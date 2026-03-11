@@ -561,6 +561,13 @@ function updateRangeSliders(){
 // ═══════════════════════════════════════════
 function setView(v){
   state.view=v;
+  // Al entrar a tendencia, activar solo 2026
+  if(v==='tendencia'){
+    state.activeYears={};
+    if(DATA.years.indexOf(2026)>-1) state.activeYears[2026]=true;
+    else state.activeYears[DATA.years[DATA.years.length-1]]=true;
+    buildYearChips();
+  }
   ['anual','semana','tendencia'].forEach(function(name){
     document.getElementById('view'+name.charAt(0).toUpperCase()+name.slice(1)).style.display=v===name?'':'none';
     document.getElementById('vt'+name.charAt(0).toUpperCase()+name.slice(1)).classList.toggle('active',v===name);
