@@ -1194,9 +1194,10 @@ function showProductos(rancho, tipo, weekNum, yr) {
 
   // Debug info
   var availKeys = Object.keys(allProds);
+  var ranchosDisp = prods ? Object.keys(prods).join(' | ') : 'ninguno';
   var debugInfo = availKeys.length === 0
     ? '⚠️ productos vacío — pestaña PR'+String(yr).slice(2)+String(weekNum).padStart(2,'0')+' no detectada'
-    : 'Claves PR disponibles: '+availKeys.join(', ')+(prods?' · Rancho "'+rancho+'" '+(prods[rancho]?'✓':'no encontrado'):'');
+    : 'semCode='+semCode+' · ranchos en PR: ['+ranchosDisp+'] · buscando: "'+rancho+'"';
 
   document.getElementById('modalSub').textContent =
     'W'+String(weekNum).padStart(2,'0')+' · '+yr+' · '+debugInfo;
