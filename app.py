@@ -1183,13 +1183,16 @@ function initScrollHints(){
 // MODAL DE PRODUCTOS
 // ═══════════════════════════════════════════
 function showProductos(rancho, tipo, weekNum, yr) {
-  var semCode = yr % 100 * 100 + weekNum;  // ej: 2609
-  // semCode como string clave
+  var semCode = (yr % 100) * 100 + weekNum;  // ej: 2609
   var prods = (DATA.productos || {})[semCode];
-  var list = prods ? (prods[rancho] || []) : [];
-
-  // Filtrar por tipo MIRFE o MIPE según codigo
-  // tipo: 'MIRFE' o 'MIPE'
+  // Key is "rancho||tipo" because Python dict serializes tuple as list
+  var list = [];
+  if(prods){
+    // Try direct key (Python serializes tuple key as "['rancho', 'tipo']" string)
+    // We store as nested: prods[rancho][tipo]
+    var byRanch = prods[rancho];
+    if(byRanch) list = byRanch[tipo] || [];
+  }
   var col = tipo === 'MIRFE' ? '#f0b429' : '#3b9eff';
   document.getElementById('modalTitle').innerHTML =
     '<span style="color:'+col+'">'+tipo+'</span> · '+rancho;
