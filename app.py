@@ -1183,26 +1183,32 @@ function initScrollHints(){
 // MODAL DE PRODUCTOS
 // ═══════════════════════════════════════════
 function showProductos(rancho, tipo, weekNum, yr) {
-  var semCode = (yr % 100) * 100 + weekNum;  // ej: 2609
-  var prods = (DATA.productos || {})[semCode];
-  // Key is "rancho||tipo" because Python dict serializes tuple as list
+  var semCode = (yr % 100) * 100 + weekNum;
+  var semCodeStr = String(semCode);
+  var allProds = DATA.productos || {};
+  // JSON serializes int keys as strings — try both
+  var prods = allProds[semCode] || allProds[semCodeStr] || null;
   var list = [];
   if(prods){
-    // Try direct key (Python serializes tuple key as "['rancho', 'tipo']" string)
-    // We store as nested: prods[rancho][tipo]
     var byRanch = prods[rancho];
     if(byRanch) list = byRanch[tipo] || [];
   }
   var col = tipo === 'MIRFE' ? '#f0b429' : '#3b9eff';
   document.getElementById('modalTitle').innerHTML =
     '<span style="color:'+col+'">'+tipo+'</span> · '+rancho;
+
+  // Debug info
+  var availKeys = Object.keys(allProds);
+  var debugInfo = availKeys.length === 0
+    ? '⚠️ productos vacío — pestaña PR'+String(yr).slice(2)+String(weekNum).padStart(2,'0')+' no detectada'
+    : 'Claves PR disponibles: '+availKeys.join(', ')+(prods?' · Rancho "'+rancho+'" '+(prods[rancho]?'✓':'no encontrado'):'');
+
   document.getElementById('modalSub').textContent =
-    'W'+String(weekNum).padStart(2,'0')+' · '+yr+(list.length?' · '+list.length+' productos':' · Sin detalle de productos');
+    'W'+String(weekNum).padStart(2,'0')+' · '+yr+' · '+debugInfo;
 
   if (!list.length) {
     document.getElementById('modalContent').innerHTML =
-      '<div class="no-prod">No hay detalle de productos para esta semana.<br>Agrega la pestaña PR'+
-      String(yr).slice(2)+String(weekNum).padStart(2,'0')+' al archivo de Sheets.</div>';
+      '<div class="no-prod">Sin productos.<br><span style="font-size:.58rem;color:var(--dim)">'+debugInfo+'</span></div>';
   } else {
     document.getElementById('modalContent').innerHTML = list.map(function(p) {
       return '<div class="prod-row">'+
