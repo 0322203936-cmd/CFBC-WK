@@ -91,16 +91,85 @@ def sv(v) -> float:
         return 0.0
 
 
+
+def _parse_pr(rows: list) -> dict:
+    """
+    Lee filas del reporte CONTPAQi PR####.
+    Busca columnas: Codigo, Producto/Nombre, Unidades
+    El codigo tiene forma RANCHOTIPOCLAVE ej: ISAMIRPTR
+    Retorna: {rancho: [(nombre_producto, unidades)]}
+    """
+    RANCH_MAP = {
+        'RAM': 'Prop-RM', 'RAMO': 'Prop-RM',
+        'ISA': 'Isabela',
+        'CHR': 'Christina', 'CHRI': 'Christina',
+        'CEC': 'Cecilia',
+        'C25': 'Cecilia 25',
+        'POS': 'PosCo-RM',
+        'CAM': 'Campo-RM',
+        'VIV': 'Vivero',
+    }
+    # Encontrar fila de encabezados
+    cod_col = nom_col = uni_col = -1
+    for i, row in enumerate(rows[:20]):
+        for j, cell in enumerate(row):
+            c = str(cell).strip().upper()
+            if c in ('CODIGO', 'CDIGO', 'COD'):     cod_col = j
+            if 'NOMBRE' in c and nom_col < 0:        nom_col = j
+            if 'UNIDAD' in c or c == 'UNIDADES':     uni_col = j
+        if cod_col >= 0 and nom_col >= 0:
+            header_idx = i
+            break
+    else:
+        return {}
+
+    result = {}
+    for row in rows[header_idx+1:]:
+        if not row or len(row) <= max(cod_col, nom_col):
+            continue
+        codigo = str(row[cod_col]).strip().upper() if cod_col < len(row) else ''
+        nombre = str(row[nom_col]).strip()        if nom_col < len(row) else ''
+        unids  = str(row[uni_col]).strip()        if uni_col >= 0 and uni_col < len(row) else ''
+        if not codigo or not nombre or nombre.upper() in ('NOMBRE', 'PRODUCTO', ''):
+            continue
+        # Detectar rancho por prefijo del codigo
+        rancho = None
+        for pfx, rn in sorted(RANCH_MAP.items(), key=lambda x: -len(x[0])):
+            if codigo.startswith(pfx):
+                rancho = rn
+                break
+        if not rancho:
+            continue
+        if rancho not in result:
+            result[rancho] = []
+        # Evitar duplicados
+        entry = (nombre, unids)
+        if entry not in result[rancho]:
+            result[rancho].append(entry)
+    return result
+
 def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     all_data = []
     SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
 
     # 1. Filtrar hojas validas
     hojas_validas = []
+    pr_hojas = []   # hojas PR (productos)
     for ws in spreadsheet.worksheets():
         sname = ws.title.strip()
         if sname.upper() in SKIP:
             continue
+        # Detectar hojas PR (productos)
+        pr_raw = re.sub(r"PR\s*", "", sname, flags=re.IGNORECASE).strip()
+        if re.match(r"PR\s*\d{4}", sname, re.IGNORECASE):
+            try:
+                pr_code = int(pr_raw)
+                pr_year = 2000 + (pr_code // 100)
+                if 2018 <= pr_year <= 2030:
+                    pr_hojas.append((ws.title, pr_code))
+                    continue
+            except ValueError:
+                pass
         code_raw = re.sub(r"WK\s*", "", sname, flags=re.IGNORECASE).strip()
         try:
             code = int(code_raw)
@@ -129,6 +198,23 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
             vals  = item.get("values", [])
             titulo = rng.split("!")[0].strip("'")
             batch_data[titulo] = vals
+
+    # 2b. Leer hojas PR en batch
+    productos = {}  # {semana_code: {rancho: [(nombre, unidades)]}}
+    if pr_hojas:
+        pr_rangos = [f"'{t}'!A1:M200" for t, _ in pr_hojas]
+        for i in range(0, len(pr_rangos), BATCH):
+            grupo = pr_rangos[i:i+BATCH]
+            res = spreadsheet.values_batch_get(grupo, params={"valueRenderOption": "UNFORMATTED_VALUE"})
+            for item in res.get("valueRanges", []):
+                rng  = item.get("range", "")
+                vals = item.get("values", [])
+                tit  = rng.split("!")[0].strip("'")
+                # Find matching pr_code
+                for pt, pc in pr_hojas:
+                    if pt == tit:
+                        productos[pc] = _parse_pr(vals)
+                        break
 
     # 3. Procesar cada hoja con datos en memoria
     for titulo, code in hojas_validas:
@@ -251,6 +337,7 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
         "summary":        summary,
         "weeks_per_year": weeks_per_year,
         "weekly_detail":  all_data,
+        "productos":      productos,
     }
 
 
