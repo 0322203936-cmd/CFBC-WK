@@ -958,7 +958,6 @@ function renderTendencia(){
               y:{grid:{color:'#1e3040'},ticks:{color:'#5a7a66',font:{size:10,family:'IBM Plex Mono'},callback:function(v){return fmt(v);}}}}}
   });
 
-  renderHeatmap(f,t,yrs);
   renderRangeTable(f,t,yrs,byYear);
 }
 
@@ -1133,7 +1132,7 @@ function renderRangeTable(f,t,yrs,byYear){
 // SCROLL HINTS
 // ═══════════════════════════════════════════
 function initScrollHints(){
-  [{wrap:'wrapAnual',hint:'hintAnual'},{wrap:'wrapSemana',hint:'hintSemana'},{wrap:'wrapRange',hint:'hintRange'},{wrap:'heatmapWrap',hint:null}].forEach(function(p){
+  [{wrap:'wrapAnual',hint:'hintAnual'},{wrap:'wrapSemana',hint:'hintSemana'},{wrap:'wrapRange',hint:'hintRange'}].forEach(function(p){
     var el=document.getElementById(p.wrap);if(!el) return;
     function check(){
       var has=el.scrollWidth>el.clientWidth+4;
