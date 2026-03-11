@@ -1,7 +1,7 @@
 """
 data_extractor.py
 Centro Floricultor de Baja California
-Extrae datos desde Google Sheets — funciona local Y en Streamlit Cloud
+Extrae datos desde Google Sheets — lectura en batch (rapido)
 """
 
 import re
@@ -30,17 +30,8 @@ CATEGORIAS_ORDEN = [
 ]
 
 
-# ──────────────────────────────────────────────────────────────
-# AUTENTICACION — detecta automaticamente local vs Streamlit Cloud
-# ──────────────────────────────────────────────────────────────
 def get_client(credentials_path: str = "credentials.json") -> gspread.Client:
-    """
-    Si estamos en Streamlit Cloud lee desde st.secrets.
-    Si estamos en local lee desde credentials.json.
-    """
     import streamlit as st
-
-    # ── Streamlit Cloud: secrets configurados en el dashboard ──
     if "gcp_service_account" in st.secrets:
         info = {
             "type":                        st.secrets["gcp_service_account"]["type"],
@@ -56,93 +47,106 @@ def get_client(credentials_path: str = "credentials.json") -> gspread.Client:
         }
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     else:
-        # ── Local: lee desde archivo credentials.json ──
         creds = Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
-
     return gspread.authorize(creds)
 
 
-# ──────────────────────────────────────────────────────────────
-# NORMALIZADORES
-# ──────────────────────────────────────────────────────────────
 def norm_ranch(s: str):
     s = str(s).upper().strip()
-    if "PROP" in s:                                     return "Prop-RM"
-    if "POSCO" in s:                                    return "PosCo-RM"
-    if "CAMPO-VI" in s or "CAMPO-IV" in s:              return "Campo-VI"
-    if "ALBAHACA" in s:                                 return "Albahaca-RM"
-    if "HOOPS" in s:                                    return "HOOPS"
-    if "CHRISTINA" in s:                                return "Christina"
-    if "CECILIA 25" in s:                               return "Cecilia 25"
-    if "CECILIA" in s:                                  return "Cecilia"
-    if "ISABEL" in s:                                   return "Isabela"
+    if "PROP" in s:                                      return "Prop-RM"
+    if "POSCO" in s:                                     return "PosCo-RM"
+    if "CAMPO-VI" in s or "CAMPO-IV" in s:               return "Campo-VI"
+    if "ALBAHACA" in s:                                  return "Albahaca-RM"
+    if "HOOPS" in s:                                     return "HOOPS"
+    if "CHRISTINA" in s:                                 return "Christina"
+    if "CECILIA 25" in s:                                return "Cecilia 25"
+    if "CECILIA" in s:                                   return "Cecilia"
+    if "ISABEL" in s:                                    return "Isabela"
     if "CAMPO" in s and "VI" not in s and "IV" not in s: return "Campo-RM"
     return None
 
 
 def norm_cat(s: str):
     s = str(s).upper().strip()
-    if "DESINFECCION" in s and "FERTILIZ" in s:         return "DESINFECCION Y FERTILIZACION"
-    if s.startswith("AMPLIACION"):                       return "AMPLIACION"
-    if "CULTIVO" in s:                                   return "CULTIVO TIERRA, CHAROLAS"
-    if "MATERIAL VEG" in s:                              return "MATERIAL VEGETAL"
-    if "PREPARACION" in s:                               return "PREPARACION DE SUELO"
-    if "FERTILIZANTE" in s:                              return "FERTILIZANTES"
-    if "SANIDAD" in s or "PLAGUICIDA" in s:              return "DESINFECCION / PLAGUICIDAS"
-    if "MANTENIMIENTO" in s:                             return "MANTENIMIENTO"
-    if "EXPANSION" in s:                                 return "EXPANSION CECILIA 25"
-    if "RENOVACION" in s:                                return "RENOVACION DE SIEMBRA"
-    if "MATERIAL DE EMP" in s:                           return "MATERIAL DE EMPAQUE"
-    if "COSTO DE MAT" in s:                              return "COSTO_STOP"
+    if "DESINFECCION" in s and "FERTILIZ" in s:  return "DESINFECCION Y FERTILIZACION"
+    if s.startswith("AMPLIACION"):                return "AMPLIACION"
+    if "CULTIVO" in s:                            return "CULTIVO TIERRA, CHAROLAS"
+    if "MATERIAL VEG" in s:                       return "MATERIAL VEGETAL"
+    if "PREPARACION" in s:                        return "PREPARACION DE SUELO"
+    if "FERTILIZANTE" in s:                       return "FERTILIZANTES"
+    if "SANIDAD" in s or "PLAGUICIDA" in s:       return "DESINFECCION / PLAGUICIDAS"
+    if "MANTENIMIENTO" in s:                      return "MANTENIMIENTO"
+    if "EXPANSION" in s:                          return "EXPANSION CECILIA 25"
+    if "RENOVACION" in s:                         return "RENOVACION DE SIEMBRA"
+    if "MATERIAL DE EMP" in s:                    return "MATERIAL DE EMPAQUE"
+    if "COSTO DE MAT" in s:                       return "COSTO_STOP"
     return None
 
 
 def sv(v) -> float:
     try:
         f = float(v)
-        return f if f == f else 0.0   # NaN guard
+        return f if f == f else 0.0
     except (TypeError, ValueError):
         return 0.0
 
 
-# ──────────────────────────────────────────────────────────────
-# EXTRACCION PRINCIPAL
-# ──────────────────────────────────────────────────────────────
 def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     all_data = []
     SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
 
+    # 1. Filtrar hojas validas
+    hojas_validas = []
     for ws in spreadsheet.worksheets():
         sname = ws.title.strip()
         if sname.upper() in SKIP:
             continue
-
         code_raw = re.sub(r"WK\s*", "", sname, flags=re.IGNORECASE).strip()
         try:
             code = int(code_raw)
         except ValueError:
             continue
+        year = 2000 + (code // 100)
+        if not (2018 <= year <= 2030):
+            continue
+        hojas_validas.append((ws.title, code))
+
+    if not hojas_validas:
+        return {"error": "No se encontraron hojas WK validas."}
+
+    # 2. Leer todas en batch (grupos de 100 para no exceder limite API)
+    batch_data = {}
+    rangos = [f"'{titulo}'!A1:AI60" for titulo, _ in hojas_validas]
+    BATCH = 100
+    for i in range(0, len(rangos), BATCH):
+        grupo = rangos[i:i + BATCH]
+        resultado = spreadsheet.values_batch_get(
+            grupo,
+            params={"valueRenderOption": "UNFORMATTED_VALUE"}
+        )
+        for item in resultado.get("valueRanges", []):
+            rng   = item.get("range", "")
+            vals  = item.get("values", [])
+            titulo = rng.split("!")[0].strip("'")
+            batch_data[titulo] = vals
+
+    # 3. Procesar cada hoja con datos en memoria
+    for titulo, code in hojas_validas:
+        raw = batch_data.get(titulo, [])
+        if not raw:
+            continue
 
         yy   = code // 100
         ww   = code % 100
         year = 2000 + yy
-        if not (2018 <= year <= 2030):
-            continue
-
-        # Leer rango amplio para no truncar datos
-        raw = ws.get("A1:AI60")
-        if not raw:
-            continue
 
         max_cols = max((len(r) for r in raw), default=0)
         data = [r + [""] * (max_cols - len(r)) for r in raw]
 
-        # Fecha de la semana (fila 4, col B)
         date_range = ""
         if len(data) > 3 and len(data[3]) > 1:
             date_range = str(data[3][1]).strip()
 
-        # Buscar fila "EJECUCION SEMANAL"
         exec_idx = -1
         for i, row in enumerate(data):
             if any(isinstance(c, str) and "EJECUCION SEMANAL" in c.upper() for c in row):
@@ -151,7 +155,6 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
         if exec_idx < 0:
             continue
 
-        # Buscar encabezado con nombres de rancho (arriba de exec_idx)
         header_idx = -1
         for i in range(exec_idx - 1, max(0, exec_idx - 6) - 1, -1):
             if any(isinstance(v, str) and any(k in v.upper() for k in RANCH_KEYS) for v in data[i]):
@@ -162,7 +165,6 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
 
         header = data[header_idx]
 
-        # Columnas TOTAL
         total_cols = [j for j, v in enumerate(header)
                       if isinstance(v, str) and v.strip().upper() == "TOTAL"]
         if not total_cols:
@@ -170,7 +172,6 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
         mxn_total_col = total_cols[0]
         usd_total_col = total_cols[1] if len(total_cols) >= 2 else None
 
-        # Mapear columnas de ranchos
         mxn_ranch_cols, usd_ranch_cols = {}, {}
         for j, v in enumerate(header):
             rn = norm_ranch(str(v)) if v else None
@@ -183,9 +184,8 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
             elif usd_total_col and j > usd_total_col:
                 usd_ranch_cols[j] = rn
 
-        # Leer filas de categorías
         for i in range(exec_idx + 1, min(exec_idx + 18, len(data))):
-            row  = data[i]
+            row   = data[i]
             label = next((str(row[c]).strip() for c in range(5)
                           if c < len(row) and row[c] and len(str(row[c]).strip()) > 3), None)
             if not label:
@@ -211,7 +211,6 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
                 "usd_ranches": usd_ranches,
             })
 
-    # Listas maestras
     cats_found = {r["categoria"] for r in all_data}
     cats  = [c for c in CATEGORIAS_ORDEN if c in cats_found]
     years = sorted({r["year"] for r in all_data})
@@ -222,7 +221,6 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
         ranches_seen.update(r["usd_ranches"])
     ranches = sorted(ranches_seen)
 
-    # Resumen anual
     summary: dict = {cat: {yr: {"usd": 0.0, "mxn": 0.0, "ranches": {}, "ranches_mxn": {}}
                             for yr in years} for cat in cats}
     for r in all_data:
@@ -241,7 +239,6 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
             d["usd"] = round(d["usd"], 2)
             d["mxn"] = round(d["mxn"], 2)
 
-    # Semanas disponibles por año
     weeks_per_year: dict = {}
     for r in all_data:
         weeks_per_year.setdefault(r["year"], set()).add(r["week"])
@@ -257,9 +254,6 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     }
 
 
-# ──────────────────────────────────────────────────────────────
-# PUNTO DE ENTRADA
-# ──────────────────────────────────────────────────────────────
 def get_datos(credentials_path: str = "credentials.json",
               spreadsheet_name: str = "WK 2026-08") -> dict:
     client = get_client(credentials_path)
@@ -270,9 +264,8 @@ def get_datos(credentials_path: str = "credentials.json",
         except gspread.SpreadsheetNotFound:
             pass
 
-    # Fallback: buscar cualquier archivo WK 2026 accesible
     for ss in client.openall():
         if "WK" in ss.title.upper() and "2026" in ss.title:
             return extraer_datos(ss)
 
-    return {"error": f"No se encontró '{spreadsheet_name}' en Drive. Verifica que lo compartiste con la service account."}
+    return {"error": f"No se encontro '{spreadsheet_name}' en Drive. Verifica que lo compartiste con la service account."}
