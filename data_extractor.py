@@ -38,9 +38,10 @@ def get_client(credentials_path: str = "credentials.json") -> gspread.Client:
     Si estamos en Streamlit Cloud lee desde st.secrets.
     Si estamos en local lee desde credentials.json.
     """
-    try:
-        import streamlit as st
-        # Streamlit Cloud: las credenciales viven en st.secrets["gcp_service_account"]
+    import streamlit as st
+
+    # ── Streamlit Cloud: secrets configurados en el dashboard ──
+    if "gcp_service_account" in st.secrets:
         info = {
             "type":                        st.secrets["gcp_service_account"]["type"],
             "project_id":                  st.secrets["gcp_service_account"]["project_id"],
@@ -54,8 +55,8 @@ def get_client(credentials_path: str = "credentials.json") -> gspread.Client:
             "client_x509_cert_url":        st.secrets["gcp_service_account"]["client_x509_cert_url"],
         }
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
-    except (KeyError, Exception):
-        # Local: lee desde archivo JSON
+    else:
+        # ── Local: lee desde archivo credentials.json ──
         creds = Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
 
     return gspread.authorize(creds)
