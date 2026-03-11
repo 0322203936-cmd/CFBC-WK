@@ -111,6 +111,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .prod-name{font-size:.73rem;font-family:'IBM Plex Mono',monospace;color:var(--text)}
 .prod-units{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap}
 .no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:12px 0}
+.prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 @keyframes pulse-hint{0%,100%{opacity:.4}50%{opacity:1}}
 
 #loader{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
@@ -253,6 +254,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .prod-name{font-size:.73rem;font-family:'IBM Plex Mono',monospace;color:var(--text)}
 .prod-units{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap}
 .no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:12px 0}
+.prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 </style>
 </head>
 <body>
@@ -462,6 +464,12 @@ function recargar() { window.location.reload(); }
 // INICIALIZAR
 // ═══════════════════════════════════════════
 function inicializar() {
+  // Event delegation para celdas de productos
+  document.addEventListener('click', function(e){
+    var td = e.target.closest('.prod-cell');
+    if(!td) return;
+    showProductos(td.dataset.r, td.dataset.t, parseInt(td.dataset.w), parseInt(td.dataset.y));
+  });
   var years = DATA.years, cats = DATA.categories;
   var prefCat = 'MATERIAL DE EMPAQUE';
   state.cat = cats.indexOf(prefCat) > -1 ? prefCat : cats[0];
@@ -874,7 +882,7 @@ function renderSemana(){
       var dm=rm.length?aggregateDetail(rm):null;
       var valm=dm?(state.currency==='usd'?dm.usd:dm.mxn):0;
       var ranchSrcM=dm?(state.currency==='usd'?dm.ranches:dm.ranches_mxn):{};
-      var cellsM=KEY_RANCHES.map(function(r){var v=ranchSrcM[r]||0;var click=v>0?' style="color:'+(RANCH_COLORS[r]||'#888')+'cc;cursor:pointer;text-decoration:underline dotted" onclick="showProductos(\''+r+'\',\'MIRFE\','+weekNum+','+yr+')" title="Ver productos MIRFE en '+r+'"':' style="color:#3a5a48"';return '<td'+click+'>'+(v>0?fmt(v):'—')+'</td>';}).join('');
+      var cellsM=KEY_RANCHES.map(function(r){var v=ranchSrcM[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIRFE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#3a5a48">—</td>';}).join('');
       rows.push('<tr>'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong>'+
         '<span style="font-size:.6rem;margin-left:4px;color:#f0b429;font-family:IBM Plex Mono,monospace">MIRFE</span></td>'+
@@ -887,7 +895,7 @@ function renderSemana(){
       var dp=rp.length?aggregateDetail(rp):null;
       var valp=dp?(state.currency==='usd'?dp.usd:dp.mxn):0;
       var ranchSrcP=dp?(state.currency==='usd'?dp.ranches:dp.ranches_mxn):{};
-      var cellsP=KEY_RANCHES.map(function(r){var v=ranchSrcP[r]||0;var click=v>0?' style="color:'+(RANCH_COLORS[r]||'#888')+'cc;cursor:pointer;text-decoration:underline dotted" onclick="showProductos(\''+r+'\',\'MIPE\','+weekNum+','+yr+')" title="Ver productos MIPE en '+r+'"':' style="color:#3a5a48"';return '<td'+click+'>'+(v>0?fmt(v):'—')+'</td>';}).join('');
+      var cellsP=KEY_RANCHES.map(function(r){var v=ranchSrcP[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIPE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#3a5a48">—</td>';}).join('');
       rows.push('<tr style="border-bottom:2px solid var(--border)">'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong>'+
         '<span style="font-size:.6rem;margin-left:4px;color:#3b9eff;font-family:IBM Plex Mono,monospace">MIPE</span></td>'+
