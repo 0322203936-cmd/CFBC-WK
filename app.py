@@ -392,10 +392,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
         <div class="chart-wrap medium"><canvas id="chartCumul"></canvas></div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-hdr"><span class="card-title">Mapa de Calor — Semana × Año (USD)</span><span class="card-note">clic en celda → ir a esa semana</span></div>
-      <div class="heatmap-wrap" id="heatmapWrap"></div>
-    </div>
+
   </div>
 </div>
 </div><!-- /app -->
