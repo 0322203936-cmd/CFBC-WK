@@ -91,20 +91,18 @@ def sv(v) -> float:
         return 0.0
 
 
-
 def _parse_pr(rows: list) -> dict:
     """
     Lee filas del reporte CONTPAQi PR####.
-    Estructura fija CONTPAQi:
-      Col 0: Codigo  (ej: ISAMIRPTR)
-      Col 7: Producto (codigo producto)
-      Col 8: Nombre   (nombre del producto) <- mostramos esto
-      Col 9: Unidades
-    Retorna: {(rancho, tipo): [(nombre_producto, unidades)]}
-      tipo = 'MIRFE' o 'MIPE'
+    Columnas FIJAS en el reporte CONTPAQi:
+      Col 0 : Codigo concepto (ej: ISAMIRPTR, CECMIPSNF)
+      Col 8 : Nombre del producto
+      Col 9 : Unidades
+    El codigo indica rancho (prefijo) y tipo (MIR=MIRFE, MIP=MIPE).
+    Retorna: { rancho: { tipo: [[nombre, unidades], ...] } }
     """
     RANCH_MAP = {
-        'C25': 'Cecilia 25',  # primero los mas largos
+        'C25': 'Cecilia 25',
         'RAM': 'Prop-RM',
         'ISA': 'Isabela',
         'CHR': 'Christina',
@@ -113,47 +111,37 @@ def _parse_pr(rows: list) -> dict:
         'CAM': 'Campo-RM',
         'VIV': 'Vivero',
     }
-    # Buscar fila de encabezados buscando "Código" o "CODIGO" en col 0
-    header_idx = -1
-    for i, row in enumerate(rows[:25]):
-        if not row:
-            continue
-        cell0 = str(row[0]).strip().upper().replace('Ó','O').replace('ó','o')
-        if 'DIGO' in cell0 or cell0 == 'CODIGO':
-            header_idx = i
-            break
-
-    # Si no encontramos encabezado, buscar primer fila con codigo valido (mayus 3+ chars en col 0)
-    start_idx = header_idx + 1 if header_idx >= 0 else 0
+    NOMBRE_COL = 8
+    UNIDS_COL  = 9
 
     result = {}
-    seen = set()
-    for row in rows[start_idx:]:
-        if not row or len(row) < 9:
+    seen   = set()
+
+    for row in rows:
+        if not row:
             continue
         codigo = str(row[0]).strip().upper()
-        nombre = str(row[8]).strip() if len(row) > 8 else ''
-        unids  = str(row[9]).strip() if len(row) > 9 else ''
-
-        # Validar que codigo parece un codigo real (>= 5 chars, solo alfanum)
-        if len(codigo) < 5 or not codigo.replace('-','').replace('_','').isalnum():
+        # Codigo valido: 5-15 chars, solo letras y numeros, contiene MIR o MIP
+        if not (5 <= len(codigo) <= 15):
             continue
-        # Ignorar filas de encabezado/total
-        if codigo in ('CODIGO','CDIGO','TOTAL','FINCA','NOMBRE') or 'ALMAC' in codigo:
+        if not re.match(r'^[A-Z0-9]+$', codigo):
             continue
-        # Ignorar si nombre es encabezado
-        if not nombre or nombre.upper() in ('NOMBRE','PRODUCTO',''):
+        if 'MIR' not in codigo and 'MIP' not in codigo:
             continue
 
-        # Detectar tipo: MIR=MIRFE, MIP=MIPE
-        if 'MIR' in codigo:
-            tipo = 'MIRFE'
-        elif 'MIP' in codigo:
-            tipo = 'MIPE'
-        else:
-            continue  # no es agroquimico ni fertilizante
+        nombre = str(row[NOMBRE_COL]).strip() if len(row) > NOMBRE_COL else ''
+        if not nombre or nombre.upper() in ('NOMBRE', 'PRODUCTO', ''):
+            continue
 
-        # Detectar rancho por prefijo
+        unids = str(row[UNIDS_COL]).strip() if len(row) > UNIDS_COL else ''
+        try:
+            u = float(str(unids).replace(',', ''))
+            unids = str(int(u)) if u == int(u) else str(round(u, 2))
+        except Exception:
+            pass
+
+        tipo = 'MIRFE' if 'MIR' in codigo else 'MIPE'
+
         rancho = None
         for pfx, rn in RANCH_MAP.items():
             if codigo.startswith(pfx):
@@ -166,12 +154,12 @@ def _parse_pr(rows: list) -> dict:
             result[rancho] = {}
         if tipo not in result[rancho]:
             result[rancho][tipo] = []
-        entry = [nombre, unids]
         if (rancho, tipo, nombre) not in seen:
             seen.add((rancho, tipo, nombre))
-            result[rancho][tipo].append(entry)
+            result[rancho][tipo].append([nombre, unids])
 
     return result
+
 
 def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     all_data = []
@@ -179,14 +167,14 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
 
     # 1. Filtrar hojas validas
     hojas_validas = []
-    pr_hojas = []   # hojas PR (productos)
+    pr_hojas = []
     for ws in spreadsheet.worksheets():
         sname = ws.title.strip()
         if sname.upper() in SKIP:
             continue
-        # Detectar hojas PR (productos)
-        pr_raw = re.sub(r"PR\s*", "", sname, flags=re.IGNORECASE).strip()
-        if re.match(r"PR\s*\d{4}", sname, re.IGNORECASE):
+        # Detectar hojas PR#### (productos CONTPAQi)
+        if re.match(r'^PR\s*\d{4}$', sname, re.IGNORECASE):
+            pr_raw = re.sub(r'PR\s*', '', sname, flags=re.IGNORECASE).strip()
             try:
                 pr_code = int(pr_raw)
                 pr_year = 2000 + (pr_code // 100)
@@ -195,6 +183,7 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
                     continue
             except ValueError:
                 pass
+        # Hojas WK####
         code_raw = re.sub(r"WK\s*", "", sname, flags=re.IGNORECASE).strip()
         try:
             code = int(code_raw)
@@ -208,7 +197,7 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     if not hojas_validas:
         return {"error": "No se encontraron hojas WK validas."}
 
-    # 2. Leer todas en batch (grupos de 100 para no exceder limite API)
+    # 2. Leer hojas WK en batch
     batch_data = {}
     rangos = [f"'{titulo}'!A1:AI60" for titulo, _ in hojas_validas]
     BATCH = 100
@@ -219,32 +208,30 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
             params={"valueRenderOption": "UNFORMATTED_VALUE"}
         )
         for item in resultado.get("valueRanges", []):
-            rng   = item.get("range", "")
-            vals  = item.get("values", [])
+            rng    = item.get("range", "")
+            vals   = item.get("values", [])
             titulo = rng.split("!")[0].strip("'")
             batch_data[titulo] = vals
 
     # 2b. Leer hojas PR en batch
-    productos = {}  # {semana_code: {rancho: [(nombre, unidades)]}}
+    productos = {}
     if pr_hojas:
         pr_rangos = [f"'{t}'!A1:P300" for t, _ in pr_hojas]
         for i in range(0, len(pr_rangos), BATCH):
-            grupo = pr_rangos[i:i+BATCH]
-            res = spreadsheet.values_batch_get(grupo, params={"valueRenderOption": "UNFORMATTED_VALUE"})
+            grupo = pr_rangos[i:i + BATCH]
+            res = spreadsheet.values_batch_get(
+                grupo, params={"valueRenderOption": "UNFORMATTED_VALUE"}
+            )
             for item in res.get("valueRanges", []):
                 rng  = item.get("range", "")
                 vals = item.get("values", [])
                 tit  = rng.split("!")[0].strip("'")
-                # Find matching pr_code
                 for pt, pc in pr_hojas:
                     if pt == tit:
-                        parsed = _parse_pr(vals)
-                        # Debug: store first 10 rows so we can inspect in UI
-                        productos[pc] = parsed
-                        productos[str(pc)+'_debug'] = [str(r[:10]) for r in vals[:12]]
+                        productos[pc] = _parse_pr(vals)
                         break
 
-    # 3. Procesar cada hoja con datos en memoria
+    # 3. Procesar cada hoja WK
     for titulo, code in hojas_validas:
         raw = batch_data.get(titulo, [])
         if not raw:
