@@ -448,12 +448,7 @@ function inicializar() {
   state.fromWeek = allWeeks[0] || 1;
   state.toWeek   = allWeeks[allWeeks.length-1] || 52;
 
-  document.getElementById('headerBadges').innerHTML =
-    '<span class="badge">'+years[0]+'–'+years[years.length-1]+'</span>'+
-    '<span class="badge">'+years.length+' años</span>'+
-    '<span class="badge">'+cats.length+' categorías</span>'+
-    '<span class="badge">'+allWeeks.length+' semanas</span>'+
-    '<span class="badge muted">EJECUCION SEMANAL</span>';
+  // header removido
 
   buildCatSelect(); buildYearChips(); updateWeekSlider(); updateRangeSliders(); renderView();
   document.getElementById('loader').style.display = 'none';
