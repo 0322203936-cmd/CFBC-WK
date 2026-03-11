@@ -441,9 +441,17 @@ function inicializar() {
   DATA.weekly_detail.forEach(function(r){ wSet[r.week] = 1; });
   allWeeks = Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
   state.weekIdx = allWeeks.length - 1;
-  var curWeek  = allWeeks[allWeeks.length-1] || 1;
-  var prevWeek = allWeeks[allWeeks.length-2] || allWeeks[0] || 1;
-  state.fromWeek = prevWeek;
+
+  // Semana actual y anterior: tomar del año más reciente con datos
+  var latestYear = DATA.years[DATA.years.length-1];
+  var weeksOfLatest = DATA.weekly_detail
+    .filter(function(r){ return r.year === latestYear; })
+    .map(function(r){ return r.week; })
+    .filter(function(v,i,a){ return a.indexOf(v)===i; })
+    .sort(function(a,b){ return a-b; });
+  var curWeek  = weeksOfLatest[weeksOfLatest.length-1] || allWeeks[allWeeks.length-1] || 1;
+  var prevWeek2 = weeksOfLatest[weeksOfLatest.length-2] || weeksOfLatest[0] || curWeek;
+  state.fromWeek = prevWeek2;
   state.toWeek   = curWeek;
 
   // header removido
@@ -616,7 +624,13 @@ function onRangeChange(){
   if(f>t){var tmp=f;f=t;t=tmp;}
   state.fromWeek=f; state.toWeek=t; updateRangeSliders(); renderTendencia();
 }
-function resetRange(){ state.fromWeek=allWeeks[allWeeks.length-2]||allWeeks[0]||1; state.toWeek=allWeeks[allWeeks.length-1]||52; updateRangeSliders(); renderTendencia(); }
+function resetRange(){
+  var latestYear = DATA.years[DATA.years.length-1];
+  var wks = DATA.weekly_detail.filter(function(r){return r.year===latestYear;}).map(function(r){return r.week;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort(function(a,b){return a-b;});
+  state.toWeek   = wks[wks.length-1] || allWeeks[allWeeks.length-1] || 52;
+  state.fromWeek = wks[wks.length-2] || wks[0] || state.toWeek;
+  updateRangeSliders(); renderTendencia();
+}
 
 // ═══════════════════════════════════════════
 // VIEW 1 — ANUAL
