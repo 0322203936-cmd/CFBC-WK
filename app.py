@@ -874,7 +874,7 @@ function renderSemana(){
       var dm=rm.length?aggregateDetail(rm):null;
       var valm=dm?(state.currency==='usd'?dm.usd:dm.mxn):0;
       var ranchSrcM=dm?(state.currency==='usd'?dm.ranches:dm.ranches_mxn):{};
-      var cellsM=KEY_RANCHES.map(function(r){var v=ranchSrcM[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+      var cellsM=KEY_RANCHES.map(function(r){var v=ranchSrcM[r]||0;var click=v>0?' style="color:'+(RANCH_COLORS[r]||'#888')+'cc;cursor:pointer;text-decoration:underline dotted" onclick="showProductos(\''+r+'\',\'MIRFE\','+weekNum+','+yr+')" title="Ver productos MIRFE en '+r+'"':' style="color:#3a5a48"';return '<td'+click+'>'+(v>0?fmt(v):'—')+'</td>';}).join('');
       rows.push('<tr>'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong>'+
         '<span style="font-size:.6rem;margin-left:4px;color:#f0b429;font-family:IBM Plex Mono,monospace">MIRFE</span></td>'+
@@ -887,7 +887,7 @@ function renderSemana(){
       var dp=rp.length?aggregateDetail(rp):null;
       var valp=dp?(state.currency==='usd'?dp.usd:dp.mxn):0;
       var ranchSrcP=dp?(state.currency==='usd'?dp.ranches:dp.ranches_mxn):{};
-      var cellsP=KEY_RANCHES.map(function(r){var v=ranchSrcP[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+      var cellsP=KEY_RANCHES.map(function(r){var v=ranchSrcP[r]||0;var click=v>0?' style="color:'+(RANCH_COLORS[r]||'#888')+'cc;cursor:pointer;text-decoration:underline dotted" onclick="showProductos(\''+r+'\',\'MIPE\','+weekNum+','+yr+')" title="Ver productos MIPE en '+r+'"':' style="color:#3a5a48"';return '<td'+click+'>'+(v>0?fmt(v):'—')+'</td>';}).join('');
       rows.push('<tr style="border-bottom:2px solid var(--border)">'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong>'+
         '<span style="font-size:.6rem;margin-left:4px;color:#3b9eff;font-family:IBM Plex Mono,monospace">MIPE</span></td>'+
