@@ -99,18 +99,6 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 }
 .scroll-hint.show{display:flex}
 
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px}
-.modal-overlay.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;position:relative}
-.modal-title{font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:4px}
-.modal-sub{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:16px}
-.modal-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:.9rem;padding:2px 8px;transition:all .2s}
-.modal-close:hover{border-color:var(--red);color:var(--red)}
-.prod-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid rgba(30,48,64,.5)}
-.prod-row:last-child{border-bottom:none}
-.prod-name{font-size:.73rem;font-family:'IBM Plex Mono',monospace;color:var(--text)}
-.prod-units{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap}
-.no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:12px 0}
 .prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 @keyframes pulse-hint{0%,100%{opacity:.4}50%{opacity:1}}
 
@@ -242,18 +230,17 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .scroll-hint{display:none;align-items:center;justify-content:flex-end;gap:4px;font-size:.6rem;font-family:'IBM Plex Mono',monospace;color:var(--green);margin-bottom:4px;animation:pulse-hint 2s ease-in-out infinite;}
 .scroll-hint.show{display:flex}
 
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px}
-.modal-overlay.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;position:relative}
+.modal-overlay{display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);z-index:500}
+.modal-overlay.open{display:block}
+.modal{position:sticky;top:40px;background:#131f2e;border:1px solid #1e3040;border-radius:14px;padding:22px 24px;max-width:460px;width:90%;margin:40px auto;max-height:70vh;overflow-y:auto}
 .modal-title{font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:4px}
 .modal-sub{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:16px}
-.modal-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:.9rem;padding:2px 8px;transition:all .2s}
-.modal-close:hover{border-color:var(--red);color:var(--red)}
-.prod-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid rgba(30,48,64,.5)}
+.modal-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid #1e3040;border-radius:6px;color:#5a7a66;cursor:pointer;font-size:.9rem;padding:2px 8px}
+.prod-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #1a2e40}
 .prod-row:last-child{border-bottom:none}
-.prod-name{font-size:.73rem;font-family:'IBM Plex Mono',monospace;color:var(--text)}
-.prod-units{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap}
-.no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:12px 0}
+.prod-name{font-size:.75rem;font-family:'IBM Plex Mono',monospace;color:#c8d8c8}
+.prod-units{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:#5a7a66;white-space:nowrap}
+.no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:#3a5a48;padding:12px 0}
 .prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 </style>
 </head>
