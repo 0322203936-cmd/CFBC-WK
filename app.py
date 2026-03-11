@@ -239,16 +239,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 <div id="app" style="display:none">
 
-<div class="hdr">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
-    <div>
-      <div class="hdr-title">📊 Ejecución Semanal — Comparativo</div>
-      <div class="hdr-sub">Centro Floricultor de Baja California &nbsp;·&nbsp; WK 2026-08</div>
-    </div>
-    <button class="btn-reload" onclick="recargar()">↺ Recargar</button>
-  </div>
-  <div class="badge-row" id="headerBadges"></div>
-</div>
+
 
 <div class="cat-select-wrap">
   <span class="cat-select-label">Categoría</span>
