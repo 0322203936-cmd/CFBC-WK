@@ -6,7 +6,7 @@ Streamlit — carga datos con Python, renderiza el HTML original tal cual
 
 import json
 import streamlit as st
-import streamlit.components.v1 as components
+
 
 from data_extractor import get_datos
 
@@ -998,4 +998,4 @@ inicializar();
 html_final = HTML.replace('__DATA_JSON__', data_json)
 
 # Renderizar
-components.html(html_final, height=1200, scrolling=True)
+st.markdown(html_final, unsafe_allow_html=True)
