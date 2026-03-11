@@ -6,6 +6,7 @@ Streamlit — carga datos con Python, renderiza el HTML original tal cual
 
 import json
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 from data_extractor import get_datos
@@ -991,6 +992,17 @@ if(!DATA.weekly_series){
 }
 inicializar();
 </script>
+
+<script>
+// Auto-resize iframe height to content
+function reportHeight() {
+  var h = document.body.scrollHeight;
+  window.parent.postMessage({type:'streamlit:setFrameHeight', height:h}, '*');
+}
+var ro = new ResizeObserver(reportHeight);
+ro.observe(document.body);
+reportHeight();
+</script>
 </body>
 </html>"""
 
@@ -998,4 +1010,4 @@ inicializar();
 html_final = HTML.replace('__DATA_JSON__', data_json)
 
 # Renderizar
-st.markdown(html_final, unsafe_allow_html=True)
+components.html(html_final, height=5000, scrolling=False)
