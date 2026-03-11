@@ -227,7 +227,7 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     # 2b. Leer hojas PR en batch
     productos = {}  # {semana_code: {rancho: [(nombre, unidades)]}}
     if pr_hojas:
-        pr_rangos = [f"'{t}'!A1:M200" for t, _ in pr_hojas]
+        pr_rangos = [f"'{t}'!A1:P300" for t, _ in pr_hojas]
         for i in range(0, len(pr_rangos), BATCH):
             grupo = pr_rangos[i:i+BATCH]
             res = spreadsheet.values_batch_get(grupo, params={"valueRenderOption": "UNFORMATTED_VALUE"})
