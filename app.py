@@ -98,6 +98,19 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   animation:pulse-hint 2s ease-in-out infinite;
 }
 .scroll-hint.show{display:flex}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;position:relative}
+.modal-title{font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:4px}
+.modal-sub{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:16px}
+.modal-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:.9rem;padding:2px 8px;transition:all .2s}
+.modal-close:hover{border-color:var(--red);color:var(--red)}
+.prod-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid rgba(30,48,64,.5)}
+.prod-row:last-child{border-bottom:none}
+.prod-name{font-size:.73rem;font-family:'IBM Plex Mono',monospace;color:var(--text)}
+.prod-units{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap}
+.no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:12px 0}
 @keyframes pulse-hint{0%,100%{opacity:.4}50%{opacity:1}}
 
 #loader{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
@@ -227,6 +240,19 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .table-scroll-wrap{position:relative}
 .scroll-hint{display:none;align-items:center;justify-content:flex-end;gap:4px;font-size:.6rem;font-family:'IBM Plex Mono',monospace;color:var(--green);margin-bottom:4px;animation:pulse-hint 2s ease-in-out infinite;}
 .scroll-hint.show{display:flex}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;position:relative}
+.modal-title{font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:4px}
+.modal-sub{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:16px}
+.modal-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:.9rem;padding:2px 8px;transition:all .2s}
+.modal-close:hover{border-color:var(--red);color:var(--red)}
+.prod-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid rgba(30,48,64,.5)}
+.prod-row:last-child{border-bottom:none}
+.prod-name{font-size:.73rem;font-family:'IBM Plex Mono',monospace;color:var(--text)}
+.prod-units{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap}
+.no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:12px 0}
 </style>
 </head>
 <body>
@@ -393,6 +419,14 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
       </div>
     </div>
 
+  </div>
+</div>
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-sub" id="modalSub"></div>
+    <div id="modalContent"></div>
   </div>
 </div>
 </div><!-- /app -->
@@ -1143,6 +1177,44 @@ function initScrollHints(){
     el.addEventListener('scroll',function(){if(p.hint){var h=document.getElementById(p.hint);if(h) h.classList.remove('show');}el.classList.add('no-overflow');},{once:true});
     window.addEventListener('resize',check);
   });
+}
+
+// ═══════════════════════════════════════════
+// MODAL DE PRODUCTOS
+// ═══════════════════════════════════════════
+function showProductos(rancho, tipo, weekNum, yr) {
+  var semCode = yr % 100 * 100 + weekNum;  // ej: 2609
+  // semCode como string clave
+  var prods = (DATA.productos || {})[semCode];
+  var list = prods ? (prods[rancho] || []) : [];
+
+  // Filtrar por tipo MIRFE o MIPE según codigo
+  // tipo: 'MIRFE' o 'MIPE'
+  var col = tipo === 'MIRFE' ? '#f0b429' : '#3b9eff';
+  document.getElementById('modalTitle').innerHTML =
+    '<span style="color:'+col+'">'+tipo+'</span> · '+rancho;
+  document.getElementById('modalSub').textContent =
+    'W'+String(weekNum).padStart(2,'0')+' · '+yr+(list.length?' · '+list.length+' productos':' · Sin detalle de productos');
+
+  if (!list.length) {
+    document.getElementById('modalContent').innerHTML =
+      '<div class="no-prod">No hay detalle de productos para esta semana.<br>Agrega la pestaña PR'+
+      String(yr).slice(2)+String(weekNum).padStart(2,'0')+' al archivo de Sheets.</div>';
+  } else {
+    document.getElementById('modalContent').innerHTML = list.map(function(p) {
+      return '<div class="prod-row">'+
+        '<span class="prod-name">'+p[0]+'</span>'+
+        '<span class="prod-units">'+(p[1]||'—')+'</span>'+
+        '</div>';
+    }).join('');
+  }
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalOverlay')) {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
 }
 
 Chart.defaults.color='#5a7a66';
