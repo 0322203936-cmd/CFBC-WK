@@ -506,12 +506,17 @@ function getWeekByYear(cat,weekNum){
 function getRangeByYear(cat,fromW,toW){
   var res={};
   activeYrList().forEach(function(yr){
-    var recs=getDetail(cat,undefined,yr).filter(function(r){return r.week>=fromW&&r.week<=toW;});
-    if(!recs.length) return;
-    var ag=aggregateDetail(recs);
-    ag.weekly={};
-    recs.forEach(function(r){ag.weekly[r.week]=(ag.weekly[r.week]||0)+r.usd_total;});
-    res[yr]=ag;
+    if(isCombined(cat)){
+      var d=getCombinedRange(fromW,toW,yr);
+      if(d) res[yr]=d;
+    } else {
+      var recs=getDetail(cat,undefined,yr).filter(function(r){return r.week>=fromW&&r.week<=toW;});
+      if(!recs.length) return;
+      var ag=aggregateDetail(recs);
+      ag.weekly={};
+      recs.forEach(function(r){ag.weekly[r.week]=(ag.weekly[r.week]||0)+r.usd_total;});
+      res[yr]=ag;
+    }
   });
   return res;
 }
@@ -524,12 +529,59 @@ function heatColor(ratio){
 // ═══════════════════════════════════════════
 // UI BUILDERS
 // ═══════════════════════════════════════════
+var CAT_MIRFE = 'FERTILIZANTES';
+var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
+var CAT_COMBINED = 'MIRFE + MIPE';
+
+function isCombined(cat){ return cat === CAT_COMBINED; }
+
 function buildCatSelect(){
   var el=document.getElementById('catSelect');
-  el.innerHTML=DATA.categories.map(function(c){
-    return '<option value="'+c.replace(/"/g,'&quot;')+'"'+(c===state.cat?' selected':'')+'>'+c+'</option>';
+  var allCats = [CAT_COMBINED].concat(DATA.categories);
+  el.innerHTML=allCats.map(function(c){
+    var label = c === CAT_COMBINED ? '⚗️ MIRFE + MIPE (combinado)' : c;
+    return '<option value="'+c.replace(/"/g,'&quot;')+'"'+(c===state.cat?' selected':'')+'>'+label+'</option>';
   }).join('');
-  document.getElementById('catCount').textContent=(DATA.categories.indexOf(state.cat)+1)+' / '+DATA.categories.length;
+  var idx = allCats.indexOf(state.cat);
+  document.getElementById('catCount').textContent=(idx+1)+' / '+allCats.length;
+}
+
+// Obtener datos combinados MIRFE+MIPE para una semana y año
+function getCombinedWeek(weekNum, yr){
+  var r1 = getDetail(CAT_MIRFE, weekNum, yr);
+  var r2 = getDetail(CAT_MIPE,  weekNum, yr);
+  var mirfe = r1.length ? aggregateDetail(r1) : null;
+  var mipe  = r2.length ? aggregateDetail(r2) : null;
+  if(!mirfe && !mipe) return null;
+  // Combined total
+  var out = {
+    usd: (mirfe?mirfe.usd:0) + (mipe?mipe.usd:0),
+    mxn: (mirfe?mirfe.mxn:0) + (mipe?mipe.mxn:0),
+    ranches:{}, ranches_mxn:{},
+    date_range: (mirfe&&mirfe.date_range)?mirfe.date_range:((mipe&&mipe.date_range)?mipe.date_range:''),
+    mirfe: mirfe, mipe: mipe
+  };
+  return out;
+}
+
+// Obtener datos combinados MIRFE+MIPE para un rango
+function getCombinedRange(fromW, toW, yr){
+  var recs1 = getDetail(CAT_MIRFE, undefined, yr).filter(function(r){return r.week>=fromW&&r.week<=toW;});
+  var recs2 = getDetail(CAT_MIPE,  undefined, yr).filter(function(r){return r.week>=fromW&&r.week<=toW;});
+  if(!recs1.length && !recs2.length) return null;
+  var ag1 = recs1.length ? aggregateDetail(recs1) : {usd:0,mxn:0,ranches:{},ranches_mxn:{}};
+  var ag2 = recs2.length ? aggregateDetail(recs2) : {usd:0,mxn:0,ranches:{},ranches_mxn:{}};
+  var weekly = {};
+  recs1.forEach(function(r){weekly[r.week]=(weekly[r.week]||0)+r.usd_total;});
+  recs2.forEach(function(r){weekly[r.week]=(weekly[r.week]||0)+r.usd_total;});
+  return {
+    usd: ag1.usd + ag2.usd,
+    mxn: ag1.mxn + ag2.mxn,
+    ranches: ag1.ranches, ranches_mxn: ag1.ranches_mxn,
+    weekly: weekly,
+    mirfe_usd: ag1.usd, mirfe_mxn: ag1.mxn,
+    mipe_usd:  ag2.usd, mipe_mxn:  ag2.mxn
+  };
 }
 function buildYearChips(){
   var el=document.getElementById('yearChips');
@@ -777,23 +829,51 @@ function renderAnnualTable(){
 // ═══════════════════════════════════════════
 function renderSemana(){
   if(!allWeeks.length) return;
-  var weekNum=allWeeks[state.weekIdx], yrs=activeYrList(), byYear=getWeekByYear(state.cat,weekNum);
-  document.getElementById('swTableNote').textContent=state.currency==='usd'?'USD':'MXN';
-  document.getElementById('swTableBody').innerHTML=yrs.map(function(yr,i){
-    var d=byYear[yr], val=d?(state.currency==='usd'?d.usd:d.mxn):0;
-    var prevD=i>0?byYear[yrs[i-1]]:null, prevVal=prevD?(state.currency==='usd'?prevD.usd:prevD.mxn):null;
-    var delta=prevVal!==null?pct(val,prevVal):null;
-    var col=YEAR_COLORS[yr]||'#888';
-    var dStr=delta!==null?'<span class="'+(parseFloat(delta)>0?'chg-pos':'chg-neg')+'">'+(parseFloat(delta)>0?'+':'')+delta+'%</span>':'<span class="chg-0">—</span>';
-    var ranchSrc=d?(state.currency==='usd'?d.ranches:d.ranches_mxn):{};
-    var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
-    return '<tr>'+
-      '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong></td>'+
-      '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
-      '<td style="color:var(--dim);font-size:.65rem">'+(d&&d.date_range?d.date_range:'—')+'</td>'+
-      '<td style="color:'+col+';font-weight:600">'+fmt(val)+'</td>'+
-      '<td>'+dStr+'</td>'+cells+'</tr>';
-  }).join('');
+  var weekNum=allWeeks[state.weekIdx], yrs=activeYrList();
+  var sym=state.currency==='usd'?'USD':'MXN';
+  document.getElementById('swTableNote').textContent=sym;
+
+  if(isCombined(state.cat)){
+    // ── MODO COMBINADO MIRFE + MIPE ──
+    var prevVal=null;
+    document.getElementById('swTableBody').innerHTML=yrs.map(function(yr,i){
+      var col=YEAR_COLORS[yr]||'#888';
+      var d=getCombinedWeek(weekNum,yr);
+      var val=d?(state.currency==='usd'?d.usd:d.mxn):0;
+      var delta=prevVal!==null?pct(val,prevVal):null;
+      prevVal=val>0?val:prevVal;
+      var dStr=delta!==null?'<span class="'+(parseFloat(delta)>0?'chg-pos':'chg-neg')+'">'+(parseFloat(delta)>0?'+':'')+delta+'%</span>':'<span class="chg-0">—</span>';
+      var mirfeVal = d&&d.mirfe?(state.currency==='usd'?d.mirfe.usd:d.mirfe.mxn):0;
+      var mipeVal  = d&&d.mipe ?(state.currency==='usd'?d.mipe.usd :d.mipe.mxn ):0;
+      var subRow = '<span style="font-size:.62rem;color:#f0b429">MIRFE '+fmt(mirfeVal)+'</span>'+
+                   ' <span style="font-size:.62rem;color:var(--dim)">|</span> '+
+                   '<span style="font-size:.62rem;color:#3b9eff">MIPE '+fmt(mipeVal)+'</span>';
+      return '<tr>'+
+        '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong></td>'+
+        '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
+        '<td style="color:var(--dim);font-size:.65rem">'+(d&&d.date_range?d.date_range:'—')+'</td>'+
+        '<td><div style="color:'+col+';font-weight:600">'+fmt(val)+'</div><div style="margin-top:2px">'+subRow+'</div></td>'+
+        '<td>'+dStr+'</td></tr>';
+    }).join('');
+  } else {
+    // ── MODO NORMAL ──
+    var byYear=getWeekByYear(state.cat,weekNum);
+    document.getElementById('swTableBody').innerHTML=yrs.map(function(yr,i){
+      var d=byYear[yr], val=d?(state.currency==='usd'?d.usd:d.mxn):0;
+      var prevD=i>0?byYear[yrs[i-1]]:null, prevVal=prevD?(state.currency==='usd'?prevD.usd:prevD.mxn):null;
+      var delta=prevVal!==null?pct(val,prevVal):null;
+      var col=YEAR_COLORS[yr]||'#888';
+      var dStr=delta!==null?'<span class="'+(parseFloat(delta)>0?'chg-pos':'chg-neg')+'">'+(parseFloat(delta)>0?'+':'')+delta+'%</span>':'<span class="chg-0">—</span>';
+      var ranchSrc=d?(state.currency==='usd'?d.ranches:d.ranches_mxn):{};
+      var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+      return '<tr>'+
+        '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong></td>'+
+        '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
+        '<td style="color:var(--dim);font-size:.65rem">'+(d&&d.date_range?d.date_range:'—')+'</td>'+
+        '<td style="color:'+col+';font-weight:600">'+fmt(val)+'</td>'+
+        '<td>'+dStr+'</td>'+cells+'</tr>';
+    }).join('');
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -807,10 +887,19 @@ function renderTendencia(){
     var val=state.currency==='usd'?d.usd:d.mxn;
     var wks=Object.keys(d.weekly||{}).length, avg=wks>0?(val/wks):0;
     var col=YEAR_COLORS[yr]||'#888';
+    var subLine='';
+    if(isCombined(state.cat)){
+      var mv=state.currency==='usd'?(d.mirfe_usd||0):(d.mirfe_mxn||0);
+      var pv=state.currency==='usd'?(d.mipe_usd||0) :(d.mipe_mxn||0);
+      subLine='<div style="margin-top:4px;font-size:.6rem;font-family:IBM Plex Mono,monospace">'+
+        '<span style="color:#f0b429">⬤ MIRFE '+fmt(mv)+'</span> '+
+        '<span style="color:#3b9eff">⬤ MIPE '+fmt(pv)+'</span></div>';
+    }
     return '<div class="stat-box" style="border-color:'+col+'33">'+
       '<div class="stat-label">'+yr+' · '+sym+'</div>'+
       '<div class="stat-val" style="color:'+col+'">'+fmt(val)+'</div>'+
-      '<div style="font-size:.62rem;color:var(--dim);font-family:IBM Plex Mono,monospace">'+fmt(avg)+'/sem · '+wks+' semanas</div></div>';
+      '<div style="font-size:.62rem;color:var(--dim);font-family:IBM Plex Mono,monospace">'+fmt(avg)+'/sem · '+wks+' semanas</div>'+
+      subLine+'</div>';
   }).join('');
 
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;}), rLabels=rangeWeeks.map(wFmt);
