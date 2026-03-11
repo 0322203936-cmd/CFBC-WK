@@ -238,7 +238,10 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
                 # Find matching pr_code
                 for pt, pc in pr_hojas:
                     if pt == tit:
-                        productos[pc] = _parse_pr(vals)
+                        parsed = _parse_pr(vals)
+                        # Debug: store first 10 rows so we can inspect in UI
+                        productos[pc] = parsed
+                        productos[str(pc)+'_debug'] = [str(r[:10]) for r in vals[:12]]
                         break
 
     # 3. Procesar cada hoja con datos en memoria
