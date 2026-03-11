@@ -51,7 +51,10 @@ if "error" in DATA:
     st.stop()
 
 # Serializar DATA a JSON para inyectarlo en el HTML
-data_json = json.dumps(DATA, ensure_ascii=False, default=str)
+import base64
+data_json = base64.b64encode(
+    json.dumps(DATA, ensure_ascii=True, default=str).encode('utf-8')
+).decode('ascii')
 
 # ─────────────────────────────────────────────
 # HTML ORIGINAL — reemplazar google.script.run
@@ -414,7 +417,8 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 // ═══════════════════════════════════════════
 // DATOS INYECTADOS DESDE PYTHON
 // ═══════════════════════════════════════════
-var DATA = __DATA_JSON__;
+var _raw = atob('__DATA_JSON__');
+var DATA = JSON.parse(_raw);
 
 // ═══════════════════════════════════════════
 // ESTADO GLOBAL
@@ -1010,4 +1014,4 @@ reportHeight();
 html_final = HTML.replace('__DATA_JSON__', data_json)
 
 # Renderizar
-components.html(html_final, height=5000, scrolling=False)
+components.html(html_final, height=4000, scrolling=True)
