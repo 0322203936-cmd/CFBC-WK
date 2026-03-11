@@ -1195,16 +1195,19 @@ function showProductos(rancho, tipo, weekNum, yr) {
   // Debug info
   var availKeys = Object.keys(allProds);
   var ranchosDisp = prods ? Object.keys(prods).join(' | ') : 'ninguno';
+  var rawRows = allProds[semCodeStr+'_debug'] || allProds[String(semCode)+'_debug'] || [];
   var debugInfo = availKeys.length === 0
-    ? '⚠️ productos vacío — pestaña PR'+String(yr).slice(2)+String(weekNum).padStart(2,'0')+' no detectada'
-    : 'semCode='+semCode+' · ranchos en PR: ['+ranchosDisp+'] · buscando: "'+rancho+'"';
+    ? '⚠️ productos vacío'
+    : 'ranchos: ['+ranchosDisp+']';
+  var debugRows = rawRows.length ? rawRows.join(' // ') : '';
 
   document.getElementById('modalSub').textContent =
     'W'+String(weekNum).padStart(2,'0')+' · '+yr+' · '+debugInfo;
 
   if (!list.length) {
     document.getElementById('modalContent').innerHTML =
-      '<div class="no-prod">Sin productos.<br><span style="font-size:.58rem;color:var(--dim)">'+debugInfo+'</span></div>';
+      '<div class="no-prod">Sin productos.<br><span style="font-size:.58rem;color:var(--dim)">'+debugInfo+'</span>'+
+      (debugRows?'<br><span style="font-size:.55rem;color:#2a4a38;word-break:break-all">FILAS: '+debugRows+'</span>':'')+'</div>';
   } else {
     document.getElementById('modalContent').innerHTML = list.map(function(p) {
       return '<div class="prod-row">'+
