@@ -251,8 +251,8 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 </div>
 
 <div class="view-tabs">
-  <button class="view-tab active" id="vtAnual"     onclick="setView('anual')">📊 Por Año</button>
-  <button class="view-tab"        id="vtSemana"    onclick="setView('semana')">📆 Por Semana</button>
+  <button class="view-tab"        id="vtAnual"     onclick="setView('anual')">📊 Por Año</button>
+  <button class="view-tab active" id="vtSemana"    onclick="setView('semana')">📆 Por Semana</button>
   <button class="view-tab"        id="vtTendencia" onclick="setView('tendencia')">📈 Tendencia & Rango</button>
 </div>
 
@@ -267,7 +267,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 </div>
 
 <!-- VIEW: ANUAL -->
-<div id="viewAnual">
+<div id="viewAnual" style="display:none">
   <div class="main">
     <div class="kpi-strip" id="kpiStrip"></div>
     <div class="row2">
@@ -313,7 +313,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 </div>
 
 <!-- VIEW: POR SEMANA -->
-<div id="viewSemana" style="display:none">
+<div id="viewSemana">
   <div class="week-nav">
     <button class="week-nav-btn" onclick="prevWeek()">◀</button>
     <div class="week-info">
@@ -359,24 +359,6 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   <div class="main">
     <div class="stat-row" id="rangeStats"></div>
     <div class="card">
-      <div class="card-hdr"><span class="card-title">Tendencia Semanal en el Rango — Años Superpuestos</span><span class="card-note">USD · línea = 1 año</span></div>
-      <div class="chart-wrap tall"><canvas id="chartRangeLine"></canvas></div>
-    </div>
-    <div class="row2">
-      <div class="card">
-        <div class="card-hdr"><span class="card-title">Total en el Rango por Año</span><span class="card-note" id="rangeBarNote">USD</span></div>
-        <div class="chart-wrap medium"><canvas id="chartRangeBar"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-hdr"><span class="card-title">Acumulado Semanal</span><span class="card-note">USD · suma corrida por semana</span></div>
-        <div class="chart-wrap medium"><canvas id="chartCumul"></canvas></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-hdr"><span class="card-title">Mapa de Calor — Semana × Año (USD)</span><span class="card-note">clic en celda → ir a esa semana</span></div>
-      <div class="heatmap-wrap" id="heatmapWrap"></div>
-    </div>
-    <div class="card">
       <div class="card-hdr"><span class="card-title">Tabla Desglose por Semana</span><span class="card-note" id="rangeTableNote">USD · cada fila = 1 semana</span></div>
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <span style="font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Ver por</span>
@@ -396,6 +378,24 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
         </div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-hdr"><span class="card-title">Tendencia Semanal en el Rango — Años Superpuestos</span><span class="card-note">USD · línea = 1 año</span></div>
+      <div class="chart-wrap tall"><canvas id="chartRangeLine"></canvas></div>
+    </div>
+    <div class="row2">
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Total en el Rango por Año</span><span class="card-note" id="rangeBarNote">USD</span></div>
+        <div class="chart-wrap medium"><canvas id="chartRangeBar"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Acumulado Semanal</span><span class="card-note">USD · suma corrida por semana</span></div>
+        <div class="chart-wrap medium"><canvas id="chartCumul"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="card-title">Mapa de Calor — Semana × Año (USD)</span><span class="card-note">clic en celda → ir a esa semana</span></div>
+      <div class="heatmap-wrap" id="heatmapWrap"></div>
+    </div>
   </div>
 </div>
 </div><!-- /app -->
@@ -412,7 +412,7 @@ var DATA = JSON.parse(_raw);
 // ═══════════════════════════════════════════
 var state = {
   cat:'', currency:'usd', activeYears:{}, ranchYear:'all',
-  view:'anual', weekIdx:0, fromWeek:1, toWeek:52
+  view:'semana', weekIdx:0, fromWeek:1, toWeek:52
 };
 var allWeeks = [];
 var YEAR_COLORS = {2021:'#4ecdc4',2022:'#f7dc6f',2023:'#82e0aa',2024:'#f0b429',2025:'#00c97d',2026:'#ff6b6b'};
@@ -434,8 +434,10 @@ function inicializar() {
   var years = DATA.years, cats = DATA.categories;
   var prefCat = 'MATERIAL DE EMPAQUE';
   state.cat = cats.indexOf(prefCat) > -1 ? prefCat : cats[0];
+  // Solo mostrar año más reciente al inicio
   state.activeYears = {};
-  years.forEach(function(y){ state.activeYears[y] = true; });
+  var latestYr = years[years.length-1];
+  state.activeYears[latestYr] = true;
 
   var wSet = {};
   DATA.weekly_detail.forEach(function(r){ wSet[r.week] = 1; });
