@@ -346,17 +346,13 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 <!-- VIEW: TENDENCIA / RANGO -->
 <div id="viewTendencia" style="display:none">
   <div class="range-ctrl">
-    <div class="range-group">
-      <span class="range-label">Desde</span>
-      <span class="range-val" id="fromWeekLabel">W01</span>
-      <input type="range" class="range-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
-    </div>
+    <span class="range-label">Desde</span>
+    <span class="range-val" id="fromWeekLabel">W01</span>
+    <input type="range" class="range-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
     <span class="range-sep">→</span>
-    <div class="range-group">
-      <span class="range-label">Hasta</span>
-      <span class="range-val" id="toWeekLabel">W52</span>
-      <input type="range" class="range-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
-    </div>
+    <span class="range-label">Hasta</span>
+    <span class="range-val" id="toWeekLabel">W52</span>
+    <input type="range" class="range-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
     <span class="range-badge" id="rangeBadge">W01 → W52 · 52 semanas</span>
     <button class="btn-reload" style="margin-left:auto" onclick="resetRange()">↺ Reset</button>
   </div>
@@ -445,8 +441,10 @@ function inicializar() {
   DATA.weekly_detail.forEach(function(r){ wSet[r.week] = 1; });
   allWeeks = Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
   state.weekIdx = allWeeks.length - 1;
-  state.fromWeek = allWeeks[0] || 1;
-  state.toWeek   = allWeeks[allWeeks.length-1] || 52;
+  var curWeek  = allWeeks[allWeeks.length-1] || 1;
+  var prevWeek = allWeeks[allWeeks.length-2] || allWeeks[0] || 1;
+  state.fromWeek = prevWeek;
+  state.toWeek   = curWeek;
 
   // header removido
 
@@ -611,7 +609,7 @@ function onRangeChange(){
   if(f>t){var tmp=f;f=t;t=tmp;}
   state.fromWeek=f; state.toWeek=t; updateRangeSliders(); renderTendencia();
 }
-function resetRange(){ state.fromWeek=allWeeks[0]||1; state.toWeek=allWeeks[allWeeks.length-1]||52; updateRangeSliders(); renderTendencia(); }
+function resetRange(){ state.fromWeek=allWeeks[allWeeks.length-2]||allWeeks[0]||1; state.toWeek=allWeeks[allWeeks.length-1]||52; updateRangeSliders(); renderTendencia(); }
 
 // ═══════════════════════════════════════════
 // VIEW 1 — ANUAL
