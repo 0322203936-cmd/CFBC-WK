@@ -970,6 +970,13 @@ Chart.defaults.color='#5a7a66';
 Chart.defaults.borderColor='#1e3040';
 Chart.defaults.font={family:'IBM Plex Mono'};
 
+window.onerror = function(msg, src, line, col, err) {
+  document.getElementById('loader').innerHTML =
+    '<div style="color:#f05252;font-family:IBM Plex Mono,monospace;padding:20px;max-width:600px;word-break:break-all">' +
+    '<b>ERROR JS:</b><br>' + msg + '<br><small>línea ' + line + '</small></div>';
+  return true;
+};
+
 // ═══════════════════════════════════════════
 // ARRANCAR CON DATOS YA LISTOS
 // ═══════════════════════════════════════════
