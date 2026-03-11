@@ -95,57 +95,82 @@ def sv(v) -> float:
 def _parse_pr(rows: list) -> dict:
     """
     Lee filas del reporte CONTPAQi PR####.
-    Busca columnas: Codigo, Producto/Nombre, Unidades
-    El codigo tiene forma RANCHOTIPOCLAVE ej: ISAMIRPTR
-    Retorna: {rancho: [(nombre_producto, unidades)]}
+    Estructura fija CONTPAQi:
+      Col 0: Codigo  (ej: ISAMIRPTR)
+      Col 7: Producto (codigo producto)
+      Col 8: Nombre   (nombre del producto) <- mostramos esto
+      Col 9: Unidades
+    Retorna: {(rancho, tipo): [(nombre_producto, unidades)]}
+      tipo = 'MIRFE' o 'MIPE'
     """
     RANCH_MAP = {
-        'RAM': 'Prop-RM', 'RAMO': 'Prop-RM',
+        'C25': 'Cecilia 25',  # primero los mas largos
+        'RAM': 'Prop-RM',
         'ISA': 'Isabela',
-        'CHR': 'Christina', 'CHRI': 'Christina',
+        'CHR': 'Christina',
         'CEC': 'Cecilia',
-        'C25': 'Cecilia 25',
         'POS': 'PosCo-RM',
         'CAM': 'Campo-RM',
         'VIV': 'Vivero',
     }
-    # Encontrar fila de encabezados
-    cod_col = nom_col = uni_col = -1
-    for i, row in enumerate(rows[:20]):
-        for j, cell in enumerate(row):
-            c = str(cell).strip().upper()
-            if c in ('CODIGO', 'CDIGO', 'COD'):     cod_col = j
-            if 'NOMBRE' in c and nom_col < 0:        nom_col = j
-            if 'UNIDAD' in c or c == 'UNIDADES':     uni_col = j
-        if cod_col >= 0 and nom_col >= 0:
+    # Buscar fila de encabezados buscando "Código" o "CODIGO" en col 0
+    header_idx = -1
+    for i, row in enumerate(rows[:25]):
+        if not row:
+            continue
+        cell0 = str(row[0]).strip().upper().replace('Ó','O').replace('ó','o')
+        if 'DIGO' in cell0 or cell0 == 'CODIGO':
             header_idx = i
             break
-    else:
-        return {}
+
+    # Si no encontramos encabezado, buscar primer fila con codigo valido (mayus 3+ chars en col 0)
+    start_idx = header_idx + 1 if header_idx >= 0 else 0
 
     result = {}
-    for row in rows[header_idx+1:]:
-        if not row or len(row) <= max(cod_col, nom_col):
+    seen = set()
+    for row in rows[start_idx:]:
+        if not row or len(row) < 9:
             continue
-        codigo = str(row[cod_col]).strip().upper() if cod_col < len(row) else ''
-        nombre = str(row[nom_col]).strip()        if nom_col < len(row) else ''
-        unids  = str(row[uni_col]).strip()        if uni_col >= 0 and uni_col < len(row) else ''
-        if not codigo or not nombre or nombre.upper() in ('NOMBRE', 'PRODUCTO', ''):
+        codigo = str(row[0]).strip().upper()
+        nombre = str(row[8]).strip() if len(row) > 8 else ''
+        unids  = str(row[9]).strip() if len(row) > 9 else ''
+
+        # Validar que codigo parece un codigo real (>= 5 chars, solo alfanum)
+        if len(codigo) < 5 or not codigo.replace('-','').replace('_','').isalnum():
             continue
-        # Detectar rancho por prefijo del codigo
+        # Ignorar filas de encabezado/total
+        if codigo in ('CODIGO','CDIGO','TOTAL','FINCA','NOMBRE') or 'ALMAC' in codigo:
+            continue
+        # Ignorar si nombre es encabezado
+        if not nombre or nombre.upper() in ('NOMBRE','PRODUCTO',''):
+            continue
+
+        # Detectar tipo: MIR=MIRFE, MIP=MIPE
+        if 'MIR' in codigo:
+            tipo = 'MIRFE'
+        elif 'MIP' in codigo:
+            tipo = 'MIPE'
+        else:
+            continue  # no es agroquimico ni fertilizante
+
+        # Detectar rancho por prefijo
         rancho = None
-        for pfx, rn in sorted(RANCH_MAP.items(), key=lambda x: -len(x[0])):
+        for pfx, rn in RANCH_MAP.items():
             if codigo.startswith(pfx):
                 rancho = rn
                 break
         if not rancho:
             continue
+
         if rancho not in result:
-            result[rancho] = []
-        # Evitar duplicados
-        entry = (nombre, unids)
-        if entry not in result[rancho]:
-            result[rancho].append(entry)
+            result[rancho] = {}
+        if tipo not in result[rancho]:
+            result[rancho][tipo] = []
+        entry = [nombre, unids]
+        if (rancho, tipo, nombre) not in seen:
+            seen.add((rancho, tipo, nombre))
+            result[rancho][tipo].append(entry)
+
     return result
 
 def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
