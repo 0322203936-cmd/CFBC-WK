@@ -4,6 +4,19 @@ Centro Floricultor de Baja California
 Streamlit — carga datos con Python, renderiza el HTML original tal cual
 """
 
+import streamlit as st
+
+# Código CSS para ocultar el menú hamburguesa y el pie de página
+hide_menu_style = """
+        <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        /* Opcional: Esto oculta la barra superior donde salen los iconos de "Running" */
+        [data-testid="stHeader"] {visibility: hidden;}
+        </style>
+        """
+st.markdown(hide_menu_style, unsafe_allow_html=True)
+
 import json
 import streamlit as st
 import streamlit.components.v1 as components
