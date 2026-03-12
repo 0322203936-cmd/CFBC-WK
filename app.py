@@ -4,51 +4,41 @@ Centro Floricultor de Baja California
 Streamlit — carga datos con Python, renderiza el HTML original tal cual
 """
 
-import streamlit as st
-
-# Código CSS para ocultar el menú hamburguesa y el pie de página
-hide_menu_style = """
-        <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        /* Opcional: Esto oculta la barra superior donde salen los iconos de "Running" */
-        [data-testid="stHeader"] {visibility: hidden;}
-        </style>
-        """
-st.markdown(hide_menu_style, unsafe_allow_html=True)
-
 import json
+import base64
 import streamlit as st
 import streamlit.components.v1 as components
-
-
 from data_extractor import get_datos
 
 st.set_page_config(
-page_title="CFBC WK",
-page_icon="📊",
-layout="wide",
-initial_sidebar_state="collapsed",
+    page_title="CFBC WK",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
-# Quitar padding de Streamlit para que el HTML ocupe toda la pantalla
+# 👇 ESTE ES EL BLOQUE NUEVO QUE DEBES DEJAR 👇
 st.markdown("""
 <style>
  #MainMenu, header, footer { display: none !important; }
+ [data-testid="stHeader"] { display: none !important; }
  .stApp { background: #0b1117; }
  .block-container { padding: 0 !important; max-width: 100% !important; }
  section[data-testid="stSidebar"] { display: none !important; }
+ 
+ /* Ocultar la marca de agua flotante de Streamlit Cloud */
+ div[class^="viewerBadge"] { display: none !important; }
+ a[href^="https://streamlit.io/cloud"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
-
+# 👆 HASTA AQUÍ 👆
 
 # ─────────────────────────────────────────────
 # CARGA DE DATOS
 # ─────────────────────────────────────────────
 @st.cache_data(ttl=300, show_spinner=False)
 def load_data():
-return get_datos()
-
+    return get_datos()
 
 try:
 DATA = load_data()
