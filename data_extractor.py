@@ -107,14 +107,14 @@ def _parse_pr(rows: list) -> dict:
     Retorna: { rancho: { tipo: [[producto, unidades, gasto], ...] } }
     """
     RANCH_MAP = {
-        'RAM': 'Prop-RM',
-        'C25': 'Cecilia 25',
-        'ISA': 'Isabela',
-        'CHR': 'Christina',
-        'CEC': 'Cecilia',
+        'VIV': 'Prop-RM',          # VIVEVIV → Prop-RM
+        'RAM': 'Campo -RM',         # RAMMIR, RAMCORT → Campo -RM (con espacio)
+        'ISA': 'Isabela',           # ISAMIR, ISAMIP → Isabela
+        'CHR': 'Christina',         # CHRMIR, CHRMIP → Christina
+        'CEC': 'Cecilia',           # CECMIR, CECMIP → Cecilia
+        'C25': 'Cecilia 25',        # C25MIR, C25MIP → Cecilia 25
         'POS': 'PosCo-RM',
         'CAM': 'Campo-RM',
-        'VIV': 'Vivero',
         'ALB': 'Albahaca-RM',
         'HOO': 'HOOPS',
     }
