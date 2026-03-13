@@ -232,28 +232,27 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 .prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 
-.productos-section{display:none;margin:32px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:14px;animation:fadeIn .3s ease-out}
+.productos-section{display:none;margin:24px 32px;padding:0;background:transparent;border:none}
 .productos-section.show{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-.productos-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:16px}
+.productos-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:12px 0;border-bottom:2px solid #1e3040}
 .productos-info{flex:1}
-.productos-title{font-size:.95rem;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.3px}
-.productos-subtitle{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
-.productos-close{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:.72rem;padding:6px 14px;font-family:'IBM Plex Mono',monospace;font-weight:600;transition:all .2s;flex-shrink:0}
-.productos-close:hover{border-color:var(--green);color:var(--green)}
-.productos-table-wrap{margin-top:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.productos-table{width:100%;border-collapse:collapse;background:var(--bg)}
-.productos-table thead{background:var(--surface2);border-bottom:2px solid var(--border)}
-.productos-table th{padding:12px 16px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-align:right}
-.productos-table th:first-child{text-align:left}
-.productos-table tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
-.productos-table tbody tr:hover{background:var(--surface2)}
+.productos-title{font-size:.82rem;font-weight:600;color:#e8f0ea;margin-bottom:2px;letter-spacing:0;font-family:'Syne',sans-serif}
+.productos-subtitle{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:#5a7a66}
+.productos-close{background:transparent;border:none;color:#5a7a66;cursor:pointer;font-size:.7rem;padding:4px 8px;font-family:'IBM Plex Mono',monospace;font-weight:400;transition:color .15s;flex-shrink:0}
+.productos-close:hover{color:#e8f0ea}
+.productos-table-wrap{margin-top:0;border:none;border-radius:0;overflow:visible}
+.productos-table{width:100%;border-collapse:collapse;background:transparent}
+.productos-table thead{background:transparent;border-bottom:1px solid #1e3040}
+.productos-table th{padding:8px 16px 8px 0;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5a7a66;font-family:'Syne',sans-serif;text-align:right}
+.productos-table th:first-child{text-align:left;padding-left:0}
+.productos-table tbody tr{border-bottom:1px solid rgba(30,48,64,.3)}
+.productos-table tbody tr:hover{background:rgba(19,25,32,.4)}
 .productos-table tbody tr:last-child{border-bottom:none}
-.productos-table td{padding:10px 16px;font-size:.75rem;font-family:'IBM Plex Mono',monospace;text-align:right}
-.productos-table td:first-child{color:var(--text);font-weight:500;text-align:left}
-.productos-table td:nth-child(2){color:var(--muted)}
-.productos-table td:nth-child(3){font-weight:600}
-.no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:20px;text-align:center}
+.productos-table td{padding:10px 16px 10px 0;font-size:.72rem;font-family:'IBM Plex Mono',monospace;text-align:right;color:#e8f0ea}
+.productos-table td:first-child{font-weight:400;text-align:left;padding-left:0;color:#c8d8c8}
+.productos-table td:nth-child(2){color:#7a9a86;font-size:.68rem}
+.productos-table td:nth-child(3){font-weight:500;font-size:.75rem}
+.no-prod{font-size:.7rem;font-family:'IBM Plex Mono',monospace;color:#3a5a48;padding:24px 0;text-align:left}
 
 </style>
 </head>
@@ -435,9 +434,9 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <table class="productos-table">
       <thead>
         <tr>
-          <th style="text-align:left; min-width:220px">PRODUCTO</th>
-          <th style="min-width:100px">UNIDADES</th>
-          <th style="min-width:120px">GASTO</th>
+          <th style="text-align:left; min-width:280px">Producto</th>
+          <th style="min-width:90px">Cantidad</th>
+          <th style="min-width:110px">Monto</th>
         </tr>
       </thead>
       <tbody id="productosContent">
@@ -1219,8 +1218,9 @@ function showProductos(rancho, tipo, weekNum, yr) {
     if(byRanch) list = byRanch[tipo] || [];
   }
   var col = tipo === 'MIRFE' ? '#f0b429' : '#3b9eff';
+  var tipoNombre = tipo === 'MIRFE' ? 'Material de Riego/Fertilización' : 'Material de Protección';
   document.getElementById('productosTitle').innerHTML =
-    '<span style="color:'+col+'">'+tipo+'</span> · '+rancho;
+    rancho + ' <span style="color:#5a7a66;font-weight:400">— '+tipoNombre+'</span>';
 
   // Debug info mejorado
   var hojasEncontradas = debug.hojas_pr_encontradas || [];
@@ -1230,33 +1230,30 @@ function showProductos(rancho, tipo, weekNum, yr) {
   
   var debugInfo = '';
   if (hojasEncontradas.length === 0) {
-    debugInfo = '⚠️ No se encontraron hojas PR en el sheet';
+    debugInfo = 'No se encontraron hojas PR en el sheet';
   } else if (!prods) {
-    debugInfo = '⚠️ No hay datos para semana ' + semCode + ' (PR' + semCode + ')';
-    debugInfo += '<br>📋 Hojas PR: ' + hojasEncontradas.join(', ');
-    debugInfo += '<br>📊 Semanas con productos: ' + (semanasDisponibles || 'ninguna');
+    debugInfo = 'No hay datos para semana ' + semCode + ' · Hojas: ' + hojasEncontradas.join(', ');
   } else if (!list.length) {
-    debugInfo = '⚠️ Rancho "' + rancho + '" no encontrado en PR' + semCode;
-    debugInfo += '<br>🏠 Ranchos disponibles: ' + ranchosDisp;
-    debugInfo += '<br>📋 Ranchos en PR' + semCode + ': ' + ranchosEnPR.join(', ');
+    debugInfo = 'Rancho no encontrado · Disponibles: ' + ranchosDisp;
   }
 
   document.getElementById('productosSub').innerHTML =
-    'W'+String(weekNum).padStart(2,'0')+' · '+yr+' (PR'+semCode+')';
+    'Semana '+String(weekNum).padStart(2,'0')+' · '+yr;
 
   if (!list.length) {
     document.getElementById('productosContent').innerHTML =
-      '<tr><td colspan="3" class="no-prod" style="padding:24px">Sin productos para este rancho.<br><br>'+
-      '<div style="font-size:.62rem;color:var(--dim);text-align:left;line-height:1.6;max-width:600px;margin:12px auto">'+
-      debugInfo+'</div></td></tr>';
+      '<tr><td colspan="3" class="no-prod" style="padding:20px 0">Sin productos disponibles para este rancho.<br>'+
+      '<span style="font-size:.6rem;color:#3a5a48;line-height:1.8">'+debugInfo+'</span></td></tr>';
   } else {
     document.getElementById('productosContent').innerHTML = list.map(function(p) {
       var gasto = p[2] ? parseFloat(p[2]) : 0;
       var gastoStr = gasto !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—';
+      var unidades = p[1] ? parseFloat(p[1]) : 0;
+      var unidadesStr = unidades !== 0 ? Math.abs(unidades).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2}) : '—';
       return '<tr>'+
         '<td>'+p[0]+'</td>'+
-        '<td>'+(p[1]||'—')+' unids</td>'+
-        '<td style="color:'+(gasto<0?'#f05252':'#00c97d')+'">'+gastoStr+'</td>'+
+        '<td>'+unidadesStr+'</td>'+
+        '<td style="color:'+(gasto<0?'#e8f0ea':'#00c97d')+'">'+gastoStr+'</td>'+
         '</tr>';
     }).join('');
   }
