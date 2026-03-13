@@ -193,31 +193,65 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     # 1. Filtrar hojas validas
     hojas_validas = []
     pr_hojas = []
+    print("\n" + "=" * 60)
+    print("🔍 DETECTANDO HOJAS EN GOOGLE SHEET")
+    print("=" * 60)
+    
     for ws in spreadsheet.worksheets():
         sname = ws.title.strip()
+        print(f"\n📄 Hoja: '{sname}'")
+        
         if sname.upper() in SKIP:
+            print(f"   ⏭️  SKIP (en lista de exclusión)")
             continue
+            
         # Detectar hojas PR#### (productos CONTPAQi)
-        if re.match(r'^PR\s*\d{4}$', sname, re.IGNORECASE):
+        pr_match = re.match(r'^PR\s*\d{4}$', sname, re.IGNORECASE)
+        print(f"   🔍 Regex PR: {bool(pr_match)}")
+        
+        if pr_match:
             pr_raw = re.sub(r'PR\s*', '', sname, flags=re.IGNORECASE).strip()
+            print(f"   📊 Código extraído: '{pr_raw}'")
             try:
                 pr_code = int(pr_raw)
                 pr_year = 2000 + (pr_code // 100)
+                print(f"   📅 PR{pr_code} → Año {pr_year}, Semana {pr_code % 100}")
                 if 2018 <= pr_year <= 2030:
+                    print(f"   ✅ PR DETECTADA Y VÁLIDA")
                     pr_hojas.append((ws.title, pr_code))
                     continue
-            except ValueError:
+                else:
+                    print(f"   ❌ Año {pr_year} fuera de rango (2018-2030)")
+            except ValueError as e:
+                print(f"   ❌ Error: {e}")
                 pass
+                
         # Hojas WK####
-        code_raw = re.sub(r"WK\s*", "", sname, flags=re.IGNORECASE).strip()
-        try:
-            code = int(code_raw)
-        except ValueError:
-            continue
-        year = 2000 + (code // 100)
-        if not (2018 <= year <= 2030):
-            continue
-        hojas_validas.append((ws.title, code))
+        wk_match = re.match(r'^WK\s*\d{4}$', sname, re.IGNORECASE)
+        print(f"   🔍 Regex WK: {bool(wk_match)}")
+        
+        if wk_match:
+            code_raw = re.sub(r"WK\s*", "", sname, flags=re.IGNORECASE).strip()
+            try:
+                code = int(code_raw)
+                year = 2000 + (code // 100)
+                print(f"   📅 WK{code} → Año {year}, Semana {code % 100}")
+                if 2018 <= year <= 2030:
+                    print(f"   ✅ WK DETECTADA Y VÁLIDA")
+                    hojas_validas.append((ws.title, code))
+                else:
+                    print(f"   ❌ Año {year} fuera de rango")
+            except ValueError:
+                print(f"   ❌ Error convirtiendo código")
+                continue
+        else:
+            print(f"   ℹ️  No es WK ni PR")
+    
+    print("\n" + "=" * 60)
+    print(f"📊 RESUMEN:")
+    print(f"   • Hojas WK encontradas: {len(hojas_validas)}")
+    print(f"   • Hojas PR encontradas: {len(pr_hojas)}")
+    print("=" * 60 + "\n")
 
     if not hojas_validas:
         return {"error": "No se encontraron hojas WK validas."}
