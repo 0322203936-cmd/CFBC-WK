@@ -230,19 +230,31 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .scroll-hint{display:none;align-items:center;justify-content:flex-end;gap:4px;font-size:.6rem;font-family:'IBM Plex Mono',monospace;color:var(--green);margin-bottom:4px;animation:pulse-hint 2s ease-in-out infinite;}
 .scroll-hint.show{display:flex}
 
-.modal-overlay{display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);z-index:500}
-.modal-overlay.open{display:block}
-.modal{position:sticky;top:40px;background:#131f2e;border:1px solid #1e3040;border-radius:14px;padding:22px 24px;max-width:460px;width:90%;margin:40px auto;max-height:70vh;overflow-y:auto}
-.modal-title{font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:4px}
-.modal-sub{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:16px}
-.modal-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid #1e3040;border-radius:6px;color:#5a7a66;cursor:pointer;font-size:.9rem;padding:2px 8px}
-.prod-row{display:grid;grid-template-columns:1fr auto auto;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid #1a2e40}
-.prod-row:last-child{border-bottom:none}
-.prod-name{font-size:.75rem;font-family:'IBM Plex Mono',monospace;color:#c8d8c8}
-.prod-units{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:#5a7a66;white-space:nowrap}
-.prod-gasto{font-size:.72rem;font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:nowrap}
-.no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:#3a5a48;padding:12px 0}
 .prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+
+.productos-section{display:none;margin:32px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:14px;animation:fadeIn .3s ease-out}
+.productos-section.show{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.productos-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:16px}
+.productos-info{flex:1}
+.productos-title{font-size:.95rem;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.3px}
+.productos-subtitle{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
+.productos-close{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:.72rem;padding:6px 14px;font-family:'IBM Plex Mono',monospace;font-weight:600;transition:all .2s;flex-shrink:0}
+.productos-close:hover{border-color:var(--green);color:var(--green)}
+.productos-table-wrap{margin-top:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.productos-table{width:100%;border-collapse:collapse;background:var(--bg)}
+.productos-table thead{background:var(--surface2);border-bottom:2px solid var(--border)}
+.productos-table th{padding:12px 16px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-align:right}
+.productos-table th:first-child{text-align:left}
+.productos-table tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+.productos-table tbody tr:hover{background:var(--surface2)}
+.productos-table tbody tr:last-child{border-bottom:none}
+.productos-table td{padding:10px 16px;font-size:.75rem;font-family:'IBM Plex Mono',monospace;text-align:right}
+.productos-table td:first-child{color:var(--text);font-weight:500;text-align:left}
+.productos-table td:nth-child(2){color:var(--muted)}
+.productos-table td:nth-child(3){font-weight:600}
+.no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:20px;text-align:center}
+
 </style>
 </head>
 <body>
@@ -411,12 +423,27 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
   </div>
 </div>
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div class="modal-title" id="modalTitle"></div>
-    <div class="modal-sub" id="modalSub"></div>
-    <div id="modalContent"></div>
+<div id="productosSection" class="productos-section">
+  <div class="productos-header">
+    <div class="productos-info">
+      <div class="productos-title" id="productosTitle">PRODUCTOS</div>
+      <div class="productos-subtitle" id="productosSub"></div>
+    </div>
+    <button class="productos-close" onclick="closeProductos()">✕ Cerrar</button>
+  </div>
+  <div class="productos-table-wrap scroll-x">
+    <table class="productos-table">
+      <thead>
+        <tr>
+          <th style="text-align:left; min-width:220px">PRODUCTO</th>
+          <th style="min-width:100px">UNIDADES</th>
+          <th style="min-width:120px">GASTO</th>
+        </tr>
+      </thead>
+      <tbody id="productosContent">
+        <!-- Se llena con JS -->
+      </tbody>
+    </table>
   </div>
 </div>
 </div><!-- /app -->
@@ -1190,7 +1217,7 @@ function showProductos(rancho, tipo, weekNum, yr) {
     if(byRanch) list = byRanch[tipo] || [];
   }
   var col = tipo === 'MIRFE' ? '#f0b429' : '#3b9eff';
-  document.getElementById('modalTitle').innerHTML =
+  document.getElementById('productosTitle').innerHTML =
     '<span style="color:'+col+'">'+tipo+'</span> · '+rancho;
 
   // Debug info
@@ -1202,32 +1229,42 @@ function showProductos(rancho, tipo, weekNum, yr) {
     : 'ranchos: ['+ranchosDisp+']';
   var debugRows = rawRows.length ? rawRows.join(' // ') : '';
 
-  document.getElementById('modalSub').textContent =
+  document.getElementById('productosSub').textContent =
     'W'+String(weekNum).padStart(2,'0')+' · '+yr+' · '+debugInfo;
 
   if (!list.length) {
-    document.getElementById('modalContent').innerHTML =
-      '<div class="no-prod">Sin productos.<br><span style="font-size:.58rem;color:var(--dim)">'+debugInfo+'</span>'+
-      (debugRows?'<br><span style="font-size:.55rem;color:#2a4a38;word-break:break-all">FILAS: '+debugRows+'</span>':'')+'</div>';
+    document.getElementById('productosContent').innerHTML =
+      '<tr><td colspan="3" class="no-prod">Sin productos.<br><span style="font-size:.58rem;color:var(--dim)">'+debugInfo+'</span>'+
+      (debugRows?'<br><span style="font-size:.55rem;color:#2a4a38;word-break:break-all">FILAS: '+debugRows+'</span>':'')+'</td></tr>';
   } else {
-    document.getElementById('modalContent').innerHTML = list.map(function(p) {
+    document.getElementById('productosContent').innerHTML = list.map(function(p) {
       var gasto = p[2] ? parseFloat(p[2]) : 0;
       var gastoStr = gasto !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—';
-      return '<div class="prod-row">'+
-        '<span class="prod-name">'+p[0]+'</span>'+
-        '<span class="prod-units">'+(p[1]||'—')+' unids</span>'+
-        '<span class="prod-gasto" style="color:'+(gasto<0?'#f05252':'#00c97d')+'">'+gastoStr+'</span>'+
-        '</div>';
+      return '<tr>'+
+        '<td>'+p[0]+'</td>'+
+        '<td>'+(p[1]||'—')+' unids</td>'+
+        '<td style="color:'+(gasto<0?'#f05252':'#00c97d')+'">'+gastoStr+'</td>'+
+        '</tr>';
     }).join('');
   }
-  document.getElementById('modalOverlay').classList.add('open');
+  
+  // Mostrar la sección y hacer scroll hacia ella
+  var section = document.getElementById('productosSection');
+  section.classList.add('show');
+  section.style.display = 'block';
+  setTimeout(function() {
+    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
 }
 
-function closeModal(e) {
-  if (!e || e.target === document.getElementById('modalOverlay')) {
-    document.getElementById('modalOverlay').classList.remove('open');
-  }
+function closeProductos() {
+  var section = document.getElementById('productosSection');
+  section.classList.remove('show');
+  setTimeout(function() {
+    section.style.display = 'none';
+  }, 300);
 }
+
 
 Chart.defaults.color='#5a7a66';
 Chart.defaults.borderColor='#1e3040';
