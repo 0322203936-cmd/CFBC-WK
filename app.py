@@ -236,10 +236,11 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .modal-title{font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:4px}
 .modal-sub{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:16px}
 .modal-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid #1e3040;border-radius:6px;color:#5a7a66;cursor:pointer;font-size:.9rem;padding:2px 8px}
-.prod-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #1a2e40}
+.prod-row{display:grid;grid-template-columns:1fr auto auto;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid #1a2e40}
 .prod-row:last-child{border-bottom:none}
 .prod-name{font-size:.75rem;font-family:'IBM Plex Mono',monospace;color:#c8d8c8}
 .prod-units{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:#5a7a66;white-space:nowrap}
+.prod-gasto{font-size:.72rem;font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:nowrap}
 .no-prod{font-size:.72rem;font-family:'IBM Plex Mono',monospace;color:#3a5a48;padding:12px 0}
 .prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 </style>
@@ -1210,9 +1211,12 @@ function showProductos(rancho, tipo, weekNum, yr) {
       (debugRows?'<br><span style="font-size:.55rem;color:#2a4a38;word-break:break-all">FILAS: '+debugRows+'</span>':'')+'</div>';
   } else {
     document.getElementById('modalContent').innerHTML = list.map(function(p) {
+      var gasto = p[2] ? parseFloat(p[2]) : 0;
+      var gastoStr = gasto !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—';
       return '<div class="prod-row">'+
         '<span class="prod-name">'+p[0]+'</span>'+
-        '<span class="prod-units">'+(p[1]||'—')+'</span>'+
+        '<span class="prod-units">'+(p[1]||'—')+' unids</span>'+
+        '<span class="prod-gasto" style="color:'+(gasto<0?'#f05252':'#00c97d')+'">'+gastoStr+'</span>'+
         '</div>';
     }).join('');
   }
