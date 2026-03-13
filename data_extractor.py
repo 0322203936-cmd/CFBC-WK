@@ -106,18 +106,6 @@ def _parse_pr(rows: list) -> dict:
     
     Retorna: { rancho: { tipo: [[producto, unidades, gasto], ...] } }
     """
-    RANCH_MAP = {
-        'VIV': 'Prop-RM',          # VIVEVIV → Prop-RM
-        'RAM': 'Campo -RM',         # RAMMIR, RAMCORT → Campo -RM (con espacio)
-        'ISA': 'Isabela',           # ISAMIR, ISAMIP → Isabela
-        'CHR': 'Christina',         # CHRMIR, CHRMIP → Christina
-        'CEC': 'Cecilia',           # CECMIR, CECMIP → Cecilia
-        'C25': 'Cecilia 25',        # C25MIR, C25MIP → Cecilia 25
-        'POS': 'PosCo-RM',
-        'CAM': 'Campo-RM',
-        'ALB': 'Albahaca-RM',
-        'HOO': 'HOOPS',
-    }
     
     UBICACION_COL = 2
     PRODUCTO_COL = 5
@@ -142,9 +130,40 @@ def _parse_pr(rows: list) -> dict:
         if 'MIR' not in ubicacion and 'MIP' not in ubicacion:
             continue
         
-        # Extraer rancho (primeros 3 caracteres)
-        ranch_code = ubicacion[:3]
-        rancho = RANCH_MAP.get(ranch_code)
+        # Determinar rancho basado en patrones en UBICACION
+        rancho = None
+        
+        # Prop-RM: detectar VIV o VIVEVIV
+        if 'VIV' in ubicacion:
+            rancho = 'Prop-RM'
+        # Campo -RM: detectar RAM
+        elif ubicacion.startswith('RAM'):
+            rancho = 'Campo -RM'
+        # Isabela: detectar ISA
+        elif ubicacion.startswith('ISA'):
+            rancho = 'Isabela'
+        # Christina: detectar CHR
+        elif ubicacion.startswith('CHR'):
+            rancho = 'Christina'
+        # Cecilia 25: detectar C25 (antes de CEC)
+        elif ubicacion.startswith('C25'):
+            rancho = 'Cecilia 25'
+        # Cecilia: detectar CEC
+        elif ubicacion.startswith('CEC'):
+            rancho = 'Cecilia'
+        # PosCo-RM: detectar POS
+        elif ubicacion.startswith('POS'):
+            rancho = 'PosCo-RM'
+        # Campo-RM: detectar CAM
+        elif ubicacion.startswith('CAM'):
+            rancho = 'Campo-RM'
+        # Albahaca-RM: detectar ALB
+        elif ubicacion.startswith('ALB'):
+            rancho = 'Albahaca-RM'
+        # HOOPS: detectar HOO
+        elif ubicacion.startswith('HOO'):
+            rancho = 'HOOPS'
+        
         if not rancho:
             continue
         
