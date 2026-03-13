@@ -93,70 +93,95 @@ def sv(v) -> float:
 
 def _parse_pr(rows: list) -> dict:
     """
-    Lee filas del reporte CONTPAQi PR####.
-    Columnas FIJAS en el reporte CONTPAQi:
-      Col 0 : Codigo concepto (ej: ISAMIRPTR, CECMIPSNF)
-      Col 8 : Nombre del producto
-      Col 9 : Unidades
-    El codigo indica rancho (prefijo) y tipo (MIR=MIRFE, MIP=MIPE).
-    Retorna: { rancho: { tipo: [[nombre, unidades], ...] } }
+    Lee filas del reporte PR#### del Excel.
+    Estructura del archivo PR:
+      Col 2: UBICACION (código del rancho, ej: RAMMIPRNN, CECMIPSNF)
+      Col 5: PRODUCTO (nombre del químico/producto)
+      Col 7: UNIDADES
+      Col 9: GASTO
+    
+    El código UBICACION indica:
+      - Primeros 3 chars: rancho (RAM, CEC, ISA, CHR, POS, CAM, etc)
+      - Chars siguientes: tipo MIR=MIRFE o MIP=MIPE
+    
+    Retorna: { rancho: { tipo: [[producto, unidades, gasto], ...] } }
     """
     RANCH_MAP = {
-        'C25': 'Cecilia 25',
         'RAM': 'Prop-RM',
+        'C25': 'Cecilia 25',
         'ISA': 'Isabela',
         'CHR': 'Christina',
         'CEC': 'Cecilia',
         'POS': 'PosCo-RM',
         'CAM': 'Campo-RM',
         'VIV': 'Vivero',
+        'ALB': 'Albahaca-RM',
+        'HOO': 'HOOPS',
     }
-    NOMBRE_COL = 8
-    UNIDS_COL  = 9
+    
+    UBICACION_COL = 2
+    PRODUCTO_COL = 5
+    UNIDADES_COL = 7
+    GASTO_COL = 9
 
     result = {}
-    seen   = set()
+    seen = set()
 
     for row in rows:
-        if not row:
+        if not row or len(row) < 10:
             continue
-        codigo = str(row[0]).strip().upper()
-        # Codigo valido: 5-15 chars, solo letras y numeros, contiene MIR o MIP
-        if not (5 <= len(codigo) <= 15):
+        
+        # Leer UBICACION (código del rancho)
+        ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
+        
+        # Validar que sea un código válido
+        if not ubicacion or len(ubicacion) < 6:
             continue
-        if not re.match(r'^[A-Z0-9]+$', codigo):
+        if not re.match(r'^[A-Z0-9]+$', ubicacion):
             continue
-        if 'MIR' not in codigo and 'MIP' not in codigo:
+        if 'MIR' not in ubicacion and 'MIP' not in ubicacion:
             continue
-
-        nombre = str(row[NOMBRE_COL]).strip() if len(row) > NOMBRE_COL else ''
-        if not nombre or nombre.upper() in ('NOMBRE', 'PRODUCTO', ''):
-            continue
-
-        unids = str(row[UNIDS_COL]).strip() if len(row) > UNIDS_COL else ''
-        try:
-            u = float(str(unids).replace(',', ''))
-            unids = str(int(u)) if u == int(u) else str(round(u, 2))
-        except Exception:
-            pass
-
-        tipo = 'MIRFE' if 'MIR' in codigo else 'MIPE'
-
-        rancho = None
-        for pfx, rn in RANCH_MAP.items():
-            if codigo.startswith(pfx):
-                rancho = rn
-                break
+        
+        # Extraer rancho (primeros 3 caracteres)
+        ranch_code = ubicacion[:3]
+        rancho = RANCH_MAP.get(ranch_code)
         if not rancho:
             continue
-
+        
+        # Determinar tipo (MIRFE o MIPE)
+        tipo = 'MIRFE' if 'MIR' in ubicacion else 'MIPE'
+        
+        # Leer producto
+        producto = str(row[PRODUCTO_COL]).strip() if len(row) > PRODUCTO_COL else ''
+        if not producto or producto.upper() in ('PRODUCTO', 'NOMBRE', ''):
+            continue
+        
+        # Leer unidades
+        unidades = str(row[UNIDADES_COL]).strip() if len(row) > UNIDADES_COL else ''
+        try:
+            u = float(str(unidades).replace(',', ''))
+            unidades = str(int(u)) if u == int(u) else str(round(u, 2))
+        except Exception:
+            unidades = '0'
+        
+        # Leer gasto
+        gasto = str(row[GASTO_COL]).strip() if len(row) > GASTO_COL else ''
+        try:
+            g = float(str(gasto).replace(',', ''))
+            gasto = str(round(g, 2))
+        except Exception:
+            gasto = '0'
+        
+        # Agregar al resultado
         if rancho not in result:
             result[rancho] = {}
         if tipo not in result[rancho]:
             result[rancho][tipo] = []
-        if (rancho, tipo, nombre) not in seen:
-            seen.add((rancho, tipo, nombre))
-            result[rancho][tipo].append([nombre, unids])
+        
+        # Evitar duplicados
+        if (rancho, tipo, producto) not in seen:
+            seen.add((rancho, tipo, producto))
+            result[rancho][tipo].append([producto, unidades, gasto])
 
     return result
 
@@ -216,7 +241,7 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     # 2b. Leer hojas PR en batch
     productos = {}
     if pr_hojas:
-        pr_rangos = [f"'{t}'!A1:P300" for t, _ in pr_hojas]
+        pr_rangos = [f"'{t}'!A1:K500" for t, _ in pr_hojas]
         for i in range(0, len(pr_rangos), BATCH):
             grupo = pr_rangos[i:i + BATCH]
             res = spreadsheet.values_batch_get(
