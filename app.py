@@ -232,27 +232,30 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 .prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 
-.productos-section{display:none;margin:24px 32px;padding:0;background:transparent;border:none}
+.productos-section{display:none;margin:16px 32px;padding:0;background:transparent;border:none}
 .productos-section.show{display:block}
-.productos-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:12px 0;border-bottom:2px solid #1e3040}
+.productos-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px 0;border-bottom:2px solid #1e3040}
 .productos-info{flex:1}
-.productos-title{font-size:.82rem;font-weight:600;color:#e8f0ea;margin-bottom:2px;letter-spacing:0;font-family:'Syne',sans-serif}
-.productos-subtitle{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:#5a7a66}
-.productos-close{background:transparent;border:none;color:#5a7a66;cursor:pointer;font-size:.7rem;padding:4px 8px;font-family:'IBM Plex Mono',monospace;font-weight:400;transition:color .15s;flex-shrink:0}
+.productos-title{font-size:.75rem;font-weight:600;color:#e8f0ea;margin-bottom:2px;letter-spacing:0;font-family:'Syne',sans-serif}
+.productos-subtitle{font-size:.6rem;font-family:'IBM Plex Mono',monospace;color:#5a7a66}
+.productos-close{background:transparent;border:none;color:#5a7a66;cursor:pointer;font-size:.65rem;padding:2px 6px;font-family:'IBM Plex Mono',monospace;font-weight:400;transition:color .15s;flex-shrink:0}
 .productos-close:hover{color:#e8f0ea}
 .productos-table-wrap{margin-top:0;border:none;border-radius:0;overflow:visible}
 .productos-table{width:100%;border-collapse:collapse;background:transparent}
 .productos-table thead{background:transparent;border-bottom:1px solid #1e3040}
-.productos-table th{padding:8px 16px 8px 0;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5a7a66;font-family:'Syne',sans-serif;text-align:right}
+.productos-table th{padding:6px 12px 6px 0;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5a7a66;font-family:'Syne',sans-serif;text-align:right}
 .productos-table th:first-child{text-align:left;padding-left:0}
-.productos-table tbody tr{border-bottom:1px solid rgba(30,48,64,.3)}
-.productos-table tbody tr:hover{background:rgba(19,25,32,.4)}
+.productos-table tbody tr{border-bottom:1px solid rgba(30,48,64,.25)}
+.productos-table tbody tr:hover{background:rgba(19,25,32,.3)}
 .productos-table tbody tr:last-child{border-bottom:none}
-.productos-table td{padding:10px 16px 10px 0;font-size:.72rem;font-family:'IBM Plex Mono',monospace;text-align:right;color:#e8f0ea}
+.productos-table tbody tr.total-row{border-top:2px solid #1e3040;border-bottom:none;background:rgba(19,25,32,.2)}
+.productos-table tbody tr.total-row:hover{background:rgba(19,25,32,.3)}
+.productos-table td{padding:7px 12px 7px 0;font-size:.68rem;font-family:'IBM Plex Mono',monospace;text-align:right;color:#e8f0ea}
 .productos-table td:first-child{font-weight:400;text-align:left;padding-left:0;color:#c8d8c8}
-.productos-table td:nth-child(2){color:#7a9a86;font-size:.68rem}
-.productos-table td:nth-child(3){font-weight:500;font-size:.75rem}
-.no-prod{font-size:.7rem;font-family:'IBM Plex Mono',monospace;color:#3a5a48;padding:24px 0;text-align:left}
+.productos-table td:nth-child(2){color:#7a9a86;font-size:.64rem}
+.productos-table td:nth-child(3){font-weight:500;font-size:.7rem}
+.productos-table tbody tr.total-row td{font-weight:600;color:#e8f0ea;font-size:.72rem}
+.no-prod{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:#3a5a48;padding:16px 0;text-align:left}
 
 </style>
 </head>
@@ -434,9 +437,9 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <table class="productos-table">
       <thead>
         <tr>
-          <th style="text-align:left; min-width:280px">Producto</th>
-          <th style="min-width:90px">Cantidad</th>
-          <th style="min-width:110px">Monto</th>
+          <th style="text-align:left; min-width:200px">Producto</th>
+          <th style="min-width:80px">Cantidad</th>
+          <th style="min-width:100px">Monto</th>
         </tr>
       </thead>
       <tbody id="productosContent">
@@ -1242,13 +1245,21 @@ function showProductos(rancho, tipo, weekNum, yr) {
 
   if (!list.length) {
     document.getElementById('productosContent').innerHTML =
-      '<tr><td colspan="3" class="no-prod" style="padding:20px 0">Sin productos disponibles para este rancho.<br>'+
-      '<span style="font-size:.6rem;color:#3a5a48;line-height:1.8">'+debugInfo+'</span></td></tr>';
+      '<tr><td colspan="3" class="no-prod" style="padding:16px 0">Sin productos disponibles para este rancho.<br>'+
+      '<span style="font-size:.58rem;color:#3a5a48;line-height:1.8">'+debugInfo+'</span></td></tr>';
   } else {
-    document.getElementById('productosContent').innerHTML = list.map(function(p) {
+    // Calcular total
+    var totalGasto = 0;
+    var totalUnidades = 0;
+    
+    var rows = list.map(function(p) {
       var gasto = p[2] ? parseFloat(p[2]) : 0;
-      var gastoStr = gasto !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—';
       var unidades = p[1] ? parseFloat(p[1]) : 0;
+      
+      totalGasto += gasto;
+      totalUnidades += unidades;
+      
+      var gastoStr = gasto !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—';
       var unidadesStr = unidades !== 0 ? Math.abs(unidades).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2}) : '—';
       return '<tr>'+
         '<td>'+p[0]+'</td>'+
@@ -1256,6 +1267,17 @@ function showProductos(rancho, tipo, weekNum, yr) {
         '<td style="color:'+(gasto<0?'#e8f0ea':'#00c97d')+'">'+gastoStr+'</td>'+
         '</tr>';
     }).join('');
+    
+    // Agregar fila de total
+    var totalGastoStr = '$' + Math.abs(totalGasto).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    var totalUnidadesStr = Math.abs(totalUnidades).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+    var totalRow = '<tr class="total-row">'+
+      '<td style="color:#00c97d">TOTAL</td>'+
+      '<td>'+totalUnidadesStr+'</td>'+
+      '<td style="color:#00c97d">'+totalGastoStr+'</td>'+
+      '</tr>';
+    
+    document.getElementById('productosContent').innerHTML = rows + totalRow;
   }
   
   // Mostrar la sección y hacer scroll hacia ella
