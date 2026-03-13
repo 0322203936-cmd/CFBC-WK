@@ -240,6 +240,8 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
 
     # 2b. Leer hojas PR en batch
     productos = {}
+    productos_debug = {"hojas_pr_encontradas": [t for t, _ in pr_hojas]}
+    
     if pr_hojas:
         pr_rangos = [f"'{t}'!A1:K500" for t, _ in pr_hojas]
         for i in range(0, len(pr_rangos), BATCH):
@@ -253,7 +255,11 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
                 tit  = rng.split("!")[0].strip("'")
                 for pt, pc in pr_hojas:
                     if pt == tit:
-                        productos[pc] = _parse_pr(vals)
+                        parsed = _parse_pr(vals)
+                        productos[pc] = parsed
+                        # Debug: guardar info sobre qué se encontró
+                        ranchos_en_parsed = list(parsed.keys()) if parsed else []
+                        productos_debug[f"PR{pc}_ranchos"] = ranchos_en_parsed
                         break
 
     # 3. Procesar cada hoja WK
@@ -378,6 +384,7 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
         "weeks_per_year": weeks_per_year,
         "weekly_detail":  all_data,
         "productos":      productos,
+        "productos_debug": productos_debug,
     }
 
 
