@@ -1209,6 +1209,8 @@ function showProductos(rancho, tipo, weekNum, yr) {
   var semCode = (yr % 100) * 100 + weekNum;
   var semCodeStr = String(semCode);
   var allProds = DATA.productos || {};
+  var debug = DATA.productos_debug || {};
+  
   // JSON serializes int keys as strings — try both
   var prods = allProds[semCode] || allProds[semCodeStr] || null;
   var list = [];
@@ -1220,22 +1222,33 @@ function showProductos(rancho, tipo, weekNum, yr) {
   document.getElementById('productosTitle').innerHTML =
     '<span style="color:'+col+'">'+tipo+'</span> · '+rancho;
 
-  // Debug info
-  var availKeys = Object.keys(allProds);
-  var ranchosDisp = prods ? Object.keys(prods).join(' | ') : 'ninguno';
-  var rawRows = allProds[semCodeStr+'_debug'] || allProds[String(semCode)+'_debug'] || [];
-  var debugInfo = availKeys.length === 0
-    ? '⚠️ productos vacío'
-    : 'ranchos: ['+ranchosDisp+']';
-  var debugRows = rawRows.length ? rawRows.join(' // ') : '';
+  // Debug info mejorado
+  var hojasEncontradas = debug.hojas_pr_encontradas || [];
+  var semanasDisponibles = Object.keys(allProds).filter(function(k){return k !== 'debug'}).join(', ');
+  var ranchosDisp = prods ? Object.keys(prods).join(', ') : 'ninguno';
+  var ranchosEnPR = debug['PR'+semCode+'_ranchos'] || [];
+  
+  var debugInfo = '';
+  if (hojasEncontradas.length === 0) {
+    debugInfo = '⚠️ No se encontraron hojas PR en el sheet';
+  } else if (!prods) {
+    debugInfo = '⚠️ No hay datos para semana ' + semCode + ' (PR' + semCode + ')';
+    debugInfo += '<br>📋 Hojas PR: ' + hojasEncontradas.join(', ');
+    debugInfo += '<br>📊 Semanas con productos: ' + (semanasDisponibles || 'ninguna');
+  } else if (!list.length) {
+    debugInfo = '⚠️ Rancho "' + rancho + '" no encontrado en PR' + semCode;
+    debugInfo += '<br>🏠 Ranchos disponibles: ' + ranchosDisp;
+    debugInfo += '<br>📋 Ranchos en PR' + semCode + ': ' + ranchosEnPR.join(', ');
+  }
 
-  document.getElementById('productosSub').textContent =
-    'W'+String(weekNum).padStart(2,'0')+' · '+yr+' · '+debugInfo;
+  document.getElementById('productosSub').innerHTML =
+    'W'+String(weekNum).padStart(2,'0')+' · '+yr+' (PR'+semCode+')';
 
   if (!list.length) {
     document.getElementById('productosContent').innerHTML =
-      '<tr><td colspan="3" class="no-prod">Sin productos.<br><span style="font-size:.58rem;color:var(--dim)">'+debugInfo+'</span>'+
-      (debugRows?'<br><span style="font-size:.55rem;color:#2a4a38;word-break:break-all">FILAS: '+debugRows+'</span>':'')+'</td></tr>';
+      '<tr><td colspan="3" class="no-prod" style="padding:24px">Sin productos para este rancho.<br><br>'+
+      '<div style="font-size:.62rem;color:var(--dim);text-align:left;line-height:1.6;max-width:600px;margin:12px auto">'+
+      debugInfo+'</div></td></tr>';
   } else {
     document.getElementById('productosContent').innerHTML = list.map(function(p) {
       var gasto = p[2] ? parseFloat(p[2]) : 0;
