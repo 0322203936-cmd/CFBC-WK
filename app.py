@@ -291,21 +291,9 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   <img src="__FLORES_IMG__" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%;display:block;"
     onerror="this.src='https://images.unsplash.com/photo-1457530378978-8bac673b8062?w=1600&h=200&fit=crop&q=85'"/>
   <!-- Overlay suave para legibilidad -->
-  <div style="position:absolute;inset:0;background:rgba(255,255,255,0.55);"></div>
+  <div style="position:absolute;inset:0;background:rgba(255,255,255,0.35);"></div>
   <!-- Controles encima -->
   <div class="cat-select-wrap" style="position:relative;z-index:2;border-bottom:none;padding:12px 24px;">
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;opacity:.9">
-      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(0 14 14)"/>
-      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(45 14 14)"/>
-      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(90 14 14)"/>
-      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(135 14 14)"/>
-      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(22.5 14 14)"/>
-      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(67.5 14 14)"/>
-      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(112.5 14 14)"/>
-      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(157.5 14 14)"/>
-      <circle cx="14" cy="14" r="3.5" fill="#fff" stroke="#0a7c52" stroke-width="1.2"/>
-      <circle cx="14" cy="14" r="1.6" fill="#0a7c52"/>
-    </svg>
     <!-- Label Categoría -->
     <span class="cat-select-label" style="background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.12);">Categoría</span>
     <!-- Selector -->
