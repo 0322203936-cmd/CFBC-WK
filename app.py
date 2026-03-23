@@ -119,14 +119,16 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .badge{font-family:'IBM Plex Mono',monospace;font-size:.67rem;font-weight:600;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7)}
 .badge.muted{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
 
-.cat-select-wrap{padding:12px 32px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.cat-select-wrap{padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.cat-select-wrap::-webkit-scrollbar{display:none}
 .cat-select-label{font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'IBM Plex Mono',monospace;white-space:nowrap}
-.cat-select-outer{position:relative;display:flex;align-items:center;flex:1;max-width:560px}
-.cat-select{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;padding:9px 36px 9px 14px;cursor:pointer;appearance:none;-webkit-appearance:none;outline:none;transition:border-color .2s}
+.cat-select-outer{position:relative;display:flex;align-items:center;flex:1;min-width:160px;max-width:400px}
+.cat-select{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;padding:8px 36px 8px 14px;cursor:pointer;appearance:none;-webkit-appearance:none;outline:none;transition:border-color .2s}
 .cat-select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(10,124,82,.1)}
 .cat-select option{background:var(--surface);color:var(--text)}
 .cat-arrow{position:absolute;right:12px;color:var(--green);font-size:.75rem;pointer-events:none}
 .cat-count{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px}
+.main{padding:16px 24px;display:grid;gap:16px;min-width:0}
 
 .view-tabs{display:flex;gap:0;background:var(--surface);border-bottom:2px solid var(--border)}
 .view-tab{flex:1;max-width:220px;padding:11px 20px;font-size:.78rem;font-weight:700;cursor:pointer;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted);background:transparent;transition:all .2s;font-family:'Syne',sans-serif;letter-spacing:.3px}
@@ -143,15 +145,15 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .yr-chip{padding:5px 12px;font-size:.72rem;font-weight:700;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:all .2s;font-family:'IBM Plex Mono',monospace;opacity:.4;white-space:nowrap}
 .yr-chip.on{opacity:1;border-color:currentColor}
 
-.week-nav{display:flex;align-items:center;gap:12px;padding:14px 32px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
+.week-nav{display:flex;align-items:center;gap:12px;padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
 .week-nav::-webkit-scrollbar{display:none}
-.week-nav-btn{width:34px;height:34px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--muted);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.week-nav-btn{width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--muted);cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
 .week-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--accent-soft)}
-.week-info{display:flex;flex-direction:column;gap:2px;min-width:200px}
-.week-num{font-size:.95rem;font-weight:800;font-family:'IBM Plex Mono',monospace;color:var(--navy)}
-.week-date{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
-.week-slider{flex:1;min-width:160px;max-width:300px;accent-color:var(--green);cursor:pointer;height:3px}
-.week-avail{font-size:.63rem;font-family:'IBM Plex Mono',monospace;color:var(--dim)}
+.week-info{display:flex;flex-direction:column;gap:1px;min-width:160px}
+.week-num{font-size:.9rem;font-weight:800;font-family:'IBM Plex Mono',monospace;color:var(--navy)}
+.week-date{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
+.week-slider{flex:1;min-width:120px;max-width:260px;accent-color:var(--green);cursor:pointer;height:3px}
+.week-avail{font-size:.62rem;font-family:'IBM Plex Mono',monospace;color:var(--dim)}
 
 .range-ctrl{display:flex;align-items:center;gap:16px;padding:14px 32px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
 .range-ctrl::-webkit-scrollbar{display:none}
@@ -290,28 +292,40 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 
 <div class="cat-select-wrap">
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;opacity:.7">
+    <circle cx="14" cy="14" r="3.5" fill="#0a7c52"/>
+    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(0 14 14)"/>
+    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(45 14 14)"/>
+    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(90 14 14)"/>
+    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(135 14 14)"/>
+    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(22.5 14 14)"/>
+    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(67.5 14 14)"/>
+    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(112.5 14 14)"/>
+    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(157.5 14 14)"/>
+    <circle cx="14" cy="14" r="3.5" fill="#fff" stroke="#0a7c52" stroke-width="1.2"/>
+    <circle cx="14" cy="14" r="1.6" fill="#0a7c52"/>
+  </svg>
   <span class="cat-select-label">Categoría</span>
   <div class="cat-select-outer">
     <select class="cat-select" id="catSelect" onchange="selectCat(this.value)"></select>
     <span class="cat-arrow">▾</span>
   </div>
   <span class="cat-count" id="catCount"></span>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <span class="ctrl-label">Moneda</span>
+    <div class="toggle-group">
+      <button class="toggle-btn active" id="btnUSD" onclick="setCurrency('usd')">USD $</button>
+      <button class="toggle-btn"        id="btnMXN" onclick="setCurrency('mxn')">MXN $</button>
+    </div>
+    <span class="ctrl-label" style="margin-left:4px">Años</span>
+    <div class="year-chips" id="yearChips"></div>
+  </div>
 </div>
 
 <div class="view-tabs">
   <button class="view-tab"        id="vtAnual"     onclick="setView('anual')">📊 Por Año</button>
   <button class="view-tab active" id="vtSemana"    onclick="setView('semana')">📆 Por Semana</button>
   <button class="view-tab"        id="vtTendencia" onclick="setView('tendencia')">📈 Tendencia & Rango</button>
-</div>
-
-<div class="ctrl-bar">
-  <span class="ctrl-label">Moneda</span>
-  <div class="toggle-group">
-    <button class="toggle-btn active" id="btnUSD" onclick="setCurrency('usd')">USD $</button>
-    <button class="toggle-btn"        id="btnMXN" onclick="setCurrency('mxn')">MXN $</button>
-  </div>
-  <span class="ctrl-label" style="margin-left:6px">Años</span>
-  <div class="year-chips" id="yearChips"></div>
 </div>
 
 <!-- VIEW: ANUAL -->
@@ -919,10 +933,10 @@ function renderSemana(){
       var dm=rm.length?aggregateDetail(rm):null;
       var valm=dm?(state.currency==='usd'?dm.usd:dm.mxn):0;
       var ranchSrcM=dm?(state.currency==='usd'?dm.ranches:dm.ranches_mxn):{};
-      var cellsM=KEY_RANCHES.map(function(r){var v=ranchSrcM[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIRFE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#3a5a48">—</td>';}).join('');
+      var cellsM=KEY_RANCHES.map(function(r){var v=ranchSrcM[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIRFE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#94a3b8">—</td>';}).join('');
       rows.push('<tr>'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong>'+
-        '<span style="font-size:.6rem;margin-left:4px;color:#f0b429;font-family:IBM Plex Mono,monospace">MIRFE</span></td>'+
+        '<span style="font-size:.6rem;margin-left:4px;color:#b45309;font-family:IBM Plex Mono,monospace">MIRFE</span></td>'+
         '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
         '<td style="color:var(--dim);font-size:.65rem">'+(dm&&dm.date_range?dm.date_range:'—')+'</td>'+
         '<td style="color:'+(valm>0?col:'var(--dim)')+';font-weight:600">'+fmt(valm)+'</td>'+
@@ -932,10 +946,10 @@ function renderSemana(){
       var dp=rp.length?aggregateDetail(rp):null;
       var valp=dp?(state.currency==='usd'?dp.usd:dp.mxn):0;
       var ranchSrcP=dp?(state.currency==='usd'?dp.ranches:dp.ranches_mxn):{};
-      var cellsP=KEY_RANCHES.map(function(r){var v=ranchSrcP[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIPE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#3a5a48">—</td>';}).join('');
+      var cellsP=KEY_RANCHES.map(function(r){var v=ranchSrcP[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIPE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#94a3b8">—</td>';}).join('');
       rows.push('<tr style="border-bottom:2px solid var(--border)">'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong>'+
-        '<span style="font-size:.6rem;margin-left:4px;color:#3b9eff;font-family:IBM Plex Mono,monospace">MIPE</span></td>'+
+        '<span style="font-size:.6rem;margin-left:4px;color:#2563eb;font-family:IBM Plex Mono,monospace">MIPE</span></td>'+
         '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
         '<td style="color:var(--dim);font-size:.65rem">'+(dp&&dp.date_range?dp.date_range:'—')+'</td>'+
         '<td style="color:'+(valp>0?col:'var(--dim)')+';font-weight:600">'+fmt(valp)+'</td>'+
@@ -1243,7 +1257,7 @@ function showProductos(rancho, tipo, weekNum, yr) {
   var col = tipo === 'MIRFE' ? '#f0b429' : '#3b9eff';
   var tipoNombre = tipo === 'MIRFE' ? 'Material de Riego/Fertilización' : 'Material de Protección';
   document.getElementById('productosTitle').innerHTML =
-    rancho + ' <span style="color:#5a7a66;font-weight:400">— '+tipoNombre+'</span>';
+    rancho + ' <span style="color:#64748b;font-weight:400">— '+tipoNombre+'</span>';
 
   // Debug info mejorado
   var hojasEncontradas = debug.hojas_pr_encontradas || [];
@@ -1266,7 +1280,7 @@ function showProductos(rancho, tipo, weekNum, yr) {
   if (!list.length) {
     document.getElementById('productosContent').innerHTML =
       '<tr><td colspan="3" class="no-prod" style="padding:16px 0">Sin productos disponibles para este rancho.<br>'+
-      '<span style="font-size:.58rem;color:#3a5a48;line-height:1.8">'+debugInfo+'</span></td></tr>';
+      '<span style="font-size:.58rem;color:#94a3b8;line-height:1.8">'+debugInfo+'</span></td></tr>';
   } else {
     // Calcular total
     var totalGasto = 0;
@@ -1284,7 +1298,7 @@ function showProductos(rancho, tipo, weekNum, yr) {
       return '<tr>'+
         '<td>'+p[0]+'</td>'+
         '<td>'+unidadesStr+'</td>'+
-        '<td style="color:'+(gasto<0?'#e8f0ea':'#00c97d')+'">'+gastoStr+'</td>'+
+        '<td style="color:'+(gasto<0?'#dc2626':'#0a7c52')+'">'+gastoStr+'</td>'+
         '</tr>';
     }).join('');
     
