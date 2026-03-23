@@ -142,8 +142,8 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .toggle-btn{padding:6px 16px;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;border:none;color:var(--muted);font-family:'Syne',sans-serif;white-space:nowrap}
 .toggle-btn.active{background:var(--green);color:#fff}
 .year-chips{display:flex;gap:5px;flex-wrap:nowrap;flex-shrink:0}
-.yr-chip{padding:5px 12px;font-size:.72rem;font-weight:700;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:all .2s;font-family:'IBM Plex Mono',monospace;opacity:.4;white-space:nowrap}
-.yr-chip.on{opacity:1;border-color:currentColor}
+.yr-chip{padding:5px 12px;font-size:.72rem;font-weight:700;border-radius:6px;cursor:pointer;border:1.5px solid transparent;transition:all .2s;font-family:'IBM Plex Mono',monospace;opacity:.55;white-space:nowrap}
+.yr-chip.on{opacity:1;border-color:currentColor;background:rgba(0,0,0,.05)}
 
 .week-nav{display:flex;align-items:center;gap:12px;padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
 .week-nav::-webkit-scrollbar{display:none}
@@ -274,21 +274,6 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 <div id="app" style="display:none">
 
-<div class="hdr">
-  <div class="hdr-logo">
-    <div class="hdr-logo-mark">CF</div>
-    <div>
-      <div class="hdr-title">Centro Floricultor de Baja California</div>
-      <div class="hdr-sub">Dashboard de Ejecución Semanal · Pacifica Farms</div>
-    </div>
-  </div>
-  <div class="badge-row">
-    <span class="badge">📊 Ejecución WK</span>
-    <span class="badge">🌿 Multi-Rancho</span>
-    <span class="badge muted" id="badgeYears"></span>
-  </div>
-</div>
-
 
 
 <div class="cat-select-wrap">
@@ -326,6 +311,141 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   <button class="view-tab"        id="vtAnual"     onclick="setView('anual')">📊 Por Año</button>
   <button class="view-tab active" id="vtSemana"    onclick="setView('semana')">📆 Por Semana</button>
   <button class="view-tab"        id="vtTendencia" onclick="setView('tendencia')">📈 Tendencia & Rango</button>
+</div>
+
+<!-- FRANJA FLORAL -->
+<div style="width:100%;overflow:hidden;height:52px;background:linear-gradient(135deg,#f0faf5 0%,#e8f5f0 50%,#f0faf5 100%);border-bottom:1px solid #c8e6d8;position:relative;display:flex;align-items:center">
+  <svg width="100%" height="52" viewBox="0 0 1400 52" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <!-- Rama izquierda -->
+    <path d="M0 38 Q80 20 160 32 Q240 44 320 28 Q400 12 480 30 Q560 46 640 26 Q720 8 800 28 Q880 46 960 24 Q1040 4 1120 26 Q1200 44 1280 22 Q1340 10 1400 26" stroke="#0a7c52" stroke-width="1.5" fill="none" opacity="0.3"/>
+    <path d="M0 44 Q80 30 160 40 Q240 50 320 36 Q400 22 480 38 Q560 52 640 34 Q720 16 800 36 Q880 52 960 32 Q1040 14 1120 34 Q1200 50 1280 30 Q1340 18 1400 34" stroke="#16a367" stroke-width="1" fill="none" opacity="0.2"/>
+    <!-- Flores distribuidas a lo largo -->
+    <!-- Flor 1 -->
+    <g transform="translate(60,26)">
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#0a7c52" opacity=".5"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#0a7c52" opacity=".5" transform="rotate(45 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#0a7c52" opacity=".5" transform="rotate(90 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#0a7c52" opacity=".5" transform="rotate(135 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#34d399" opacity=".35" transform="rotate(22.5 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#34d399" opacity=".35" transform="rotate(67.5 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#34d399" opacity=".35" transform="rotate(112.5 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#34d399" opacity=".35" transform="rotate(157.5 0 0)"/>
+      <circle cx="0" cy="0" r="3.2" fill="#fff" stroke="#0a7c52" stroke-width="1"/>
+      <circle cx="0" cy="0" r="1.4" fill="#0a7c52"/>
+    </g>
+    <!-- Flor 2 - pequeña -->
+    <g transform="translate(160,22)">
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(0 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(60 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(120 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(180 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(240 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(300 0 0)"/>
+      <circle cx="0" cy="0" r="2.5" fill="#fff" stroke="#0a7c52" stroke-width=".8"/>
+      <circle cx="0" cy="0" r="1.1" fill="#0a7c52"/>
+    </g>
+    <!-- Flor 3 - grande -->
+    <g transform="translate(290,28)">
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#0a7c52" opacity=".5"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#0a7c52" opacity=".5" transform="rotate(45 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#0a7c52" opacity=".5" transform="rotate(90 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#0a7c52" opacity=".5" transform="rotate(135 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#34d399" opacity=".3" transform="rotate(22.5 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#34d399" opacity=".3" transform="rotate(67.5 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#34d399" opacity=".3" transform="rotate(112.5 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#34d399" opacity=".3" transform="rotate(157.5 0 0)"/>
+      <circle cx="0" cy="0" r="3.8" fill="#fff" stroke="#0a7c52" stroke-width="1.2"/>
+      <circle cx="0" cy="0" r="1.7" fill="#0a7c52"/>
+    </g>
+    <!-- Flor 4 -->
+    <g transform="translate(430,24)">
+      <ellipse cx="0" cy="-6" rx="2.8" ry="4.8" fill="#0a7c52" opacity=".45" transform="rotate(0 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.8" ry="4.8" fill="#0a7c52" opacity=".45" transform="rotate(45 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.8" ry="4.8" fill="#0a7c52" opacity=".45" transform="rotate(90 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.8" ry="4.8" fill="#0a7c52" opacity=".45" transform="rotate(135 0 0)"/>
+      <circle cx="0" cy="0" r="3" fill="#fff" stroke="#0a7c52" stroke-width="1"/>
+      <circle cx="0" cy="0" r="1.3" fill="#0a7c52"/>
+    </g>
+    <!-- Hoja decorativa -->
+    <path d="M490 34 Q510 18 530 34" stroke="#16a367" stroke-width="1.2" fill="none" opacity=".4"/>
+    <path d="M510 18 Q510 34 510 34" stroke="#16a367" stroke-width=".8" fill="none" opacity=".3"/>
+    <!-- Flor 5 - centro grande -->
+    <g transform="translate(600,26)">
+      <ellipse cx="0" cy="-9" rx="4" ry="7" fill="#0a7c52" opacity=".5"/>
+      <ellipse cx="0" cy="-9" rx="4" ry="7" fill="#0a7c52" opacity=".5" transform="rotate(45 0 0)"/>
+      <ellipse cx="0" cy="-9" rx="4" ry="7" fill="#0a7c52" opacity=".5" transform="rotate(90 0 0)"/>
+      <ellipse cx="0" cy="-9" rx="4" ry="7" fill="#0a7c52" opacity=".5" transform="rotate(135 0 0)"/>
+      <ellipse cx="0" cy="-9" rx="4" ry="7" fill="#34d399" opacity=".3" transform="rotate(22.5 0 0)"/>
+      <ellipse cx="0" cy="-9" rx="4" ry="7" fill="#34d399" opacity=".3" transform="rotate(67.5 0 0)"/>
+      <ellipse cx="0" cy="-9" rx="4" ry="7" fill="#34d399" opacity=".3" transform="rotate(112.5 0 0)"/>
+      <ellipse cx="0" cy="-9" rx="4" ry="7" fill="#34d399" opacity=".3" transform="rotate(157.5 0 0)"/>
+      <circle cx="0" cy="0" r="4.2" fill="#fff" stroke="#0a7c52" stroke-width="1.3"/>
+      <circle cx="0" cy="0" r="1.9" fill="#0a7c52"/>
+    </g>
+    <!-- Flor 6 -->
+    <g transform="translate(730,22)">
+      <ellipse cx="0" cy="-6" rx="2.5" ry="4.5" fill="#16a367" opacity=".45" transform="rotate(0 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.5" ry="4.5" fill="#16a367" opacity=".45" transform="rotate(60 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.5" ry="4.5" fill="#16a367" opacity=".45" transform="rotate(120 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.5" ry="4.5" fill="#16a367" opacity=".45" transform="rotate(180 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.5" ry="4.5" fill="#16a367" opacity=".45" transform="rotate(240 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.5" ry="4.5" fill="#16a367" opacity=".45" transform="rotate(300 0 0)"/>
+      <circle cx="0" cy="0" r="2.8" fill="#fff" stroke="#0a7c52" stroke-width="1"/>
+      <circle cx="0" cy="0" r="1.2" fill="#0a7c52"/>
+    </g>
+    <path d="M790 38 Q810 20 830 36" stroke="#16a367" stroke-width="1.2" fill="none" opacity=".4"/>
+    <path d="M810 20 Q810 36 810 36" stroke="#16a367" stroke-width=".8" fill="none" opacity=".3"/>
+    <!-- Flor 7 -->
+    <g transform="translate(900,28)">
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#0a7c52" opacity=".5"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#0a7c52" opacity=".5" transform="rotate(45 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#0a7c52" opacity=".5" transform="rotate(90 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#0a7c52" opacity=".5" transform="rotate(135 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#34d399" opacity=".3" transform="rotate(22.5 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#34d399" opacity=".3" transform="rotate(67.5 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#34d399" opacity=".3" transform="rotate(112.5 0 0)"/>
+      <ellipse cx="0" cy="-8" rx="3.5" ry="6" fill="#34d399" opacity=".3" transform="rotate(157.5 0 0)"/>
+      <circle cx="0" cy="0" r="3.8" fill="#fff" stroke="#0a7c52" stroke-width="1.2"/>
+      <circle cx="0" cy="0" r="1.7" fill="#0a7c52"/>
+    </g>
+    <!-- Flor 8 -->
+    <g transform="translate(1040,24)">
+      <ellipse cx="0" cy="-6" rx="2.8" ry="4.8" fill="#0a7c52" opacity=".45" transform="rotate(0 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.8" ry="4.8" fill="#0a7c52" opacity=".45" transform="rotate(45 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.8" ry="4.8" fill="#0a7c52" opacity=".45" transform="rotate(90 0 0)"/>
+      <ellipse cx="0" cy="-6" rx="2.8" ry="4.8" fill="#0a7c52" opacity=".45" transform="rotate(135 0 0)"/>
+      <circle cx="0" cy="0" r="3" fill="#fff" stroke="#0a7c52" stroke-width="1"/>
+      <circle cx="0" cy="0" r="1.3" fill="#0a7c52"/>
+    </g>
+    <!-- Flor 9 - pequeña -->
+    <g transform="translate(1170,22)">
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(0 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(60 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(120 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(180 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(240 0 0)"/>
+      <ellipse cx="0" cy="-5" rx="2.2" ry="4" fill="#16a367" opacity=".45" transform="rotate(300 0 0)"/>
+      <circle cx="0" cy="0" r="2.5" fill="#fff" stroke="#0a7c52" stroke-width=".8"/>
+      <circle cx="0" cy="0" r="1.1" fill="#0a7c52"/>
+    </g>
+    <!-- Flor 10 -->
+    <g transform="translate(1320,26)">
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#0a7c52" opacity=".5"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#0a7c52" opacity=".5" transform="rotate(45 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#0a7c52" opacity=".5" transform="rotate(90 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#0a7c52" opacity=".5" transform="rotate(135 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#34d399" opacity=".35" transform="rotate(22.5 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#34d399" opacity=".35" transform="rotate(67.5 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#34d399" opacity=".35" transform="rotate(112.5 0 0)"/>
+      <ellipse cx="0" cy="-7" rx="3" ry="5.5" fill="#34d399" opacity=".35" transform="rotate(157.5 0 0)"/>
+      <circle cx="0" cy="0" r="3.2" fill="#fff" stroke="#0a7c52" stroke-width="1"/>
+      <circle cx="0" cy="0" r="1.4" fill="#0a7c52"/>
+    </g>
+  </svg>
+  <!-- Texto centrado sobre la franja -->
+  <div style="position:absolute;left:50%;transform:translateX(-50%);font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;color:#0a7c52;letter-spacing:2px;text-transform:uppercase;opacity:.6;white-space:nowrap">
+    Centro Floricultor de Baja California
+  </div>
 </div>
 
 <!-- VIEW: ANUAL -->
@@ -497,11 +617,11 @@ var state = {
   view:'semana', weekIdx:0, fromWeek:1, toWeek:52
 };
 var allWeeks = [];
-var YEAR_COLORS = {2021:'#4ecdc4',2022:'#f7dc6f',2023:'#82e0aa',2024:'#f0b429',2025:'#00c97d',2026:'#ff6b6b'};
+var YEAR_COLORS = {2021:'#0891b2',2022:'#b45309',2023:'#047857',2024:'#7c3aed',2025:'#0a7c52',2026:'#dc2626'};
 var RANCH_COLORS = {
-  'Prop-RM':'#00c97d','PosCo-RM':'#3b9eff','Campo-RM':'#f0b429',
-  'Isabela':'#c084fc','HOOPS':'#fb923c','Cecilia':'#f472b6',
-  'Cecilia 25':'#34d399','Christina':'#60a5fa','Albahaca-RM':'#a78bfa','Campo-VI':'#94a3b8'
+  'Prop-RM':'#047857','PosCo-RM':'#1d4ed8','Campo-RM':'#b45309',
+  'Isabela':'#7c3aed','HOOPS':'#c2410c','Cecilia':'#be185d',
+  'Cecilia 25':'#047857','Christina':'#0369a1','Albahaca-RM':'#6d28d9','Campo-VI':'#64748b'
 };
 var RANCH_ORDER = ['Prop-RM','PosCo-RM','Campo-RM','Isabela','HOOPS','Cecilia','Cecilia 25','Christina','Albahaca-RM','Campo-VI'];
 var KEY_RANCHES = ['Prop-RM','PosCo-RM','Campo-RM','Isabela','Cecilia','Cecilia 25','Christina'];
