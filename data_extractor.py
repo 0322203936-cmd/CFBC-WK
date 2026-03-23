@@ -62,8 +62,10 @@ def _leer_hoja(xls: pd.ExcelFile, titulo: str, rango_filas: int = 60,
             sheet_name=titulo,
             header=None,
             nrows=rango_filas,
-            usecols=range(rango_cols),
         ).fillna("")
+        # Recortar a rango_cols si la hoja tiene más columnas de las necesarias
+        if df.shape[1] > rango_cols:
+            df = df.iloc[:, :rango_cols]
         return df.values.tolist()
     except Exception as e:
         print(f"   ⚠️  Error leyendo hoja '{titulo}': {e}")
