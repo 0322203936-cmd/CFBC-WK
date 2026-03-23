@@ -86,7 +86,7 @@ HTML = """<!DOCTYPE html>
   --navy:#0f2044;--accent-soft:rgba(10,124,82,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:auto}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow:hidden}
 
 .scroll-x{
   position:relative;overflow-x:auto;overflow-y:visible;
@@ -1376,4 +1376,4 @@ setInterval(reportHeight, 400);
 html_final = HTML.replace('__DATA_JSON__', data_json).replace('__FLORES_IMG__', _flores_b64)
 
 # Renderizar
-components.html(html_final, height=900, scrolling=True)
+components.html(html_final, height=900, scrolling=False)
