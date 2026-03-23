@@ -149,8 +149,8 @@ def _parse_pr(rows: list) -> dict:
     UNIDADES_COL  = 7
     GASTO_COL     = 9
 
-    result = {}
-    seen   = set()
+    result  = {}
+    accum   = {}   # (rancho, tipo, producto) → [u_total, g_total]
 
     for row in rows:
         if not row or len(row) < 10:
@@ -202,11 +202,21 @@ def _parse_pr(rows: list) -> dict:
         except Exception:
             gasto = '0'
 
-        result.setdefault(rancho, {}).setdefault(tipo, [])
+        u = float(unidades) if unidades else 0.0
+        g = float(gasto)    if gasto    else 0.0
 
-        if (rancho, tipo, producto) not in seen:
-            seen.add((rancho, tipo, producto))
-            result[rancho][tipo].append([producto, unidades, gasto])
+        key = (rancho, tipo, producto)
+        if key in accum:
+            accum[key][0] += u
+            accum[key][1] += g
+        else:
+            accum[key] = [u, g]
+
+    # Construir result final desde el acumulador
+    for (rancho, tipo, producto), (u_tot, g_tot) in accum.items():
+        u_str = str(int(u_tot)) if u_tot == int(u_tot) else str(round(u_tot, 2))
+        g_str = str(round(g_tot, 2))
+        result.setdefault(rancho, {}).setdefault(tipo, []).append([producto, u_str, g_str])
 
     return result
 
