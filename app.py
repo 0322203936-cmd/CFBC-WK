@@ -1356,14 +1356,15 @@ inicializar();
 </script>
 
 <script>
-// Auto-resize iframe height to content
 function reportHeight() {
-  var h = document.body.scrollHeight;
-  window.parent.postMessage({type:'streamlit:setFrameHeight', height:h}, '*');
+  var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, 600);
+  window.parent.postMessage({type:'streamlit:setFrameHeight', height: h + 40}, '*');
 }
 var ro = new ResizeObserver(reportHeight);
 ro.observe(document.body);
+ro.observe(document.getElementById('app'));
 reportHeight();
+setInterval(reportHeight, 400);
 </script>
 </body>
 </html>"""
@@ -1372,4 +1373,4 @@ reportHeight();
 html_final = HTML.replace('__DATA_JSON__', data_json).replace('__FLORES_IMG__', _flores_b64)
 
 # Renderizar
-components.html(html_final, height=4000, scrolling=True)
+components.html(html_final, height=900, scrolling=True)
