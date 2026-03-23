@@ -260,15 +260,17 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .productos-table thead{background:transparent;border-bottom:1px solid var(--border)}
 .productos-table th{padding:6px 12px 6px 0;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-family:'Syne',sans-serif;text-align:right}
 .productos-table th:first-child{text-align:left;padding-left:0}
+.productos-table th:nth-child(2){text-align:left}
 .productos-table tbody tr{border-bottom:1px solid var(--border)}
 .productos-table tbody tr:hover{background:var(--accent-soft)}
 .productos-table tbody tr:last-child{border-bottom:none}
 .productos-table tbody tr.total-row{border-top:2px solid var(--border);border-bottom:none;background:var(--surface2)}
 .productos-table tbody tr.total-row:hover{background:var(--accent-soft)}
 .productos-table td{padding:7px 12px 7px 0;font-size:.68rem;font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--text)}
-.productos-table td:first-child{font-weight:400;text-align:left;padding-left:0;color:var(--text)}
-.productos-table td:nth-child(2){color:var(--muted);font-size:.64rem}
-.productos-table td:nth-child(3){font-weight:600;font-size:.7rem}
+.productos-table td:first-child{color:var(--muted);font-size:.62rem;text-align:left;padding-left:0}
+.productos-table td:nth-child(2){font-weight:400;text-align:left;color:var(--text)}
+.productos-table td:nth-child(3){color:var(--muted);font-size:.64rem}
+.productos-table td:nth-child(4){font-weight:600;font-size:.7rem}
 .productos-table tbody tr.total-row td{font-weight:700;color:var(--navy);font-size:.72rem}
 .no-prod{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:16px 0;text-align:left}
 
