@@ -463,10 +463,10 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <table class="productos-table">
       <thead>
         <tr>
+          <th style="min-width:120px">Detalles</th>
           <th style="text-align:left; min-width:200px">Producto</th>
           <th style="min-width:80px">Cantidad</th>
           <th style="min-width:100px">Monto</th>
-          <th style="min-width:120px">Detalles</th>
         </tr>
       </thead>
       <tbody id="productosContent">
@@ -1266,10 +1266,10 @@ function showProductos(rancho, tipo, weekNum, yr) {
       var unidadesStr = unidades !== 0 ? Math.abs(unidades).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2}) : '—';
       var detalle = p[3] ? p[3] : '—';
       return '<tr>'+
+        '<td style="color:var(--muted);font-size:.62rem">'+detalle+'</td>'+
         '<td>'+p[0]+'</td>'+
         '<td>'+unidadesStr+'</td>'+
         '<td style="color:'+(gasto<0?'#dc2626':'#0a7c52')+'">'+gastoStr+'</td>'+
-        '<td style="color:var(--muted);font-size:.62rem">'+detalle+'</td>'+
         '</tr>';
     }).join('');
     
@@ -1277,10 +1277,10 @@ function showProductos(rancho, tipo, weekNum, yr) {
     var totalGastoStr = '$' + Math.abs(totalGasto).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     var totalUnidadesStr = Math.abs(totalUnidades).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
     var totalRow = '<tr class="total-row">'+
+      '<td></td>'+
       '<td style="color:#00c97d">TOTAL</td>'+
       '<td>'+totalUnidadesStr+'</td>'+
       '<td style="color:#00c97d">'+totalGastoStr+'</td>'+
-      '<td></td>'+
       '</tr>';
     
     document.getElementById('productosContent').innerHTML = rows + totalRow;
