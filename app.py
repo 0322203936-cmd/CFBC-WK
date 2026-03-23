@@ -5,11 +5,21 @@ Streamlit — carga datos con Python, renderiza el HTML original tal cual
 """
 
 import json
+import base64
+import os
 import streamlit as st
 import streamlit.components.v1 as components
 
-
 from data_extractor import get_datos
+
+# Cargar imagen de flores desde el repositorio
+_flores_b64 = ""
+for _ext in ["jpg","jpeg","png","webp"]:
+    _path = os.path.join(os.path.dirname(__file__), f"flores.{_ext}")
+    if os.path.exists(_path):
+        with open(_path, "rb") as _f:
+            _flores_b64 = f"data:image/{_ext};base64," + base64.b64encode(_f.read()).decode()
+        break
 
 st.set_page_config(
     page_title="CFBC WK",
@@ -307,17 +317,17 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   </div>
 </div>
 
-<!-- BANNER FLORAL — imagen real de flores -->
-<div style="width:100%;height:90px;overflow:hidden;position:relative;border-bottom:1px solid #c8e6d8;">
+<!-- BANNER FLORAL — imagen campo de flores -->
+<div style="width:100%;height:100px;overflow:hidden;position:relative;border-bottom:2px solid #c8e6d8;">
   <img
-    src="https://images.unsplash.com/photo-1490750967868-88df5691bbf9?w=1600&h=180&fit=crop&crop=center"
-    alt="flores"
-    style="width:100%;height:100%;object-fit:cover;object-position:center 60%;display:block;"
-    onerror="this.parentElement.style.background='linear-gradient(135deg,#d1fae5,#a7f3d0,#6ee7b7)';this.style.display='none'"
+    src="__FLORES_IMG__"
+    alt="campo de flores"
+    style="width:100%;height:100%;object-fit:cover;object-position:center 55%;display:block;"
+    onerror="this.src='https://images.unsplash.com/photo-1457530378978-8bac673b8062?w=1600&h=200&fit=crop&q=85'"
   />
-  <div style="position:absolute;inset:0;background:linear-gradient(to right, rgba(255,255,255,.25) 0%, rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,.25) 100%);pointer-events:none"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,.08) 0%, rgba(0,0,0,.22) 100%);pointer-events:none"></div>
   <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-    <span style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:800;color:#fff;letter-spacing:3px;text-transform:uppercase;text-shadow:0 1px 8px rgba(0,0,0,.45)">Centro Floricultor de Baja California</span>
+    <span style="font-family:'Syne',sans-serif;font-size:.85rem;font-weight:800;color:#fff;letter-spacing:4px;text-transform:uppercase;text-shadow:0 2px 12px rgba(0,0,0,.55)">Centro Floricultor de Baja California</span>
   </div>
 </div>
 
@@ -1374,7 +1384,7 @@ reportHeight();
 </html>"""
 
 # Inyectar los datos JSON en el HTML
-html_final = HTML.replace('__DATA_JSON__', data_json)
+html_final = HTML.replace('__DATA_JSON__', data_json).replace('__FLORES_IMG__', _flores_b64)
 
 # Renderizar
 components.html(html_final, height=4000, scrolling=True)
