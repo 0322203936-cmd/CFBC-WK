@@ -171,18 +171,19 @@ def _parse_pr(rows: list) -> dict:
         rancho = RANCH_MAP.get(ranch_code)
 
         # VIV / VIVE / VIVEVIV → Prop-RM
-        if not rancho and (ubicacion.startswith('VIV') or ubicacion.startswith('VIVE')):
+        if not rancho and ubicacion.startswith('VIV'):
             rancho = 'Prop-RM'
 
-        # VIVEVIV siempre es MIRFE
-        if ubicacion.startswith('VIVEVIV'):
-            tipo = 'MIRFE'
-        else:
-            tipo = 'MIRFE' if 'MIR' in ubicacion else 'MIPE'
         if not rancho:
             continue
 
-        tipo    = 'MIRFE' if 'MIR' in ubicacion else 'MIPE'
+        # Determinar tipo — VIVEVIV siempre es MIRFE
+        if ubicacion.startswith('VIVEVIV'):
+            tipo = 'MIRFE'
+            print(f"   ✅ VIVEVIV detectado: {ubicacion} → Prop-RM / MIRFE")
+        else:
+            tipo = 'MIRFE' if 'MIR' in ubicacion else 'MIPE'
+
         producto = str(row[PRODUCTO_COL]).strip() if len(row) > PRODUCTO_COL else ''
         if not producto or producto.upper() in ('PRODUCTO', 'NOMBRE', ''):
             continue
