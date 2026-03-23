@@ -157,6 +157,7 @@ def _parse_pr(rows: list) -> dict:
             continue
 
         ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
+        ubicacion = re.sub(r'\s+', '', ubicacion)   # eliminar espacios internos
 
         if not ubicacion or len(ubicacion) < 6:
             continue
