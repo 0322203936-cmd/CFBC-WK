@@ -97,10 +97,23 @@ def sv(v) -> float:
 # ─────────────────────────────────────────────
 def get_workbook_from_sharepoint(url: str = SHAREPOINT_URL) -> openpyxl.Workbook:
     """Descarga el Excel de SharePoint y retorna un Workbook de openpyxl."""
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+    }
     log.info("Descargando Excel desde SharePoint...")
     try:
-        resp = requests.get(url, timeout=60)
+        resp = requests.get(url, headers=headers, timeout=60, allow_redirects=True)
         resp.raise_for_status()
+        content_type = resp.headers.get("Content-Type", "")
+        if "html" in content_type.lower():
+            raise RuntimeError(
+                f"SharePoint devolvió HTML en lugar del Excel. "
+                f"Verifica que el link sea público. Content-Type: {content_type}"
+            )
     except requests.RequestException as e:
         raise RuntimeError(f"No se pudo descargar el archivo de SharePoint: {e}")
     return openpyxl.load_workbook(io.BytesIO(resp.content), data_only=True)
