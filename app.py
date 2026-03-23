@@ -77,7 +77,7 @@ HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ejecución Semanal — Comparativo</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
 <style>
 :root{
   --bg:#f0f4f8;--surface:#ffffff;--surface2:#f8fafc;--border:#e2e8f0;
@@ -329,7 +329,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <div class="row2">
       <div class="card">
         <div class="card-hdr"><span class="card-title">Comparativo Anual</span><span class="card-note" id="barNote">USD</span></div>
-        <div class="chart-wrap tall"><canvas id="chartBar"></canvas></div>
+        <div class="chart-wrap tall"><div id="chartBar"></div></div>
       </div>
       <div class="card">
         <div class="card-hdr"><span class="card-title">Desglose por Rancho</span><span class="card-note" id="ranchNote">USD</span></div>
@@ -342,12 +342,12 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     </div>
     <div class="card">
       <div class="card-hdr"><span class="card-title">Tendencia Semanal (USD) — Años superpuestos</span><span class="card-note">línea = 1 año</span></div>
-      <div class="chart-wrap tall"><canvas id="chartLine"></canvas></div>
+      <div class="chart-wrap tall"><div id="chartLine"></div></div>
     </div>
     <div class="row2">
       <div class="card">
         <div class="card-hdr"><span class="card-title">Barras Apiladas por Rancho</span><span class="card-note" id="stackNote">USD</span></div>
-        <div class="chart-wrap medium"><canvas id="chartStack"></canvas></div>
+        <div class="chart-wrap medium"><div id="chartStack"></div></div>
       </div>
       <div class="card">
         <div class="card-hdr"><span class="card-title">Tabla Resumen Anual</span><span class="card-note" id="tableNote">USD · Δ anual</span></div>
@@ -436,16 +436,16 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     </div>
     <div class="card">
       <div class="card-hdr"><span class="card-title">Tendencia Semanal en el Rango — Años Superpuestos</span><span class="card-note">USD · línea = 1 año</span></div>
-      <div class="chart-wrap tall"><canvas id="chartRangeLine"></canvas></div>
+      <div class="chart-wrap tall"><div id="chartRangeLine"></div></div>
     </div>
     <div class="row2">
       <div class="card">
         <div class="card-hdr"><span class="card-title">Total en el Rango por Año</span><span class="card-note" id="rangeBarNote">USD</span></div>
-        <div class="chart-wrap medium"><canvas id="chartRangeBar"></canvas></div>
+        <div class="chart-wrap medium"><div id="chartRangeBar"></div></div>
       </div>
       <div class="card">
         <div class="card-hdr"><span class="card-title">Acumulado Semanal</span><span class="card-note">USD · suma corrida por semana</span></div>
-        <div class="chart-wrap medium"><canvas id="chartCumul"></canvas></div>
+        <div class="chart-wrap medium"><div id="chartCumul"></div></div>
       </div>
     </div>
 
@@ -560,7 +560,7 @@ function fmt(n) {
   return (neg?'-$':'$')+s.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 function pct(a,b){ return (!b||b===0)?null:((a-b)/b*100).toFixed(1); }
-function destroyChart(id){ if(charts[id]){charts[id].destroy();delete charts[id];} }
+function destroyChart(id){ var el=document.getElementById(id); if(el) Plotly.purge(el); }
 function getAnnualVal(cat,yr){ var d=(DATA.summary[cat]||{})[yr]; if(!d) return 0; return state.currency==='usd'?d.usd:d.mxn; }
 function activeYrList(){ return DATA.years.filter(function(y){return state.activeYears[y];}); }
 function wFmt(n){ return 'W'+String(n).padStart(2,'0'); }
@@ -795,19 +795,15 @@ function renderKPIs(){
 }
 
 function renderAnnualBar(){
-  destroyChart('annBar');
+  destroyChart('chartBar');
   var yrs=activeYrList(), vals=yrs.map(function(y){return getAnnualVal(state.cat,y);});
   document.getElementById('barNote').textContent=(state.currency==='usd'?'USD':'MXN')+' · total anual';
-  charts.annBar=new Chart(document.getElementById('chartBar').getContext('2d'),{
-    type:'bar',
-    data:{labels:yrs.map(function(y){return y===2026?'2026*':String(y);}),
-      datasets:[{data:vals,backgroundColor:yrs.map(function(y){return (YEAR_COLORS[y]||'#888')+'bb';}),
-        borderColor:yrs.map(function(y){return YEAR_COLORS[y]||'#888';}),borderWidth:1.5,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#1e293b',bodyColor:'#64748b',borderColor:'#e2e8f0',borderWidth:1,callbacks:{label:function(c){return ' '+fmt(c.raw);}}}},
-      scales:{x:{grid:{color:'#f1f5f9'},ticks:{color:'#64748b',font:{family:'IBM Plex Mono',size:11}}},
-              y:{grid:{color:'#f1f5f9'},ticks:{color:'#64748b',font:{family:'IBM Plex Mono',size:10},callback:function(v){return fmt(v);}}}}}
-  });
+  var trace={type:'bar',x:yrs.map(function(y){return y===2026?'2026*':String(y);}),y:vals,
+    marker:{color:yrs.map(function(y){return YEAR_COLORS[y]||'#888';}),
+    line:{color:yrs.map(function(y){return YEAR_COLORS[y]||'#888';}),width:1}},
+    text:vals.map(fmt),textposition:'outside',hovertemplate:'<b>%{x}</b><br>%{text}<extra></extra>'};
+  var layout=plotlyLayout({yaxis:{tickformat:'$,.0f'}});
+  Plotly.newPlot('chartBar',[trace],layout,plotlyCfg());
 }
 
 function renderRanchBars(){
@@ -835,63 +831,53 @@ function renderRanchBars(){
 }
 
 function renderLine(){
-  destroyChart('line');
+  destroyChart('chartLine');
   var ws=DATA.weekly_series?DATA.weekly_series[state.cat]||{}:{};
-  // rebuild from weekly_detail if weekly_series not present
   if(!DATA.weekly_series){
     DATA.weekly_detail.forEach(function(r){
-      if(r.usd_total>0){
-        var key=r.year+'-W'+String(r.week).padStart(2,'0');
-        if(!ws[key]) ws[key]=0; ws[key]+=r.usd_total;
-      }
+      if(r.usd_total>0){var key=r.year+'-W'+String(r.week).padStart(2,'0');if(!ws[key]) ws[key]=0;ws[key]+=r.usd_total;}
     });
   }
   var yrs=activeYrList();
   var labels=[]; for(var i=1;i<=53;i++) labels.push(wFmt(i));
-  var datasets=yrs.map(function(yr){
+  var traces=yrs.map(function(yr){
     var data=new Array(53).fill(null);
     Object.keys(ws).forEach(function(key){
       var parts=key.split('-W');
       if(parseInt(parts[0])===yr){var w=parseInt(parts[1])-1;if(w>=0&&w<53) data[w]=ws[key];}
     });
     var col=YEAR_COLORS[yr]||'#888';
-    return {label:String(yr),data:data,borderColor:col,backgroundColor:col+'15',
-      borderWidth:yr===2025?2.5:1.5,borderDash:yr===2026?[4,4]:[],
-      pointRadius:0,pointHoverRadius:4,tension:0.3,fill:false,spanGaps:true};
+    return {type:'scatter',mode:'lines',name:String(yr),x:labels,y:data,
+      line:{color:col,width:yr===2025?3:2,dash:yr===2026?'dash':'solid'},
+      connectgaps:true,hovertemplate:'<b>'+yr+' %{x}</b><br>%{text}<extra></extra>',
+      text:data.map(function(v){return v?fmt(v):'—';})};
   });
-  if(!datasets.some(function(d){return d.data.some(function(v){return v!==null;});})) return;
-  charts.line=new Chart(document.getElementById('chartLine').getContext('2d'),{
-    type:'line',data:{labels:labels,datasets:datasets},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:true,position:'top',labels:{color:'#64748b',font:{family:'IBM Plex Mono',size:10},padding:14,boxWidth:14,boxHeight:2}},
-               tooltip:{backgroundColor:'#fff',titleColor:'#1e293b',bodyColor:'#64748b',borderColor:'#e2e8f0',borderWidth:1,callbacks:{label:function(c){return ' '+c.dataset.label+': '+fmt(c.raw);}}}},
-      scales:{x:{grid:{color:'#f1f5f9'},ticks:{color:'#94a3b8',font:{size:9,family:'IBM Plex Mono'},maxTicksLimit:13}},
-              y:{grid:{color:'#f1f5f9'},ticks:{color:'#64748b',font:{size:10,family:'IBM Plex Mono'},callback:function(v){return fmt(v);}}}}}
-  });
+  if(!traces.length) return;
+  var layout=plotlyLayout({yaxis:{tickformat:'$,.0f'},legend:{orientation:'h',y:1.12}});
+  Plotly.newPlot('chartLine',traces,layout,plotlyCfg());
 }
 
 function renderStack(){
-  destroyChart('stack');
+  destroyChart('chartStack');
   var yrs=activeYrList();
   document.getElementById('stackNote').textContent=state.currency==='usd'?'USD':'MXN';
   var rUsed={};
   yrs.forEach(function(y){var d=(DATA.summary[state.cat]||{})[y];if(d) Object.keys(d.ranches||{}).forEach(function(r){rUsed[r]=1;});});
   var rList=RANCH_ORDER.filter(function(r){return rUsed[r];});
   if(!rList.length) return;
-  var datasets=rList.map(function(r){
-    return {label:r,data:yrs.map(function(y){
+  var xLabels=yrs.map(function(y){return y===2026?'2026*':String(y);});
+  var traces=rList.map(function(r){
+    var vals=yrs.map(function(y){
       var d=(DATA.summary[state.cat]||{})[y];if(!d) return 0;
       return state.currency==='mxn'&&d.usd>0?(d.ranches[r]||0)*d.mxn/d.usd:(d.ranches[r]||0);
-    }),backgroundColor:(RANCH_COLORS[r]||'#888')+'cc',borderWidth:0,borderRadius:3};
+    });
+    return {type:'bar',name:r,x:xLabels,y:vals,
+      marker:{color:RANCH_COLORS[r]||'#888'},
+      hovertemplate:'<b>'+r+'</b><br>%{text}<extra></extra>',
+      text:vals.map(fmt)};
   });
-  charts.stack=new Chart(document.getElementById('chartStack').getContext('2d'),{
-    type:'bar',data:{labels:yrs.map(function(y){return y===2026?'2026*':String(y);}),datasets:datasets},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:true,position:'right',labels:{color:'#64748b',font:{size:9,family:'IBM Plex Mono'},boxWidth:10,padding:6}},
-               tooltip:{backgroundColor:'#fff',titleColor:'#1e293b',bodyColor:'#64748b',borderColor:'#e2e8f0',borderWidth:1,callbacks:{label:function(c){return '  '+c.dataset.label+': '+fmt(c.raw);}}}},
-      scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#64748b',font:{family:'IBM Plex Mono',size:11}}},
-              y:{stacked:true,grid:{color:'#f1f5f9'},ticks:{color:'#64748b',font:{size:10,family:'IBM Plex Mono'},callback:function(v){return fmt(v);}}}}}
-  });
+  var layout=plotlyLayout({barmode:'stack',yaxis:{tickformat:'$,.0f'},legend:{orientation:'v',x:1.02}});
+  Plotly.newPlot('chartStack',traces,layout,plotlyCfg());
 }
 
 function renderAnnualTable(){
@@ -1002,51 +988,36 @@ function renderTendencia(){
 
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;}), rLabels=rangeWeeks.map(wFmt);
 
-  destroyChart('rangeLine');
-  var rDatasets=yrs.map(function(yr){
+  destroyChart('chartRangeLine');
+  var rTraces=yrs.map(function(yr){
     var d=byYear[yr], data=rangeWeeks.map(function(w){return d&&d.weekly[w]?d.weekly[w]:null;}), col=YEAR_COLORS[yr]||'#888';
-    return {label:String(yr),data:data,borderColor:col,backgroundColor:col+'15',
-      borderWidth:yr===2025?2.5:1.5,borderDash:yr===2026?[4,4]:[],
-      pointRadius:rangeWeeks.length<20?3:0,pointHoverRadius:4,tension:0.3,fill:false,spanGaps:true};
+    return {type:'scatter',mode:'lines'+(rangeWeeks.length<20?'+markers':''),name:String(yr),x:rLabels,y:data,
+      line:{color:col,width:yr===2025?3:2,dash:yr===2026?'dash':'solid'},
+      connectgaps:true,hovertemplate:'<b>'+yr+' %{x}</b><br>%{text}<extra></extra>',
+      text:data.map(function(v){return v?fmt(v):'—';})};
   });
-  if(rDatasets.some(function(d){return d.data.some(function(v){return v!==null;});})){
-    charts.rangeLine=new Chart(document.getElementById('chartRangeLine').getContext('2d'),{
-      type:'line',data:{labels:rLabels,datasets:rDatasets},
-      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        plugins:{legend:{display:true,position:'top',labels:{color:'#64748b',font:{family:'IBM Plex Mono',size:10},padding:12,boxWidth:12,boxHeight:2}},
-                 tooltip:{backgroundColor:'#fff',titleColor:'#1e293b',bodyColor:'#64748b',borderColor:'#e2e8f0',borderWidth:1,callbacks:{label:function(c){return ' '+c.dataset.label+': '+fmt(c.raw);}}}},
-        scales:{x:{grid:{color:'#f1f5f9'},ticks:{color:'#94a3b8',font:{size:9,family:'IBM Plex Mono'},maxTicksLimit:16}},
-                y:{grid:{color:'#f1f5f9'},ticks:{color:'#64748b',font:{size:10,family:'IBM Plex Mono'},callback:function(v){return fmt(v);}}}}}
-    });
+  if(rTraces.some(function(d){return d.y.some(function(v){return v!==null;});})){
+    Plotly.newPlot('chartRangeLine',rTraces,plotlyLayout({yaxis:{tickformat:'$,.0f'},legend:{orientation:'h',y:1.12}}),plotlyCfg());
   }
 
-  destroyChart('rangeBar');
+  destroyChart('chartRangeBar');
   document.getElementById('rangeBarNote').textContent=sym;
   var rbVals=yrs.map(function(y){var d=byYear[y];return d?(state.currency==='usd'?d.usd:d.mxn):0;});
-  charts.rangeBar=new Chart(document.getElementById('chartRangeBar').getContext('2d'),{
-    type:'bar',data:{labels:yrs.map(String),datasets:[{data:rbVals,
-      backgroundColor:yrs.map(function(y){return (YEAR_COLORS[y]||'#888')+'bb';}),
-      borderColor:yrs.map(function(y){return YEAR_COLORS[y]||'#888';}),borderWidth:1.5,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#1e293b',bodyColor:'#64748b',borderColor:'#e2e8f0',borderWidth:1,callbacks:{label:function(c){return ' '+fmt(c.raw);}}}},
-      scales:{x:{grid:{color:'#f1f5f9'},ticks:{color:'#64748b',font:{family:'IBM Plex Mono',size:11}}},
-              y:{grid:{color:'#f1f5f9'},ticks:{color:'#64748b',font:{size:10,family:'IBM Plex Mono'},callback:function(v){return fmt(v);}}}}}
-  });
+  Plotly.newPlot('chartRangeBar',[{type:'bar',x:yrs.map(String),y:rbVals,
+    marker:{color:yrs.map(function(y){return YEAR_COLORS[y]||'#888';})},
+    text:rbVals.map(fmt),textposition:'outside',
+    hovertemplate:'<b>%{x}</b><br>%{text}<extra></extra>'}],
+    plotlyLayout({yaxis:{tickformat:'$,.0f'}}),plotlyCfg());
 
-  destroyChart('cumul');
-  var cDatasets=yrs.map(function(yr){
+  destroyChart('chartCumul');
+  var cTraces=yrs.map(function(yr){
     var d=byYear[yr], cum=0, data=rangeWeeks.map(function(w){if(d&&d.weekly[w]) cum+=d.weekly[w];return cum||null;}), col=YEAR_COLORS[yr]||'#888';
-    return {label:String(yr),data:data,borderColor:col,backgroundColor:col+'20',
-      borderWidth:1.5,borderDash:yr===2026?[4,4]:[],pointRadius:0,pointHoverRadius:4,tension:0.3,fill:true,spanGaps:true};
+    return {type:'scatter',mode:'lines',name:String(yr),x:rLabels,y:data,
+      fill:'tozeroy',fillcolor:col+'25',line:{color:col,width:2,dash:yr===2026?'dash':'solid'},
+      connectgaps:true,hovertemplate:'<b>'+yr+' %{x}</b><br>%{text}<extra></extra>',
+      text:data.map(function(v){return v?fmt(v):'—';})};
   });
-  charts.cumul=new Chart(document.getElementById('chartCumul').getContext('2d'),{
-    type:'line',data:{labels:rLabels,datasets:cDatasets},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:true,position:'top',labels:{color:'#64748b',font:{family:'IBM Plex Mono',size:9},padding:10,boxWidth:12,boxHeight:2}},
-               tooltip:{backgroundColor:'#fff',titleColor:'#1e293b',bodyColor:'#64748b',borderColor:'#e2e8f0',borderWidth:1,callbacks:{label:function(c){return ' '+c.dataset.label+': '+fmt(c.raw);}}}},
-      scales:{x:{grid:{color:'#f1f5f9'},ticks:{color:'#94a3b8',font:{size:9,family:'IBM Plex Mono'},maxTicksLimit:16}},
-              y:{grid:{color:'#f1f5f9'},ticks:{color:'#64748b',font:{size:10,family:'IBM Plex Mono'},callback:function(v){return fmt(v);}}}}}
-  });
+  Plotly.newPlot('chartCumul',cTraces,plotlyLayout({yaxis:{tickformat:'$,.0f'},legend:{orientation:'h',y:1.12}}),plotlyCfg());
 
   renderRangeTable(f,t,yrs,byYear);
 }
@@ -1329,9 +1300,33 @@ function closeProductos() {
 }
 
 
-Chart.defaults.color='#64748b';
-Chart.defaults.borderColor='#e2e8f0';
-Chart.defaults.font={family:'IBM Plex Mono'};
+// ═══════════════════════════════════════════
+// PLOTLY HELPERS
+// ═══════════════════════════════════════════
+function plotlyLayout(extra){
+  var base={
+    paper_bgcolor:'rgba(0,0,0,0)',
+    plot_bgcolor:'rgba(0,0,0,0)',
+    font:{family:'IBM Plex Mono, monospace',color:'#64748b',size:11},
+    margin:{t:10,r:10,b:40,l:60},
+    xaxis:{gridcolor:'#f1f5f9',linecolor:'#e2e8f0',tickfont:{size:10}},
+    yaxis:{gridcolor:'#f1f5f9',linecolor:'#e2e8f0',tickfont:{size:10},tickformat:'$,.0f'},
+    hoverlabel:{bgcolor:'#fff',bordercolor:'#e2e8f0',font:{family:'IBM Plex Mono',size:12,color:'#1e293b'}},
+    legend:{font:{size:10},bgcolor:'rgba(255,255,255,0.8)',bordercolor:'#e2e8f0',borderwidth:1},
+    autosize:true
+  };
+  if(extra) Object.keys(extra).forEach(function(k){
+    if(typeof extra[k]==='object'&&!Array.isArray(extra[k])&&base[k]){
+      Object.assign(base[k],extra[k]);
+    } else { base[k]=extra[k]; }
+  });
+  return base;
+}
+function plotlyCfg(){
+  return {responsive:true,displayModeBar:true,
+    modeBarButtonsToRemove:['select2d','lasso2d','autoScale2d'],
+    displaylogo:false};
+}
 
 window.onerror = function(msg, src, line, col, err) {
   document.getElementById('loader').innerHTML =
