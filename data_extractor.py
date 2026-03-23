@@ -83,6 +83,7 @@ def _leer_hoja(xls: pd.ExcelFile, titulo: str, rango_filas: int = 60,
 # ─── Helpers de normalización ─────────────────────────────────────────────────
 def norm_ranch(s: str):
     s = str(s).upper().strip()
+    s = re.sub(r'\s*-\s*', '-', s)   # normaliza "CAMPO -RM" → "CAMPO-RM"
     if "PROP" in s:                                      return "Prop-RM"
     if "POSCO" in s:                                     return "PosCo-RM"
     if "CAMPO-VI" in s or "CAMPO-IV" in s:               return "Campo-VI"
@@ -156,27 +157,35 @@ def _parse_pr(rows: list) -> dict:
         if not row or len(row) < 10:
             continue
 
-        ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
-        ubicacion = re.sub(r'\s+', '', ubicacion)   # eliminar espacios internos
+        ubicacion_raw = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
+        ubicacion = re.sub(r'\s+', '', ubicacion_raw)   # eliminar espacios internos
 
-        if not ubicacion or len(ubicacion) < 6:
+        if not ubicacion:
             continue
-        if not re.match(r'^[A-Z0-9]+$', ubicacion):
-            continue
-        ranch_code = ubicacion[:3]
-        rancho = RANCH_MAP.get(ranch_code)
 
-        # VIV / VIVEVIV → Prop-RM
-        if not rancho and ubicacion.startswith('VIV'):
-            rancho = 'Prop-RM'
+        # Intento 1: el valor es un nombre completo como "CAMPO-RM" o "Campo -RM"
+        rancho = norm_ranch(ubicacion_raw)
+
+        # Intento 2: código corto alfanumérico (ej. RAMMIPRNN)
+        if not rancho:
+            if len(ubicacion) < 6:
+                continue
+            if not re.match(r'^[A-Z0-9]+$', ubicacion):
+                continue
+            ranch_code = ubicacion[:3]
+            rancho = RANCH_MAP.get(ranch_code)
+
+            # VIV / VIVEVIV → Prop-RM
+            if not rancho and ubicacion.startswith('VIV'):
+                rancho = 'Prop-RM'
 
         # Si no es un rancho conocido, descartar
         if not rancho:
             continue
 
-        # Determinar tipo:
+        # Determinar tipo desde el código limpio (sin espacios)
         #   MIP en el código → MIPE
-        #   MIR, CORT, COR, VIVEVIV o cualquier otro sufijo → MIRFE
+        #   cualquier otro sufijo → MIRFE
         if 'MIP' in ubicacion:
             tipo = 'MIPE'
         else:
