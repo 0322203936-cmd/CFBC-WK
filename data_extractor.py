@@ -168,7 +168,8 @@ def _parse_pr(rows: list) -> dict:
         ranch_code = ubicacion[:3]
         rancho = RANCH_MAP.get(ranch_code)
 
-        if not rancho and ubicacion.startswith('VIV'):
+        # Cualquier código que empiece con VIV o VIVE → Prop-RM
+        if not rancho and (ubicacion.startswith('VIV') or ubicacion.startswith('VIVE')):
             rancho = 'Prop-RM'
         if not rancho:
             continue
