@@ -286,48 +286,41 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 
 
-<div class="cat-select-wrap">
-  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;opacity:.7">
-    <circle cx="14" cy="14" r="3.5" fill="#0a7c52"/>
-    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(0 14 14)"/>
-    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(45 14 14)"/>
-    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(90 14 14)"/>
-    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(135 14 14)"/>
-    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(22.5 14 14)"/>
-    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(67.5 14 14)"/>
-    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(112.5 14 14)"/>
-    <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(157.5 14 14)"/>
-    <circle cx="14" cy="14" r="3.5" fill="#fff" stroke="#0a7c52" stroke-width="1.2"/>
-    <circle cx="14" cy="14" r="1.6" fill="#0a7c52"/>
-  </svg>
-  <span class="cat-select-label">Categoría</span>
-  <div class="cat-select-outer">
-    <select class="cat-select" id="catSelect" onchange="selectCat(this.value)"></select>
-    <span class="cat-arrow">▾</span>
-  </div>
-  <span class="cat-count" id="catCount"></span>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0">
-    <span class="ctrl-label">Moneda</span>
-    <div class="toggle-group">
-      <button class="toggle-btn active" id="btnUSD" onclick="setCurrency('usd')">USD $</button>
-      <button class="toggle-btn"        id="btnMXN" onclick="setCurrency('mxn')">MXN $</button>
+<div style="position:relative;border-bottom:2px solid #c8e6d8;overflow:hidden;">
+  <!-- Imagen de fondo -->
+  <img src="__FLORES_IMG__" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%;display:block;"
+    onerror="this.src='https://images.unsplash.com/photo-1457530378978-8bac673b8062?w=1600&h=200&fit=crop&q=85'"/>
+  <!-- Overlay para que los controles sean legibles -->
+  <div style="position:absolute;inset:0;background:rgba(255,255,255,0.82);backdrop-filter:blur(1px);"></div>
+  <!-- Controles encima -->
+  <div class="cat-select-wrap" style="position:relative;z-index:2;border-bottom:none;">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;opacity:.8">
+      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(0 14 14)"/>
+      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(45 14 14)"/>
+      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(90 14 14)"/>
+      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(135 14 14)"/>
+      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(22.5 14 14)"/>
+      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(67.5 14 14)"/>
+      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(112.5 14 14)"/>
+      <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#16a367" opacity=".5" transform="rotate(157.5 14 14)"/>
+      <circle cx="14" cy="14" r="3.5" fill="#fff" stroke="#0a7c52" stroke-width="1.2"/>
+      <circle cx="14" cy="14" r="1.6" fill="#0a7c52"/>
+    </svg>
+    <span class="cat-select-label">Categoría</span>
+    <div class="cat-select-outer">
+      <select class="cat-select" id="catSelect" onchange="selectCat(this.value)"></select>
+      <span class="cat-arrow">▾</span>
     </div>
-    <span class="ctrl-label" style="margin-left:4px">Años</span>
-    <div class="year-chips" id="yearChips"></div>
-  </div>
-</div>
-
-<!-- BANNER FLORAL — imagen campo de flores -->
-<div style="width:100%;height:100px;overflow:hidden;position:relative;border-bottom:2px solid #c8e6d8;">
-  <img
-    src="__FLORES_IMG__"
-    alt="campo de flores"
-    style="width:100%;height:100%;object-fit:cover;object-position:center 55%;display:block;"
-    onerror="this.src='https://images.unsplash.com/photo-1457530378978-8bac673b8062?w=1600&h=200&fit=crop&q=85'"
-  />
-  <div style="position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,.08) 0%, rgba(0,0,0,.22) 100%);pointer-events:none"></div>
-  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-    <span style="font-family:'Syne',sans-serif;font-size:.85rem;font-weight:800;color:#fff;letter-spacing:4px;text-transform:uppercase;text-shadow:0 2px 12px rgba(0,0,0,.55)">Centro Floricultor de Baja California</span>
+    <span class="cat-count" id="catCount"></span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <span class="ctrl-label">Moneda</span>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="btnUSD" onclick="setCurrency('usd')">USD $</button>
+        <button class="toggle-btn"        id="btnMXN" onclick="setCurrency('mxn')">MXN $</button>
+      </div>
+      <span class="ctrl-label" style="margin-left:4px">Años</span>
+      <div class="year-chips" id="yearChips"></div>
+    </div>
   </div>
 </div>
 
