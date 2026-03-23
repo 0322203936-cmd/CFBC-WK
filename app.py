@@ -293,8 +293,8 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   <!-- Overlay suave para legibilidad -->
   <div style="position:absolute;inset:0;background:rgba(255,255,255,0.55);"></div>
   <!-- Controles encima -->
-  <div class="cat-select-wrap" style="position:relative;z-index:2;border-bottom:none;">
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;opacity:.8">
+  <div class="cat-select-wrap" style="position:relative;z-index:2;border-bottom:none;padding:12px 24px;">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;opacity:.9">
       <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(0 14 14)"/>
       <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(45 14 14)"/>
       <ellipse cx="14" cy="7" rx="2.8" ry="4.5" fill="#0a7c52" opacity=".7" transform="rotate(90 14 14)"/>
@@ -306,13 +306,17 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
       <circle cx="14" cy="14" r="3.5" fill="#fff" stroke="#0a7c52" stroke-width="1.2"/>
       <circle cx="14" cy="14" r="1.6" fill="#0a7c52"/>
     </svg>
-    <span class="cat-select-label">Categoría</span>
-    <div class="cat-select-outer">
-      <select class="cat-select" id="catSelect" onchange="selectCat(this.value)"></select>
+    <!-- Label Categoría -->
+    <span class="cat-select-label" style="background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.12);">Categoría</span>
+    <!-- Selector -->
+    <div class="cat-select-outer" style="background:rgba(255,255,255,0.92);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.15);">
+      <select class="cat-select" id="catSelect" onchange="selectCat(this.value)" style="background:transparent;font-weight:700;color:#0f2044;"></select>
       <span class="cat-arrow">▾</span>
     </div>
-    <span class="cat-count" id="catCount"></span>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <!-- Contador -->
+    <span class="cat-count" id="catCount" style="background:rgba(255,255,255,0.88);box-shadow:0 1px 4px rgba(0,0,0,.12);"></span>
+    <!-- Controles derecha -->
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(255,255,255,0.82);padding:6px 14px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.13);">
       <span class="ctrl-label">Moneda</span>
       <div class="toggle-group">
         <button class="toggle-btn active" id="btnUSD" onclick="setCurrency('usd')">USD $</button>
