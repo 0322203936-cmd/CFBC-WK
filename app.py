@@ -152,8 +152,8 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .toggle-btn{padding:6px 16px;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;border:none;color:var(--muted);font-family:'Syne',sans-serif;white-space:nowrap}
 .toggle-btn.active{background:var(--green);color:#fff}
 .year-chips{display:flex;gap:5px;flex-wrap:nowrap;flex-shrink:0}
-.yr-chip{padding:5px 12px;font-size:.72rem;font-weight:700;border-radius:6px;cursor:pointer;border:1.5px solid transparent;transition:all .2s;font-family:'IBM Plex Mono',monospace;opacity:.55;white-space:nowrap}
-.yr-chip.on{opacity:1;border-color:currentColor;background:rgba(0,0,0,.05)}
+.yr-chip{padding:4px 10px;font-size:.72rem;font-weight:700;border-radius:6px;cursor:pointer;border:1.5px solid rgba(255,255,255,.25);transition:all .2s;font-family:'IBM Plex Mono',monospace;white-space:nowrap;background:rgba(0,0,0,.35);color:#fff;opacity:.6}
+.yr-chip.on{opacity:1;border-color:currentColor;background:rgba(0,0,0,.55)}
 
 .week-nav{display:flex;align-items:center;gap:12px;padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
 .week-nav::-webkit-scrollbar{display:none}
@@ -311,7 +311,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
         <button class="toggle-btn"        id="btnMXN" onclick="setCurrency('mxn')">MXN $</button>
       </div>
       <span class="ctrl-label" style="margin-left:4px;color:#f0e8f2;">Años</span>
-      <div class="year-chips" id="yearChips"></div>
+      <div class="year-chips" id="yearChips" style="gap:4px;"></div>
     </div>
   </div>
 </div>
@@ -491,7 +491,7 @@ var state = {
   view:'semana', weekIdx:0, fromWeek:1, toWeek:52
 };
 var allWeeks = [];
-var YEAR_COLORS = {2021:'#0891b2',2022:'#b45309',2023:'#047857',2024:'#7c3aed',2025:'#0a7c52',2026:'#dc2626'};
+var YEAR_COLORS = {2021:'#67e8f9',2022:'#fde68a',2023:'#86efac',2024:'#c4b5fd',2025:'#6ee7b7',2026:'#fca5a5'};
 var RANCH_COLORS = {
   'Prop-RM':'#047857','PosCo-RM':'#1d4ed8','Campo-RM':'#b45309',
   'Isabela':'#7c3aed','HOOPS':'#c2410c','Cecilia':'#be185d',
@@ -671,7 +671,7 @@ function buildYearChips(){
   var el=document.getElementById('yearChips');
   el.innerHTML=DATA.years.map(function(y){
     var col=YEAR_COLORS[y]||'#888', on=state.activeYears[y]?'on':'';
-    return '<button class="yr-chip '+on+'" style="color:'+col+';background:'+(on?col+'22':'transparent')+';border-color:'+col+'44" onclick="toggleYear('+y+')">'+y+'</button>';
+    return '<button class="yr-chip '+on+'" style="color:'+col+';border-color:'+(on?col:'rgba(255,255,255,.25)')+'" onclick="toggleYear('+y+')">'+y+'</button>';
   }).join('');
   var rb=document.getElementById('ranchYrBtns');
   if(rb) rb.innerHTML=DATA.years.map(function(y){
