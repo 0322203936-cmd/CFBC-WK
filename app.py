@@ -129,7 +129,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .badge{font-family:'IBM Plex Mono',monospace;font-size:.67rem;font-weight:600;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7)}
 .badge.muted{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
 
-.cat-select-wrap{padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.cat-select-wrap{padding:10px 24px;background:transparent;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
 .cat-select-wrap::-webkit-scrollbar{display:none}
 .cat-select-label{font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'IBM Plex Mono',monospace;white-space:nowrap}
 .cat-select-outer{position:relative;display:flex;align-items:center;flex:1;min-width:160px;max-width:400px}
@@ -286,12 +286,12 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 
 
-<div style="position:relative;border-bottom:2px solid #c8e6d8;overflow:hidden;">
+<div style="position:relative;border-bottom:2px solid #c8e6d8;overflow:hidden;min-height:70px;">
   <!-- Imagen de fondo -->
   <img src="__FLORES_IMG__" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%;display:block;"
     onerror="this.src='https://images.unsplash.com/photo-1457530378978-8bac673b8062?w=1600&h=200&fit=crop&q=85'"/>
-  <!-- Overlay para que los controles sean legibles -->
-  <div style="position:absolute;inset:0;background:rgba(255,255,255,0.82);backdrop-filter:blur(1px);"></div>
+  <!-- Overlay suave para legibilidad -->
+  <div style="position:absolute;inset:0;background:rgba(255,255,255,0.55);"></div>
   <!-- Controles encima -->
   <div class="cat-select-wrap" style="position:relative;z-index:2;border-bottom:none;">
     <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;opacity:.8">
