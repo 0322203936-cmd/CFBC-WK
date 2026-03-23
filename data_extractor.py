@@ -133,7 +133,7 @@ def _parse_pr(rows: list) -> dict:
     """
     RANCH_MAP = {
         'VIV': 'Prop-RM',
-        'RAM': 'Campo -RM',
+        'RAM': 'Campo-RM',
         'ISA': 'Isabela',
         'CHR': 'Christina',
         'CEC': 'Cecilia',
