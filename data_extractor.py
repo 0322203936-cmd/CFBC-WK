@@ -83,7 +83,6 @@ def _leer_hoja(xls: pd.ExcelFile, titulo: str, rango_filas: int = 60,
 # ─── Helpers de normalización ─────────────────────────────────────────────────
 def norm_ranch(s: str):
     s = str(s).upper().strip()
-    s = re.sub(r'\s*-\s*', '-', s)   # normaliza "CAMPO -RM" → "CAMPO-RM"
     if "PROP" in s:                                      return "Prop-RM"
     if "POSCO" in s:                                     return "PosCo-RM"
     if "CAMPO-VI" in s or "CAMPO-IV" in s:               return "Campo-VI"
@@ -151,41 +150,33 @@ def _parse_pr(rows: list) -> dict:
     GASTO_COL     = 9
 
     result  = {}
-    accum   = {}   # (rancho, tipo, producto) → [u_total, g_total]
+    accum   = {}   # (rancho, tipo, producto, ubicacion) → [u_total, g_total]
 
     for row in rows:
         if not row or len(row) < 10:
             continue
 
-        ubicacion_raw = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
-        ubicacion = re.sub(r'\s+', '', ubicacion_raw)   # eliminar espacios internos
+        ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
+        ubicacion = re.sub(r'\s+', '', ubicacion)   # eliminar espacios internos
 
-        if not ubicacion:
+        if not ubicacion or len(ubicacion) < 6:
             continue
+        if not re.match(r'^[A-Z0-9]+$', ubicacion):
+            continue
+        ranch_code = ubicacion[:3]
+        rancho = RANCH_MAP.get(ranch_code)
 
-        # Intento 1: el valor es un nombre completo como "CAMPO-RM" o "Campo -RM"
-        rancho = norm_ranch(ubicacion_raw)
-
-        # Intento 2: código corto alfanumérico (ej. RAMMIPRNN)
-        if not rancho:
-            if len(ubicacion) < 6:
-                continue
-            if not re.match(r'^[A-Z0-9]+$', ubicacion):
-                continue
-            ranch_code = ubicacion[:3]
-            rancho = RANCH_MAP.get(ranch_code)
-
-            # VIV / VIVEVIV → Prop-RM
-            if not rancho and ubicacion.startswith('VIV'):
-                rancho = 'Prop-RM'
+        # VIV / VIVEVIV → Prop-RM
+        if not rancho and ubicacion.startswith('VIV'):
+            rancho = 'Prop-RM'
 
         # Si no es un rancho conocido, descartar
         if not rancho:
             continue
 
-        # Determinar tipo desde el código limpio (sin espacios)
+        # Determinar tipo:
         #   MIP en el código → MIPE
-        #   cualquier otro sufijo → MIRFE
+        #   MIR, CORT, COR, VIVEVIV o cualquier otro sufijo → MIRFE
         if 'MIP' in ubicacion:
             tipo = 'MIPE'
         else:
@@ -212,7 +203,7 @@ def _parse_pr(rows: list) -> dict:
         u = float(unidades) if unidades else 0.0
         g = float(gasto)    if gasto    else 0.0
 
-        key = (rancho, tipo, producto)
+        key = (rancho, tipo, producto, ubicacion)
         if key in accum:
             accum[key][0] += u
             accum[key][1] += g
@@ -220,10 +211,10 @@ def _parse_pr(rows: list) -> dict:
             accum[key] = [u, g]
 
     # Construir result final desde el acumulador
-    for (rancho, tipo, producto), (u_tot, g_tot) in accum.items():
+    for (rancho, tipo, producto, ubicacion), (u_tot, g_tot) in accum.items():
         u_str = str(int(u_tot)) if u_tot == int(u_tot) else str(round(u_tot, 2))
         g_str = str(round(g_tot, 2))
-        result.setdefault(rancho, {}).setdefault(tipo, []).append([producto, u_str, g_str])
+        result.setdefault(rancho, {}).setdefault(tipo, []).append([producto, u_str, g_str, ubicacion])
 
     return result
 
