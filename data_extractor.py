@@ -1,13 +1,21 @@
 """
 data_extractor.py
 Centro Floricultor de Baja California
-Extrae datos desde Excel en OneDrive (sin Google Sheets)
+- Hojas WK  → Excel en OneDrive (pandas + requests)
+- Hojas PR  → Google Sheets (gspread + service account)
 """
 
 import re
 import requests
 import pandas as pd
+import gspread
 from io import BytesIO
+from google.oauth2.service_account import Credentials
+
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets.readonly",
+    "https://www.googleapis.com/auth/drive.readonly",
+]
 
 # ─── URL de OneDrive ──────────────────────────────────────────────────────────
 ONEDRIVE_URL = (
@@ -402,12 +410,111 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
     }
 
 
+# ─── Conexión a Google Sheets (solo para hojas PR) ───────────────────────────
+def get_gsheets_client(credentials_path: str = "credentials.json") -> gspread.Client:
+    import streamlit as st
+    if "gcp_service_account" in st.secrets:
+        info = {
+            "type":                        st.secrets["gcp_service_account"]["type"],
+            "project_id":                  st.secrets["gcp_service_account"]["project_id"],
+            "private_key_id":              st.secrets["gcp_service_account"]["private_key_id"],
+            "private_key":                 st.secrets["gcp_service_account"]["private_key"],
+            "client_email":                st.secrets["gcp_service_account"]["client_email"],
+            "client_id":                   st.secrets["gcp_service_account"]["client_id"],
+            "auth_uri":                    st.secrets["gcp_service_account"]["auth_uri"],
+            "token_uri":                   st.secrets["gcp_service_account"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["gcp_service_account"]["auth_provider_x509_cert_url"],
+            "client_x509_cert_url":        st.secrets["gcp_service_account"]["client_x509_cert_url"],
+        }
+        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+    else:
+        creds = Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
+    return gspread.authorize(creds)
+
+
+def _fetch_pr_desde_sheets(spreadsheet_name: str = "WK 2026-08") -> tuple[dict, dict]:
+    """
+    Se conecta a Google Sheets y lee SOLO las hojas PR####.
+    Retorna (productos, productos_debug) con el mismo formato que extraer_datos.
+    """
+    productos       = {}
+    productos_debug = {"hojas_pr_encontradas": []}
+
+    try:
+        client = get_gsheets_client()
+
+        # Buscar el spreadsheet por nombre
+        ss = None
+        for name in [spreadsheet_name, spreadsheet_name.replace(" ", "_")]:
+            try:
+                ss = client.open(name)
+                break
+            except gspread.SpreadsheetNotFound:
+                pass
+
+        if ss is None:
+            # Buscar cualquier sheet con WK y el año actual
+            for s in client.openall():
+                if "WK" in s.title.upper() and "2026" in s.title:
+                    ss = s
+                    break
+
+        if ss is None:
+            print("⚠️  No se encontró el Google Sheet para hojas PR")
+            return productos, productos_debug
+
+        # Filtrar solo hojas PR####
+        pr_hojas = []
+        for ws in ss.worksheets():
+            sname = ws.title.strip()
+            pr_match = re.match(r'^PR\s*\d{4}$', sname, re.IGNORECASE)
+            if pr_match:
+                pr_raw = re.sub(r'PR\s*', '', sname, flags=re.IGNORECASE).strip()
+                try:
+                    pr_code = int(pr_raw)
+                    pr_year = 2000 + (pr_code // 100)
+                    if 2018 <= pr_year <= 2030:
+                        print(f"   ✅ PR encontrada en Sheets: {sname}")
+                        pr_hojas.append((ws.title, pr_code))
+                except ValueError:
+                    pass
+
+        productos_debug["hojas_pr_encontradas"] = [t for t, _ in pr_hojas]
+
+        if not pr_hojas:
+            print("   ℹ️  No hay hojas PR en el Google Sheet")
+            return productos, productos_debug
+
+        # Leer hojas PR en batch
+        BATCH = 100
+        pr_rangos = [f"'{t}'!A1:K500" for t, _ in pr_hojas]
+        for i in range(0, len(pr_rangos), BATCH):
+            grupo = pr_rangos[i:i + BATCH]
+            res   = ss.values_batch_get(grupo, params={"valueRenderOption": "UNFORMATTED_VALUE"})
+            for item in res.get("valueRanges", []):
+                rng  = item.get("range", "")
+                vals = item.get("values", [])
+                tit  = rng.split("!")[0].strip("'")
+                for pt, pc in pr_hojas:
+                    if pt == tit:
+                        parsed = _parse_pr(vals)
+                        productos[pc] = parsed
+                        productos_debug[f"PR{pc}_ranchos"] = list(parsed.keys()) if parsed else []
+                        break
+
+    except Exception as e:
+        print(f"⚠️  Error leyendo PR desde Google Sheets: {e}")
+
+    return productos, productos_debug
+
+
 # ─── Punto de entrada público ─────────────────────────────────────────────────
-def get_datos() -> dict:
+def get_datos(spreadsheet_name: str = "WK 2026-08") -> dict:
     """
-    Descarga el Excel desde OneDrive y retorna el mismo dict estructurado
-    que antes devolvía la versión de Google Sheets.
+    - Hojas WK  → descargadas desde el Excel de OneDrive
+    - Hojas PR  → leídas desde Google Sheets con service account
     """
+    # 1. Leer WK desde OneDrive
     archivo = descargar_excel()
     if archivo is None:
         return {"error": "No se pudo descargar el archivo de OneDrive."}
@@ -417,4 +524,15 @@ def get_datos() -> dict:
     except Exception as e:
         return {"error": f"No se pudo abrir el Excel: {e}"}
 
-    return extraer_datos(xls)
+    resultado = extraer_datos(xls)
+
+    # 2. Leer PR desde Google Sheets y combinar
+    if "error" not in resultado:
+        print("\n" + "=" * 60)
+        print("🔍 LEYENDO HOJAS PR DESDE GOOGLE SHEETS")
+        print("=" * 60)
+        productos, productos_debug = _fetch_pr_desde_sheets(spreadsheet_name)
+        resultado["productos"]       = productos
+        resultado["productos_debug"] = productos_debug
+
+    return resultado
