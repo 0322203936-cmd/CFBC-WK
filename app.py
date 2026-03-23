@@ -86,7 +86,7 @@ HTML = """<!DOCTYPE html>
   --navy:#0f2044;--accent-soft:rgba(10,124,82,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;overflow-y:visible}
 
 .scroll-x{
   position:relative;overflow-x:auto;overflow-y:visible;
@@ -1360,14 +1360,15 @@ inicializar();
 
 <script>
 function reportHeight() {
-  var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, 600);
-  window.parent.postMessage({type:'streamlit:setFrameHeight', height: h + 40}, '*');
+  var h = document.getElementById('app') 
+    ? document.getElementById('app').getBoundingClientRect().bottom + window.scrollY + 40
+    : document.body.scrollHeight + 40;
+  window.parent.postMessage({type:'streamlit:setFrameHeight', height: Math.max(h, 600)}, '*');
 }
 var ro = new ResizeObserver(reportHeight);
 ro.observe(document.body);
-ro.observe(document.getElementById('app'));
 reportHeight();
-setInterval(reportHeight, 400);
+setInterval(reportHeight, 300);
 </script>
 </body>
 </html>"""
@@ -1376,4 +1377,4 @@ setInterval(reportHeight, 400);
 html_final = HTML.replace('__DATA_JSON__', data_json).replace('__FLORES_IMG__', _flores_b64)
 
 # Renderizar
-components.html(html_final, height=900, scrolling=False)
+components.html(html_final, height=3500, scrolling=False)
