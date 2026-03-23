@@ -526,7 +526,7 @@ function inicializar() {
   allWeeks = Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
   state.weekIdx = allWeeks.length - 1;
 
-  // Semana actual y anterior: tomar del año más reciente con datos
+  // ── Apuntar a la semana más reciente del año más reciente ──
   var latestYear = DATA.years[DATA.years.length-1];
   var weeksOfLatest = DATA.weekly_detail
     .filter(function(r){ return r.year === latestYear; })
@@ -534,6 +534,9 @@ function inicializar() {
     .filter(function(v,i,a){ return a.indexOf(v)===i; })
     .sort(function(a,b){ return a-b; });
   var curWeek  = weeksOfLatest[weeksOfLatest.length-1] || allWeeks[allWeeks.length-1] || 1;
+  // Buscar el índice de esa semana en allWeeks y apuntar ahí
+  var curIdx = allWeeks.indexOf(curWeek);
+  if(curIdx >= 0) state.weekIdx = curIdx;
   var prevWeek2 = weeksOfLatest[weeksOfLatest.length-2] || weeksOfLatest[0] || curWeek;
   state.fromWeek = prevWeek2;
   state.toWeek   = curWeek;
