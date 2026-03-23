@@ -295,22 +295,22 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   <!-- Controles encima -->
   <div class="cat-select-wrap" style="position:relative;z-index:2;border-bottom:none;padding:12px 24px;">
     <!-- Label Categoría -->
-    <span class="cat-select-label" style="background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.12);">Categoría</span>
+    <span class="cat-select-label" style="background:rgba(110,81,115,0.85);color:#fff;padding:3px 8px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18);">Categoría</span>
     <!-- Selector -->
-    <div class="cat-select-outer" style="background:rgba(255,255,255,0.92);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.15);">
-      <select class="cat-select" id="catSelect" onchange="selectCat(this.value)" style="background:transparent;font-weight:700;color:#0f2044;"></select>
-      <span class="cat-arrow">▾</span>
+    <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
+      <select class="cat-select" id="catSelect" onchange="selectCat(this.value)" style="background:transparent;font-weight:700;color:#fff;"></select>
+      <span class="cat-arrow" style="color:#fff;">▾</span>
     </div>
     <!-- Contador -->
     <span class="cat-count" id="catCount" style="display:none;"></span>
     <!-- Controles derecha -->
-    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(255,255,255,0.82);padding:6px 14px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.13);">
-      <span class="ctrl-label">Moneda</span>
-      <div class="toggle-group">
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(110,81,115,0.85);padding:6px 14px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.18);">
+      <span class="ctrl-label" style="color:#f0e8f2;">Moneda</span>
+      <div class="toggle-group" style="border-color:rgba(255,255,255,.3);">
         <button class="toggle-btn active" id="btnUSD" onclick="setCurrency('usd')">USD $</button>
         <button class="toggle-btn"        id="btnMXN" onclick="setCurrency('mxn')">MXN $</button>
       </div>
-      <span class="ctrl-label" style="margin-left:4px">Años</span>
+      <span class="ctrl-label" style="margin-left:4px;color:#f0e8f2;">Años</span>
       <div class="year-chips" id="yearChips"></div>
     </div>
   </div>
