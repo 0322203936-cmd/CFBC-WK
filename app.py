@@ -302,7 +302,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
       <span class="cat-arrow">▾</span>
     </div>
     <!-- Contador -->
-    <span class="cat-count" id="catCount" style="background:rgba(255,255,255,0.88);box-shadow:0 1px 4px rgba(0,0,0,.12);"></span>
+    <span class="cat-count" id="catCount" style="display:none;"></span>
     <!-- Controles derecha -->
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(255,255,255,0.82);padding:6px 14px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.13);">
       <span class="ctrl-label">Moneda</span>
