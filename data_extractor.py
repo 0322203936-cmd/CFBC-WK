@@ -1,18 +1,21 @@
 """
 data_extractor.py
 Centro Floricultor de Baja California
-Extrae datos desde Google Sheets — lectura en batch (rapido)
+Extrae datos desde Excel en OneDrive (sin Google Sheets)
 """
 
 import re
-import gspread
-from google.oauth2.service_account import Credentials
+import requests
+import pandas as pd
+from io import BytesIO
 
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets.readonly",
-    "https://www.googleapis.com/auth/drive.readonly",
-]
+# ─── URL de OneDrive ──────────────────────────────────────────────────────────
+ONEDRIVE_URL = (
+    "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
+    "anahi_mora_cfbc_co/IQAQCb79SzHtRrTQR71pSNQcASOWqFXyeGGzEhUcT9FRRJ4?e=ClxLCN"
+)
 
+# ─── Constantes ───────────────────────────────────────────────────────────────
 RANCH_KEYS = ["PROP", "POSCO", "CAMPO", "ISABEL", "HOOPS", "CECILIA", "CHRISTINA", "ALBAHACA"]
 
 CATEGORIAS_ORDEN = [
@@ -29,28 +32,45 @@ CATEGORIAS_ORDEN = [
     "MATERIAL DE EMPAQUE",
 ]
 
-
-def get_client(credentials_path: str = "credentials.json") -> gspread.Client:
-    import streamlit as st
-    if "gcp_service_account" in st.secrets:
-        info = {
-            "type":                        st.secrets["gcp_service_account"]["type"],
-            "project_id":                  st.secrets["gcp_service_account"]["project_id"],
-            "private_key_id":              st.secrets["gcp_service_account"]["private_key_id"],
-            "private_key":                 st.secrets["gcp_service_account"]["private_key"],
-            "client_email":                st.secrets["gcp_service_account"]["client_email"],
-            "client_id":                   st.secrets["gcp_service_account"]["client_id"],
-            "auth_uri":                    st.secrets["gcp_service_account"]["auth_uri"],
-            "token_uri":                   st.secrets["gcp_service_account"]["token_uri"],
-            "auth_provider_x509_cert_url": st.secrets["gcp_service_account"]["auth_provider_x509_cert_url"],
-            "client_x509_cert_url":        st.secrets["gcp_service_account"]["client_x509_cert_url"],
-        }
-        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
-    else:
-        creds = Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
-    return gspread.authorize(creds)
+SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
 
 
+# ─── Descarga del Excel ───────────────────────────────────────────────────────
+def descargar_excel() -> BytesIO | None:
+    """Descarga el archivo .xlsx desde OneDrive y lo retorna como BytesIO."""
+    # OneDrive requiere el parámetro download=1 para descarga directa
+    download_url = ONEDRIVE_URL.replace("?e=", "?download=1&e=")
+    try:
+        response = requests.get(download_url, timeout=30)
+        response.raise_for_status()
+        return BytesIO(response.content)
+    except Exception as e:
+        print(f"❌ Error descargando el archivo: {e}")
+        return None
+
+
+def _leer_hoja(xls: pd.ExcelFile, titulo: str, rango_filas: int = 60,
+               rango_cols: int = 35) -> list[list]:
+    """
+    Lee una hoja del ExcelFile y la retorna como lista de listas.
+    Las celdas vacías / NaN se convierten a "".
+    rango_filas / rango_cols limitan cuánto leer (equivalente al rango A1:AI60).
+    """
+    try:
+        df = pd.read_excel(
+            xls,
+            sheet_name=titulo,
+            header=None,
+            nrows=rango_filas,
+            usecols=range(rango_cols),
+        ).fillna("")
+        return df.values.tolist()
+    except Exception as e:
+        print(f"   ⚠️  Error leyendo hoja '{titulo}': {e}")
+        return []
+
+
+# ─── Helpers de normalización ─────────────────────────────────────────────────
 def norm_ranch(s: str):
     s = str(s).upper().strip()
     if "PROP" in s:                                      return "Prop-RM"
@@ -91,19 +111,14 @@ def sv(v) -> float:
         return 0.0
 
 
+# ─── Parser de hojas PR#### ───────────────────────────────────────────────────
 def _parse_pr(rows: list) -> dict:
     """
     Lee filas del reporte PR#### del Excel.
-    Estructura del archivo PR:
-      Col 2: UBICACION (código del rancho, ej: RAMMIPRNN, CECMIPSNF)
-      Col 5: PRODUCTO (nombre del químico/producto)
+      Col 2: UBICACION  (ej: RAMMIPRNN, CECMIPSNF)
+      Col 5: PRODUCTO
       Col 7: UNIDADES
       Col 9: GASTO
-    
-    El código UBICACION indica:
-      - Primeros 3 chars: rancho (RAM, CEC, ISA, CHR, POS, CAM, etc)
-      - Chars siguientes: tipo MIR=MIRFE o MIP=MIPE
-    
     Retorna: { rancho: { tipo: [[producto, unidades, gasto], ...] } }
     """
     RANCH_MAP = {
@@ -118,74 +133,57 @@ def _parse_pr(rows: list) -> dict:
         'ALB': 'Albahaca-RM',
         'HOO': 'HOOPS',
     }
-    
+
     UBICACION_COL = 2
-    PRODUCTO_COL = 5
-    UNIDADES_COL = 7
-    GASTO_COL = 9
+    PRODUCTO_COL  = 5
+    UNIDADES_COL  = 7
+    GASTO_COL     = 9
 
     result = {}
-    seen = set()
+    seen   = set()
 
     for row in rows:
         if not row or len(row) < 10:
             continue
-        
-        # Leer UBICACION (código del rancho)
+
         ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
-        
-        # Validar que sea un código válido
+
         if not ubicacion or len(ubicacion) < 6:
             continue
         if not re.match(r'^[A-Z0-9]+$', ubicacion):
             continue
         if 'MIR' not in ubicacion and 'MIP' not in ubicacion:
             continue
-        
-        # Extraer rancho basado en los primeros caracteres de UBICACION
+
         ranch_code = ubicacion[:3]
         rancho = RANCH_MAP.get(ranch_code)
-        
-        # Si no se encontró con los primeros 3, revisar casos especiales
-        if not rancho:
-            # Prop-RM: códigos que empiezan con VIV (VIVEVIVGRL, etc.)
-            if ubicacion.startswith('VIV'):
-                rancho = 'Prop-RM'
-        
+
+        if not rancho and ubicacion.startswith('VIV'):
+            rancho = 'Prop-RM'
         if not rancho:
             continue
-        
-        # Determinar tipo (MIRFE o MIPE)
-        tipo = 'MIRFE' if 'MIR' in ubicacion else 'MIPE'
-        
-        # Leer producto
+
+        tipo    = 'MIRFE' if 'MIR' in ubicacion else 'MIPE'
         producto = str(row[PRODUCTO_COL]).strip() if len(row) > PRODUCTO_COL else ''
         if not producto or producto.upper() in ('PRODUCTO', 'NOMBRE', ''):
             continue
-        
-        # Leer unidades
+
         unidades = str(row[UNIDADES_COL]).strip() if len(row) > UNIDADES_COL else ''
         try:
             u = float(str(unidades).replace(',', ''))
             unidades = str(int(u)) if u == int(u) else str(round(u, 2))
         except Exception:
             unidades = '0'
-        
-        # Leer gasto
+
         gasto = str(row[GASTO_COL]).strip() if len(row) > GASTO_COL else ''
         try:
             g = float(str(gasto).replace(',', ''))
             gasto = str(round(g, 2))
         except Exception:
             gasto = '0'
-        
-        # Agregar al resultado
-        if rancho not in result:
-            result[rancho] = {}
-        if tipo not in result[rancho]:
-            result[rancho][tipo] = []
-        
-        # Evitar duplicados
+
+        result.setdefault(rancho, {}).setdefault(tipo, [])
+
         if (rancho, tipo, producto) not in seen:
             seen.add((rancho, tipo, producto))
             result[rancho][tipo].append([producto, unidades, gasto])
@@ -193,29 +191,29 @@ def _parse_pr(rows: list) -> dict:
     return result
 
 
-def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
-    all_data = []
-    SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
+# ─── Extractor principal ──────────────────────────────────────────────────────
+def extraer_datos(xls: pd.ExcelFile) -> dict:
+    all_data  = []
 
-    # 1. Filtrar hojas validas
-    hojas_validas = []
-    pr_hojas = []
+    # 1. Clasificar hojas
+    hojas_validas = []   # [(titulo, code_int)]
+    pr_hojas      = []   # [(titulo, code_int)]
+
     print("\n" + "=" * 60)
-    print("🔍 DETECTANDO HOJAS EN GOOGLE SHEET")
+    print("🔍 DETECTANDO HOJAS EN EL EXCEL")
     print("=" * 60)
-    
-    for ws in spreadsheet.worksheets():
-        sname = ws.title.strip()
+
+    for sname in xls.sheet_names:
+        sname = sname.strip()
         print(f"\n📄 Hoja: '{sname}'")
-        
+
         if sname.upper() in SKIP:
-            print(f"   ⏭️  SKIP (en lista de exclusión)")
+            print("   ⏭️  SKIP (en lista de exclusión)")
             continue
-            
-        # Detectar hojas PR#### (productos CONTPAQi)
+
+        # Hojas PR####
         pr_match = re.match(r'^PR\s*\d{4}$', sname, re.IGNORECASE)
         print(f"   🔍 Regex PR: {bool(pr_match)}")
-        
         if pr_match:
             pr_raw = re.sub(r'PR\s*', '', sname, flags=re.IGNORECASE).strip()
             print(f"   📊 Código extraído: '{pr_raw}'")
@@ -224,19 +222,17 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
                 pr_year = 2000 + (pr_code // 100)
                 print(f"   📅 PR{pr_code} → Año {pr_year}, Semana {pr_code % 100}")
                 if 2018 <= pr_year <= 2030:
-                    print(f"   ✅ PR DETECTADA Y VÁLIDA")
-                    pr_hojas.append((ws.title, pr_code))
+                    print("   ✅ PR DETECTADA Y VÁLIDA")
+                    pr_hojas.append((sname, pr_code))
                     continue
                 else:
                     print(f"   ❌ Año {pr_year} fuera de rango (2018-2030)")
             except ValueError as e:
                 print(f"   ❌ Error: {e}")
-                pass
-                
+
         # Hojas WK####
         wk_match = re.match(r'^WK\s*\d{4}$', sname, re.IGNORECASE)
         print(f"   🔍 Regex WK: {bool(wk_match)}")
-        
         if wk_match:
             code_raw = re.sub(r"WK\s*", "", sname, flags=re.IGNORECASE).strip()
             try:
@@ -244,18 +240,18 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
                 year = 2000 + (code // 100)
                 print(f"   📅 WK{code} → Año {year}, Semana {code % 100}")
                 if 2018 <= year <= 2030:
-                    print(f"   ✅ WK DETECTADA Y VÁLIDA")
-                    hojas_validas.append((ws.title, code))
+                    print("   ✅ WK DETECTADA Y VÁLIDA")
+                    hojas_validas.append((sname, code))
                 else:
                     print(f"   ❌ Año {year} fuera de rango")
             except ValueError:
-                print(f"   ❌ Error convirtiendo código")
-                continue
+                print("   ❌ Error convirtiendo código")
         else:
-            print(f"   ℹ️  No es WK ni PR")
-    
+            if not pr_match:
+                print("   ℹ️  No es WK ni PR")
+
     print("\n" + "=" * 60)
-    print(f"📊 RESUMEN:")
+    print("📊 RESUMEN:")
     print(f"   • Hojas WK encontradas: {len(hojas_validas)}")
     print(f"   • Hojas PR encontradas: {len(pr_hojas)}")
     print("=" * 60 + "\n")
@@ -263,45 +259,20 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     if not hojas_validas:
         return {"error": "No se encontraron hojas WK validas."}
 
-    # 2. Leer hojas WK en batch
+    # 2. Leer hojas WK (equivalente al batch A1:AI60 → 60 filas, 35 cols)
     batch_data = {}
-    rangos = [f"'{titulo}'!A1:AI60" for titulo, _ in hojas_validas]
-    BATCH = 100
-    for i in range(0, len(rangos), BATCH):
-        grupo = rangos[i:i + BATCH]
-        resultado = spreadsheet.values_batch_get(
-            grupo,
-            params={"valueRenderOption": "UNFORMATTED_VALUE"}
-        )
-        for item in resultado.get("valueRanges", []):
-            rng    = item.get("range", "")
-            vals   = item.get("values", [])
-            titulo = rng.split("!")[0].strip("'")
-            batch_data[titulo] = vals
+    for titulo, _ in hojas_validas:
+        batch_data[titulo] = _leer_hoja(xls, titulo, rango_filas=60, rango_cols=35)
 
-    # 2b. Leer hojas PR en batch
-    productos = {}
+    # 2b. Leer hojas PR (equivalente al batch A1:K500 → 500 filas, 11 cols)
+    productos       = {}
     productos_debug = {"hojas_pr_encontradas": [t for t, _ in pr_hojas]}
-    
-    if pr_hojas:
-        pr_rangos = [f"'{t}'!A1:K500" for t, _ in pr_hojas]
-        for i in range(0, len(pr_rangos), BATCH):
-            grupo = pr_rangos[i:i + BATCH]
-            res = spreadsheet.values_batch_get(
-                grupo, params={"valueRenderOption": "UNFORMATTED_VALUE"}
-            )
-            for item in res.get("valueRanges", []):
-                rng  = item.get("range", "")
-                vals = item.get("values", [])
-                tit  = rng.split("!")[0].strip("'")
-                for pt, pc in pr_hojas:
-                    if pt == tit:
-                        parsed = _parse_pr(vals)
-                        productos[pc] = parsed
-                        # Debug: guardar info sobre qué se encontró
-                        ranchos_en_parsed = list(parsed.keys()) if parsed else []
-                        productos_debug[f"PR{pc}_ranchos"] = ranchos_en_parsed
-                        break
+
+    for titulo, pr_code in pr_hojas:
+        vals   = _leer_hoja(xls, titulo, rango_filas=500, rango_cols=11)
+        parsed = _parse_pr(vals)
+        productos[pr_code] = parsed
+        productos_debug[f"PR{pr_code}_ranchos"] = list(parsed.keys()) if parsed else []
 
     # 3. Procesar cada hoja WK
     for titulo, code in hojas_validas:
@@ -314,7 +285,7 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
         year = 2000 + yy
 
         max_cols = max((len(r) for r in raw), default=0)
-        data = [r + [""] * (max_cols - len(r)) for r in raw]
+        data     = [r + [""] * (max_cols - len(r)) for r in raw]
 
         date_range = ""
         if len(data) > 3 and len(data[3]) > 1:
@@ -418,29 +389,30 @@ def extraer_datos(spreadsheet: gspread.Spreadsheet) -> dict:
     weeks_per_year = {yr: sorted(wks) for yr, wks in weeks_per_year.items()}
 
     return {
-        "years":          years,
-        "categories":     cats,
-        "ranches":        ranches,
-        "summary":        summary,
-        "weeks_per_year": weeks_per_year,
-        "weekly_detail":  all_data,
-        "productos":      productos,
+        "years":           years,
+        "categories":      cats,
+        "ranches":         ranches,
+        "summary":         summary,
+        "weeks_per_year":  weeks_per_year,
+        "weekly_detail":   all_data,
+        "productos":       productos,
         "productos_debug": productos_debug,
     }
 
 
-def get_datos(credentials_path: str = "credentials.json",
-              spreadsheet_name: str = "WK 2026-08") -> dict:
-    client = get_client(credentials_path)
+# ─── Punto de entrada público ─────────────────────────────────────────────────
+def get_datos() -> dict:
+    """
+    Descarga el Excel desde OneDrive y retorna el mismo dict estructurado
+    que antes devolvía la versión de Google Sheets.
+    """
+    archivo = descargar_excel()
+    if archivo is None:
+        return {"error": "No se pudo descargar el archivo de OneDrive."}
 
-    for name in [spreadsheet_name, spreadsheet_name.replace(" ", "_")]:
-        try:
-            return extraer_datos(client.open(name))
-        except gspread.SpreadsheetNotFound:
-            pass
+    try:
+        xls = pd.ExcelFile(archivo)
+    except Exception as e:
+        return {"error": f"No se pudo abrir el Excel: {e}"}
 
-    for ss in client.openall():
-        if "WK" in ss.title.upper() and "2026" in ss.title:
-            return extraer_datos(ss)
-
-    return {"error": f"No se encontro '{spreadsheet_name}' en Drive. Verifica que lo compartiste con la service account."}
+    return extraer_datos(xls)
