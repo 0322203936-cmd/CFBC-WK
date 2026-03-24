@@ -514,7 +514,7 @@ function inicializar() {
   document.addEventListener('click', function(e){
     var td = e.target.closest('.prod-cell');
     if(!td) return;
-    showProductos(td.dataset.r, td.dataset.t, parseInt(td.dataset.w), parseInt(td.dataset.y));
+    showProductos(td.dataset.r, td.dataset.t, parseInt(td.dataset.w), parseInt(td.dataset.y), td.dataset.src || 'pr');
   });
   var years = DATA.years, cats = DATA.categories;
   var prefCat = 'MATERIAL DE EMPAQUE';
@@ -952,7 +952,8 @@ function renderSemana(){
       var col=YEAR_COLORS[yr]||'#888';
       var dStr=delta!==null?'<span class="'+(parseFloat(delta)>0?'chg-pos':'chg-neg')+'">'+(parseFloat(delta)>0?'+':'')+delta+'%</span>':'<span class="chg-0">—</span>';
       var ranchSrc=d?(state.currency==='usd'?d.ranches:d.ranches_mxn):{};
-      var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+      var isMant=(state.cat==='MANTENIMIENTO');
+      var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;if(v>0&&isMant){return '<td class="prod-cell" data-r="'+r+'" data-t="ALL" data-w="'+weekNum+'" data-y="'+yr+'" data-src="mp" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
       return '<tr>'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong></td>'+
         '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
@@ -1212,60 +1213,74 @@ function initScrollHints(){
 // ═══════════════════════════════════════════
 // MODAL DE PRODUCTOS
 // ═══════════════════════════════════════════
-function showProductos(rancho, tipo, weekNum, yr) {
+function showProductos(rancho, tipo, weekNum, yr, src) {
+  src = src || 'pr';
   var semCode = (yr % 100) * 100 + weekNum;
   var semCodeStr = String(semCode);
-  var allProds = DATA.productos || {};
-  var debug = DATA.productos_debug || {};
-  
-  // JSON serializes int keys as strings — try both
+
+  // Seleccionar fuente de datos: PR o MP
+  var allProds = src === 'mp' ? (DATA.productos_mp || {}) : (DATA.productos || {});
+  var debug    = src === 'mp' ? (DATA.productos_mp_debug || {}) : (DATA.productos_debug || {});
+  var prefix   = src === 'mp' ? 'MP' : 'PR';
+
   var prods = allProds[semCode] || allProds[semCodeStr] || null;
+
+  // Construir lista de productos
   var list = [];
   if(prods){
     var byRanch = prods[rancho];
-    if(byRanch) list = byRanch[tipo] || [];
+    if(byRanch){
+      if(tipo === 'ALL'){
+        // MANTENIMIENTO: mostrar MIRFE + MIPE juntos
+        (byRanch['MIRFE'] || []).forEach(function(p){ list.push(p); });
+        (byRanch['MIPE']  || []).forEach(function(p){ list.push(p); });
+      } else {
+        list = byRanch[tipo] || [];
+      }
+    }
   }
-  var col = tipo === 'MIRFE' ? '#f0b429' : '#3b9eff';
-  var tipoNombre = tipo === 'MIRFE' ? 'Material de Riego/Fertilización' : 'Material de Protección';
+
+  // Título y subtítulo
+  var tipoNombre;
+  if(src === 'mp'){
+    tipoNombre = 'Mantenimiento';
+  } else {
+    tipoNombre = tipo === 'MIRFE' ? 'Material de Riego/Fertilización' : 'Material de Protección';
+  }
   document.getElementById('productosTitle').innerHTML =
     rancho + ' <span style="color:#64748b;font-weight:400">— '+tipoNombre+'</span>';
 
-  // Debug info mejorado
-  var hojasEncontradas = debug.hojas_pr_encontradas || [];
-  var semanasDisponibles = Object.keys(allProds).filter(function(k){return k !== 'debug'}).join(', ');
+  // Debug info
+  var hojasKey = 'hojas_' + prefix.toLowerCase() + '_encontradas';
+  var hojasEncontradas = debug[hojasKey] || [];
   var ranchosDisp = prods ? Object.keys(prods).join(', ') : 'ninguno';
-  var ranchosEnPR = debug['PR'+semCode+'_ranchos'] || [];
-  
+
   var debugInfo = '';
-  if (hojasEncontradas.length === 0) {
-    debugInfo = 'No se encontraron hojas PR en el sheet';
-  } else if (!prods) {
+  if(hojasEncontradas.length === 0){
+    debugInfo = 'No se encontraron hojas '+prefix+' en el sheet';
+  } else if(!prods){
     debugInfo = 'No hay datos para semana ' + semCode + ' · Hojas: ' + hojasEncontradas.join(', ');
-  } else if (!list.length) {
+  } else if(!list.length){
     debugInfo = 'Rancho no encontrado · Disponibles: ' + ranchosDisp;
   }
 
   document.getElementById('productosSub').innerHTML =
     'Semana '+String(weekNum).padStart(2,'0')+' · '+yr;
 
-  if (!list.length) {
+  if(!list.length){
     document.getElementById('productosContent').innerHTML =
       '<tr><td colspan="3" class="no-prod" style="padding:16px 0">Sin productos disponibles para este rancho.<br>'+
       '<span style="font-size:.58rem;color:#94a3b8;line-height:1.8">'+debugInfo+'</span></td></tr>';
   } else {
-    // Calcular total
     var totalGasto = 0;
     var totalUnidades = 0;
-    
-    var rows = list.map(function(p) {
-      var gasto = p[2] ? parseFloat(p[2]) : 0;
+    var rows = list.map(function(p){
+      var gasto    = p[2] ? parseFloat(p[2]) : 0;
       var unidades = p[1] ? parseFloat(p[1]) : 0;
-      
-      totalGasto += gasto;
+      totalGasto    += gasto;
       totalUnidades += unidades;
-      
-      var gastoStr = gasto !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—';
-      var unidadesStr = unidades !== 0 ? Math.abs(unidades).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2}) : '—';
+      var gastoStr    = gasto    !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+      var unidadesStr = unidades !== 0 ? Math.abs(unidades).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}) : '—';
       var detalle = p[3] ? p[3] : '—';
       return '<tr>'+
         '<td style="color:var(--muted);font-size:.62rem">'+detalle+'</td>'+
@@ -1274,27 +1289,21 @@ function showProductos(rancho, tipo, weekNum, yr) {
         '<td style="color:'+(gasto<0?'#dc2626':'#0a7c52')+'">'+gastoStr+'</td>'+
         '</tr>';
     }).join('');
-    
-    // Agregar fila de total
-    var totalGastoStr = '$' + Math.abs(totalGasto).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    var totalUnidadesStr = Math.abs(totalUnidades).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+    var totalGastoStr    = '$' + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    var totalUnidadesStr = Math.abs(totalUnidades).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
     var totalRow = '<tr class="total-row">'+
       '<td></td>'+
       '<td style="color:#00c97d">TOTAL</td>'+
       '<td>'+totalUnidadesStr+'</td>'+
       '<td style="color:#00c97d">'+totalGastoStr+'</td>'+
       '</tr>';
-    
     document.getElementById('productosContent').innerHTML = rows + totalRow;
   }
-  
-  // Mostrar la sección y hacer scroll hacia ella
+
   var section = document.getElementById('productosSection');
   section.classList.add('show');
   section.style.display = 'block';
-  setTimeout(function() {
-    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 100);
+  setTimeout(function(){ section.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 100);
 }
 
 function closeProductos() {
