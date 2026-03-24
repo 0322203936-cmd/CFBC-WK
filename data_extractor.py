@@ -111,21 +111,16 @@ def norm_cat(s: str):
     if "RENOVACION" in s:                         return "RENOVACION DE SIEMBRA"
     if "MATERIAL DE EMP" in s:                    return "MATERIAL DE EMPAQUE"
     if "COSTO DE MAT" in s:                       return "COSTO_STOP"
-    if "COSTO DE SERV" in s:                       return "SERVICIOS_START"
-    return None
-
-
-def norm_subcat_servicios(s: str):
-    """Normaliza las subcategorías de la sección COSTO DE SERVICIOS."""
-    s = str(s).upper().strip()
-    if "ELECTRIC" in s:                            return "Electricidad"
-    if "FLETE" in s or "ACARREO" in s:             return "Fletes y Acarreos"
-    if "EXPORTAC" in s:                            return "Gastos de Exportación"
-    if "FITOSANIT" in s or "CERTIF" in s:          return "Certificado Fitosanitario"
-    if "TRANSPORTE" in s and "PERSONAL" in s:      return "Transporte de Personal"
-    if "COMPRA" in s and "FLOR" in s:              return "Compra de Flor a Terceros"
-    if "COMIDA" in s:                              return "Comida para el Personal"
-    if "RTA" in s or ("TEL" in s and "RO" in s):  return "RO, TEL, RTA.Alim"
+    if "COSTO DE SERV" in s:                       return "COSTO_STOP"  # header de sección, ignorar
+    # ── COSTO DE SERVICIOS: detectar subcategorías directamente por su label ──
+    if "ELECTRIC" in s:                            return "SV:Electricidad"
+    if "FLETE" in s or "ACARREO" in s:             return "SV:Fletes y Acarreos"
+    if "EXPORTAC" in s:                            return "SV:Gastos de Exportación"
+    if "FITOSANIT" in s:                           return "SV:Certificado Fitosanitario"
+    if "TRANSPORTE" in s and "PERSONAL" in s:      return "SV:Transporte de Personal"
+    if "COMPRA" in s and "FLOR" in s:              return "SV:Compra de Flor a Terceros"
+    if "COMIDA" in s:                              return "SV:Comida para el Personal"
+    if "RTA.ALIM" in s or "RTA. ALIM" in s or ("RO" in s and "TEL" in s and "RTA" in s):  return "SV:RO, TEL, RTA.Alim"
     return None
 
 
@@ -582,7 +577,6 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             elif usd_total_col and j > usd_total_col:
                 usd_ranch_cols[j] = rn
 
-        in_servicios = False
         for i in range(exec_idx + 1, min(exec_idx + 60, len(data))):
             row   = data[i]
             label = next((str(row[c]).strip() for c in range(5)
@@ -591,47 +585,29 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                 continue
 
             cat = norm_cat(label)
-            if not cat and not in_servicios:
-                print(f"   [WK loop] fila {i}: label='{label[:40]}' → sin categoría ni servicios")
+            if not cat:
                 continue
             if cat == "COSTO_STOP":
-                print(f"   [WK loop] COSTO_STOP en fila {i} — continuando...")
-                in_servicios = False
-                continue
-
-            if cat == "SERVICIOS_START":
-                print(f"   [WK loop] ✅ SERVICIOS_START detectado en fila {i}")
-                in_servicios = True
-                continue
+                continue   # saltar headers de sección y separadores
 
             mxn_ranches = {rn: sv(row[j]) for j, rn in mxn_ranch_cols.items() if j < len(row)}
             usd_ranches = {rn: sv(row[j]) for j, rn in usd_ranch_cols.items() if j < len(row)}
 
-            if in_servicios:
-                # Intentar normalizar como subcategoría de servicios
-                subcat = norm_subcat_servicios(label)
-                if not subcat:
-                    # Si encontramos otra categoría principal, salimos de servicios
-                    if cat and cat not in ("SERVICIOS_START",):
-                        in_servicios = False
-                        # procesar como categoría normal abajo
-                    else:
-                        continue
-                else:
-                    servicios_data.append({
-                        "semana":      code,
-                        "year":        year,
-                        "week":        ww,
-                        "date_range":  date_range,
-                        "subcat":      subcat,
-                        "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
-                        "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
-                        "mxn_ranches": mxn_ranches,
-                        "usd_ranches": usd_ranches,
-                    })
-                    continue
-
-            if not in_servicios and cat and cat not in ("SERVICIOS_START",):
+            if cat.startswith("SV:"):
+                # ── Subcategoría de COSTO DE SERVICIOS ──
+                servicios_data.append({
+                    "semana":      code,
+                    "year":        year,
+                    "week":        ww,
+                    "date_range":  date_range,
+                    "subcat":      cat[3:],   # quitar prefijo "SV:"
+                    "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
+                    "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
+                    "mxn_ranches": mxn_ranches,
+                    "usd_ranches": usd_ranches,
+                })
+            else:
+                # ── Categoría normal ──
                 all_data.append({
                     "semana":      code,
                     "year":        year,
