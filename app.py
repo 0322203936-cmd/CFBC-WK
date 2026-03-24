@@ -849,7 +849,7 @@ function toggleYear(y){
   var active=DATA.years.filter(function(yr){return state.activeYears[yr];});
   if(state.activeYears[y]&&active.length>1) delete state.activeYears[y];
   else state.activeYears[y]=true;
-  buildYearChips(); renderView();
+  buildYearChips(); renderView(); refreshServSiAbierto();
 }
 function setRanchYear(yr){
   state.ranchYear=yr;
