@@ -1506,6 +1506,20 @@ function buildServSelect(){
 
 function selectServ(val){
   state.servFilter = val||null;
+  // Ocultar pestañas Por Año y Tendencia — solo dejar Por Semana
+  document.getElementById('vtAnual').style.display='none';
+  document.getElementById('vtTendencia').style.display='none';
+  document.getElementById('vtSemana').style.display='';
+  // Asegurar vista en Por Semana
+  if(state.view!=='semana'){
+    state.view='semana';
+    document.getElementById('viewAnual').style.display='none';
+    document.getElementById('viewTendencia').style.display='none';
+    document.getElementById('viewSemana').style.display='';
+    document.getElementById('vtSemana').classList.add('active');
+    document.getElementById('vtAnual').classList.remove('active');
+    document.getElementById('vtTendencia').classList.remove('active');
+  }
   renderServPanel(state.servFilter);
 }
 
@@ -1613,6 +1627,10 @@ function closeServicios(){
   // Restaurar la tabla principal
   var t=document.getElementById('swTableCard');
   if(t) t.style.display='';
+  // Restaurar las 3 pestañas
+  document.getElementById('vtAnual').style.display='';
+  document.getElementById('vtTendencia').style.display='';
+  document.getElementById('vtSemana').style.display='';
   var el=document.getElementById('servSelect');
   if(el) el.selectedIndex=0;
 }
