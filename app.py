@@ -1,91 +1,32 @@
-"""
++
+    G@ÂiŽ ã                   ó¸  € R t ^ RIt^ RIt^ RIt^ RIt^ RIt ^ RIH	u H
+t	 ]P                  P                  ]
+4      t]P                  P                  ]R4      t]P                  P#                  ]4      '       g   ]P                  P                  ]R4      t]P$                  P'                  R]4      t]e   ]P*                  f   ]! R] 24      h]P$                  P/                  ]4      t]P*                  P3                  ]4       ]P4                  tRtR# F±  t]P                  P                  ]P                  P                  ]
+4      R ] 24      t]P                  P#                  ]4      '       g   K^  ]! ]R4      ;_uu_ 4       tR	] R
+2]P@                  ! ]PC                  4       4      PE                  4       ,           tRRR4        M	  ] PF                  ! R
+RR
+RR7       ] PH                  ! RRR7       ] PJ                  ! RRR7      R 4       t& ]&! 4       t'R]'9   dq   ] PT                  ! R]'R,           24       ] PX                  ! R4      '       d,   ] PJ                  P[                  4        ] P\                  ! 4        ] PV                  ! 4        ^ RIt]P@                  ! ]P^                  ! ]'R]0R7      Pc                  R4      4      PE                  R4      t2Rt3]3Pi                  R]24      Pi                  R ]4      t5]	Pl                  ! ]5R!RR"7       R#   + '       g   i     ELZ; i  ]( d2   t)] PT                  ! R]) 24       ] PV                  ! 4         Rt)A)EL@Rt)A)ii ; i)$ux   
 app.py
 Centro Floricultor de Baja California
-Streamlit — carga datos con Python, renderiza el HTML original tal cual
-"""
-
-import json
-import base64
-import os
-import importlib.util
-import streamlit as st
-import streamlit.components.v1 as components
-
-_extractor_dir = os.path.dirname(__file__)
-_extractor_path = os.path.join(_extractor_dir, "data_extractor.py")
-if not os.path.exists(_extractor_path):
-    _extractor_path = os.path.join(_extractor_dir, "data_extractor (17).py")
-_extractor_spec = importlib.util.spec_from_file_location("data_extractor_runtime", _extractor_path)
-if _extractor_spec is None or _extractor_spec.loader is None:
-    raise ImportError(f"No se pudo cargar data_extractor desde {_extractor_path}")
-_extractor_mod = importlib.util.module_from_spec(_extractor_spec)
-_extractor_spec.loader.exec_module(_extractor_mod)
-get_datos = _extractor_mod.get_datos
-
-# Cargar imagen de flores desde el repositorio
-_flores_b64 = ""
-for _ext in ["jpg","jpeg","png","webp"]:
-    _path = os.path.join(os.path.dirname(__file__), f"flores.{_ext}")
-    if os.path.exists(_path):
-        with open(_path, "rb") as _f:
-            _flores_b64 = f"data:image/{_ext};base64," + base64.b64encode(_f.read()).decode()
-        break
-
-st.set_page_config(
-    page_title="CFBC WK",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
-# Quitar padding de Streamlit para que el HTML ocupe toda la pantalla
-st.markdown("""
+Streamlit â€” carga datos con Python, renderiza el HTML original tal cual
+Nzdata_extractor.pyzdata_extractor (17).pyÚdata_extractor_runtimez'No se pudo cargar data_extractor desde Ú z flores.Úrbz
+data:image/z;base64,z CFBC WKu   ðŸ“ŠÚwideÚ	collapsed)Ú
+page_titleÚ	page_iconÚlayoutÚinitial_sidebar_statezù
 <style>
   #MainMenu, header, footer { display: none !important; }
   .stApp { background: #f0f4f8; }
   .block-container { padding: 0 !important; max-width: 100% !important; }
   section[data-testid="stSidebar"] { display: none !important; }
 </style>
-""", unsafe_allow_html=True)
-
-
-# ─────────────────────────────────────────────
-# CARGA DE DATOS
-# ─────────────────────────────────────────────
-@st.cache_data(ttl=300, show_spinner=False)
-def load_data():
-    return get_datos()
-
-
-try:
-    DATA = load_data()
-except Exception as e:
-    st.error(f"❌ Error cargando datos: {e}")
-    st.stop()
-
-if "error" in DATA:
-    st.error(f"❌ {DATA['error']}")
-    if st.button("🔄 Reintentar"):
-        st.cache_data.clear()
-        st.rerun()
-    st.stop()
-
-# Serializar DATA a JSON para inyectarlo en el HTML
-import base64
-data_json = base64.b64encode(
-    json.dumps(DATA, ensure_ascii=True, default=str).encode('utf-8')
-).decode('ascii')
-
-# ─────────────────────────────────────────────
-# HTML ORIGINAL — reemplazar google.script.run
-# por datos ya cargados desde Python
-# ─────────────────────────────────────────────
-HTML = """<!DOCTYPE html>
+T)Úunsafe_allow_htmli,  F)ÚttlÚshow_spinnerc                  ó   € \        4       # )N)Ú	get_datos© ó    Ú
+app (63).pyÚ	load_datar   7   s
+   € ä
+‹;Ðr   u   âŒ Error cargando datos: Úerroru   âŒ u   ðŸ”„ Reintentar)Úensure_asciiÚ defaultzutf-8ÚasciiuJ‚ <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ejecución Semanal — Comparativo</title>
+<title>EjecuciÃ³n Semanal â€” Comparativo</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
 <style>
@@ -257,12 +198,12 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 .prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 
-/* ── PANEL PRODUCTOS — Power BI compact ─────────────────────── */
+/* â”€â”€ PANEL PRODUCTOS â€” Power BI compact â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .pnl{display:none;margin:0 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .pnl.show{display:block;animation:pnl-in .15s ease}
 @keyframes pnl-in{from{opacity:0}to{opacity:1}}
 
-/* Header — barra oscura estilo Power BI */
+/* Header â€” barra oscura estilo Power BI */
 .pnl-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px 6px 12px;background:rgba(110,81,115,0.88);gap:10px;border-bottom:2px solid #0a7c52}
 .pnl-hdr-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
 .pnl-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1}
@@ -274,7 +215,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .pnl-close{background:transparent;border:1px solid rgba(255,255,255,.35);border-radius:3px;color:rgba(255,255,255,.7);cursor:pointer;font-size:.75rem;padding:3px 9px;font-family:'IBM Plex Mono',monospace;font-weight:600;transition:all .12s;flex-shrink:0;letter-spacing:.3px}
 .pnl-close:hover{border-color:#fff;color:#fff}
 
-/* KPI bar inline — compacto */
+/* KPI bar inline â€” compacto */
 .pnl-kpis{display:none}
 
 /* Table */
@@ -312,7 +253,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .pnl-tbl tr.pnl-total td.amt{color:#0a7c52!important;font-size:.68rem!important}
 .pnl-tbl tr.pnl-total td:first-child{color:#0a7c52!important;letter-spacing:.4px}
 
-/* Footer strip — una sola línea */
+/* Footer strip â€” una sola lÃ­nea */
 .pnl-footer{display:flex;align-items:center;justify-content:flex-end;gap:16px;padding:4px 10px;border-top:1px solid var(--border);background:#f8fafc}
 .pnl-footer-stat{display:flex;align-items:center;gap:5px}
 .pnl-footer-stat-lbl{font-size:.58rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
@@ -323,7 +264,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .pnl-empty-ico{width:28px;height:28px;margin:0 auto 8px;opacity:.2;stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round}
 .no-prod{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:16px 0;text-align:left}
 
-/* ── SERVICIOS — comparativo por rancho ─────────────────────── */
+/* â”€â”€ SERVICIOS â€” comparativo por rancho â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .svc-shell{display:grid;gap:20px}
 .svc-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:stretch}
 .svc-title-card{position:relative;padding:22px 24px;border-radius:18px;background:linear-gradient(135deg,#f8fafc,#edf7f1 58%,#fff7ed);border:1px solid rgba(148,163,184,.25);overflow:hidden;box-shadow:0 12px 32px rgba(15,32,68,.08)}
@@ -367,7 +308,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 <div id="loader">
   <div class="spin"></div>
-  <div class="load-txt">Cargando datos…</div>
+  <div class="load-txt">Cargando datosâ€¦</div>
   <div class="load-sub">Procesando hojas semanales</div>
 </div>
 
@@ -383,26 +324,26 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   <div style="position:absolute;inset:0;background:rgba(255,255,255,0.35);"></div>
   <!-- Controles encima -->
   <div class="cat-select-wrap" style="position:relative;z-index:2;border-bottom:none;padding:12px 24px;">
-    <!-- Label Categoría -->
-    <span class="cat-select-label" style="background:rgba(110,81,115,0.85);color:#fff;padding:3px 8px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18);">Categoría</span>
+    <!-- Label CategorÃ­a -->
+    <span class="cat-select-label" style="background:rgba(110,81,115,0.85);color:#fff;padding:3px 8px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18);">CategorÃ­a</span>
     <!-- Selector 1 -->
     <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
       <select class="cat-select" id="catSelect" onchange="selectMaterial(this.value)" style="background:transparent;font-weight:700;color:#fff;"></select>
-      <span class="cat-arrow" style="color:#fff;">▾</span>
+      <span class="cat-arrow" style="color:#fff;">â–¾</span>
     </div>
     <!-- Selector 2 -->
     <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
       <select class="cat-select" id="moSelect" style="background:transparent;font-weight:700;color:#fff;">
         <option value="" disabled selected>COSTO DE MANO DE OBRA</option>
       </select>
-      <span class="cat-arrow" style="color:#fff;">▾</span>
+      <span class="cat-arrow" style="color:#fff;">â–¾</span>
     </div>
     <!-- Selector 3 -->
     <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
       <select class="cat-select" id="servSelect" onclick="activateServices()" onchange="selectService(this.value)" style="background:transparent;font-weight:700;color:#fff;">
         <option value="" disabled selected>COSTO DE SERVICIOS</option>
       </select>
-      <span class="cat-arrow" style="color:#fff;">▾</span>
+      <span class="cat-arrow" style="color:#fff;">â–¾</span>
     </div>
     <!-- Contador -->
     <span class="cat-count" id="catCount" style="display:none;"></span>
@@ -413,16 +354,16 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
         <button class="toggle-btn active" id="btnUSD" onclick="setCurrency('usd')">USD $</button>
         <button class="toggle-btn"        id="btnMXN" onclick="setCurrency('mxn')">MXN $</button>
       </div>
-      <span class="ctrl-label" style="margin-left:4px;color:#f0e8f2;">Años</span>
+      <span class="ctrl-label" style="margin-left:4px;color:#f0e8f2;">AÃ±os</span>
       <div class="year-chips" id="yearChips" style="gap:4px;"></div>
     </div>
   </div>
 </div>
 
 <div class="view-tabs">
-  <button class="view-tab"        id="vtAnual"     onclick="setView('anual')">📊 Por Año</button>
-  <button class="view-tab active" id="vtSemana"    onclick="setView('semana')">📆 Por Semana</button>
-  <button class="view-tab"        id="vtTendencia" onclick="setView('tendencia')">📈 Tendencia & Rango</button>
+  <button class="view-tab"        id="vtAnual"     onclick="setView('anual')">ðŸ“Š Por AÃ±o</button>
+  <button class="view-tab active" id="vtSemana"    onclick="setView('semana')">ðŸ“† Por Semana</button>
+  <button class="view-tab"        id="vtTendencia" onclick="setView('tendencia')">ðŸ“ˆ Tendencia & Rango</button>
 </div>
 
 <!-- VIEW: ANUAL -->
@@ -444,7 +385,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
       </div>
     </div>
     <div class="card">
-      <div class="card-hdr"><span class="card-title">Tendencia Semanal (USD) — Años superpuestos</span><span class="card-note">línea = 1 año</span></div>
+      <div class="card-hdr"><span class="card-title">Tendencia Semanal (USD) â€” AÃ±os superpuestos</span><span class="card-note">lÃ­nea = 1 aÃ±o</span></div>
       <div class="chart-wrap tall"><div id="chartLine"></div></div>
     </div>
     <div class="row2">
@@ -453,13 +394,13 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
         <div class="chart-wrap medium"><div id="chartStack"></div></div>
       </div>
       <div class="card">
-        <div class="card-hdr"><span class="card-title">Tabla Resumen Anual</span><span class="card-note" id="tableNote">USD · Δ anual</span></div>
+        <div class="card-hdr"><span class="card-title">Tabla Resumen Anual</span><span class="card-note" id="tableNote">USD Â· Î” anual</span></div>
         <div class="table-scroll-wrap">
-          <div class="scroll-hint show" id="hintAnual">← desliza →</div>
+          <div class="scroll-hint show" id="hintAnual">â† desliza â†’</div>
           <div class="scroll-x scroll-fade" id="wrapAnual">
             <table class="data-table">
               <thead><tr>
-                <th>Año</th><th>Total</th><th>Δ vs ant.</th>
+                <th>AÃ±o</th><th>Total</th><th>Î” vs ant.</th>
                 <th>Prop-RM</th><th>PosCo-RM</th><th>Campo-RM</th><th>Isabela</th><th>HOOPS</th><th>Cecilia</th><th>Cecilia 25</th><th>Christina</th>
               </tr></thead>
               <tbody id="tableBody"></tbody>
@@ -474,24 +415,24 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 <!-- VIEW: POR SEMANA -->
 <div id="viewSemana">
   <div class="week-nav">
-    <button class="week-nav-btn" onclick="prevWeek()">◀</button>
+    <button class="week-nav-btn" onclick="prevWeek()">â—€</button>
     <div class="week-info">
-      <div class="week-num" id="weekNumLabel">Semana W—</div>
-      <div class="week-date" id="weekDateLabel">—</div>
+      <div class="week-num" id="weekNumLabel">Semana Wâ€”</div>
+      <div class="week-date" id="weekDateLabel">â€”</div>
     </div>
     <input type="range" class="week-slider" id="weekSlider" min="1" max="52" value="1" oninput="onWeekSlider(this.value)">
-    <button class="week-nav-btn" onclick="nextWeek()">▶</button>
+    <button class="week-nav-btn" onclick="nextWeek()">â–¶</button>
     <span class="week-avail" id="weekAvail"></span>
   </div>
   <div class="main">
     <div class="card">
-      <div class="card-hdr"><span class="card-title">Tabla — Misma Semana, Distintos Años</span><span class="card-note" id="swTableNote">USD</span></div>
+      <div class="card-hdr"><span class="card-title">Tabla â€” Misma Semana, Distintos AÃ±os</span><span class="card-note" id="swTableNote">USD</span></div>
       <div class="table-scroll-wrap">
-        <div class="scroll-hint show" id="hintSemana">← desliza →</div>
+        <div class="scroll-hint show" id="hintSemana">â† desliza â†’</div>
         <div class="scroll-x scroll-fade" id="wrapSemana">
           <table class="data-table">
             <thead><tr>
-              <th>Año</th><th>Semana</th><th>Fecha</th><th>Total USD</th><th>Δ vs mismo año ant.</th>
+              <th>AÃ±o</th><th>Semana</th><th>Fecha</th><th>Total USD</th><th>Î” vs mismo aÃ±o ant.</th>
               <th>Prop-RM</th><th>PosCo-RM</th><th>Campo-RM</th><th>Isabela</th><th>Cecilia</th><th>Cecilia 25</th><th>Christina</th>
             </tr></thead>
             <tbody id="swTableBody"></tbody>
@@ -508,27 +449,27 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <span class="range-label">Desde</span>
     <span class="range-val" id="fromWeekLabel">W01</span>
     <input type="range" class="range-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
-    <span class="range-sep">→</span>
+    <span class="range-sep">â†’</span>
     <span class="range-label">Hasta</span>
     <span class="range-val" id="toWeekLabel">W52</span>
     <input type="range" class="range-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
-    <span class="range-badge" id="rangeBadge">W01 → W52 · 52 semanas</span>
-    <button class="btn-reload" style="margin-left:auto" onclick="resetRange()">↺ Reset</button>
+    <span class="range-badge" id="rangeBadge">W01 â†’ W52 Â· 52 semanas</span>
+    <button class="btn-reload" style="margin-left:auto" onclick="resetRange()">â†º Reset</button>
   </div>
   <div class="main">
     <div class="stat-row" id="rangeStats"></div>
     <div class="card">
-      <div class="card-hdr"><span class="card-title">Tabla Desglose por Semana</span><span class="card-note" id="rangeTableNote">USD · cada fila = 1 semana</span></div>
+      <div class="card-hdr"><span class="card-title">Tabla Desglose por Semana</span><span class="card-note" id="rangeTableNote">USD Â· cada fila = 1 semana</span></div>
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <span style="font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Ver por</span>
         <div class="toggle-group">
-          <button class="toggle-btn active" id="rtgYear" onclick="setRangeTableGroup('year')" style="font-size:.7rem;padding:5px 12px">Año → Semana</button>
-          <button class="toggle-btn"        id="rtgWeek" onclick="setRangeTableGroup('week')" style="font-size:.7rem;padding:5px 12px">Semana → Año</button>
+          <button class="toggle-btn active" id="rtgYear" onclick="setRangeTableGroup('year')" style="font-size:.7rem;padding:5px 12px">AÃ±o â†’ Semana</button>
+          <button class="toggle-btn"        id="rtgWeek" onclick="setRangeTableGroup('week')" style="font-size:.7rem;padding:5px 12px">Semana â†’ AÃ±o</button>
         </div>
         <span style="font-size:.62rem;font-family:'IBM Plex Mono',monospace;color:var(--dim)" id="rangeTableSub"></span>
       </div>
       <div class="table-scroll-wrap">
-        <div class="scroll-hint show" id="hintRange">← desliza →</div>
+        <div class="scroll-hint show" id="hintRange">â† desliza â†’</div>
         <div class="scroll-x scroll-fade" id="wrapRange">
           <table class="data-table" id="rangeDetailTable">
             <thead id="rangeDetailHead"></thead>
@@ -538,16 +479,16 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
       </div>
     </div>
     <div class="card">
-      <div class="card-hdr"><span class="card-title">Tendencia Semanal en el Rango — Años Superpuestos</span><span class="card-note">USD · línea = 1 año</span></div>
+      <div class="card-hdr"><span class="card-title">Tendencia Semanal en el Rango â€” AÃ±os Superpuestos</span><span class="card-note">USD Â· lÃ­nea = 1 aÃ±o</span></div>
       <div class="chart-wrap tall"><div id="chartRangeLine"></div></div>
     </div>
     <div class="row2">
       <div class="card">
-        <div class="card-hdr"><span class="card-title">Total en el Rango por Año</span><span class="card-note" id="rangeBarNote">USD</span></div>
+        <div class="card-hdr"><span class="card-title">Total en el Rango por AÃ±o</span><span class="card-note" id="rangeBarNote">USD</span></div>
         <div class="chart-wrap medium"><div id="chartRangeBar"></div></div>
       </div>
       <div class="card">
-        <div class="card-hdr"><span class="card-title">Acumulado Semanal</span><span class="card-note">USD · suma corrida por semana</span></div>
+        <div class="card-hdr"><span class="card-title">Acumulado Semanal</span><span class="card-note">USD Â· suma corrida por semana</span></div>
         <div class="chart-wrap medium"><div id="chartCumul"></div></div>
       </div>
     </div>
@@ -556,13 +497,13 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 </div>
 <div id="viewServicios" style="display:none">
   <div class="week-nav">
-    <button class="week-nav-btn" onclick="prevWeek()">◀</button>
+    <button class="week-nav-btn" onclick="prevWeek()">â—€</button>
     <div class="week-info">
-      <div class="week-num" id="svcWeekNumLabel">Semana W—</div>
-      <div class="week-date" id="svcWeekDateLabel">—</div>
+      <div class="week-num" id="svcWeekNumLabel">Semana Wâ€”</div>
+      <div class="week-date" id="svcWeekDateLabel">â€”</div>
     </div>
     <input type="range" class="week-slider" id="svcWeekSlider" min="1" max="52" value="1" oninput="onWeekSlider(this.value)">
-    <button class="week-nav-btn" onclick="nextWeek()">▶</button>
+    <button class="week-nav-btn" onclick="nextWeek()">â–¶</button>
     <span class="week-avail" id="svcWeekAvail"></span>
   </div>
   <div class="main">
@@ -582,7 +523,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
           <div class="chart-wrap medium"><div id="chartServicesPie"></div></div>
         </div>
         <div class="card">
-          <div class="card-hdr"><span class="card-title">Comparación de Gastos por Rancho</span><span class="card-note" id="svcBarNote">USD</span></div>
+          <div class="card-hdr"><span class="card-title">ComparaciÃ³n de Gastos por Rancho</span><span class="card-note" id="svcBarNote">USD</span></div>
           <div class="chart-wrap medium"><div id="chartServicesBar"></div></div>
         </div>
       </div>
@@ -596,14 +537,14 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
         <span class="pnl-title" id="productosTitle">PRODUCTOS</span>
       </div>
     </div>
-    <button class="pnl-close" onclick="closeProductos()">✕</button>
+    <button class="pnl-close" onclick="closeProductos()">âœ•</button>
   </div>
   <div id="pnlKpis" class="pnl-kpis"></div>
   <div class="pnl-scroll">
     <table class="pnl-tbl">
       <thead>
         <tr>
-          <th>Ubicación</th>
+          <th>UbicaciÃ³n</th>
           <th>Producto</th>
           <th>Unid.</th>
           <th>Monto</th>
@@ -619,15 +560,15 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 </div><!-- /app -->
 
 <script>
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // DATOS INYECTADOS DESDE PYTHON
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 var _raw = atob('__DATA_JSON__');
 var DATA = JSON.parse(_raw);
 
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ESTADO GLOBAL
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 var state = {
   cat:'', currency:'usd', activeYears:{}, ranchYear:'all', dataMode:'materials',
   view:'semana', weekIdx:0, fromWeek:1, toWeek:52
@@ -656,9 +597,9 @@ var charts = {};
 
 function recargar() { window.location.reload(); }
 
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // INICIALIZAR
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function inicializar() {
   // Event delegation para celdas de productos
   document.addEventListener('click', function(e){
@@ -669,7 +610,7 @@ function inicializar() {
   var years = DATA.years, cats = DATA.categories || [];
   var prefCat = 'MATERIAL DE EMPAQUE';
   state.cat = cats.indexOf(prefCat) > -1 ? prefCat : (cats[0] || '');
-  // Solo mostrar año más reciente al inicio
+  // Solo mostrar aÃ±o mÃ¡s reciente al inicio
   state.activeYears = {};
   var latestYr = years[years.length-1];
   state.activeYears[latestYr] = true;
@@ -680,7 +621,7 @@ function inicializar() {
   allWeeks = Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
   state.weekIdx = allWeeks.length - 1;
 
-  // ── Apuntar a la semana más reciente del año más reciente ──
+  // â”€â”€ Apuntar a la semana mÃ¡s reciente del aÃ±o mÃ¡s reciente â”€â”€
   var latestYear = DATA.years[DATA.years.length-1];
   var weeksOfLatest = DATA.weekly_detail
     .filter(function(r){ return r.year === latestYear; })
@@ -688,7 +629,7 @@ function inicializar() {
     .filter(function(v,i,a){ return a.indexOf(v)===i; })
     .sort(function(a,b){ return a-b; });
   var curWeek  = weeksOfLatest[weeksOfLatest.length-1] || allWeeks[allWeeks.length-1] || 1;
-  // Buscar el índice de esa semana en allWeeks y apuntar ahí
+  // Buscar el Ã­ndice de esa semana en allWeeks y apuntar ahÃ­
   var curIdx = allWeeks.indexOf(curWeek);
   if(curIdx >= 0) state.weekIdx = curIdx;
   var prevWeek2 = weeksOfLatest[weeksOfLatest.length-2] || weeksOfLatest[0] || curWeek;
@@ -701,15 +642,15 @@ function inicializar() {
   document.getElementById('loader').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   var by=document.getElementById('badgeYears');
-  if(by) by.textContent='📅 '+DATA.years[0]+' → '+DATA.years[DATA.years.length-1];
+  if(by) by.textContent='ðŸ“… '+DATA.years[0]+' â†’ '+DATA.years[DATA.years.length-1];
   setTimeout(initScrollHints, 100);
 }
 
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // HELPERS
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function fmt(n) {
-  if (n===null||n===undefined||n===0||isNaN(n)) return '—';
+  if (n===null||n===undefined||n===0||isNaN(n)) return 'â€”';
   var neg=n<0, s=Math.abs(n);
   return (neg?'-$':'$')+s.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
@@ -725,7 +666,7 @@ function getPrimaryYear(){
 }
 function hasServicesData(){ return !!((DATA.services_weekly_detail||[]).length); }
 function fmtCompact(n){
-  if(n===null||n===undefined||isNaN(n)) return '—';
+  if(n===null||n===undefined||isNaN(n)) return 'â€”';
   return (n<0?'-$':'$')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:1});
 }
 function getServiceRecords(weekNum,yearNum){
@@ -820,9 +761,9 @@ function heatColor(ratio){
   return 'rgba(0,'+g+','+b+','+a+')';
 }
 
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // UI BUILDERS
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 var CAT_MIRFE = 'FERTILIZANTES';
 var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 var CAT_COMBINED = 'MIRFE + MIPE';
@@ -851,7 +792,7 @@ function buildServiceSelect(){
     + '<option value="__overview__"'+(state.dataMode==='services'?' selected':'')+'>Comparativo por rancho</option>';
 }
 
-// Obtener datos combinados MIRFE+MIPE para una semana y año
+// Obtener datos combinados MIRFE+MIPE para una semana y aÃ±o
 function getCombinedWeek(weekNum, yr){
   var r1 = getDetail(CAT_MIRFE, weekNum, yr);
   var r2 = getDetail(CAT_MIPE,  weekNum, yr);
@@ -928,12 +869,12 @@ function updateRangeSliders(){
   document.getElementById('fromWeekLabel').textContent=wFmt(f);
   document.getElementById('toWeekLabel').textContent=wFmt(t);
   var count=0; allWeeks.forEach(function(w){if(w>=f&&w<=t) count++;});
-  document.getElementById('rangeBadge').textContent=wFmt(f)+' → '+wFmt(t)+' · '+count+' semanas';
+  document.getElementById('rangeBadge').textContent=wFmt(f)+' â†’ '+wFmt(t)+' Â· '+count+' semanas';
 }
 
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // VIEW SWITCHER
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function setView(v){
   closeProductos();
   state.dataMode='materials';
@@ -1073,26 +1014,26 @@ function renderServices(){
     .sort(function(a,b){ return b.val-a.val; });
   var totalLabel=state.currency==='usd'?'USD':'MXN';
   var sub=document.getElementById('svcSubhead');
-  if(sub) sub.textContent='Semana '+wFmt(weekNum)+' · '+yr+(snap.dateRange?' · '+snap.dateRange:'')+' · '+totalLabel;
-  document.getElementById('svcPieNote').textContent=totalLabel+' · '+yr;
-  document.getElementById('svcBarNote').textContent=totalLabel+' · '+yr;
+  if(sub) sub.textContent='Semana '+wFmt(weekNum)+' Â· '+yr+(snap.dateRange?' Â· '+snap.dateRange:'')+' Â· '+totalLabel;
+  document.getElementById('svcPieNote').textContent=totalLabel+' Â· '+yr;
+  document.getElementById('svcBarNote').textContent=totalLabel+' Â· '+yr;
 
   var kpiWrap=document.getElementById('svcKpis');
   var grid=document.getElementById('servicesRanchGrid');
   if(!ranchEntries.length){
     if(kpiWrap) kpiWrap.innerHTML='';
-    if(grid) grid.innerHTML='<div class="svc-empty">No hay datos de servicios para '+wFmt(weekNum)+' · '+yr+'.</div>';
+    if(grid) grid.innerHTML='<div class="svc-empty">No hay datos de servicios para '+wFmt(weekNum)+' Â· '+yr+'.</div>';
     destroyChart('chartServicesPie');
     destroyChart('chartServicesBar');
     return;
   }
 
   var maxRanch=ranchEntries[0];
-  var topCat=catEntries[0] || {name:'—',val:0};
+  var topCat=catEntries[0] || {name:'â€”',val:0};
   if(kpiWrap) kpiWrap.innerHTML=''
     + '<div class="svc-kpi"><div class="svc-kpi-lbl">Total de gastos</div><div class="svc-kpi-val">'+fmt(snap.total)+'</div><div class="svc-kpi-sub">'+ranchEntries.length+' ranchos con movimiento</div></div>'
-    + '<div class="svc-kpi"><div class="svc-kpi-lbl">Rancho con más gastos</div><div class="svc-kpi-val" style="color:'+(RANCH_COLORS[maxRanch.name]||'#0f2044')+'">'+maxRanch.name+'</div><div class="svc-kpi-sub">'+fmt(maxRanch.data.total)+'</div></div>'
-    + '<div class="svc-kpi"><div class="svc-kpi-lbl">Categoría más costosa</div><div class="svc-kpi-val" style="color:'+(SERVICE_COLORS[topCat.name]||'#0f2044')+'">'+topCat.name+'</div><div class="svc-kpi-sub">'+fmt(topCat.val)+'</div></div>';
+    + '<div class="svc-kpi"><div class="svc-kpi-lbl">Rancho con mÃ¡s gastos</div><div class="svc-kpi-val" style="color:'+(RANCH_COLORS[maxRanch.name]||'#0f2044')+'">'+maxRanch.name+'</div><div class="svc-kpi-sub">'+fmt(maxRanch.data.total)+'</div></div>'
+    + '<div class="svc-kpi"><div class="svc-kpi-lbl">CategorÃ­a mÃ¡s costosa</div><div class="svc-kpi-val" style="color:'+(SERVICE_COLORS[topCat.name]||'#0f2044')+'">'+topCat.name+'</div><div class="svc-kpi-sub">'+fmt(topCat.val)+'</div></div>';
 
   if(grid) grid.innerHTML=ranchEntries.map(function(entry){
     var rn=entry.name, data=entry.data, col=RANCH_COLORS[rn]||'#64748b';
@@ -1139,9 +1080,9 @@ function renderServices(){
   }], plotlyLayout({yaxis:{tickformat:'$,.0f'},margin:{t:10,r:10,b:50,l:60}}), plotlyCfg());
 }
 
-// ═══════════════════════════════════════════
-// VIEW 1 — ANUAL
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// VIEW 1 â€” ANUAL
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderAnual(){ renderKPIs(); renderAnnualBar(); renderRanchBars(); renderLine(); renderStack(); renderAnnualTable(); }
 
 function renderKPIs(){
@@ -1151,13 +1092,13 @@ function renderKPIs(){
     var prev=i>0?getAnnualVal(state.cat,yrs[i-1]):null;
     var delta=prev!==null?pct(val,prev):null;
     var cls=delta===null?'flat':parseFloat(delta)>0?'up':'down';
-    var arrow=delta===null?'':parseFloat(delta)>0?'▲':'▼';
+    var arrow=delta===null?'':parseFloat(delta)>0?'â–²':'â–¼';
     var col=YEAR_COLORS[yr]||'#888';
     var note=yr===2026?' <small style="color:var(--dim);font-size:.58rem">(YTD)</small>':'';
     return '<div class="kpi" style="--accent:'+col+'">'+
-      '<div class="kpi-yr">'+yr+note+' · '+sym+'</div>'+
+      '<div class="kpi-yr">'+yr+note+' Â· '+sym+'</div>'+
       '<div class="kpi-val" style="color:'+col+'">'+fmt(val)+'</div>'+
-      (delta!==null?'<div class="kpi-delta '+cls+'">'+arrow+' '+Math.abs(delta)+'% vs '+yrs[i-1]+'</div>':'<div class="kpi-delta flat">— base</div>')+
+      (delta!==null?'<div class="kpi-delta '+cls+'">'+arrow+' '+Math.abs(delta)+'% vs '+yrs[i-1]+'</div>':'<div class="kpi-delta flat">â€” base</div>')+
       '</div>';
   }).join('');
 }
@@ -1165,7 +1106,7 @@ function renderKPIs(){
 function renderAnnualBar(){
   destroyChart('chartBar');
   var yrs=activeYrList(), vals=yrs.map(function(y){return getAnnualVal(state.cat,y);});
-  document.getElementById('barNote').textContent=(state.currency==='usd'?'USD':'MXN')+' · total anual';
+  document.getElementById('barNote').textContent=(state.currency==='usd'?'USD':'MXN')+' Â· total anual';
   var trace={type:'bar',x:yrs.map(function(y){return y===2026?'2026*':String(y);}),y:vals,
     marker:{color:yrs.map(function(y){return YEAR_COLORS[y]||'#888';}),
     line:{color:yrs.map(function(y){return YEAR_COLORS[y]||'#888';}),width:1}},
@@ -1185,7 +1126,7 @@ function renderRanchBars(){
   });
   var total=Object.keys(totals).reduce(function(a,k){return a+totals[k];},0);
   if(!total){el.innerHTML='<div class="no-data">Sin datos de rancho</div>';return;}
-  document.getElementById('ranchNote').textContent=(yr==='all'?'todos':yr)+' · '+(state.currency==='usd'?'USD':'MXN');
+  document.getElementById('ranchNote').textContent=(yr==='all'?'todos':yr)+' Â· '+(state.currency==='usd'?'USD':'MXN');
   var sorted=RANCH_ORDER.map(function(r){return [r,totals[r]||0];}).filter(function(a){return a[1]>0;}).sort(function(a,b){return b[1]-a[1];});
   var max=sorted[0][1];
   el.innerHTML=sorted.map(function(a){
@@ -1218,7 +1159,7 @@ function renderLine(){
     return {type:'scatter',mode:'lines',name:String(yr),x:labels,y:data,
       line:{color:col,width:yr===2025?3:2,dash:yr===2026?'dash':'solid'},
       connectgaps:true,hovertemplate:'<b>'+yr+' %{x}</b><br>%{text}<extra></extra>',
-      text:data.map(function(v){return v?fmt(v):'—';})};
+      text:data.map(function(v){return v?fmt(v):'â€”';})};
   });
   if(!traces.length) return;
   var layout=plotlyLayout({yaxis:{tickformat:'$,.0f'},legend:{orientation:'h',y:1.12}});
@@ -1250,24 +1191,24 @@ function renderStack(){
 
 function renderAnnualTable(){
   var yrs=activeYrList(), sym=state.currency==='usd'?'USD':'MXN';
-  document.getElementById('tableNote').textContent=sym+' · variación vs año anterior';
+  document.getElementById('tableNote').textContent=sym+' Â· variaciÃ³n vs aÃ±o anterior';
   document.getElementById('tableBody').innerHTML=yrs.map(function(yr,i){
     var d=(DATA.summary[state.cat]||{})[yr]||{usd:0,mxn:0,ranches:{},ranches_mxn:{}};
     var val=state.currency==='usd'?d.usd:d.mxn;
     var prev=i>0?getAnnualVal(state.cat,yrs[i-1]):null;
     var delta=prev!==null?pct(val,prev):null;
-    var dStr=delta!==null?'<span class="'+(parseFloat(delta)>0?'chg-pos':'chg-neg')+'">'+(parseFloat(delta)>0?'+':'')+delta+'%</span>':'<span class="chg-0">—</span>';
+    var dStr=delta!==null?'<span class="'+(parseFloat(delta)>0?'chg-pos':'chg-neg')+'">'+(parseFloat(delta)>0?'+':'')+delta+'%</span>':'<span class="chg-0">â€”</span>';
     var col=YEAR_COLORS[yr]||'#888';
     var ranchSrc=state.currency==='usd'?d.ranches:d.ranches_mxn;
-    var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+    var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'â€”')+'</td>';}).join('');
     return '<tr><td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+(yr===2026?'*':'')+'</strong></td>'+
       '<td style="color:'+col+';font-weight:600">'+fmt(val)+'</td><td>'+dStr+'</td>'+cells+'</tr>';
   }).join('');
 }
 
-// ═══════════════════════════════════════════
-// VIEW 2 — POR SEMANA
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// VIEW 2 â€” POR SEMANA
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderSemana(){
   if(!allWeeks.length) return;
   var weekNum=allWeeks[state.weekIdx], yrs=activeYrList();
@@ -1275,7 +1216,7 @@ function renderSemana(){
   document.getElementById('swTableNote').textContent=sym;
 
   if(isCombined(state.cat)){
-    // ── MODO MIRFE + MIPE: 2 filas por año ──
+    // â”€â”€ MODO MIRFE + MIPE: 2 filas por aÃ±o â”€â”€
     var rows=[];
     yrs.forEach(function(yr){
       var col=YEAR_COLORS[yr]||'#888';
@@ -1284,55 +1225,55 @@ function renderSemana(){
       var dm=rm.length?aggregateDetail(rm):null;
       var valm=dm?(state.currency==='usd'?dm.usd:dm.mxn):0;
       var ranchSrcM=dm?(state.currency==='usd'?dm.ranches:dm.ranches_mxn):{};
-      var cellsM=KEY_RANCHES.map(function(r){var v=ranchSrcM[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIRFE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#94a3b8">—</td>';}).join('');
+      var cellsM=KEY_RANCHES.map(function(r){var v=ranchSrcM[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIRFE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#94a3b8">â€”</td>';}).join('');
       rows.push('<tr>'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong>'+
         '<span style="font-size:.6rem;margin-left:4px;color:#b45309;font-family:IBM Plex Mono,monospace">MIRFE</span></td>'+
         '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
-        '<td style="color:var(--dim);font-size:.65rem">'+(dm&&dm.date_range?dm.date_range:'—')+'</td>'+
+        '<td style="color:var(--dim);font-size:.65rem">'+(dm&&dm.date_range?dm.date_range:'â€”')+'</td>'+
         '<td style="color:'+(valm>0?col:'var(--dim)')+';font-weight:600">'+fmt(valm)+'</td>'+
-        '<td>—</td>'+cellsM+'</tr>');
+        '<td>â€”</td>'+cellsM+'</tr>');
       // Fila MIPE
       var rp=getDetail(CAT_MIPE,weekNum,yr);
       var dp=rp.length?aggregateDetail(rp):null;
       var valp=dp?(state.currency==='usd'?dp.usd:dp.mxn):0;
       var ranchSrcP=dp?(state.currency==='usd'?dp.ranches:dp.ranches_mxn):{};
-      var cellsP=KEY_RANCHES.map(function(r){var v=ranchSrcP[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIPE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#94a3b8">—</td>';}).join('');
+      var cellsP=KEY_RANCHES.map(function(r){var v=ranchSrcP[r]||0;if(v>0){return '<td class="prod-cell" data-r="'+r+'" data-t="MIPE" data-w="'+weekNum+'" data-y="'+yr+'" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:#94a3b8">â€”</td>';}).join('');
       rows.push('<tr style="border-bottom:2px solid var(--border)">'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong>'+
         '<span style="font-size:.6rem;margin-left:4px;color:#2563eb;font-family:IBM Plex Mono,monospace">MIPE</span></td>'+
         '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
-        '<td style="color:var(--dim);font-size:.65rem">'+(dp&&dp.date_range?dp.date_range:'—')+'</td>'+
+        '<td style="color:var(--dim);font-size:.65rem">'+(dp&&dp.date_range?dp.date_range:'â€”')+'</td>'+
         '<td style="color:'+(valp>0?col:'var(--dim)')+';font-weight:600">'+fmt(valp)+'</td>'+
-        '<td>—</td>'+cellsP+'</tr>');
+        '<td>â€”</td>'+cellsP+'</tr>');
     });
     document.getElementById('swTableBody').innerHTML=rows.join('');
   } else {
-    // ── MODO NORMAL ──
+    // â”€â”€ MODO NORMAL â”€â”€
     var byYear=getWeekByYear(state.cat,weekNum);
     document.getElementById('swTableBody').innerHTML=yrs.map(function(yr,i){
       var d=byYear[yr], val=d?(state.currency==='usd'?d.usd:d.mxn):0;
       var prevD=i>0?byYear[yrs[i-1]]:null, prevVal=prevD?(state.currency==='usd'?prevD.usd:prevD.mxn):null;
       var delta=prevVal!==null?pct(val,prevVal):null;
       var col=YEAR_COLORS[yr]||'#888';
-      var dStr=delta!==null?'<span class="'+(parseFloat(delta)>0?'chg-pos':'chg-neg')+'">'+(parseFloat(delta)>0?'+':'')+delta+'%</span>':'<span class="chg-0">—</span>';
+      var dStr=delta!==null?'<span class="'+(parseFloat(delta)>0?'chg-pos':'chg-neg')+'">'+(parseFloat(delta)>0?'+':'')+delta+'%</span>':'<span class="chg-0">â€”</span>';
       var ranchSrc=d?(state.currency==='usd'?d.ranches:d.ranches_mxn):{};
       var isMant=(state.cat==='MANTENIMIENTO');
       var isMatEmp=(state.cat==='MATERIAL DE EMPAQUE');
-      var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;if(v>0&&isMant){return '<td class="prod-cell" data-r="'+r+'" data-t="ALL" data-w="'+weekNum+'" data-y="'+yr+'" data-src="mp" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}if(v>0&&isMatEmp){return '<td class="prod-cell" data-r="'+r+'" data-t="ALL" data-w="'+weekNum+'" data-y="'+yr+'" data-src="me" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+      var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;if(v>0&&isMant){return '<td class="prod-cell" data-r="'+r+'" data-t="ALL" data-w="'+weekNum+'" data-y="'+yr+'" data-src="mp" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}if(v>0&&isMatEmp){return '<td class="prod-cell" data-r="'+r+'" data-t="ALL" data-w="'+weekNum+'" data-y="'+yr+'" data-src="me" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'â€”')+'</td>';}).join('');
       return '<tr>'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong></td>'+
         '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
-        '<td style="color:var(--dim);font-size:.65rem">'+(d&&d.date_range?d.date_range:'—')+'</td>'+
+        '<td style="color:var(--dim);font-size:.65rem">'+(d&&d.date_range?d.date_range:'â€”')+'</td>'+
         '<td style="color:'+col+';font-weight:600">'+fmt(val)+'</td>'+
         '<td>'+dStr+'</td>'+cells+'</tr>';
     }).join('');
   }
 }
 
-// ═══════════════════════════════════════════
-// VIEW 3 — TENDENCIA / RANGO
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// VIEW 3 â€” TENDENCIA / RANGO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderTendencia(){
   var f=state.fromWeek, t=state.toWeek, yrs=activeYrList(), byYear=getRangeByYear(state.cat,f,t);
   var sym=state.currency==='usd'?'USD':'MXN';
@@ -1346,13 +1287,13 @@ function renderTendencia(){
       var mv=state.currency==='usd'?(d.mirfe_usd||0):(d.mirfe_mxn||0);
       var pv=state.currency==='usd'?(d.mipe_usd||0) :(d.mipe_mxn||0);
       subLine='<div style="margin-top:4px;font-size:.6rem;font-family:IBM Plex Mono,monospace">'+
-        '<span style="color:#f0b429">⬤ MIRFE '+fmt(mv)+'</span> '+
-        '<span style="color:#3b9eff">⬤ MIPE '+fmt(pv)+'</span></div>';
+        '<span style="color:#f0b429">â¬¤ MIRFE '+fmt(mv)+'</span> '+
+        '<span style="color:#3b9eff">â¬¤ MIPE '+fmt(pv)+'</span></div>';
     }
     return '<div class="stat-box" style="border-color:'+col+'33">'+
-      '<div class="stat-label">'+yr+' · '+sym+'</div>'+
+      '<div class="stat-label">'+yr+' Â· '+sym+'</div>'+
       '<div class="stat-val" style="color:'+col+'">'+fmt(val)+'</div>'+
-      '<div style="font-size:.62rem;color:var(--dim);font-family:IBM Plex Mono,monospace">'+fmt(avg)+'/sem · '+wks+' semanas</div>'+
+      '<div style="font-size:.62rem;color:var(--dim);font-family:IBM Plex Mono,monospace">'+fmt(avg)+'/sem Â· '+wks+' semanas</div>'+
       subLine+'</div>';
   }).join('');
 
@@ -1364,7 +1305,7 @@ function renderTendencia(){
     return {type:'scatter',mode:'lines'+(rangeWeeks.length<20?'+markers':''),name:String(yr),x:rLabels,y:data,
       line:{color:col,width:yr===2025?3:2,dash:yr===2026?'dash':'solid'},
       connectgaps:true,hovertemplate:'<b>'+yr+' %{x}</b><br>%{text}<extra></extra>',
-      text:data.map(function(v){return v?fmt(v):'—';})};
+      text:data.map(function(v){return v?fmt(v):'â€”';})};
   });
   if(rTraces.some(function(d){return d.y.some(function(v){return v!==null;});})){
     Plotly.newPlot('chartRangeLine',rTraces,plotlyLayout({yaxis:{tickformat:'$,.0f'},legend:{orientation:'h',y:1.12}}),plotlyCfg());
@@ -1385,7 +1326,7 @@ function renderTendencia(){
     return {type:'scatter',mode:'lines',name:String(yr),x:rLabels,y:data,
       fill:'tozeroy',fillcolor:col+'25',line:{color:col,width:2,dash:yr===2026?'dash':'solid'},
       connectgaps:true,hovertemplate:'<b>'+yr+' %{x}</b><br>%{text}<extra></extra>',
-      text:data.map(function(v){return v?fmt(v):'—';})};
+      text:data.map(function(v){return v?fmt(v):'â€”';})};
   });
   Plotly.newPlot('chartCumul',cTraces,plotlyLayout({yaxis:{tickformat:'$,.0f'},legend:{orientation:'h',y:1.12}}),plotlyCfg());
 
@@ -1404,7 +1345,7 @@ function renderHeatmap(f,t,yrs){
       matrix[yr][w]=val; if(val>globalMax) globalMax=val;
     });
   });
-  var html='<table class="heatmap"><thead><tr><th class="yr-th">Año</th>';
+  var html='<table class="heatmap"><thead><tr><th class="yr-th">AÃ±o</th>';
   wi.forEach(function(w){html+='<th>'+wFmt(w)+'</th>';});
   html+='</tr></thead><tbody>';
   yrs.forEach(function(yr){
@@ -1412,8 +1353,8 @@ function renderHeatmap(f,t,yrs){
     html+='<tr><td class="hm-yr-lbl" style="color:'+col+'">'+yr+'</td>';
     wi.forEach(function(w){
       var v=matrix[yr][w], ratio=globalMax>0?v/globalMax:0;
-      var bg=heatColor(ratio), tc=ratio>0.5?'#fff':(ratio>0?'#0a7c52':'#94a3b8'), title=v>0?fmt(v):'—';
-      html+='<td style="background:'+bg+';color:'+tc+'" title="'+yr+' W'+String(w).padStart(2,'0')+': '+title+'" onclick="jumpToWeek('+w+')">'+(v>0?fmt(v):'·')+'</td>';
+      var bg=heatColor(ratio), tc=ratio>0.5?'#fff':(ratio>0?'#0a7c52':'#94a3b8'), title=v>0?fmt(v):'â€”';
+      html+='<td style="background:'+bg+';color:'+tc+'" title="'+yr+' W'+String(w).padStart(2,'0')+': '+title+'" onclick="jumpToWeek('+w+')">'+(v>0?fmt(v):'Â·')+'</td>';
     });
     html+='</tr>';
   });
@@ -1431,7 +1372,7 @@ function setRangeTableGroup(g){
   renderRangeTable(state.fromWeek,state.toWeek,activeYrList(),getRangeByYear(state.cat,state.fromWeek,state.toWeek));
 }
 function deltaCell(val,prev){
-  if(prev===null||prev===undefined||prev===0) return '<td class="delta-cell chg-0">—</td>';
+  if(prev===null||prev===undefined||prev===0) return '<td class="delta-cell chg-0">â€”</td>';
   var diff=val-prev, p=((diff/prev)*100).toFixed(1), cls=diff>0?'chg-pos':diff<0?'chg-neg':'chg-0', sign=diff>0?'+':'';
   return '<td class="delta-cell '+cls+'"><span class="delta-amt">'+sign+fmt(diff)+'</span><span class="delta-pct">'+sign+p+'%</span></td>';
 }
@@ -1439,10 +1380,10 @@ function renderRangeTable(f,t,yrs,byYear){
   var sym=state.currency==='usd'?'USD':'MXN';
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
   var ranchCols=['Prop-RM','PosCo-RM','Campo-RM','Isabela','Cecilia','Cecilia 25','Christina'];
-  document.getElementById('rangeTableNote').textContent=sym+' · '+wFmt(f)+' → '+wFmt(t);
-  document.getElementById('rangeTableSub').textContent=rangeWeeks.length+' semanas × '+yrs.length+' años = '+rangeWeeks.length*yrs.length+' filas';
+  document.getElementById('rangeTableNote').textContent=sym+' Â· '+wFmt(f)+' â†’ '+wFmt(t);
+  document.getElementById('rangeTableSub').textContent=rangeWeeks.length+' semanas Ã— '+yrs.length+' aÃ±os = '+rangeWeeks.length*yrs.length+' filas';
 
-  // Para MIRFE/MIPE: cargar datos de ambas categorías por separado
+  // Para MIRFE/MIPE: cargar datos de ambas categorÃ­as por separado
   var weekData={};
   if(isCombined(state.cat)){
     yrs.forEach(function(yr){
@@ -1460,22 +1401,22 @@ function renderRangeTable(f,t,yrs,byYear){
   }
   var head, body;
   if(rangeTableGroup==='year'){
-    head='<tr><th>Semana</th><th>Fecha</th><th>Total '+sym+'</th><th>Δ$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
+    head='<tr><th>Semana</th><th>Fecha</th><th>Total '+sym+'</th><th>Î”$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
     if(isCombined(state.cat)){
-      // ── MIRFE+MIPE: por año → 2 sub-filas por semana ──
+      // â”€â”€ MIRFE+MIPE: por aÃ±o â†’ 2 sub-filas por semana â”€â”€
       body=yrs.map(function(yr,yi){
         var col=YEAR_COLORS[yr]||'#888';
-        var hdr='<tr class="tr-group-hdr" style="--accent:'+col+'"><td colspan="'+(4+ranchCols.length)+'" style="color:'+col+'">📅 '+yr+'</td></tr>';
+        var hdr='<tr class="tr-group-hdr" style="--accent:'+col+'"><td colspan="'+(4+ranchCols.length)+'" style="color:'+col+'">ðŸ“… '+yr+'</td></tr>';
         var prevM=null, prevP=null;
         var wkRows=rangeWeeks.map(function(w){
           var dd=weekData[yr][w]||{}, dm=dd.mirfe, dp=dd.mipe;
           var vm=dm?(state.currency==='usd'?dm.usd:dm.mxn):0;
           var vp=dp?(state.currency==='usd'?dp.usd:dp.mxn):0;
-          var dr=dm&&dm.date_range?dm.date_range:(dp&&dp.date_range?dp.date_range:'—');
+          var dr=dm&&dm.date_range?dm.date_range:(dp&&dp.date_range?dp.date_range:'â€”');
           var dCellM=deltaCell(vm,prevM); prevM=vm>0?vm:prevM;
           var dCellP=deltaCell(vp,prevP); prevP=vp>0?vp:prevP;
-          var rcM=ranchCols.map(function(r){if(!dm) return '<td style="color:var(--dim)">—</td>';var src=state.currency==='usd'?dm.ranches:dm.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
-          var rcP=ranchCols.map(function(r){if(!dp) return '<td style="color:var(--dim)">—</td>';var src=state.currency==='usd'?dp.ranches:dp.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+          var rcM=ranchCols.map(function(r){if(!dm) return '<td style="color:var(--dim)">â€”</td>';var src=state.currency==='usd'?dm.ranches:dm.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'â€”')+'</td>';}).join('');
+          var rcP=ranchCols.map(function(r){if(!dp) return '<td style="color:var(--dim)">â€”</td>';var src=state.currency==='usd'?dp.ranches:dp.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'â€”')+'</td>';}).join('');
           return '<tr class="tr-week">'+
             '<td style="color:'+col+';font-weight:600">'+wFmt(w)+' <span style="color:#f0b429;font-size:.6rem">MIRFE</span></td>'+
             '<td style="color:var(--dim);font-size:.63rem">'+dr+'</td>'+
@@ -1495,17 +1436,17 @@ function renderRangeTable(f,t,yrs,byYear){
         var prevYr=yi>0?byYear[yrs[yi-1]]:null, prevYrVal=prevYr?(state.currency==='usd'?prevYr.usd:prevYr.mxn):null;
         var yDiff=prevYrVal!==null?yearTotal-prevYrVal:null, yPct=prevYrVal!==null&&prevYrVal!==0?((yearTotal-prevYrVal)/prevYrVal*100).toFixed(1):null;
         var yCls=yDiff===null?'chg-0':yDiff>0?'chg-pos':'chg-neg', ySign=yDiff!==null&&yDiff>0?'+':'';
-        var hdr='<tr class="tr-group-hdr" style="--accent:'+col+'"><td colspan="2" style="color:'+col+'">📅 '+yr+' — Total del rango</td>'+
+        var hdr='<tr class="tr-group-hdr" style="--accent:'+col+'"><td colspan="2" style="color:'+col+'">ðŸ“… '+yr+' â€” Total del rango</td>'+
           '<td style="color:'+col+'">'+fmt(yearTotal)+'</td>'+
-          '<td class="delta-cell '+yCls+'">'+(yDiff!==null?'<span class="delta-amt">'+ySign+fmt(yDiff)+'</span><span class="delta-pct">'+ySign+(yPct||'0')+'%  vs '+yrs[yi-1]+'</span>':'<span class="delta-amt chg-0">— base</span>')+'</td>'+
-          ranchCols.map(function(r){var d=byYear[yr];if(!d) return '<td>—</td>';var src=state.currency==='usd'?d.ranches:d.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+';font-size:.68rem">'+(v>0?fmt(v):'—')+'</td>';}).join('')+'</tr>';
+          '<td class="delta-cell '+yCls+'">'+(yDiff!==null?'<span class="delta-amt">'+ySign+fmt(yDiff)+'</span><span class="delta-pct">'+ySign+(yPct||'0')+'%  vs '+yrs[yi-1]+'</span>':'<span class="delta-amt chg-0">â€” base</span>')+'</td>'+
+          ranchCols.map(function(r){var d=byYear[yr];if(!d) return '<td>â€”</td>';var src=state.currency==='usd'?d.ranches:d.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+';font-size:.68rem">'+(v>0?fmt(v):'â€”')+'</td>';}).join('')+'</tr>';
         var prevWkVal=null;
         var wkRows=rangeWeeks.map(function(w){
           var d=weekData[yr][w], val=d?(state.currency==='usd'?d.usd:d.mxn):0, dCell=deltaCell(val,prevWkVal);
           prevWkVal=val>0?val:prevWkVal;
-          var ranchCells=ranchCols.map(function(r){if(!d) return '<td style="color:var(--dim)">—</td>';var src=state.currency==='usd'?d.ranches:d.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+          var ranchCells=ranchCols.map(function(r){if(!d) return '<td style="color:var(--dim)">â€”</td>';var src=state.currency==='usd'?d.ranches:d.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'â€”')+'</td>';}).join('');
           return '<tr class="tr-week"><td style="color:'+col+';font-weight:600">'+wFmt(w)+'</td>'+
-            '<td style="color:var(--dim);font-size:.63rem">'+(d&&d.date_range?d.date_range:'—')+'</td>'+
+            '<td style="color:var(--dim);font-size:.63rem">'+(d&&d.date_range?d.date_range:'â€”')+'</td>'+
             '<td style="color:'+(val>0?col:'var(--dim)')+';font-weight:'+(val>0?'600':'400')+'">'+fmt(val)+'</td>'+
             dCell+ranchCells+'</tr>';
         }).join('');
@@ -1513,13 +1454,13 @@ function renderRangeTable(f,t,yrs,byYear){
       }).join('');
     }
   } else {
-    head='<tr><th>Año</th><th>Total '+sym+'</th><th>Δ$ vs año ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
+    head='<tr><th>AÃ±o</th><th>Total '+sym+'</th><th>Î”$ vs aÃ±o ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
     if(isCombined(state.cat)){
-      // ── MIRFE+MIPE: por semana → 2 sub-filas por año ──
+      // â”€â”€ MIRFE+MIPE: por semana â†’ 2 sub-filas por aÃ±o â”€â”€
       body=rangeWeeks.map(function(w){
         var dateEx='';
         yrs.forEach(function(yr){var dd=weekData[yr][w]||{};if(dd.mirfe&&dd.mirfe.date_range) dateEx=dd.mirfe.date_range;else if(dd.mipe&&dd.mipe.date_range) dateEx=dd.mipe.date_range;});
-        var hdr='<tr class="tr-group-hdr" style="--accent:var(--green)"><td colspan="2" style="color:var(--green)">📆 '+wFmt(w)+(dateEx?' <span style="font-size:.6rem;color:var(--dim)">'+dateEx+'</span>':'')+'</td><td colspan="'+(2+ranchCols.length)+'"></td></tr>';
+        var hdr='<tr class="tr-group-hdr" style="--accent:var(--green)"><td colspan="2" style="color:var(--green)">ðŸ“† '+wFmt(w)+(dateEx?' <span style="font-size:.6rem;color:var(--dim)">'+dateEx+'</span>':'')+'</td><td colspan="'+(2+ranchCols.length)+'"></td></tr>';
         var prevM=null, prevP=null;
         var yrRows=yrs.map(function(yr){
           var col=YEAR_COLORS[yr]||'#888', dd=weekData[yr][w]||{}, dm=dd.mirfe, dp=dd.mipe;
@@ -1527,8 +1468,8 @@ function renderRangeTable(f,t,yrs,byYear){
           var vp=dp?(state.currency==='usd'?dp.usd:dp.mxn):0;
           var dCellM=deltaCell(vm,prevM); prevM=vm>0?vm:prevM;
           var dCellP=deltaCell(vp,prevP); prevP=vp>0?vp:prevP;
-          var rcM=ranchCols.map(function(r){if(!dm) return '<td style="color:var(--dim)">—</td>';var src=state.currency==='usd'?dm.ranches:dm.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
-          var rcP=ranchCols.map(function(r){if(!dp) return '<td style="color:var(--dim)">—</td>';var src=state.currency==='usd'?dp.ranches:dp.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+          var rcM=ranchCols.map(function(r){if(!dm) return '<td style="color:var(--dim)">â€”</td>';var src=state.currency==='usd'?dm.ranches:dm.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'â€”')+'</td>';}).join('');
+          var rcP=ranchCols.map(function(r){if(!dp) return '<td style="color:var(--dim)">â€”</td>';var src=state.currency==='usd'?dp.ranches:dp.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'â€”')+'</td>';}).join('');
           return '<tr class="tr-week"><td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong> <span style="color:#f0b429;font-size:.6rem">MIRFE</span></td>'+
             '<td style="color:'+(vm>0?col:'var(--dim)')+';font-weight:'+(vm>0?'600':'400')+'">'+fmt(vm)+'</td>'+dCellM+rcM+'</tr>'+
             '<tr class="tr-week" style="border-bottom:1px solid var(--border)"><td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong> <span style="color:#3b9eff;font-size:.6rem">MIPE</span></td>'+
@@ -1540,12 +1481,12 @@ function renderRangeTable(f,t,yrs,byYear){
       body=rangeWeeks.map(function(w){
         var dateEx='';
         yrs.forEach(function(yr){if(weekData[yr][w]&&weekData[yr][w].date_range) dateEx=weekData[yr][w].date_range;});
-        var hdr='<tr class="tr-group-hdr" style="--accent:var(--green)"><td colspan="2" style="color:var(--green)">📆 '+wFmt(w)+(dateEx?' <span style="font-size:.6rem;color:var(--dim)">'+dateEx+'</span>':'')+'</td><td colspan="'+(2+ranchCols.length)+'"></td></tr>';
+        var hdr='<tr class="tr-group-hdr" style="--accent:var(--green)"><td colspan="2" style="color:var(--green)">ðŸ“† '+wFmt(w)+(dateEx?' <span style="font-size:.6rem;color:var(--dim)">'+dateEx+'</span>':'')+'</td><td colspan="'+(2+ranchCols.length)+'"></td></tr>';
         var prevYrVal=null;
         var yrRows=yrs.map(function(yr){
           var col=YEAR_COLORS[yr]||'#888', d=weekData[yr][w], val=d?(state.currency==='usd'?d.usd:d.mxn):0, dCell=deltaCell(val,prevYrVal);
           prevYrVal=val>0?val:prevYrVal;
-          var ranchCells=ranchCols.map(function(r){if(!d) return '<td style="color:var(--dim)">—</td>';var src=state.currency==='usd'?d.ranches:d.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+          var ranchCells=ranchCols.map(function(r){if(!d) return '<td style="color:var(--dim)">â€”</td>';var src=state.currency==='usd'?d.ranches:d.ranches_mxn,v=src[r]||0;return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'var(--dim)')+'">'+(v>0?fmt(v):'â€”')+'</td>';}).join('');
           return '<tr class="tr-week"><td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong></td><td style="color:'+(val>0?col:'var(--dim)')+';font-weight:'+(val>0?'600':'400')+'">'+fmt(val)+'</td>'+dCell+ranchCells+'</tr>';
         }).join('');
         var wkTotal=yrs.reduce(function(acc,yr){var d=weekData[yr][w];return acc+(d?(state.currency==='usd'?d.usd:d.mxn):0);},0);
@@ -1559,9 +1500,9 @@ function renderRangeTable(f,t,yrs,byYear){
   setTimeout(initScrollHints,80);
 }
 
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SCROLL HINTS
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function initScrollHints(){
   [{wrap:'wrapAnual',hint:'hintAnual'},{wrap:'wrapSemana',hint:'hintSemana'},{wrap:'wrapRange',hint:'hintRange'}].forEach(function(p){
     var el=document.getElementById(p.wrap);if(!el) return;
@@ -1576,9 +1517,9 @@ function initScrollHints(){
   });
 }
 
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // MODAL DE PRODUCTOS
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function showProductos(rancho, tipo, weekNum, yr, src) {
   src = src || 'pr';
   lastProductos = {rancho: rancho, tipo: tipo, src: src};
@@ -1610,12 +1551,12 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
 
   var tipoNombre = src === 'mp' ? 'Mantenimiento'
     : src === 'me' ? 'Material de Empaque'
-    : tipo === 'MIRFE' ? 'Riego / Fertilización' : 'Material de Protección';
+    : tipo === 'MIRFE' ? 'Riego / FertilizaciÃ³n' : 'Material de ProtecciÃ³n';
 
   document.getElementById('productosTitle').innerHTML =
-    rancho + ' <span>— ' + tipoNombre + '</span>';
+    rancho + ' <span>â€” ' + tipoNombre + '</span>';
 
-  var wkLabel = 'W' + String(weekNum).padStart(2,'0') + ' · ' + yr;
+  var wkLabel = 'W' + String(weekNum).padStart(2,'0') + ' Â· ' + yr;
 
   var footer = document.getElementById('pnlFooter');
 
@@ -1624,8 +1565,8 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
     var hojasEncontradas = debug[hojasKey] || [];
     var ranchosDisp = prods ? Object.keys(prods).join(', ') : 'ninguno';
     var msg = hojasEncontradas.length === 0 ? 'No se encontraron hojas ' + prefix + ' en el sheet'
-      : !prods ? 'Sin datos · Semana ' + semCode + ' · Hojas: ' + hojasEncontradas.join(', ')
-      : 'Rancho no encontrado · Disponibles: ' + ranchosDisp;
+      : !prods ? 'Sin datos Â· Semana ' + semCode + ' Â· Hojas: ' + hojasEncontradas.join(', ')
+      : 'Rancho no encontrado Â· Disponibles: ' + ranchosDisp;
 
     document.getElementById('pnlKpis').innerHTML = '';
     document.getElementById('productosContent').innerHTML =
@@ -1642,7 +1583,7 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
     // Agrupar por ubicacion
     var grupos = {}, gruposOrder = [];
     list.forEach(function(p){
-      var det = p[3] ? p[3] : '—';
+      var det = p[3] ? p[3] : 'â€”';
       if(!grupos[det]){ grupos[det]=[]; gruposOrder.push(det); }
       grupos[det].push(p);
     });
@@ -1654,7 +1595,7 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
       totalGasto    += p[2] ? parseFloat(p[2]) : 0;
     });
 
-    // Sin KPI strip separado — las métricas van en el header
+    // Sin KPI strip separado â€” las mÃ©tricas van en el header
     document.getElementById('pnlKpis').innerHTML = '';
     // Build rows
     var rows = '';
@@ -1681,11 +1622,11 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
         var amtClass = 'amt ' + (gasto < 0 ? 'neg' : 'pos');
         var amtStr   = gasto !== 0
           ? (gasto < 0 ? '-$' : '$') + Math.abs(gasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-          : '—';
+          : 'â€”';
         var qtyStr = unidades !== 0
           ? Math.abs(unidades).toLocaleString('en-US',{maximumFractionDigits:2})
-          : '—';
-        var ubicCell = gruposOrder.length > 1 ? '' : (det !== '—' ? det : '');
+          : 'â€”';
+        var ubicCell = gruposOrder.length > 1 ? '' : (det !== 'â€”' ? det : '');
         rows += '<tr>' +
           '<td>' + ubicCell + '</td>' +
           '<td>' + p[0] + '</td>' +
@@ -1723,9 +1664,9 @@ function closeProductos() {
 }
 
 
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // PLOTLY HELPERS
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function plotlyLayout(extra){
   var base={
     paper_bgcolor:'rgba(0,0,0,0)',
@@ -1754,13 +1695,13 @@ function plotlyCfg(){
 window.onerror = function(msg, src, line, col, err) {
   document.getElementById('loader').innerHTML =
     '<div style="color:#dc2626;font-family:IBM Plex Mono,monospace;padding:20px;max-width:600px;word-break:break-all;background:#fff;border-radius:12px;border:1px solid #fecaca">' +
-    '<b>ERROR JS:</b><br>' + msg + '<br><small>línea ' + line + '</small></div>';
+    '<b>ERROR JS:</b><br>' + msg + '<br><small>lÃ­nea ' + line + '</small></div>';
   return true;
 };
 
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ARRANCAR CON DATOS YA LISTOS
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Reconstruir weekly_series desde weekly_detail si no existe
 if(!DATA.weekly_series){
   DATA.weekly_series={};
@@ -1789,10 +1730,53 @@ reportHeight();
 setInterval(reportHeight, 300);
 </script>
 </body>
-</html>"""
+</html>Ú
+__DATA_JSON__Ú__FLORES_IMG__i¬
+  )ÚheightÚ	scrolling)ÚjpgÚjpegÚpngÚwebp)7Ú __doc__ÚjsonÚbase64ÚosÚimportlib.utilÚ	importlibÚ	streamlitÚstÚstreamlit.components.v1Ú
+componentsÚv1ÚpathÚ dirnameÚ__file__Ú_extractor_dirÚjoinÚ_extractor_pathÚexistsÚutilÚspec_from_file_locationÚ_extractor_specÚloaderÚ
+ImportErrorÚmodule_from_specÚ_extractor_modÚ
+exec_moduler   Ú
+_flores_b64Ú_extÚ_pathÚopenÚ_fÚ	b64encodeÚreadÚdecodeÚset_page_configÚmarkdownÚ
+cache_datar   ÚDATAÚ	ExceptionÚer   ÚstopÚbuttonÚclearÚrerunÚdumpsÚstrÚencodeÚ	data_jsonÚHTMLÚ replaceÚ
+html_finalÚhtmlr   r   r   Ú<module>rT      s×  ðñó Û 
+Û 	Û Û ß ,Ð ,à—‘—‘ Ó*€Ø—'‘'—,‘,˜~Ð/BÓC€Ø 	‡ww‡~~o× &Ò &Ø—g‘g—l‘l >Ð3KÓL€OØ—.‘.×8Ñ8Ð9QÐSbÓc€ØÒ˜o×4Ñ4Ò<Ù
+Ð?ÀÐ?PÐQÓ
+RÐRØ—‘×0Ñ0°ÓA€Ø × Ñ × "Ñ " >Ô 2Ø×$Ñ$€	ð €
+Û'€DØG‰GL‰L˜Ÿ™Ÿ™¨Ó2°g¸d¸VÐ4DÓE€EØ 	‡ww‡~~e× Ô Ù
+%˜×
+Ô
+ "Ø'¨ v¨XÐ6¸×9IÒ9IÈ"Ï'É'Ë)Ó9T×9[Ñ9[Ó9]Õ]ˆK÷ á
+ñ
+ 
+(ð × Ò ØØØ
+Ø%õ	ð ‡
+‚
+ð  
+ð õ ð ‡‚3 UÔ+ñó ,ððÙ
+‹;€Dð
+ 
+ˆd„?Ø‡H‚HˆtD˜•M?Ð
+#Ô$Ø 	‡y‚yÐ"× #Ò #Ø
+
+‰
+×ÑÔØ
+ŠŒ
+Ø‡G‚G„Ió Ø×ÒØ‡J‚Jˆt $°Ô4×;Ñ;¸GÓDó
+ç&ˆƒ/ð 
+ðm
+€ð`5 \‰\˜/¨9Ó
+5×
+=Ñ
+=Ð>NÐP[Ó
+\€
+ð 
+‡‚
+ 4°5× 9÷Q7 ×
+Ð
+ûð@ ô Ø‡H‚HÐ)¨!¨Ð
+-Ô.Ø‡G‚G‡I‚Iûðús$   Æ:L
+ È
+ L! Ì
 
-# Inyectar los datos JSON en el HTML
-html_final = HTML.replace('__DATA_JSON__', data_json).replace('__FLORES_IMG__', _flores_b64)
-
-# Renderizar
-components.html(html_final, height=3500, scrolling=False)
+L
+Ì! MÌ(&MÍM
