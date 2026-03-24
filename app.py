@@ -1291,9 +1291,7 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
   document.getElementById('productosTitle').innerHTML =
     rancho + ' <span>— ' + tipoNombre + '</span>';
 
-  // Stats inline en el header (compacto)
   var wkLabel = 'W' + String(weekNum).padStart(2,'0') + ' · ' + yr;
-  document.getElementById('productosBadges').innerHTML = wkLabel;
 
   var footer = document.getElementById('pnlFooter');
 
