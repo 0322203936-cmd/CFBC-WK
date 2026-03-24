@@ -337,9 +337,23 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   <div class="cat-select-wrap" style="position:relative;z-index:2;border-bottom:none;padding:12px 24px;">
     <!-- Label Categoría -->
     <span class="cat-select-label" style="background:rgba(110,81,115,0.85);color:#fff;padding:3px 8px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18);">Categoría</span>
-    <!-- Selector -->
+    <!-- Selector 1 -->
     <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
       <select class="cat-select" id="catSelect" onchange="selectCat(this.value)" style="background:transparent;font-weight:700;color:#fff;"></select>
+      <span class="cat-arrow" style="color:#fff;">▾</span>
+    </div>
+    <!-- Selector 2 -->
+    <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
+      <select class="cat-select" id="moSelect" style="background:transparent;font-weight:700;color:#fff;">
+        <option value="" disabled selected>COSTO DE MANO DE OBRA</option>
+      </select>
+      <span class="cat-arrow" style="color:#fff;">▾</span>
+    </div>
+    <!-- Selector 3 -->
+    <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
+      <select class="cat-select" id="servSelect" style="background:transparent;font-weight:700;color:#fff;">
+        <option value="" disabled selected>COSTO DE SERVICIOS</option>
+      </select>
       <span class="cat-arrow" style="color:#fff;">▾</span>
     </div>
     <!-- Contador -->
