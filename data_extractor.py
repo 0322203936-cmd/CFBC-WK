@@ -513,10 +513,10 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
     if not hojas_validas:
         return {"error": "No se encontraron hojas WK validas."}
 
-    # 2. Leer hojas WK (equivalente al batch A1:AI60 → 60 filas, 35 cols)
+    # 2. Leer hojas WK (ampliado a 120 filas para alcanzar COSTO DE SERVICIOS)
     batch_data = {}
     for titulo, _ in hojas_validas:
-        batch_data[titulo] = _leer_hoja(xls, titulo, rango_filas=60, rango_cols=35)
+        batch_data[titulo] = _leer_hoja(xls, titulo, rango_filas=120, rango_cols=35)
 
     # 2b. Leer hojas PR (equivalente al batch A1:K500 → 500 filas, 11 cols)
     productos       = {}
@@ -592,13 +592,15 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
 
             cat = norm_cat(label)
             if not cat and not in_servicios:
+                print(f"   [WK loop] fila {i}: label='{label[:40]}' → sin categoría ni servicios")
                 continue
             if cat == "COSTO_STOP":
-                in_servicios = False   # salir del modo servicios si estábamos en él
-                continue              # NO romper — puede haber más secciones adelante
+                print(f"   [WK loop] COSTO_STOP en fila {i} — continuando...")
+                in_servicios = False
+                continue
 
-            # ── Detectar inicio de la sección COSTO DE SERVICIOS ──
             if cat == "SERVICIOS_START":
+                print(f"   [WK loop] ✅ SERVICIOS_START detectado en fila {i}")
                 in_servicios = True
                 continue
 
@@ -641,6 +643,10 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                     "mxn_ranches": mxn_ranches,
                     "usd_ranches": usd_ranches,
                 })
+
+    print(f"\n✅ servicios_data: {len(servicios_data)} registros encontrados")
+    if servicios_data:
+        print(f"   subcats: {list({r['subcat'] for r in servicios_data})}")
 
     cats_found = {r["categoria"] for r in all_data}
     cats  = [c for c in CATEGORIAS_ORDEN if c in cats_found]
