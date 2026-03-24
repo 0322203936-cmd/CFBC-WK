@@ -790,18 +790,24 @@ function updateWeekSlider(){
   var sl=document.getElementById('weekSlider');
   sl.min=allWeeks[0]; sl.max=allWeeks[allWeeks.length-1]; sl.value=wn;
   document.getElementById('weekNumLabel').textContent='Semana '+wFmt(wn);
-  // Buscar fecha por año+semana exacto usando el mapa pre-calculado
   var activeYr=activeYrList(); var yr=activeYr[activeYr.length-1];
-  var key=yr+'-'+wn;
-  var wdr=DATA.week_date_ranges||{};
-  var dateText=wdr[key]||'';
+  var dateText='';
+  // 1. Buscar en el mapa exacto año+semana
+  var wdr=DATA.week_date_ranges;
+  if(wdr) dateText=wdr[yr+'-'+wn]||wdr[String(yr)+'-'+String(wn)]||'';
+  // 2. Filtrar weekly_detail por año+semana si no hubo resultado
   if(!dateText){
-    // fallback: buscar semana en cualquier año
-    var any=DATA.weekly_detail&&DATA.weekly_detail.filter(function(r){return r.week===wn&&r.date_range;});
-    dateText=any&&any.length?any[0].date_range:'';
+    var recsByYr=(DATA.weekly_detail||[]).filter(function(r){return r.week===wn&&r.year===yr&&r.date_range;});
+    if(recsByYr.length) dateText=recsByYr[0].date_range;
+  }
+  // 3. Fallback: cualquier año para esa semana
+  if(!dateText){
+    var recsAny=(DATA.weekly_detail||[]).filter(function(r){return r.week===wn&&r.date_range;});
+    recsAny.sort(function(a,b){return Math.abs(a.year-yr)-Math.abs(b.year-yr);}); // más cercano al año activo
+    if(recsAny.length) dateText=recsAny[0].date_range;
   }
   document.getElementById('weekDateLabel').textContent=dateText;
-  var avail=DATA.years.filter(function(yr){return DATA.weekly_detail.some(function(r){return r.week===wn&&r.year===yr;});});
+  var avail=DATA.years.filter(function(y2){return (DATA.weekly_detail||[]).some(function(r){return r.week===wn&&r.year===y2;});});
   document.getElementById('weekAvail').textContent='Disponible en: '+avail.join(', ');
 }
 function updateRangeSliders(){
