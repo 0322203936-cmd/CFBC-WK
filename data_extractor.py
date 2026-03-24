@@ -7,6 +7,7 @@ Centro Floricultor de Baja California
 """
 
 import re
+import unicodedata
 import requests
 import pandas as pd
 import gspread
@@ -27,7 +28,7 @@ ONEDRIVE_URL = (
 # ─── Constantes ───────────────────────────────────────────────────────────────
 RANCH_KEYS = ["PROP", "POSCO", "CAMPO", "ISABEL", "HOOPS", "CECILIA", "CHRISTINA", "ALBAHACA"]
 
-CATEGORIAS_ORDEN = [
+MATERIAL_CATEGORIAS_ORDEN = [
     "DESINFECCION Y FERTILIZACION",
     "AMPLIACION",
     "CULTIVO TIERRA, CHAROLAS",
@@ -39,6 +40,17 @@ CATEGORIAS_ORDEN = [
     "EXPANSION CECILIA 25",
     "RENOVACION DE SIEMBRA",
     "MATERIAL DE EMPAQUE",
+]
+
+SERVICIOS_CATEGORIAS_ORDEN = [
+    "ELECTRICIDAD",
+    "FLETES Y ACARREOS",
+    "GASTOS DE EXPORTACION",
+    "CERTIFICADO FITOSANITARIO",
+    "TRANSPORTE DE PERSONAL",
+    "COMPRA DE FLOR A TERCEROS",
+    "COMIDA PARA EL PERSONAL",
+    "RO, TEL, RTA.ALIM",
 ]
 
 SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
@@ -97,21 +109,63 @@ def norm_ranch(s: str):
     return None
 
 
-def norm_cat(s: str):
-    s = str(s).upper().strip()
+def _norm_text(s: str) -> str:
+    s = str(s or "").strip().upper()
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+
+def norm_section(s: str):
+    s = _norm_text(s)
+    if "COSTO DE MAT" in s:
+        return "materials"
+    if "COSTO DE SERV" in s:
+        return "services"
+    if "COSTO DE MANO" in s or "MANO DE OBRA" in s:
+        return "labor"
+    return None
+
+
+def norm_material_cat(s: str):
+    s = _norm_text(s)
     if "DESINFECCION" in s and "FERTILIZ" in s:  return "DESINFECCION Y FERTILIZACION"
     if s.startswith("AMPLIACION"):                return "AMPLIACION"
     if "CULTIVO" in s:                            return "CULTIVO TIERRA, CHAROLAS"
     if "MATERIAL VEG" in s:                       return "MATERIAL VEGETAL"
     if "PREPARACION" in s:                        return "PREPARACION DE SUELO"
     if "FERTILIZANTE" in s:                       return "FERTILIZANTES"
-    if "SANIDAD" in s or "PLAGUICIDA" in s:       return "DESINFECCION / PLAGUICIDAS"
+    if "SANIDAD" in s or "PLAGUICIDA" in s:      return "DESINFECCION / PLAGUICIDAS"
     if "MANTENIMIENTO" in s:                      return "MANTENIMIENTO"
     if "EXPANSION" in s:                          return "EXPANSION CECILIA 25"
     if "RENOVACION" in s:                         return "RENOVACION DE SIEMBRA"
     if "MATERIAL DE EMP" in s:                    return "MATERIAL DE EMPAQUE"
-    if "COSTO DE MAT" in s:                       return "COSTO_STOP"
     return None
+
+
+def norm_service_cat(s: str):
+    s = _norm_text(s)
+    if "ELECTRIC" in s:
+        return "ELECTRICIDAD"
+    if "FLETE" in s and "ACARRE" in s:
+        return "FLETES Y ACARREOS"
+    if "EXPORT" in s:
+        return "GASTOS DE EXPORTACION"
+    if "FITO" in s:
+        return "CERTIFICADO FITOSANITARIO"
+    if "TRANSPORTE" in s and "PERSONAL" in s:
+        return "TRANSPORTE DE PERSONAL"
+    if "COMPRA" in s and "FLOR" in s and "TERCER" in s:
+        return "COMPRA DE FLOR A TERCEROS"
+    if "COMIDA" in s and "PERSONAL" in s:
+        return "COMIDA PARA EL PERSONAL"
+    if "TEL" in s and ("RO" in s or "R/O" in s) and ("RTA" in s or "ALIM" in s):
+        return "RO, TEL, RTA.ALIM"
+    return None
+
+
+def norm_cat(s: str):
+    return norm_material_cat(s)
 
 
 def sv(v) -> float:
@@ -120,6 +174,65 @@ def sv(v) -> float:
         return f if f == f else 0.0
     except (TypeError, ValueError):
         return 0.0
+
+
+def build_dataset(records: list[dict], ordered_categories: list[str]) -> dict:
+    cats_found = {r["categoria"] for r in records}
+    cats = [c for c in ordered_categories if c in cats_found]
+    years = sorted({r["year"] for r in records})
+
+    ranches_seen: set = set()
+    for r in records:
+        ranches_seen.update(r["mxn_ranches"])
+        ranches_seen.update(r["usd_ranches"])
+    ranches = sorted(ranches_seen)
+
+    summary: dict = {
+        cat: {
+            yr: {"usd": 0.0, "mxn": 0.0, "ranches": {}, "ranches_mxn": {}}
+            for yr in years
+        }
+        for cat in cats
+    }
+    for r in records:
+        s = summary.get(r["categoria"], {}).get(r["year"])
+        if not s:
+            continue
+        s["usd"] += r["usd_total"]
+        s["mxn"] += r["mxn_total"]
+        for rn, v in r["usd_ranches"].items():
+            s["ranches"][rn] = round(s["ranches"].get(rn, 0) + v, 2)
+        for rn, v in r["mxn_ranches"].items():
+            s["ranches_mxn"][rn] = round(s["ranches_mxn"].get(rn, 0) + v, 2)
+    for cat in cats:
+        for yr in years:
+            d = summary[cat][yr]
+            d["usd"] = round(d["usd"], 2)
+            d["mxn"] = round(d["mxn"], 2)
+
+    weeks_per_year: dict = {}
+    for r in records:
+        weeks_per_year.setdefault(r["year"], set()).add(r["week"])
+    weeks_per_year = {yr: sorted(wks) for yr, wks in weeks_per_year.items()}
+
+    weekly_series: dict = {cat: {} for cat in cats}
+    for r in records:
+        if r["usd_total"] > 0:
+            key = f'{r["year"]}-W{str(r["week"]).zfill(2)}'
+            weekly_series.setdefault(r["categoria"], {})
+            weekly_series[r["categoria"]][key] = round(
+                weekly_series[r["categoria"]].get(key, 0) + r["usd_total"], 2
+            )
+
+    return {
+        "years": years,
+        "categories": cats,
+        "ranches": ranches,
+        "summary": summary,
+        "weeks_per_year": weeks_per_year,
+        "weekly_detail": records,
+        "weekly_series": weekly_series,
+    }
 
 
 # ─── Parser de hojas PR#### ───────────────────────────────────────────────────
@@ -431,7 +544,8 @@ def _parse_me(rows: list) -> dict:
 
 # ─── Extractor principal ──────────────────────────────────────────────────────
 def extraer_datos(xls: pd.ExcelFile) -> dict:
-    all_data  = []
+    materiales_data = []
+    servicios_data = []
 
     # 1. Clasificar hojas
     hojas_validas = []   # [(titulo, code_int)]
@@ -566,73 +680,68 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             elif usd_total_col and j > usd_total_col:
                 usd_ranch_cols[j] = rn
 
-        for i in range(exec_idx + 1, min(exec_idx + 18, len(data))):
+        section = None
+        for i in range(exec_idx + 1, len(data)):
             row   = data[i]
             label = next((str(row[c]).strip() for c in range(5)
                           if c < len(row) and row[c] and len(str(row[c]).strip()) > 3), None)
             if not label:
                 continue
-            cat = norm_cat(label)
-            if not cat:
+
+            section_found = norm_section(label)
+            if section_found:
+                section = section_found
                 continue
-            if cat == "COSTO_STOP":
-                break
+
+            mat_cat = norm_material_cat(label)
+            serv_cat = norm_service_cat(label)
+            if not mat_cat and not serv_cat:
+                continue
+
+            target_cat = None
+            target_list = None
+            if serv_cat and section != "materials":
+                target_cat = serv_cat
+                target_list = servicios_data
+            elif mat_cat and section != "services":
+                target_cat = mat_cat
+                target_list = materiales_data
+            else:
+                continue
 
             mxn_ranches = {rn: sv(row[j]) for j, rn in mxn_ranch_cols.items() if j < len(row)}
             usd_ranches = {rn: sv(row[j]) for j, rn in usd_ranch_cols.items() if j < len(row)}
 
-            all_data.append({
+            target_list.append({
                 "semana":      code,
                 "year":        year,
                 "week":        ww,
                 "date_range":  date_range,
-                "categoria":   cat,
+                "categoria":   target_cat,
                 "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
                 "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
                 "mxn_ranches": mxn_ranches,
                 "usd_ranches": usd_ranches,
             })
 
-    cats_found = {r["categoria"] for r in all_data}
-    cats  = [c for c in CATEGORIAS_ORDEN if c in cats_found]
-    years = sorted({r["year"] for r in all_data})
-
-    ranches_seen: set = set()
-    for r in all_data:
-        ranches_seen.update(r["mxn_ranches"])
-        ranches_seen.update(r["usd_ranches"])
-    ranches = sorted(ranches_seen)
-
-    summary: dict = {cat: {yr: {"usd": 0.0, "mxn": 0.0, "ranches": {}, "ranches_mxn": {}}
-                            for yr in years} for cat in cats}
-    for r in all_data:
-        s = summary.get(r["categoria"], {}).get(r["year"])
-        if not s:
-            continue
-        s["usd"] += r["usd_total"]
-        s["mxn"] += r["mxn_total"]
-        for rn, v in r["usd_ranches"].items():
-            s["ranches"][rn] = round(s["ranches"].get(rn, 0) + v, 2)
-        for rn, v in r["mxn_ranches"].items():
-            s["ranches_mxn"][rn] = round(s["ranches_mxn"].get(rn, 0) + v, 2)
-    for cat in cats:
-        for yr in years:
-            d = summary[cat][yr]
-            d["usd"] = round(d["usd"], 2)
-            d["mxn"] = round(d["mxn"], 2)
-
-    weeks_per_year: dict = {}
-    for r in all_data:
-        weeks_per_year.setdefault(r["year"], set()).add(r["week"])
-    weeks_per_year = {yr: sorted(wks) for yr, wks in weeks_per_year.items()}
+    materiales = build_dataset(materiales_data, MATERIAL_CATEGORIAS_ORDEN)
+    servicios = build_dataset(servicios_data, SERVICIOS_CATEGORIAS_ORDEN)
 
     return {
-        "years":           years,
-        "categories":      cats,
-        "ranches":         ranches,
-        "summary":         summary,
-        "weeks_per_year":  weeks_per_year,
-        "weekly_detail":   all_data,
+        "years":                 materiales["years"],
+        "categories":            materiales["categories"],
+        "ranches":               materiales["ranches"],
+        "summary":               materiales["summary"],
+        "weeks_per_year":        materiales["weeks_per_year"],
+        "weekly_detail":         materiales["weekly_detail"],
+        "weekly_series":         materiales["weekly_series"],
+        "services_years":        servicios["years"],
+        "services_categories":   servicios["categories"],
+        "services_ranches":      servicios["ranches"],
+        "services_summary":      servicios["summary"],
+        "services_weeks_per_year": servicios["weeks_per_year"],
+        "services_weekly_detail":  servicios["weekly_detail"],
+        "services_weekly_series":  servicios["weekly_series"],
         "productos":       productos,
         "productos_debug": productos_debug,
     }
