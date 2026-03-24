@@ -317,7 +317,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .serv-panel{display:none;margin:0 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
 .serv-panel.show{display:block;animation:pnl-in .15s ease}
 .serv-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(10,124,82,.12);border-bottom:2px solid var(--green);gap:12px}
-.serv-panel-title{font-size:.8rem;font-weight:800;color:var(--navy);font-family:'Syne',sans-serif;letter-spacing:.2px}
+.serv-panel-title{font-size:.8rem;font-weight:700;color:var(--navy);font-family:'Inter',sans-serif;letter-spacing:0;text-transform:uppercase}
 .serv-kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:14px 16px;background:var(--surface2);border-bottom:1px solid var(--border)}
 .serv-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
 .serv-kpi-label{font-size:.6rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
@@ -1558,7 +1558,7 @@ function renderServPanel(subcatFilter){
   Object.keys(ranchData).forEach(function(r){Object.keys(ranchData[r]).forEach(function(sc){subcatTotals[sc]=(subcatTotals[sc]||0)+ranchData[r][sc];});});
   var topSubcat=Object.keys(subcatTotals).sort(function(a,b){return subcatTotals[b]-subcatTotals[a];})[0]||'—';
 
-  var title=(subcatFilter?'SERVICIOS — '+subcatFilter:'COSTO DE SERVICIOS')+' · W'+String(weekNum).padStart(2,'0')+' '+yr;
+  var title = subcatFilter ? 'COSTO DE SERVICIOS — ' + subcatFilter : 'COSTO DE SERVICIOS';
   document.getElementById('servPanelTitle').textContent=title;
 
   document.getElementById('servKpiStrip').innerHTML=
