@@ -843,6 +843,7 @@ function setCurrency(cur){
   document.getElementById('btnUSD').classList.toggle('active',cur==='usd');
   document.getElementById('btnMXN').classList.toggle('active',cur==='mxn');
   renderView();
+  refreshServSiAbierto();
 }
 function toggleYear(y){
   var active=DATA.years.filter(function(yr){return state.activeYears[yr];});
