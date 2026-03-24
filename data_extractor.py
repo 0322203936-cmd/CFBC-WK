@@ -126,6 +126,8 @@ def norm_cat(s: str):
 
 def sv(v) -> float:
     try:
+        if isinstance(v, str):
+            v = v.replace("$", "").replace(",", "").strip()
         f = float(v)
         return f if f == f else 0.0
     except (TypeError, ValueError):
@@ -586,7 +588,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         hdr_vals = [(j, str(header[j])[:15]) for j in range(len(header)) if str(header[j]).strip()]
         print(f"   header non-empty: {hdr_vals}")
 
-        for i in range(exec_idx + 1, min(exec_idx + 60, len(data))):
+        for i in range(exec_idx + 1, min(exec_idx + 120, len(data))):
             row   = data[i]
             label = next((str(row[c]).strip() for c in range(5)
                           if c < len(row) and row[c] and len(str(row[c]).strip()) > 3), None)
