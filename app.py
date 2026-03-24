@@ -253,7 +253,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 @keyframes pnl-in{from{opacity:0}to{opacity:1}}
 
 /* Header — barra oscura estilo Power BI */
-.pnl-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px 6px 12px;background:#6e5173;gap:10px;border-bottom:2px solid #0a7c52}
+.pnl-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px 6px 12px;background:rgba(110,81,115,0.88);gap:10px;border-bottom:2px solid #0a7c52}
 .pnl-hdr-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
 .pnl-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1}
 .pnl-title{font-size:.73rem;font-weight:700;color:#e2e8f0;font-family:'IBM Plex Mono',monospace;white-space:nowrap;letter-spacing:.2px}
@@ -497,8 +497,6 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <div class="pnl-hdr-left">
       <div class="pnl-meta">
         <span class="pnl-title" id="productosTitle">PRODUCTOS</span>
-        <span class="pnl-sep">·</span>
-        <span class="pnl-meta-stat" id="productosBadges"></span>
       </div>
     </div>
     <button class="pnl-close" onclick="closeProductos()">✕ Cerrar</button>
@@ -1336,12 +1334,6 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
 
     // Sin KPI strip separado — las métricas van en el header
     document.getElementById('pnlKpis').innerHTML = '';
-    // Actualizar header con totales
-    document.getElementById('productosBadges').innerHTML =
-      wkLabel + ' &nbsp;·&nbsp; <b>' + totalItems + ' prods</b> &nbsp;·&nbsp; <b>' +
-      Math.abs(totalUnidades).toLocaleString('en-US',{maximumFractionDigits:0}) + ' uds</b> &nbsp;·&nbsp; <b>' +
-      (totalGasto<0?'-$':'$') + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</b>';
-
     // Build rows
     var rows = '';
     gruposOrder.forEach(function(det){
