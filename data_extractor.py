@@ -112,15 +112,15 @@ def norm_cat(s: str):
     if "MATERIAL DE EMP" in s:                    return "MATERIAL DE EMPAQUE"
     if "COSTO DE MAT" in s:                       return "COSTO_STOP"
     if "COSTO DE SERV" in s:                       return "COSTO_STOP"  # header de sección, ignorar
-    # ── COSTO DE SERVICIOS: detectar subcategorías directamente por su label ──
-    if "ELECTRIC" in s:                            return "SV:Electricidad"
-    if "FLETE" in s or "ACARREO" in s:             return "SV:Fletes y Acarreos"
-    if "EXPORTAC" in s:                            return "SV:Gastos de Exportación"
-    if "FITOSANIT" in s:                           return "SV:Certificado Fitosanitario"
-    if "TRANSPORTE" in s and "PERSONAL" in s:      return "SV:Transporte de Personal"
-    if "COMPRA" in s and "FLOR" in s:              return "SV:Compra de Flor a Terceros"
-    if "COMIDA" in s:                              return "SV:Comida para el Personal"
-    if "RTA.ALIM" in s or "RTA. ALIM" in s or ("RO" in s and "TEL" in s and "RTA" in s):  return "SV:RO, TEL, RTA.Alim"
+    # ── COSTO DE SERVICIOS: detectar subcategorías de manera estricta ──
+    if s.startswith("ELECTRICIDAD"):                        return "SV:Electricidad"
+    if s.startswith("FLETES Y ACARREOS"):                   return "SV:Fletes y Acarreos"
+    if s.startswith("GASTOS DE EXPORTACION"):               return "SV:Gastos de Exportación"
+    if s.startswith("CERTIFICADO DE FITOSANITARIO"):        return "SV:Certificado Fitosanitario"
+    if s.startswith("TRANSPORTE DE PERSONAL"):              return "SV:Transporte de Personal"
+    if s.startswith("COMPRA DE FLOR"):                      return "SV:Compra de Flor a Terceros"
+    if s.startswith("COMIDA PARA EL PERSONAL"):             return "SV:Comida para el Personal"
+    if s.startswith("RO, TEL") or s.startswith("RO , TEL"): return "SV:RO, TEL, RTA.Alim"
     return None
 
 
