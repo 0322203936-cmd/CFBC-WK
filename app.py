@@ -313,6 +313,37 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .pnl-empty-ico{width:28px;height:28px;margin:0 auto 8px;opacity:.2;stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round}
 .no-prod{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:16px 0;text-align:left}
 
+/* ── PANEL SERVICIOS ─────────────────────────────────────── */
+#serviciosPanel{display:none;margin:0 0 0;background:var(--bg);border-top:3px solid rgba(110,81,115,0.6)}
+#serviciosPanel.show{display:block;animation:pnl-in .18s ease}
+.serv-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 24px;background:rgba(110,81,115,0.88);gap:10px}
+.serv-hdr-title{font-size:.78rem;font-weight:700;color:#fff;font-family:'IBM Plex Mono',monospace;letter-spacing:.5px}
+.serv-hdr-meta{font-size:.65rem;color:rgba(255,255,255,.7);font-family:'IBM Plex Mono',monospace}
+.serv-hdr-close{background:transparent;border:1px solid rgba(255,255,255,.35);border-radius:3px;color:rgba(255,255,255,.8);cursor:pointer;font-size:.75rem;padding:3px 9px;font-family:'IBM Plex Mono',monospace;transition:all .12s}
+.serv-hdr-close:hover{border-color:#fff;color:#fff}
+.serv-week-bar{display:flex;align-items:center;gap:8px;padding:6px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.serv-week-lbl{font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
+.serv-week-val{font-size:.75rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--navy)}
+.serv-total-strip{font-size:.7rem;font-family:'IBM Plex Mono',monospace;color:var(--green);font-weight:700;margin-left:auto}
+.serv-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:16px 24px}
+.serv-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);transition:box-shadow .2s}
+.serv-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.serv-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;border-bottom:1px solid var(--border)}
+.serv-card-name{font-size:.78rem;font-weight:800;font-family:'Syne',sans-serif;letter-spacing:.3px;color:#fff}
+.serv-card-total{font-size:.85rem;font-weight:800;font-family:'IBM Plex Mono',monospace;color:#fff}
+.serv-card-body{display:flex;gap:8px;padding:10px 14px;align-items:flex-start}
+.serv-card-list{flex:1;display:flex;flex-direction:column;gap:3px}
+.serv-item{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0}
+.serv-item-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.serv-item-name{font-size:.58rem;font-family:'IBM Plex Mono',monospace;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.serv-item-amt{font-size:.6rem;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--text);white-space:nowrap}
+.serv-item.highlighted .serv-item-name{color:var(--green);font-weight:700}
+.serv-item.highlighted .serv-item-amt{color:var(--green)}
+.serv-card-donut{width:80px;height:80px;flex-shrink:0}
+.serv-card-footer{padding:5px 14px 8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.serv-card-footer-lbl{font-size:.55rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.serv-card-footer-val{font-size:.65rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--green)}
+
 </style>
 </head>
 <body>
@@ -351,7 +382,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     </div>
     <!-- Selector 3 -->
     <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
-      <select class="cat-select" id="servSelect" style="background:transparent;font-weight:700;color:#fff;">
+      <select class="cat-select" id="servSelect" onchange="selectServ(this.value)" style="background:transparent;font-weight:700;color:#fff;">
         <option value="" disabled selected>COSTO DE SERVICIOS</option>
       </select>
       <span class="cat-arrow" style="color:#fff;">▾</span>
@@ -535,6 +566,28 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 </div>
 </div><!-- /app -->
 
+<!-- PANEL SERVICIOS -->
+<div id="serviciosPanel">
+  <div class="serv-hdr">
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span class="serv-hdr-title">💡 COSTO DE SERVICIOS</span>
+      <span class="serv-hdr-meta" id="servHdrMeta">— selecciona semana y año</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span class="serv-total-strip" id="servTotalStrip"></span>
+      <button class="serv-hdr-close" onclick="closeServicios()">✕</button>
+    </div>
+  </div>
+  <div class="serv-week-bar">
+    <span class="serv-week-lbl">Semana</span>
+    <span class="serv-week-val" id="servWeekVal">—</span>
+    <span class="serv-week-lbl" style="margin-left:12px">Servicio seleccionado</span>
+    <span class="serv-week-val" id="servSelVal" style="color:rgba(110,81,115,1)">—</span>
+    <span class="serv-total-strip" id="servGrandTotal" style="margin-left:auto"></span>
+  </div>
+  <div class="serv-cards-grid" id="servCardsGrid"></div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════
 // DATOS INYECTADOS DESDE PYTHON
@@ -550,6 +603,11 @@ var state = {
   view:'semana', weekIdx:0, fromWeek:1, toWeek:52
 };
 var lastProductos = null; // guarda {rancho, tipo, src} para refrescar con semana nueva
+var state_serv = { selectedServ: '' };
+
+var SERV_COLORS = [
+  '#0a7c52','#7c3aed','#b45309','#1d4ed8','#be185d','#c2410c','#0369a1','#6d28d9'
+];
 var allWeeks = [];
 var YEAR_COLORS = {2021:'#67e8f9',2022:'#fde68a',2023:'#86efac',2024:'#c4b5fd',2025:'#6ee7b7',2026:'#fca5a5'};
 var RANCH_COLORS = {
@@ -603,7 +661,7 @@ function inicializar() {
 
   // header removido
 
-  buildCatSelect(); buildYearChips(); updateWeekSlider(); updateRangeSliders(); renderView();
+  buildCatSelect(); buildServSelect(); buildYearChips(); updateWeekSlider(); updateRangeSliders(); renderView();
   document.getElementById('loader').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   var by=document.getElementById('badgeYears');
@@ -694,6 +752,15 @@ function buildCatSelect(){
   document.getElementById('catCount').textContent=(DATA.categories.indexOf(state.cat)+1)+' / '+DATA.categories.length;
 }
 
+function buildServSelect(){
+  var el = document.getElementById('servSelect');
+  var servs = (DATA.servicios || []);
+  el.innerHTML = '<option value="" disabled selected>COSTO DE SERVICIOS</option>' +
+    servs.map(function(s){
+      return '<option value="'+s.replace(/"/g,'&quot;')+'"'+(s===state_serv.selectedServ?' selected':'')+'>'+s+'</option>';
+    }).join('');
+}
+
 // Obtener datos combinados MIRFE+MIPE para una semana y año
 function getCombinedWeek(weekNum, yr){
   var r1 = getDetail(CAT_MIRFE, weekNum, yr);
@@ -769,6 +836,7 @@ function updateRangeSliders(){
 // ═══════════════════════════════════════════
 function setView(v){
   closeProductos();
+  closeServicios();
   state.view=v;
   // Al entrar a tendencia, activar solo 2026
   if(v==='tendencia'){
@@ -827,6 +895,11 @@ function refreshProductosSiAbierto(){
     var activeYrs = DATA.years.filter(function(y){ return state.activeYears[y]; }).sort(function(a,b){return b-a;});
     var targetYr = activeYrs[0] || DATA.years[DATA.years.length-1];
     showProductos(lastProductos.rancho, lastProductos.tipo, weekNum, targetYr, lastProductos.src);
+  }
+  // Refrescar panel servicios si está abierto
+  var sp = document.getElementById('serviciosPanel');
+  if(state_serv.selectedServ && sp && sp.style.display !== 'none'){
+    renderServiciosPanel();
   }
 }
 function onRangeChange(){
@@ -1417,6 +1490,139 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
   section.classList.add('show');
   section.style.display = 'block';
   setTimeout(function(){ section.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 100);
+}
+
+// ═══════════════════════════════════════════
+// PANEL SERVICIOS
+// ═══════════════════════════════════════════
+function selectServ(serv) {
+  state_serv.selectedServ = serv;
+  renderServiciosPanel();
+}
+
+function closeServicios() {
+  state_serv.selectedServ = '';
+  document.getElementById('serviciosPanel').classList.remove('show');
+  document.getElementById('serviciosPanel').style.display = 'none';
+  document.getElementById('servSelect').value = '';
+}
+
+function renderServiciosPanel() {
+  var panel = document.getElementById('serviciosPanel');
+  var servs  = DATA.servicios || [];
+  var detail = DATA.servicios_detail || [];
+  var selServ = state_serv.selectedServ;
+
+  // Semana y año activos
+  var weekNum = allWeeks[state.weekIdx];
+  var activeYrs = DATA.years.filter(function(y){ return state.activeYears[y]; }).sort(function(a,b){return b-a;});
+  var yr = activeYrs[0] || DATA.years[DATA.years.length-1];
+  var cur = selServ || 'TODOS';
+
+  document.getElementById('servWeekVal').textContent = 'W' + String(weekNum).padStart(2,'0') + ' · ' + yr;
+  document.getElementById('servSelVal').textContent  = selServ || 'TODOS';
+
+  // Filtrar detail por semana y año
+  var rows = detail.filter(function(r){ return r.week === weekNum && r.year === yr; });
+
+  // Agrupar por rancho → { rancho: { servicio: { usd, mxn } } }
+  var byRanch = {};
+  RANCH_ORDER.forEach(function(r){ byRanch[r] = {}; });
+  rows.forEach(function(r){
+    RANCH_ORDER.forEach(function(rn){
+      var v = state.currency === 'mxn' ? (r.mxn_ranches||{})[rn] : (r.usd_ranches||{})[rn];
+      if(v && v > 0){
+        if(!byRanch[rn]) byRanch[rn] = {};
+        byRanch[rn][r.servicio] = (byRanch[rn][r.servicio]||0) + v;
+      }
+    });
+  });
+
+  // Calcular grand total
+  var grandTotal = 0;
+  RANCH_ORDER.forEach(function(rn){
+    Object.values(byRanch[rn]||{}).forEach(function(v){ grandTotal += v; });
+  });
+  var fmtGT = (state.currency==='mxn'?'MXN ':'USD ') + fmt(grandTotal);
+  document.getElementById('servGrandTotal').textContent = 'TOTAL: ' + fmtGT;
+  document.getElementById('servHdrMeta').textContent = 'W' + String(weekNum).padStart(2,'0') + ' · ' + yr + ' · ' + servs.length + ' servicios · ' + RANCH_ORDER.filter(function(r){ return Object.keys(byRanch[r]||{}).length>0; }).length + ' ranchos';
+
+  // Construir tarjetas
+  var html = '';
+  var ranchesConDatos = RANCH_ORDER.filter(function(rn){ return Object.keys(byRanch[rn]||{}).length > 0; });
+
+  if(!ranchesConDatos.length){
+    html = '<div style="padding:32px;text-align:center;color:var(--muted);font-family:\'IBM Plex Mono\',monospace;font-size:.75rem;grid-column:1/-1">Sin datos de servicios para esta semana</div>';
+  } else {
+    ranchesConDatos.forEach(function(rn, ri){
+      var color = RANCH_COLORS[rn] || '#64748b';
+      var rdata = byRanch[rn];
+      var total = Object.values(rdata).reduce(function(a,b){return a+b;},0);
+
+      // Lista servicios
+      var listHtml = '';
+      servs.forEach(function(s, si){
+        var v = rdata[s] || 0;
+        if(v <= 0) return;
+        var dotColor = SERV_COLORS[si % SERV_COLORS.length];
+        var isHL = selServ && s === selServ;
+        listHtml += '<div class="serv-item'+(isHL?' highlighted':'')+'">' +
+          '<div class="serv-item-dot" style="background:'+dotColor+'"></div>' +
+          '<span class="serv-item-name" title="'+s+'">'+s+'</span>' +
+          '<span class="serv-item-amt">'+fmt(v)+'</span>' +
+          '</div>';
+      });
+      if(!listHtml) listHtml = '<div style="font-size:.6rem;color:var(--dim);font-family:\'IBM Plex Mono\',monospace;padding:4px 0">Sin datos</div>';
+
+      // Porcentaje del total general
+      var pct = grandTotal > 0 ? Math.round(total/grandTotal*100) : 0;
+      var chartId = 'servDonut_' + rn.replace(/[^a-zA-Z0-9]/g,'_');
+
+      html += '<div class="serv-card">' +
+        '<div class="serv-card-hdr" style="background:'+color+'">' +
+          '<span class="serv-card-name">'+rn+'</span>' +
+          '<span class="serv-card-total">'+fmt(total)+'</span>' +
+        '</div>' +
+        '<div class="serv-card-body">' +
+          '<div class="serv-card-list">'+listHtml+'</div>' +
+          '<div class="serv-card-donut" id="'+chartId+'"></div>' +
+        '</div>' +
+        '<div class="serv-card-footer">' +
+          '<span class="serv-card-footer-lbl">% del total general</span>' +
+          '<span class="serv-card-footer-val">'+pct+'%</span>' +
+        '</div>' +
+      '</div>';
+    });
+  }
+
+  document.getElementById('servCardsGrid').innerHTML = html;
+  panel.style.display = 'block';
+  panel.classList.add('show');
+  setTimeout(function(){
+    // Dibujar donuts con Plotly
+    ranchesConDatos.forEach(function(rn){
+      var rdata = byRanch[rn];
+      var chartId = 'servDonut_' + rn.replace(/[^a-zA-Z0-9]/g,'_');
+      var el = document.getElementById(chartId);
+      if(!el) return;
+      var labels=[], values=[], colors=[];
+      servs.forEach(function(s,si){
+        var v = rdata[s]||0;
+        if(v>0){ labels.push(s); values.push(v); colors.push(SERV_COLORS[si%SERV_COLORS.length]); }
+      });
+      Plotly.newPlot(el,[{
+        type:'pie', hole:.55, labels:labels, values:values,
+        marker:{colors:colors},
+        textinfo:'none', hoverinfo:'label+percent',
+        showlegend:false
+      }],{
+        margin:{t:0,r:0,b:0,l:0},
+        paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+        height:80, width:80
+      },{displayModeBar:false, responsive:false});
+    });
+    panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }, 80);
 }
 
 function closeProductos() {
