@@ -577,6 +577,15 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             elif usd_total_col and j > usd_total_col:
                 usd_ranch_cols[j] = rn
 
+        # DEBUG: mostrar mapeo de columnas para el primer par de hojas
+        print(f"\n[DEBUG {titulo}]")
+        print(f"   exec_idx={exec_idx}, header_idx={header_idx}")
+        print(f"   mxn_total_col={mxn_total_col}, usd_total_col={usd_total_col}")
+        print(f"   mxn_ranch_cols={mxn_ranch_cols}")
+        print(f"   usd_ranch_cols={usd_ranch_cols}")
+        hdr_vals = [(j, str(header[j])[:15]) for j in range(len(header)) if str(header[j]).strip()]
+        print(f"   header non-empty: {hdr_vals}")
+
         for i in range(exec_idx + 1, min(exec_idx + 60, len(data))):
             row   = data[i]
             label = next((str(row[c]).strip() for c in range(5)
@@ -594,6 +603,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             usd_ranches = {rn: sv(row[j]) for j, rn in usd_ranch_cols.items() if j < len(row)}
 
             if cat.startswith("SV:"):
+                print(f"   [SV] fila={i} label='{label[:30]}' cat='{cat}' mxn_total={sv(row[mxn_total_col]) if mxn_total_col < len(row) else 'OUT'} mxn_ranches={mxn_ranches}")
                 # ── Subcategoría de COSTO DE SERVICIOS ──
                 servicios_data.append({
                     "semana":      code,
