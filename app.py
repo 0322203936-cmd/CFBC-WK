@@ -256,13 +256,13 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .pnl-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px 6px 12px;background:rgba(110,81,115,0.88);gap:10px;border-bottom:2px solid #0a7c52}
 .pnl-hdr-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
 .pnl-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1}
-.pnl-title{font-size:.73rem;font-weight:700;color:#e2e8f0;font-family:'IBM Plex Mono',monospace;white-space:nowrap;letter-spacing:.2px}
-.pnl-title span{font-weight:400;color:#64748b;font-size:.7rem}
-.pnl-sep{color:#334155;font-size:.65rem}
-.pnl-meta-stat{font-size:.64rem;color:#94a3b8;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
-.pnl-meta-stat b{color:#cbd5e1;font-weight:600}
-.pnl-close{background:transparent;border:1px solid #334155;border-radius:3px;color:#64748b;cursor:pointer;font-size:.6rem;padding:3px 9px;font-family:'IBM Plex Mono',monospace;font-weight:600;transition:all .12s;flex-shrink:0;letter-spacing:.3px}
-.pnl-close:hover{border-color:#94a3b8;color:#e2e8f0}
+.pnl-title{font-size:.73rem;font-weight:700;color:#fff;font-family:'IBM Plex Mono',monospace;white-space:nowrap;letter-spacing:.2px}
+.pnl-title span{font-weight:400;color:rgba(255,255,255,.7);font-size:.7rem}
+.pnl-sep{color:rgba(255,255,255,.4);font-size:.65rem}
+.pnl-meta-stat{font-size:.64rem;color:rgba(255,255,255,.8);font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pnl-meta-stat b{color:#fff;font-weight:600}
+.pnl-close{background:transparent;border:1px solid rgba(255,255,255,.35);border-radius:3px;color:rgba(255,255,255,.7);cursor:pointer;font-size:.75rem;padding:3px 9px;font-family:'IBM Plex Mono',monospace;font-weight:600;transition:all .12s;flex-shrink:0;letter-spacing:.3px}
+.pnl-close:hover{border-color:#fff;color:#fff}
 
 /* KPI bar inline — compacto */
 .pnl-kpis{display:none}
@@ -499,7 +499,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
         <span class="pnl-title" id="productosTitle">PRODUCTOS</span>
       </div>
     </div>
-    <button class="pnl-close" onclick="closeProductos()">✕ Cerrar</button>
+    <button class="pnl-close" onclick="closeProductos()">✕</button>
   </div>
   <div id="pnlKpis" class="pnl-kpis"></div>
   <div class="pnl-scroll">
@@ -535,6 +535,7 @@ var state = {
   cat:'', currency:'usd', activeYears:{}, ranchYear:'all',
   view:'semana', weekIdx:0, fromWeek:1, toWeek:52
 };
+var lastProductos = null; // guarda {rancho, tipo, src} para refrescar con semana nueva
 var allWeeks = [];
 var YEAR_COLORS = {2021:'#67e8f9',2022:'#fde68a',2023:'#86efac',2024:'#c4b5fd',2025:'#6ee7b7',2026:'#fca5a5'};
 var RANCH_COLORS = {
@@ -752,6 +753,7 @@ function updateRangeSliders(){
 // VIEW SWITCHER
 // ═══════════════════════════════════════════
 function setView(v){
+  closeProductos();
   state.view=v;
   // Al entrar a tendencia, activar solo 2026
   if(v==='tendencia'){
@@ -773,6 +775,7 @@ function renderView(){
   setTimeout(initScrollHints,80);
 }
 function selectCat(cat){
+  closeProductos();
   state.cat=cat;
   document.getElementById('catCount').textContent=(DATA.categories.indexOf(cat)+1)+' / '+DATA.categories.length;
   renderView();
@@ -795,12 +798,21 @@ function setRanchYear(yr){
   DATA.years.forEach(function(y){var b=document.getElementById('ranchYr'+y);if(b) b.classList.toggle('active',yr===y);});
   renderRanchBars();
 }
-function prevWeek(){ if(state.weekIdx>0){state.weekIdx--;updateWeekSlider();renderSemana();} }
-function nextWeek(){ if(state.weekIdx<allWeeks.length-1){state.weekIdx++;updateWeekSlider();renderSemana();} }
+function prevWeek(){ if(state.weekIdx>0){state.weekIdx--;updateWeekSlider();renderSemana();refreshProductosSiAbierto();} }
+function nextWeek(){ if(state.weekIdx<allWeeks.length-1){state.weekIdx++;updateWeekSlider();renderSemana();refreshProductosSiAbierto();} }
 function onWeekSlider(val){
   var wn=parseInt(val), idx=allWeeks.indexOf(wn);
   if(idx<0){ idx=0; var mn=Math.abs(allWeeks[0]-wn); allWeeks.forEach(function(w,i){var d=Math.abs(w-wn);if(d<mn){mn=d;idx=i;}});}
-  state.weekIdx=idx; updateWeekSlider(); renderSemana();
+  state.weekIdx=idx; updateWeekSlider(); renderSemana(); refreshProductosSiAbierto();
+}
+function refreshProductosSiAbierto(){
+  var section = document.getElementById('productosSection');
+  if(lastProductos && section.style.display !== 'none'){
+    var weekNum = allWeeks[state.weekIdx];
+    var activeYrs = DATA.years.filter(function(y){ return state.activeYears[y]; }).sort(function(a,b){return b-a;});
+    var targetYr = activeYrs[0] || DATA.years[DATA.years.length-1];
+    showProductos(lastProductos.rancho, lastProductos.tipo, weekNum, targetYr, lastProductos.src);
+  }
 }
 function onRangeChange(){
   var f=parseInt(document.getElementById('fromSlider').value);
@@ -1258,6 +1270,7 @@ function initScrollHints(){
 // ═══════════════════════════════════════════
 function showProductos(rancho, tipo, weekNum, yr, src) {
   src = src || 'pr';
+  lastProductos = {rancho: rancho, tipo: tipo, src: src};
   var semCode = (yr % 100) * 100 + weekNum;
   var semCodeStr = String(semCode);
 
@@ -1392,6 +1405,7 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
 }
 
 function closeProductos() {
+  lastProductos = null;
   var section = document.getElementById('productosSection');
   section.classList.remove('show');
   setTimeout(function() { section.style.display = 'none'; }, 300);
