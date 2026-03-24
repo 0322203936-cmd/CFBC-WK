@@ -224,14 +224,14 @@ def _parse_pr(rows: list) -> dict:
 def _parse_mp(rows: list) -> dict:
     """
     Lee filas del reporte MP#### de Google Sheets.
-    Mismo formato que PR####:
-      Col 2: UBICACION  (ej: VIVEVIV, POSCOMP, RAMMIR...)
+    MISMO FORMATO EXACTO que PR####:
+      Col 2: UBICACION  (ej: RAMMIPRNN, CECMIPSNF)
       Col 5: PRODUCTO
       Col 7: UNIDADES
       Col 9: GASTO
     Retorna: { rancho: { tipo: [[producto, unidades, gasto, ubicacion], ...] } }
 
-    Ranchos detectados para MANTENIMIENTO:
+    Ranchos para MANTENIMIENTO:
       VIV → Prop-RM
       POS → PosCo-RM
       RAM → Campo-RM
@@ -255,32 +255,34 @@ def _parse_mp(rows: list) -> dict:
     UNIDADES_COL  = 7
     GASTO_COL     = 9
 
-    result = {}
-    accum  = {}   # (rancho, tipo, producto, ubicacion) → [u_total, g_total]
+    result  = {}
+    accum   = {}   # (rancho, tipo, producto, ubicacion) → [u_total, g_total]
 
     for row in rows:
         if not row or len(row) < 10:
             continue
 
         ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
-        ubicacion = re.sub(r'\s+', '', ubicacion)
+        ubicacion = re.sub(r'\s+', '', ubicacion)   # eliminar espacios internos
 
         if not ubicacion or len(ubicacion) < 6:
             continue
         if not re.match(r'^[A-Z0-9]+$', ubicacion):
             continue
-
         ranch_code = ubicacion[:3]
         rancho = RANCH_MAP.get(ranch_code)
 
-        # VIVEVIV y variantes → Prop-RM
+        # VIV / VIVEVIV → Prop-RM
         if not rancho and ubicacion.startswith('VIV'):
             rancho = 'Prop-RM'
 
+        # Si no es un rancho conocido, descartar
         if not rancho:
             continue
 
-        # Determinar tipo por código de ubicación
+        # Determinar tipo:
+        #   MIP en el código → MIPE
+        #   MIR, CORT, COR, VIVEVIV o cualquier otro sufijo → MIRFE
         if 'MIP' in ubicacion:
             tipo = 'MIPE'
         else:
@@ -314,7 +316,7 @@ def _parse_mp(rows: list) -> dict:
         else:
             accum[key] = [u, g]
 
-    # Construir resultado agrupado igual que _parse_pr
+    # Construir result final desde el acumulador (igual que _parse_pr)
     for (rancho, tipo, producto, ubicacion), (u_tot, g_tot) in accum.items():
         u_str = str(int(u_tot)) if u_tot == int(u_tot) else str(round(u_tot, 2))
         g_str = str(round(g_tot, 2))
@@ -667,14 +669,18 @@ def _fetch_mp_desde_sheets(spreadsheet_name: str = "WK 2026-08") -> tuple[dict, 
             mp_match = re.match(r'^MP\s*\d{4}$', sname, re.IGNORECASE)
             if mp_match:
                 mp_raw = re.sub(r'MP\s*', '', sname, flags=re.IGNORECASE).strip()
+                print(f"   📊 Código extraído: '{mp_raw}'")
                 try:
                     mp_code = int(mp_raw)
                     mp_year = 2000 + (mp_code // 100)
+                    print(f"   📅 MP{mp_code} → Año {mp_year}, Semana {mp_code % 100}")
                     if 2018 <= mp_year <= 2030:
                         print(f"   ✅ MP encontrada en Sheets: {sname}")
                         mp_hojas.append((ws.title, mp_code))
-                except ValueError:
-                    pass
+                    else:
+                        print(f"   ❌ Año {mp_year} fuera de rango (2018-2030)")
+                except ValueError as e:
+                    print(f"   ❌ Error: {e}")
 
         productos_mp_debug["hojas_mp_encontradas"] = [t for t, _ in mp_hojas]
 
@@ -697,6 +703,7 @@ def _fetch_mp_desde_sheets(spreadsheet_name: str = "WK 2026-08") -> tuple[dict, 
                         parsed = _parse_mp(vals)
                         productos_mp[pc] = parsed
                         productos_mp_debug[f"MP{pc}_ranchos"] = list(parsed.keys()) if parsed else []
+                        print(f"   🐄 MP{pc} ranchos detectados: {list(parsed.keys())}")
                         break
 
     except Exception as e:
