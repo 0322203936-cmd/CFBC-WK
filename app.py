@@ -953,7 +953,8 @@ function renderSemana(){
       var dStr=delta!==null?'<span class="'+(parseFloat(delta)>0?'chg-pos':'chg-neg')+'">'+(parseFloat(delta)>0?'+':'')+delta+'%</span>':'<span class="chg-0">—</span>';
       var ranchSrc=d?(state.currency==='usd'?d.ranches:d.ranches_mxn):{};
       var isMant=(state.cat==='MANTENIMIENTO');
-      var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;if(v>0&&isMant){return '<td class="prod-cell" data-r="'+r+'" data-t="ALL" data-w="'+weekNum+'" data-y="'+yr+'" data-src="mp" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
+      var isMatEmp=(state.cat==='MATERIAL DE EMPAQUE');
+      var cells=KEY_RANCHES.map(function(r){var v=ranchSrc[r]||0;if(v>0&&isMant){return '<td class="prod-cell" data-r="'+r+'" data-t="ALL" data-w="'+weekNum+'" data-y="'+yr+'" data-src="mp" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}if(v>0&&isMatEmp){return '<td class="prod-cell" data-r="'+r+'" data-t="ALL" data-w="'+weekNum+'" data-y="'+yr+'" data-src="me" style="color:'+(RANCH_COLORS[r]||'#888')+'cc">'+fmt(v)+'</td>';}return '<td style="color:'+(v>0?(RANCH_COLORS[r]||'#888')+'cc':'#3a5a48')+'">'+(v>0?fmt(v):'—')+'</td>';}).join('');
       return '<tr>'+
         '<td><span class="yr-dot" style="background:'+col+'"></span><strong style="color:'+col+'">'+yr+'</strong></td>'+
         '<td style="color:'+col+'">'+wFmt(weekNum)+'</td>'+
@@ -1218,10 +1219,14 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
   var semCode = (yr % 100) * 100 + weekNum;
   var semCodeStr = String(semCode);
 
-  // Seleccionar fuente de datos: PR o MP
-  var allProds = src === 'mp' ? (DATA.productos_mp || {}) : (DATA.productos || {});
-  var debug    = src === 'mp' ? (DATA.productos_mp_debug || {}) : (DATA.productos_debug || {});
-  var prefix   = src === 'mp' ? 'MP' : 'PR';
+  // Seleccionar fuente de datos: PR, MP o ME
+  var allProds = src === 'mp' ? (DATA.productos_mp || {})
+               : src === 'me' ? (DATA.productos_me || {})
+               : (DATA.productos || {});
+  var debug    = src === 'mp' ? (DATA.productos_mp_debug || {})
+               : src === 'me' ? (DATA.productos_me_debug || {})
+               : (DATA.productos_debug || {});
+  var prefix   = src === 'mp' ? 'MP' : src === 'me' ? 'ME' : 'PR';
 
   var prods = allProds[semCode] || allProds[semCodeStr] || null;
 
@@ -1244,6 +1249,8 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
   var tipoNombre;
   if(src === 'mp'){
     tipoNombre = 'Mantenimiento';
+  } else if(src === 'me'){
+    tipoNombre = 'Material de Empaque';
   } else {
     tipoNombre = tipo === 'MIRFE' ? 'Material de Riego/Fertilización' : 'Material de Protección';
   }
