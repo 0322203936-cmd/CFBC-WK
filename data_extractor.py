@@ -665,8 +665,12 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             d["mxn"] = round(d["mxn"], 2)
 
     weeks_per_year: dict = {}
+    week_date_ranges: dict = {}
     for r in all_data:
         weeks_per_year.setdefault(r["year"], set()).add(r["week"])
+        key = f"{r['year']}-{r['week']}"
+        if key not in week_date_ranges and r.get("date_range"):
+            week_date_ranges[key] = r["date_range"]
     weeks_per_year = {yr: sorted(wks) for yr, wks in weeks_per_year.items()}
 
     return {
@@ -675,6 +679,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         "ranches":         ranches,
         "summary":         summary,
         "weeks_per_year":  weeks_per_year,
+        "week_date_ranges": week_date_ranges,
         "weekly_detail":   all_data,
         "productos":       productos,
         "productos_debug": productos_debug,
