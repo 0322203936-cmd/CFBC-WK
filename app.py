@@ -1532,11 +1532,6 @@ function renderServPanel(subcatFilter){
   var data=(DATA.servicios_data||[]).filter(function(r){
     return r.week===weekNum&&r.year===yr&&(!subcatFilter||r.subcat===subcatFilter);
   });
-  if(!data.length){
-    data=(DATA.servicios_data||[]).filter(function(r){
-      return r.year===yr&&(!subcatFilter||r.subcat===subcatFilter);
-    });
-  }
 
   var ranchData={};
   data.forEach(function(r){
