@@ -247,34 +247,126 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 .prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 
-.productos-section{display:none;margin:16px 32px;padding:0;background:transparent;border:none}
-.productos-section.show{display:block}
-.productos-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px 0;border-bottom:2px solid var(--border)}
-.productos-info{flex:1}
-.productos-title{font-size:.75rem;font-weight:700;color:var(--navy);margin-bottom:2px;letter-spacing:0;font-family:'Syne',sans-serif}
-.productos-subtitle{font-size:.6rem;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
-.productos-close{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.65rem;padding:2px 6px;font-family:'IBM Plex Mono',monospace;font-weight:400;transition:color .15s;flex-shrink:0}
-.productos-close:hover{color:var(--text)}
-.productos-table-wrap{margin-top:0;border:none;border-radius:0;overflow:visible}
-.productos-table{width:100%;border-collapse:collapse;background:transparent;table-layout:fixed}
-.productos-table thead{background:transparent;border-bottom:2px solid var(--border)}
-.productos-table th{padding:4px 8px;font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-align:right;white-space:nowrap}
-.productos-table th:nth-child(1){text-align:left;width:100px}
-.productos-table th:nth-child(2){text-align:left;width:auto}
-.productos-table th:nth-child(3){width:80px}
-.productos-table th:nth-child(4){width:100px}
-.productos-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s ease}
-.productos-table tbody tr:hover{background:rgba(10,124,82,.06)}
-.productos-table tbody tr:last-child{border-bottom:none}
-.productos-table tbody tr.grp-header td{background:#f1f5f9;padding:5px 8px;font-size:.6rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--navy);letter-spacing:.5px;border-top:2px solid var(--border);border-left:3px solid var(--green)}
-.productos-table tbody tr.total-row{border-top:2px solid var(--border);border-bottom:none;background:rgba(10,124,82,.06)}
-.productos-table tbody tr.total-row:hover{background:rgba(10,124,82,.1)}
-.productos-table td{padding:4px 8px;font-size:.67rem;font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--text)}
-.productos-table td:nth-child(1){text-align:left;color:var(--dim);font-size:.58rem;letter-spacing:.3px}
-.productos-table td:nth-child(2){text-align:left;font-weight:600;color:var(--text)}
-.productos-table td:nth-child(3){color:var(--muted);font-size:.63rem}
-.productos-table td:nth-child(4){font-weight:700;font-size:.68rem}
-.productos-table tbody tr.total-row td{font-weight:700;color:var(--navy);font-size:.7rem}
+/* ── PANEL PRODUCTOS — SaaS/BI ──────────────────────────────── */
+.pnl{
+  display:none;margin:0 24px 24px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;
+  box-shadow:0 4px 24px rgba(0,0,0,.07),0 1px 4px rgba(0,0,0,.04);
+}
+.pnl.show{display:block;animation:pnl-in .2s cubic-bezier(.22,1,.36,1)}
+@keyframes pnl-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Header */
+.pnl-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg,rgba(10,124,82,.04) 0%,rgba(15,32,68,.04) 100%);
+  gap:14px;
+}
+.pnl-hdr-left{display:flex;align-items:center;gap:12px;min-width:0}
+.pnl-icon{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:rgba(10,124,82,.1);border:1.5px solid rgba(10,124,82,.2);
+  display:flex;align-items:center;justify-content:center;
+}
+.pnl-icon svg{width:16px;height:16px;stroke:#0a7c52;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pnl-meta{min-width:0}
+.pnl-title{font-size:.88rem;font-weight:800;color:var(--navy);font-family:'Syne',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.pnl-title span{font-weight:400;color:var(--muted);font-size:.8rem}
+.pnl-badges{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap}
+.pnl-badge{font-family:'IBM Plex Mono',monospace;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid;letter-spacing:.3px}
+.pnl-badge.wk{background:rgba(10,124,82,.07);border-color:rgba(10,124,82,.25);color:#0a7c52}
+.pnl-badge.src{background:rgba(37,99,235,.07);border-color:rgba(37,99,235,.2);color:#1d4ed8}
+.pnl-badge.yr{background:rgba(180,83,9,.07);border-color:rgba(180,83,9,.2);color:#92400e}
+.pnl-close{
+  background:var(--surface);border:1.5px solid var(--border);border-radius:9px;
+  color:var(--muted);cursor:pointer;font-size:.65rem;padding:6px 14px;
+  font-family:'IBM Plex Mono',monospace;font-weight:700;
+  transition:all .15s;flex-shrink:0;letter-spacing:.5px;
+  display:flex;align-items:center;gap:5px;
+}
+.pnl-close:hover{border-color:var(--navy);color:var(--navy);background:var(--surface2)}
+
+/* KPI strip */
+.pnl-kpis{display:flex;border-bottom:1px solid var(--border)}
+.pnl-kpi{
+  flex:1;padding:12px 20px;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;gap:3px;position:relative;overflow:hidden;
+}
+.pnl-kpi:last-child{border-right:none}
+.pnl-kpi::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2.5px;
+}
+.pnl-kpi.k-items::before{background:var(--blue)}
+.pnl-kpi.k-units::before{background:var(--gold)}
+.pnl-kpi.k-total::before{background:var(--green)}
+.pnl-kpi-lbl{font-size:.56rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-weight:600}
+.pnl-kpi-val{font-size:1.05rem;font-weight:800;font-family:'IBM Plex Mono',monospace;color:var(--navy);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.pnl-kpi-val.g{color:#0a7c52}
+.pnl-kpi-val.r{color:#dc2626}
+
+/* Table */
+.pnl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.pnl-scroll::-webkit-scrollbar{height:4px}
+.pnl-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+.pnl-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace}
+.pnl-tbl thead tr{border-bottom:2px solid var(--border);background:var(--surface2)}
+.pnl-tbl th{
+  padding:9px 16px;font-size:.57rem;text-transform:uppercase;
+  letter-spacing:.9px;color:var(--dim);font-weight:700;
+  white-space:nowrap;text-align:right;
+}
+.pnl-tbl th:first-child{text-align:left;min-width:110px}
+.pnl-tbl th:nth-child(2){text-align:left}
+.pnl-tbl th:nth-child(3){min-width:80px}
+.pnl-tbl th:nth-child(4){min-width:110px}
+.pnl-tbl tbody tr{border-bottom:1px solid rgba(226,232,240,.6);transition:background .1s}
+.pnl-tbl tbody tr:hover td{background:rgba(10,124,82,.035)!important}
+.pnl-tbl td{
+  padding:8px 16px;font-size:.68rem;color:var(--text);
+  text-align:right;vertical-align:middle;
+  font-variant-numeric:tabular-nums;
+}
+.pnl-tbl td:first-child{text-align:left;color:var(--dim);font-size:.6rem;letter-spacing:.3px;font-style:italic}
+.pnl-tbl td:nth-child(2){text-align:left;font-weight:600;color:var(--text);font-style:normal;letter-spacing:0}
+.pnl-tbl td.qty{color:var(--muted);font-size:.65rem}
+.pnl-tbl td.amt{font-weight:700;font-size:.74rem}
+.pnl-tbl td.amt.pos{color:#0a7c52}
+.pnl-tbl td.amt.neg{color:#dc2626}
+
+/* Group rows */
+.pnl-grp td{
+  padding:7px 16px!important;font-size:.6rem!important;
+  font-weight:700!important;letter-spacing:.5px!important;color:var(--navy)!important;
+  background:rgba(15,32,68,.04)!important;
+  border-top:2px solid var(--border)!important;
+  border-bottom:1px solid var(--border)!important;
+}
+.pnl-grp td:first-child{
+  border-left:3px solid #0a7c52!important;padding-left:13px!important;
+}
+.pnl-grp-sub{font-weight:400!important;font-size:.58rem!important;color:var(--muted)!important;margin-left:8px}
+.pnl-grp td.pnl-grp-amt{
+  font-weight:700!important;font-size:.65rem!important;
+  color:#0a7c52!important;text-align:right!important;font-style:normal!important;
+}
+
+/* Footer total bar */
+.pnl-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-top:2px solid var(--border);
+  background:rgba(10,124,82,.05);gap:16px;flex-wrap:wrap;
+}
+.pnl-footer-label{font-size:.65rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--navy);letter-spacing:.5px;text-transform:uppercase}
+.pnl-footer-right{display:flex;align-items:center;gap:20px}
+.pnl-footer-stat{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.pnl-footer-stat-lbl{font-size:.55rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.pnl-footer-stat-val{font-size:.9rem;font-weight:800;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:#0a7c52}
+
+/* Empty state */
+.pnl-empty{padding:40px 24px;text-align:center;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:.72rem;line-height:1.9}
+.pnl-empty-ico{width:40px;height:40px;margin:0 auto 12px;opacity:.25;stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round}
 .no-prod{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:16px 0;text-align:left}
 
 </style>
@@ -456,28 +548,36 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
   </div>
 </div>
-<div id="productosSection" class="productos-section">
-  <div class="productos-header">
-    <div class="productos-info">
-      <div class="productos-title" id="productosTitle">PRODUCTOS</div>
-      <div class="productos-subtitle" id="productosSub"></div>
+<div id="productosSection" class="pnl">
+  <div class="pnl-hdr">
+    <div class="pnl-hdr-left">
+      <div class="pnl-icon">
+        <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+      </div>
+      <div class="pnl-meta">
+        <div class="pnl-title" id="productosTitle">PRODUCTOS</div>
+        <div class="pnl-badges" id="productosBadges"></div>
+      </div>
     </div>
-    <button class="productos-close" onclick="closeProductos()">✕ Cerrar</button>
+    <button class="pnl-close" onclick="closeProductos()">✕ Cerrar</button>
   </div>
-  <div class="productos-table-wrap scroll-x">
-    <table class="productos-table">
+  <div id="pnlKpis" class="pnl-kpis"></div>
+  <div class="pnl-scroll">
+    <table class="pnl-tbl">
       <thead>
         <tr>
-          <th>Detalles</th>
+          <th>Ubicación</th>
           <th>Producto</th>
-          <th>Cantidad</th>
+          <th>Unidades</th>
           <th>Monto</th>
         </tr>
       </thead>
-      <tbody id="productosContent">
-        <!-- Se llena con JS -->
-      </tbody>
+      <tbody id="productosContent"></tbody>
     </table>
+  </div>
+  <div id="pnlFooter" class="pnl-footer" style="display:none">
+    <span class="pnl-footer-label">Total general</span>
+    <div class="pnl-footer-right" id="pnlFooterStats"></div>
   </div>
 </div>
 </div><!-- /app -->
@@ -1222,7 +1322,6 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
   var semCode = (yr % 100) * 100 + weekNum;
   var semCodeStr = String(semCode);
 
-  // Seleccionar fuente de datos: PR, MP o ME
   var allProds = src === 'mp' ? (DATA.productos_mp || {})
                : src === 'me' ? (DATA.productos_me || {})
                : (DATA.productos || {});
@@ -1233,13 +1332,11 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
 
   var prods = allProds[semCode] || allProds[semCodeStr] || null;
 
-  // Construir lista de productos
   var list = [];
   if(prods){
     var byRanch = prods[rancho];
     if(byRanch){
       if(tipo === 'ALL'){
-        // MANTENIMIENTO: mostrar MIRFE + MIPE juntos
         (byRanch['MIRFE'] || []).forEach(function(p){ list.push(p); });
         (byRanch['MIPE']  || []).forEach(function(p){ list.push(p); });
       } else {
@@ -1248,84 +1345,121 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
     }
   }
 
-  // Título y subtítulo
-  var tipoNombre;
-  if(src === 'mp'){
-    tipoNombre = 'Mantenimiento';
-  } else if(src === 'me'){
-    tipoNombre = 'Material de Empaque';
-  } else {
-    tipoNombre = tipo === 'MIRFE' ? 'Material de Riego/Fertilización' : 'Material de Protección';
-  }
+  var tipoNombre = src === 'mp' ? 'Mantenimiento'
+    : src === 'me' ? 'Material de Empaque'
+    : tipo === 'MIRFE' ? 'Riego / Fertilización' : 'Material de Protección';
+
   document.getElementById('productosTitle').innerHTML =
-    rancho + ' <span style="color:#64748b;font-weight:400">— '+tipoNombre+'</span>';
+    rancho + ' <span>— ' + tipoNombre + '</span>';
 
-  // Debug info
-  var hojasKey = 'hojas_' + prefix.toLowerCase() + '_encontradas';
-  var hojasEncontradas = debug[hojasKey] || [];
-  var ranchosDisp = prods ? Object.keys(prods).join(', ') : 'ninguno';
+  // Badges
+  var wkLabel = 'W' + String(weekNum).padStart(2,'0');
+  document.getElementById('productosBadges').innerHTML =
+    '<span class="pnl-badge wk">' + wkLabel + ' · ' + yr + '</span>' +
+    '<span class="pnl-badge src">' + prefix + '</span>';
 
-  var debugInfo = '';
-  if(hojasEncontradas.length === 0){
-    debugInfo = 'No se encontraron hojas '+prefix+' en el sheet';
-  } else if(!prods){
-    debugInfo = 'No hay datos para semana ' + semCode + ' · Hojas: ' + hojasEncontradas.join(', ');
-  } else if(!list.length){
-    debugInfo = 'Rancho no encontrado · Disponibles: ' + ranchosDisp;
-  }
-
-  document.getElementById('productosSub').innerHTML =
-    'Semana '+String(weekNum).padStart(2,'0')+' · '+yr;
+  var footer = document.getElementById('pnlFooter');
 
   if(!list.length){
-    document.getElementById('productosContent').innerHTML =
-      '<tr><td colspan="4" class="no-prod" style="padding:16px 0">Sin productos disponibles para este rancho.<br>'+
-      '<span style="font-size:.58rem;color:#94a3b8;line-height:1.8">'+debugInfo+'</span></td></tr>';
-  } else {
-    var totalGasto = 0;
-    var totalUnidades = 0;
+    var hojasKey = 'hojas_' + prefix.toLowerCase() + '_encontradas';
+    var hojasEncontradas = debug[hojasKey] || [];
+    var ranchosDisp = prods ? Object.keys(prods).join(', ') : 'ninguno';
+    var msg = hojasEncontradas.length === 0 ? 'No se encontraron hojas ' + prefix + ' en el sheet'
+      : !prods ? 'Sin datos · Semana ' + semCode + ' · Hojas: ' + hojasEncontradas.join(', ')
+      : 'Rancho no encontrado · Disponibles: ' + ranchosDisp;
 
-    // Agrupar por ubicacion (col 3)
-    var grupos = {};
-    var gruposOrder = [];
+    document.getElementById('pnlKpis').innerHTML = '';
+    document.getElementById('productosContent').innerHTML =
+      '<tr><td colspan="4" style="border:none">' +
+      '<div class="pnl-empty">' +
+      '<svg class="pnl-empty-ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>' +
+      'Sin productos disponibles para este rancho.<br>' +
+      '<span style="font-size:.6rem;opacity:.7">' + msg + '</span>' +
+      '</div></td></tr>';
+    footer.style.display = 'none';
+  } else {
+    var totalGasto = 0, totalUnidades = 0;
+
+    // Agrupar por ubicacion
+    var grupos = {}, gruposOrder = [];
     list.forEach(function(p){
       var det = p[3] ? p[3] : '—';
       if(!grupos[det]){ grupos[det]=[]; gruposOrder.push(det); }
       grupos[det].push(p);
     });
 
+    // KPI strip
+    var totalItems = list.length;
+    list.forEach(function(p){
+      totalUnidades += p[1] ? parseFloat(p[1]) : 0;
+      totalGasto    += p[2] ? parseFloat(p[2]) : 0;
+    });
+
+    var kpiColor = totalGasto < 0 ? 'r' : 'g';
+    var kpiSign  = totalGasto < 0 ? '-' : '';
+    document.getElementById('pnlKpis').innerHTML =
+      '<div class="pnl-kpi k-items">' +
+        '<span class="pnl-kpi-lbl">Productos</span>' +
+        '<span class="pnl-kpi-val">' + totalItems + '</span>' +
+      '</div>' +
+      '<div class="pnl-kpi k-units">' +
+        '<span class="pnl-kpi-lbl">Unidades</span>' +
+        '<span class="pnl-kpi-val">' + Math.abs(totalUnidades).toLocaleString('en-US',{maximumFractionDigits:0}) + '</span>' +
+      '</div>' +
+      '<div class="pnl-kpi k-total">' +
+        '<span class="pnl-kpi-lbl">Gasto total</span>' +
+        '<span class="pnl-kpi-val ' + kpiColor + '">' + kpiSign + '$' + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
+      '</div>';
+
+    // Build rows
     var rows = '';
     gruposOrder.forEach(function(det){
-      // Fila de encabezado de grupo (solo si hay más de 1 grupo)
+      var grpGasto = 0, grpUnidades = 0;
+      grupos[det].forEach(function(p){
+        grpGasto    += p[2] ? parseFloat(p[2]) : 0;
+        grpUnidades += p[1] ? parseFloat(p[1]) : 0;
+      });
+
       if(gruposOrder.length > 1){
-        rows += '<tr class="grp-header"><td colspan="4">'+det+'</td></tr>';
+        var grpAmtStr = (grpGasto < 0 ? '-$' : '$') + Math.abs(grpGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+        var grpUStr   = Math.abs(grpUnidades).toLocaleString('en-US',{maximumFractionDigits:0});
+        rows += '<tr class="pnl-grp">' +
+          '<td colspan="2">' + det + '<span class="pnl-grp-sub">' + grupos[det].length + ' productos</span></td>' +
+          '<td class="qty" style="font-size:.6rem;color:var(--muted);font-weight:500">' + grpUStr + '</td>' +
+          '<td class="pnl-grp-amt">' + grpAmtStr + '</td>' +
+          '</tr>';
       }
+
       grupos[det].forEach(function(p){
         var gasto    = p[2] ? parseFloat(p[2]) : 0;
         var unidades = p[1] ? parseFloat(p[1]) : 0;
-        totalGasto    += gasto;
-        totalUnidades += unidades;
-        var gastoStr    = gasto    !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-        var unidadesStr = unidades !== 0 ? Math.abs(unidades).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}) : '—';
-        var detalleCell = gruposOrder.length > 1 ? '' : (det !== '—' ? det : '');
-        rows += '<tr>'+
-          '<td>'+detalleCell+'</td>'+
-          '<td>'+p[0]+'</td>'+
-          '<td>'+unidadesStr+'</td>'+
-          '<td style="color:'+(gasto<0?'#dc2626':'#0a7c52')+'">'+gastoStr+'</td>'+
+        var amtClass = 'amt ' + (gasto < 0 ? 'neg' : 'pos');
+        var amtStr   = gasto !== 0
+          ? (gasto < 0 ? '-$' : '$') + Math.abs(gasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+          : '—';
+        var qtyStr = unidades !== 0
+          ? Math.abs(unidades).toLocaleString('en-US',{maximumFractionDigits:2})
+          : '—';
+        var ubicCell = gruposOrder.length > 1 ? '' : (det !== '—' ? det : '');
+        rows += '<tr>' +
+          '<td>' + ubicCell + '</td>' +
+          '<td>' + p[0] + '</td>' +
+          '<td class="qty">' + qtyStr + '</td>' +
+          '<td class="' + amtClass + '">' + amtStr + '</td>' +
           '</tr>';
       });
     });
 
-    var totalGastoStr    = '$' + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-    var totalUnidadesStr = Math.abs(totalUnidades).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
-    var totalRow = '<tr class="total-row">'+
-      '<td></td>'+
-      '<td style="color:#00c97d">TOTAL</td>'+
-      '<td>'+totalUnidadesStr+'</td>'+
-      '<td style="color:#00c97d">'+totalGastoStr+'</td>'+
-      '</tr>';
-    document.getElementById('productosContent').innerHTML = rows + totalRow;
+    document.getElementById('productosContent').innerHTML = rows;
+
+    // Footer bar
+    var fSign = totalGasto < 0 ? '-$' : '$';
+    document.getElementById('pnlFooterStats').innerHTML =
+      '<div class="pnl-footer-stat"><span class="pnl-footer-stat-lbl">Unidades</span><span class="pnl-footer-stat-val" style="color:var(--navy)">' +
+        Math.abs(totalUnidades).toLocaleString('en-US',{maximumFractionDigits:0}) + '</span></div>' +
+      '<div class="pnl-footer-stat"><span class="pnl-footer-stat-lbl">Monto</span><span class="pnl-footer-stat-val ' + (totalGasto<0?'style="color:#dc2626"':'') + '">' +
+        fSign + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span></div>';
+    footer.style.display = 'flex';
   }
 
   var section = document.getElementById('productosSection');
@@ -1337,9 +1471,7 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
 function closeProductos() {
   var section = document.getElementById('productosSection');
   section.classList.remove('show');
-  setTimeout(function() {
-    section.style.display = 'none';
-  }, 300);
+  setTimeout(function() { section.style.display = 'none'; }, 300);
 }
 
 
