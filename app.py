@@ -461,7 +461,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <span class="week-avail" id="weekAvail"></span>
   </div>
   <div class="main">
-    <div class="card">
+    <div class="card" id="swTableCard">
       <div class="card-hdr"><span class="card-title">Tabla — Misma Semana, Distintos Años</span><span class="card-note" id="swTableNote">USD</span></div>
       <div class="table-scroll-wrap">
         <div class="scroll-hint show" id="hintSemana">← desliza →</div>
@@ -1591,6 +1591,9 @@ function renderServPanel(subcatFilter){
   var section=document.getElementById('serviciosSection');
   section.classList.add('show');
   section.style.display='block';
+  // Ocultar la tabla principal mientras se ve COSTO DE SERVICIOS
+  var t=document.getElementById('swTableCard');
+  if(t) t.style.display='none';
   setTimeout(function(){section.scrollIntoView({behavior:'smooth',block:'nearest'});},100);
 }
 
@@ -1598,6 +1601,9 @@ function closeServicios(){
   var section=document.getElementById('serviciosSection');
   section.classList.remove('show');
   setTimeout(function(){section.style.display='none';},300);
+  // Restaurar la tabla principal
+  var t=document.getElementById('swTableCard');
+  if(t) t.style.display='';
   var el=document.getElementById('servSelect');
   if(el) el.selectedIndex=0;
 }
