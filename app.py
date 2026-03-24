@@ -247,126 +247,68 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 .prod-cell{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 
-/* ── PANEL PRODUCTOS — SaaS/BI ──────────────────────────────── */
-.pnl{
-  display:none;margin:0 24px 24px;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:16px;overflow:hidden;
-  box-shadow:0 4px 24px rgba(0,0,0,.07),0 1px 4px rgba(0,0,0,.04);
-}
-.pnl.show{display:block;animation:pnl-in .2s cubic-bezier(.22,1,.36,1)}
-@keyframes pnl-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* ── PANEL PRODUCTOS — Power BI compact ─────────────────────── */
+.pnl{display:none;margin:0 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.pnl.show{display:block;animation:pnl-in .15s ease}
+@keyframes pnl-in{from{opacity:0}to{opacity:1}}
 
-/* Header */
-.pnl-hdr{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:16px 20px;border-bottom:1px solid var(--border);
-  background:linear-gradient(135deg,rgba(10,124,82,.04) 0%,rgba(15,32,68,.04) 100%);
-  gap:14px;
-}
-.pnl-hdr-left{display:flex;align-items:center;gap:12px;min-width:0}
-.pnl-icon{
-  width:36px;height:36px;border-radius:10px;flex-shrink:0;
-  background:rgba(10,124,82,.1);border:1.5px solid rgba(10,124,82,.2);
-  display:flex;align-items:center;justify-content:center;
-}
-.pnl-icon svg{width:16px;height:16px;stroke:#0a7c52;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
-.pnl-meta{min-width:0}
-.pnl-title{font-size:.88rem;font-weight:800;color:var(--navy);font-family:'Syne',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
-.pnl-title span{font-weight:400;color:var(--muted);font-size:.8rem}
-.pnl-badges{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap}
-.pnl-badge{font-family:'IBM Plex Mono',monospace;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid;letter-spacing:.3px}
-.pnl-badge.wk{background:rgba(10,124,82,.07);border-color:rgba(10,124,82,.25);color:#0a7c52}
-.pnl-badge.src{background:rgba(37,99,235,.07);border-color:rgba(37,99,235,.2);color:#1d4ed8}
-.pnl-badge.yr{background:rgba(180,83,9,.07);border-color:rgba(180,83,9,.2);color:#92400e}
-.pnl-close{
-  background:var(--surface);border:1.5px solid var(--border);border-radius:9px;
-  color:var(--muted);cursor:pointer;font-size:.65rem;padding:6px 14px;
-  font-family:'IBM Plex Mono',monospace;font-weight:700;
-  transition:all .15s;flex-shrink:0;letter-spacing:.5px;
-  display:flex;align-items:center;gap:5px;
-}
-.pnl-close:hover{border-color:var(--navy);color:var(--navy);background:var(--surface2)}
+/* Header — barra oscura estilo Power BI */
+.pnl-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px 6px 12px;background:#1e2e3d;gap:10px;border-bottom:2px solid #0a7c52}
+.pnl-hdr-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.pnl-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1}
+.pnl-title{font-size:.73rem;font-weight:700;color:#e2e8f0;font-family:'IBM Plex Mono',monospace;white-space:nowrap;letter-spacing:.2px}
+.pnl-title span{font-weight:400;color:#64748b;font-size:.7rem}
+.pnl-sep{color:#334155;font-size:.65rem}
+.pnl-meta-stat{font-size:.64rem;color:#94a3b8;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pnl-meta-stat b{color:#cbd5e1;font-weight:600}
+.pnl-close{background:transparent;border:1px solid #334155;border-radius:3px;color:#64748b;cursor:pointer;font-size:.6rem;padding:3px 9px;font-family:'IBM Plex Mono',monospace;font-weight:600;transition:all .12s;flex-shrink:0;letter-spacing:.3px}
+.pnl-close:hover{border-color:#94a3b8;color:#e2e8f0}
 
-/* KPI strip */
-.pnl-kpis{display:flex;border-bottom:1px solid var(--border)}
-.pnl-kpi{
-  flex:1;padding:12px 20px;border-right:1px solid var(--border);
-  display:flex;flex-direction:column;gap:3px;position:relative;overflow:hidden;
-}
-.pnl-kpi:last-child{border-right:none}
-.pnl-kpi::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2.5px;
-}
-.pnl-kpi.k-items::before{background:var(--blue)}
-.pnl-kpi.k-units::before{background:var(--gold)}
-.pnl-kpi.k-total::before{background:var(--green)}
-.pnl-kpi-lbl{font-size:.56rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-weight:600}
-.pnl-kpi-val{font-size:1.05rem;font-weight:800;font-family:'IBM Plex Mono',monospace;color:var(--navy);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
-.pnl-kpi-val.g{color:#0a7c52}
-.pnl-kpi-val.r{color:#dc2626}
+/* KPI bar inline — compacto */
+.pnl-kpis{display:none}
 
 /* Table */
 .pnl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
-.pnl-scroll::-webkit-scrollbar{height:4px}
-.pnl-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+.pnl-scroll::-webkit-scrollbar{height:3px}
+.pnl-scroll::-webkit-scrollbar-thumb{background:#cbd5e1}
 .pnl-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace}
-.pnl-tbl thead tr{border-bottom:2px solid var(--border);background:var(--surface2)}
-.pnl-tbl th{
-  padding:9px 16px;font-size:.57rem;text-transform:uppercase;
-  letter-spacing:.9px;color:var(--dim);font-weight:700;
-  white-space:nowrap;text-align:right;
-}
-.pnl-tbl th:first-child{text-align:left;min-width:110px}
+.pnl-tbl thead tr{background:#f1f5f9;border-bottom:1px solid #cbd5e1}
+.pnl-tbl th{padding:5px 10px;font-size:.58rem;text-transform:uppercase;letter-spacing:.6px;color:#475569;font-weight:700;white-space:nowrap;text-align:right;border-right:1px solid #e2e8f0}
+.pnl-tbl th:last-child{border-right:none}
+.pnl-tbl th:first-child{text-align:left;width:108px}
 .pnl-tbl th:nth-child(2){text-align:left}
-.pnl-tbl th:nth-child(3){min-width:80px}
-.pnl-tbl th:nth-child(4){min-width:110px}
-.pnl-tbl tbody tr{border-bottom:1px solid rgba(226,232,240,.6);transition:background .1s}
-.pnl-tbl tbody tr:hover td{background:rgba(10,124,82,.035)!important}
-.pnl-tbl td{
-  padding:8px 16px;font-size:.68rem;color:var(--text);
-  text-align:right;vertical-align:middle;
-  font-variant-numeric:tabular-nums;
-}
-.pnl-tbl td:first-child{text-align:left;color:var(--dim);font-size:.6rem;letter-spacing:.3px;font-style:italic}
-.pnl-tbl td:nth-child(2){text-align:left;font-weight:600;color:var(--text);font-style:normal;letter-spacing:0}
-.pnl-tbl td.qty{color:var(--muted);font-size:.65rem}
-.pnl-tbl td.amt{font-weight:700;font-size:.74rem}
+.pnl-tbl tbody tr{border-bottom:1px solid #f1f5f9;transition:background .08s}
+.pnl-tbl tbody tr:nth-child(even) td{background:#fafafa}
+.pnl-tbl tbody tr:hover td{background:#eff6f2!important}
+.pnl-tbl td{padding:4px 10px;font-size:.67rem;color:var(--text);text-align:right;vertical-align:middle;font-variant-numeric:tabular-nums;border-right:1px solid #f1f5f9}
+.pnl-tbl td:last-child{border-right:none}
+.pnl-tbl td:first-child{text-align:left;color:#64748b;font-size:.6rem}
+.pnl-tbl td:nth-child(2){text-align:left;font-weight:500;color:var(--text)}
+.pnl-tbl td.qty{color:#475569;font-size:.64rem}
+.pnl-tbl td.amt{font-weight:600;font-size:.67rem}
 .pnl-tbl td.amt.pos{color:#0a7c52}
 .pnl-tbl td.amt.neg{color:#dc2626}
 
-/* Group rows */
-.pnl-grp td{
-  padding:7px 16px!important;font-size:.6rem!important;
-  font-weight:700!important;letter-spacing:.5px!important;color:var(--navy)!important;
-  background:rgba(15,32,68,.04)!important;
-  border-top:2px solid var(--border)!important;
-  border-bottom:1px solid var(--border)!important;
-}
-.pnl-grp td:first-child{
-  border-left:3px solid #0a7c52!important;padding-left:13px!important;
-}
-.pnl-grp-sub{font-weight:400!important;font-size:.58rem!important;color:var(--muted)!important;margin-left:8px}
-.pnl-grp td.pnl-grp-amt{
-  font-weight:700!important;font-size:.65rem!important;
-  color:#0a7c52!important;text-align:right!important;font-style:normal!important;
-}
+/* Group header rows */
+.pnl-grp td{padding:4px 10px!important;font-size:.6rem!important;font-weight:700!important;letter-spacing:.4px!important;color:#1e293b!important;background:#e8edf2!important;border-top:1px solid #cbd5e1!important;border-bottom:1px solid #cbd5e1!important}
+.pnl-grp td:first-child{border-left:3px solid #0a7c52!important;padding-left:7px!important}
+.pnl-grp-sub{font-weight:400!important;font-size:.57rem!important;color:#64748b!important;margin-left:6px}
+.pnl-grp td.pnl-grp-amt{font-weight:700!important;font-size:.63rem!important;color:#0a7c52!important;text-align:right!important;font-style:normal!important}
 
-/* Footer total bar */
-.pnl-footer{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:12px 20px;border-top:2px solid var(--border);
-  background:rgba(10,124,82,.05);gap:16px;flex-wrap:wrap;
-}
-.pnl-footer-label{font-size:.65rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--navy);letter-spacing:.5px;text-transform:uppercase}
-.pnl-footer-right{display:flex;align-items:center;gap:20px}
-.pnl-footer-stat{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
-.pnl-footer-stat-lbl{font-size:.55rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
-.pnl-footer-stat-val{font-size:.9rem;font-weight:800;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:#0a7c52}
+/* Total row */
+.pnl-tbl tr.pnl-total td{background:#e8f4ee!important;border-top:2px solid #0a7c52;padding:5px 10px!important;font-weight:700!important;font-size:.67rem!important;color:#0f2044!important}
+.pnl-tbl tr.pnl-total td.amt{color:#0a7c52!important;font-size:.69rem!important}
+.pnl-tbl tr.pnl-total td:first-child{color:#0a7c52!important;letter-spacing:.4px}
+
+/* Footer strip — una sola línea */
+.pnl-footer{display:flex;align-items:center;justify-content:flex-end;gap:16px;padding:4px 10px;border-top:1px solid var(--border);background:#f8fafc}
+.pnl-footer-stat{display:flex;align-items:center;gap:5px}
+.pnl-footer-stat-lbl{font-size:.58rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.pnl-footer-stat-val{font-size:.67rem;font-weight:700;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:#0a7c52}
 
 /* Empty state */
-.pnl-empty{padding:40px 24px;text-align:center;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:.72rem;line-height:1.9}
-.pnl-empty-ico{width:40px;height:40px;margin:0 auto 12px;opacity:.25;stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round}
+.pnl-empty{padding:20px 16px;text-align:center;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:.67rem;line-height:1.7}
+.pnl-empty-ico{width:28px;height:28px;margin:0 auto 8px;opacity:.2;stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round}
 .no-prod{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:16px 0;text-align:left}
 
 </style>
@@ -551,12 +493,10 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 <div id="productosSection" class="pnl">
   <div class="pnl-hdr">
     <div class="pnl-hdr-left">
-      <div class="pnl-icon">
-        <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
-      </div>
       <div class="pnl-meta">
-        <div class="pnl-title" id="productosTitle">PRODUCTOS</div>
-        <div class="pnl-badges" id="productosBadges"></div>
+        <span class="pnl-title" id="productosTitle">PRODUCTOS</span>
+        <span class="pnl-sep">·</span>
+        <span class="pnl-meta-stat" id="productosBadges"></span>
       </div>
     </div>
     <button class="pnl-close" onclick="closeProductos()">✕ Cerrar</button>
@@ -568,7 +508,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
         <tr>
           <th>Ubicación</th>
           <th>Producto</th>
-          <th>Unidades</th>
+          <th>Unid.</th>
           <th>Monto</th>
         </tr>
       </thead>
@@ -576,8 +516,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     </table>
   </div>
   <div id="pnlFooter" class="pnl-footer" style="display:none">
-    <span class="pnl-footer-label">Total general</span>
-    <div class="pnl-footer-right" id="pnlFooterStats"></div>
+    <div class="pnl-footer-stat" id="pnlFooterStats"></div>
   </div>
 </div>
 </div><!-- /app -->
@@ -1352,11 +1291,9 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
   document.getElementById('productosTitle').innerHTML =
     rancho + ' <span>— ' + tipoNombre + '</span>';
 
-  // Badges
-  var wkLabel = 'W' + String(weekNum).padStart(2,'0');
-  document.getElementById('productosBadges').innerHTML =
-    '<span class="pnl-badge wk">' + wkLabel + ' · ' + yr + '</span>' +
-    '<span class="pnl-badge src">' + prefix + '</span>';
+  // Stats inline en el header (compacto)
+  var wkLabel = 'W' + String(weekNum).padStart(2,'0') + ' · ' + yr;
+  document.getElementById('productosBadges').innerHTML = wkLabel;
 
   var footer = document.getElementById('pnlFooter');
 
@@ -1395,21 +1332,13 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
       totalGasto    += p[2] ? parseFloat(p[2]) : 0;
     });
 
-    var kpiColor = totalGasto < 0 ? 'r' : 'g';
-    var kpiSign  = totalGasto < 0 ? '-' : '';
-    document.getElementById('pnlKpis').innerHTML =
-      '<div class="pnl-kpi k-items">' +
-        '<span class="pnl-kpi-lbl">Productos</span>' +
-        '<span class="pnl-kpi-val">' + totalItems + '</span>' +
-      '</div>' +
-      '<div class="pnl-kpi k-units">' +
-        '<span class="pnl-kpi-lbl">Unidades</span>' +
-        '<span class="pnl-kpi-val">' + Math.abs(totalUnidades).toLocaleString('en-US',{maximumFractionDigits:0}) + '</span>' +
-      '</div>' +
-      '<div class="pnl-kpi k-total">' +
-        '<span class="pnl-kpi-lbl">Gasto total</span>' +
-        '<span class="pnl-kpi-val ' + kpiColor + '">' + kpiSign + '$' + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
-      '</div>';
+    // Sin KPI strip separado — las métricas van en el header
+    document.getElementById('pnlKpis').innerHTML = '';
+    // Actualizar header con totales
+    document.getElementById('productosBadges').innerHTML =
+      wkLabel + ' &nbsp;·&nbsp; <b>' + totalItems + ' prods</b> &nbsp;·&nbsp; <b>' +
+      Math.abs(totalUnidades).toLocaleString('en-US',{maximumFractionDigits:0}) + ' uds</b> &nbsp;·&nbsp; <b>' +
+      (totalGasto<0?'-$':'$') + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</b>';
 
     // Build rows
     var rows = '';
@@ -1450,16 +1379,18 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
       });
     });
 
-    document.getElementById('productosContent').innerHTML = rows;
-
-    // Footer bar
+    // Fila TOTAL dentro de la tabla (Power BI style)
     var fSign = totalGasto < 0 ? '-$' : '$';
-    document.getElementById('pnlFooterStats').innerHTML =
-      '<div class="pnl-footer-stat"><span class="pnl-footer-stat-lbl">Unidades</span><span class="pnl-footer-stat-val" style="color:var(--navy)">' +
-        Math.abs(totalUnidades).toLocaleString('en-US',{maximumFractionDigits:0}) + '</span></div>' +
-      '<div class="pnl-footer-stat"><span class="pnl-footer-stat-lbl">Monto</span><span class="pnl-footer-stat-val ' + (totalGasto<0?'style="color:#dc2626"':'') + '">' +
-        fSign + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span></div>';
-    footer.style.display = 'flex';
+    var totalAmtStr = fSign + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    var totalUStr   = Math.abs(totalUnidades).toLocaleString('en-US',{maximumFractionDigits:0});
+    rows += '<tr class="pnl-total">' +
+      '<td colspan="2">TOTAL GENERAL</td>' +
+      '<td class="qty">' + totalUStr + '</td>' +
+      '<td class="amt ' + (totalGasto<0?'neg':'pos') + '">' + totalAmtStr + '</td>' +
+      '</tr>';
+
+    document.getElementById('productosContent').innerHTML = rows;
+    footer.style.display = 'none';
   }
 
   var section = document.getElementById('productosSection');
