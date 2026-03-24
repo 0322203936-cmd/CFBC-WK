@@ -811,6 +811,7 @@ function updateRangeSliders(){
 // ═══════════════════════════════════════════
 function setView(v){
   closeProductos();
+  closeServicios();
   state.view=v;
   // Al entrar a tendencia, activar solo 2026
   if(v==='tendencia'){
