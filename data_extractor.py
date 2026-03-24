@@ -583,7 +583,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                 usd_ranch_cols[j] = rn
 
         in_servicios = False
-        for i in range(exec_idx + 1, min(exec_idx + 40, len(data))):
+        for i in range(exec_idx + 1, min(exec_idx + 60, len(data))):
             row   = data[i]
             label = next((str(row[c]).strip() for c in range(5)
                           if c < len(row) and row[c] and len(str(row[c]).strip()) > 3), None)
@@ -594,7 +594,8 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             if not cat and not in_servicios:
                 continue
             if cat == "COSTO_STOP":
-                break
+                in_servicios = False   # salir del modo servicios si estábamos en él
+                continue              # NO romper — puede haber más secciones adelante
 
             # ── Detectar inicio de la sección COSTO DE SERVICIOS ──
             if cat == "SERVICIOS_START":
