@@ -313,6 +313,31 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .pnl-empty-ico{width:28px;height:28px;margin:0 auto 8px;opacity:.2;stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round}
 .no-prod{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:16px 0;text-align:left}
 
+/* ── PANEL SERVICIOS ───────────────────────────────────────── */
+.serv-panel{display:none;margin:0 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.serv-panel.show{display:block;animation:pnl-in .15s ease}
+.serv-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(10,124,82,.12);border-bottom:2px solid var(--green);gap:12px}
+.serv-panel-title{font-size:.8rem;font-weight:800;color:var(--navy);font-family:'Syne',sans-serif;letter-spacing:.2px}
+.serv-kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:14px 16px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.serv-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.serv-kpi-label{font-size:.6rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.serv-kpi-val{font-size:1.1rem;font-weight:800;font-family:'IBM Plex Mono',monospace;color:var(--green);margin-top:4px}
+.serv-kpi-sub{font-size:.63rem;color:var(--dim);font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.serv-ranch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;padding:14px 16px}
+.serv-ranch-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.serv-ranch-hdr{padding:10px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.serv-ranch-name{font-size:.78rem;font-weight:800;font-family:'Syne',sans-serif;color:#fff}
+.serv-ranch-total{font-size:.85rem;font-weight:800;font-family:'IBM Plex Mono',monospace;color:#fff}
+.serv-subcat-list{padding:8px 12px}
+.serv-subcat-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:.68rem;font-family:'IBM Plex Mono',monospace}
+.serv-subcat-row:last-child{border-bottom:none}
+.serv-subcat-icon{width:16px;height:16px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem}
+.serv-subcat-name{flex:1;color:var(--text)}
+.serv-subcat-val{font-weight:600;color:var(--navy)}
+.serv-total-row{display:flex;justify-content:space-between;padding:8px 12px;background:var(--accent-soft);border-top:2px solid rgba(10,124,82,.2);font-family:'IBM Plex Mono',monospace;font-size:.72rem;font-weight:800;color:var(--green)}
+.serv-bottom{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 16px;border-top:1px solid var(--border)}
+@media(max-width:700px){.serv-bottom{grid-template-columns:1fr}.serv-ranch-grid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -351,7 +376,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     </div>
     <!-- Selector 3 -->
     <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
-      <select class="cat-select" id="servSelect" style="background:transparent;font-weight:700;color:#fff;">
+      <select class="cat-select" id="servSelect" onchange="selectServ(this.value)" style="background:transparent;font-weight:700;color:#fff;">
         <option value="" disabled selected>COSTO DE SERVICIOS</option>
       </select>
       <span class="cat-arrow" style="color:#fff;">▾</span>
@@ -533,6 +558,23 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <div class="pnl-footer-stat" id="pnlFooterStats"></div>
   </div>
 </div>
+
+<div id="serviciosSection" class="serv-panel">
+  <div class="serv-panel-hdr">
+    <div class="serv-panel-title" id="servPanelTitle">COSTO DE SERVICIOS</div>
+    <button class="pnl-close" onclick="closeServicios()">✕</button>
+  </div>
+  <div class="serv-kpi-strip" id="servKpiStrip"></div>
+  <div class="serv-ranch-grid" id="servRanchGrid"></div>
+  <div class="serv-bottom">
+    <div>
+      <div style="font-size:.68rem;font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Gastos por Rancho</div>
+      <div id="servRanchList" class="ranch-grid"></div>
+    </div>
+    <div><div id="chartServ" style="height:200px"></div></div>
+  </div>
+</div>
+
 </div><!-- /app -->
 
 <script>
@@ -603,7 +645,7 @@ function inicializar() {
 
   // header removido
 
-  buildCatSelect(); buildYearChips(); updateWeekSlider(); updateRangeSliders(); renderView();
+  buildCatSelect(); buildServSelect(); buildYearChips(); updateWeekSlider(); updateRangeSliders(); renderView();
   document.getElementById('loader').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   var by=document.getElementById('badgeYears');
@@ -1426,6 +1468,139 @@ function closeProductos() {
   setTimeout(function() { section.style.display = 'none'; }, 300);
 }
 
+
+// ═══════════════════════════════════════════
+// COSTO DE SERVICIOS
+// ═══════════════════════════════════════════
+var SUBCAT_ICONS = {
+  'Electricidad':'⚡','Fletes y Acarreos':'🚛','Gastos de Exportación':'📦',
+  'Certificado Fitosanitario':'📋','Transporte de Personal':'🚌',
+  'Compra de Flor a Terceros':'🌸','Comida para el Personal':'🍽','RO, TEL, RTA.Alim':'📡'
+};
+var SUBCAT_COLORS = {
+  'Electricidad':'#f59e0b','Fletes y Acarreos':'#3b82f6','Gastos de Exportación':'#8b5cf6',
+  'Certificado Fitosanitario':'#10b981','Transporte de Personal':'#f97316',
+  'Compra de Flor a Terceros':'#ec4899','Comida para el Personal':'#14b8a6','RO, TEL, RTA.Alim':'#6366f1'
+};
+var SUBCATS_ORDER = ['Electricidad','Fletes y Acarreos','Gastos de Exportación','Certificado Fitosanitario','Transporte de Personal','Compra de Flor a Terceros','Comida para el Personal','RO, TEL, RTA.Alim'];
+
+function buildServSelect(){
+  var el=document.getElementById('servSelect');
+  if(!el) return;
+  var found=[];
+  (DATA.servicios_data||[]).forEach(function(r){if(found.indexOf(r.subcat)<0) found.push(r.subcat);});
+  el.innerHTML='<option value="" disabled selected>COSTO DE SERVICIOS</option>'+
+    '<option value="">— TODAS —</option>'+
+    SUBCATS_ORDER.filter(function(s){return found.indexOf(s)>=0;}).map(function(s){
+      return '<option value="'+s+'">'+s+'</option>';
+    }).join('');
+}
+
+function selectServ(val){
+  renderServPanel(val||null);
+}
+
+function renderServPanel(subcatFilter){
+  var weekNum=allWeeks[state.weekIdx];
+  var yrs=activeYrList(), yr=yrs[yrs.length-1];
+  var sym=state.currency==='usd'?'USD':'MXN';
+
+  var data=(DATA.servicios_data||[]).filter(function(r){
+    return r.week===weekNum&&r.year===yr&&(!subcatFilter||r.subcat===subcatFilter);
+  });
+  if(!data.length){
+    data=(DATA.servicios_data||[]).filter(function(r){
+      return r.year===yr&&(!subcatFilter||r.subcat===subcatFilter);
+    });
+  }
+
+  var ranchData={};
+  data.forEach(function(r){
+    var src=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;
+    Object.keys(src).forEach(function(ranch){
+      if(!src[ranch]) return;
+      if(!ranchData[ranch]) ranchData[ranch]={};
+      ranchData[ranch][r.subcat]=(ranchData[ranch][r.subcat]||0)+src[ranch];
+    });
+  });
+
+  var ranchTotals={};
+  Object.keys(ranchData).forEach(function(r){
+    ranchTotals[r]=Object.keys(ranchData[r]).reduce(function(a,k){return a+ranchData[r][k];},0);
+  });
+  var grandTotal=Object.keys(ranchTotals).reduce(function(a,k){return a+ranchTotals[k];},0);
+  var topRanch=Object.keys(ranchTotals).sort(function(a,b){return ranchTotals[b]-ranchTotals[a];})[0]||'—';
+  var subcatTotals={};
+  Object.keys(ranchData).forEach(function(r){Object.keys(ranchData[r]).forEach(function(sc){subcatTotals[sc]=(subcatTotals[sc]||0)+ranchData[r][sc];});});
+  var topSubcat=Object.keys(subcatTotals).sort(function(a,b){return subcatTotals[b]-subcatTotals[a];})[0]||'—';
+
+  var title=(subcatFilter?'SERVICIOS — '+subcatFilter:'COSTO DE SERVICIOS')+' · W'+String(weekNum).padStart(2,'0')+' '+yr;
+  document.getElementById('servPanelTitle').textContent=title;
+
+  document.getElementById('servKpiStrip').innerHTML=
+    '<div class="serv-kpi"><div class="serv-kpi-label">Total de Gastos</div><div class="serv-kpi-val">'+fmt(grandTotal)+'</div><div class="serv-kpi-sub">'+sym+'</div></div>'+
+    '<div class="serv-kpi"><div class="serv-kpi-label">Rancho con Más Gastos</div><div class="serv-kpi-val" style="color:'+(RANCH_COLORS[topRanch]||'#0a7c52')+'">'+topRanch+'</div><div class="serv-kpi-sub">'+fmt(ranchTotals[topRanch]||0)+'</div></div>'+
+    '<div class="serv-kpi"><div class="serv-kpi-label">Categoría Más Costosa</div><div class="serv-kpi-val" style="color:'+(SUBCAT_COLORS[topSubcat]||'#f59e0b')+'">'+topSubcat+'</div><div class="serv-kpi-sub">'+fmt(subcatTotals[topSubcat]||0)+'</div></div>';
+
+  var sortedRanches=RANCH_ORDER.filter(function(r){return ranchData[r];});
+  if(!sortedRanches.length) sortedRanches=Object.keys(ranchData);
+  document.getElementById('servRanchGrid').innerHTML=sortedRanches.length?
+    sortedRanches.map(function(ranch){
+      var col=RANCH_COLORS[ranch]||'#888', total=ranchTotals[ranch]||0;
+      var subcats=ranchData[ranch]||{};
+      var rows=(subcatFilter?[subcatFilter]:SUBCATS_ORDER).filter(function(sc){return sc in subcats;}).map(function(sc){
+        var v=subcats[sc]||0, ic=SUBCAT_ICONS[sc]||'•', iCol=SUBCAT_COLORS[sc]||'#888';
+        return '<div class="serv-subcat-row">'+
+          '<div class="serv-subcat-icon" style="background:'+iCol+'22;color:'+iCol+'">'+ic+'</div>'+
+          '<div class="serv-subcat-name">'+sc+'</div>'+
+          '<div class="serv-subcat-val">'+fmt(v)+'</div></div>';
+      }).join('');
+      return '<div class="serv-ranch-card">'+
+        '<div class="serv-ranch-hdr" style="background:'+col+'">'+
+        '<div class="serv-ranch-name">'+ranch+'</div>'+
+        '<div class="serv-ranch-total">'+fmt(total)+'</div></div>'+
+        '<div class="serv-subcat-list">'+rows+'</div>'+
+        '<div class="serv-total-row"><span>TOTAL:</span><span>'+fmt(total)+'</span></div></div>';
+    }).join(''):
+    '<div class="no-data" style="padding:30px;grid-column:1/-1">Sin datos para esta semana</div>';
+
+  var maxV=Math.max.apply(null,Object.values(ranchTotals).concat([1]));
+  document.getElementById('servRanchList').innerHTML=
+    RANCH_ORDER.filter(function(r){return ranchTotals[r]>0;}).sort(function(a,b){return ranchTotals[b]-ranchTotals[a];}).map(function(r){
+      var v=ranchTotals[r]||0, col=RANCH_COLORS[r]||'#888';
+      return '<div class="ranch-row">'+
+        '<div class="ranch-lbl" style="color:'+col+'">'+r+'</div>'+
+        '<div class="ranch-bar-outer"><div class="ranch-bar-inner" style="width:'+(v/maxV*100).toFixed(1)+'%;background:'+col+'"></div></div>'+
+        '<div class="ranch-usd">'+fmt(v)+'</div>'+
+        '<div class="ranch-pct">'+(grandTotal>0?(v/grandTotal*100).toFixed(1):'0')+'%</div></div>';
+    }).join('')+
+    (grandTotal>0?'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-family:IBM Plex Mono,monospace;font-size:.7rem;font-weight:700;color:var(--green)"><span>TOTAL</span><span>'+fmt(grandTotal)+'</span></div>':'');
+
+  destroyChart('chartServ');
+  var pieR=RANCH_ORDER.filter(function(r){return ranchTotals[r]>0;});
+  if(pieR.length){
+    Plotly.newPlot('chartServ',[{type:'pie',labels:pieR,
+      values:pieR.map(function(r){return ranchTotals[r]||0;}),
+      marker:{colors:pieR.map(function(r){return RANCH_COLORS[r]||'#888';})},
+      textinfo:'label+percent',hole:0.35,
+      hovertemplate:'<b>%{label}</b><br>%{text}<extra></extra>',
+      text:pieR.map(function(r){return fmt(ranchTotals[r]||0);})
+    }],plotlyLayout({margin:{t:10,r:10,b:10,l:10},height:200,showlegend:false}),plotlyCfg());
+  }
+
+  var section=document.getElementById('serviciosSection');
+  section.classList.add('show');
+  section.style.display='block';
+  setTimeout(function(){section.scrollIntoView({behavior:'smooth',block:'nearest'});},100);
+}
+
+function closeServicios(){
+  var section=document.getElementById('serviciosSection');
+  section.classList.remove('show');
+  setTimeout(function(){section.style.display='none';},300);
+  var el=document.getElementById('servSelect');
+  if(el) el.selectedIndex=0;
+}
 
 // ═══════════════════════════════════════════
 // PLOTLY HELPERS
