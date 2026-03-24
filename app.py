@@ -852,15 +852,12 @@ function toggleYear(y){
   if(state.activeYears[y]&&active.length>1) delete state.activeYears[y];
   else state.activeYears[y]=true;
   buildYearChips();
-  // Reconstruir allWeeks según los años activos
+  // Reconstruir allWeeks usando el mapa pre-calculado por año
   var singleYr=activeYrList();
   if(singleYr.length===1){
     var yrVal=singleYr[0];
-    var yWks=DATA.weekly_detail
-      .filter(function(r){return r.year===yrVal;})
-      .map(function(r){return r.week;})
-      .filter(function(v,i,a){return a.indexOf(v)===i;})
-      .sort(function(a,b){return a-b;});
+    var yWks=(DATA.weeks_per_year&&DATA.weeks_per_year[yrVal])||[];
+    yWks=yWks.slice().sort(function(a,b){return a-b;});
     if(yWks.length){ allWeeks=yWks; state.weekIdx=yWks.length-1; }
   } else {
     var wSet={}; DATA.weekly_detail.forEach(function(r){wSet[r.week]=1;});
