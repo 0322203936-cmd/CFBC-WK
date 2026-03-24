@@ -1640,7 +1640,6 @@ function renderServPanel(subcatFilter){
   // Ocultar la tabla principal mientras se ve COSTO DE SERVICIOS
   var t=document.getElementById('swTableCard');
   if(t) t.style.display='none';
-  setTimeout(function(){section.scrollIntoView({behavior:'smooth',block:'nearest'});},100);
 }
 
 function closeServicios(){
