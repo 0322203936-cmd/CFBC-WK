@@ -41,6 +41,17 @@ CATEGORIAS_ORDEN = [
     "MATERIAL DE EMPAQUE",
 ]
 
+SERVICIOS_ORDEN = [
+    "ELECTRICIDAD",
+    "FLETES Y ACARREOS",
+    "GASTOS DE EXPORTACION",
+    "CERTIFICADO DE FITOSANITARIOS",
+    "TRANSPORTE DE PERSONAL",
+    "COMPRA DE FLOR A TERCEROS",
+    "COMIDA PARA EL PERSONAL",
+    "RO, TEL, RTA.ALIM.",
+]
+
 SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
 
 
@@ -114,7 +125,17 @@ def norm_cat(s: str):
     return None
 
 
-def sv(v) -> float:
+def norm_serv(s: str):
+    s = str(s).upper().strip()
+    if "ELECTRIC" in s:                          return "ELECTRICIDAD"
+    if "FLETE" in s or "ACARREO" in s:           return "FLETES Y ACARREOS"
+    if "EXPORTACION" in s or "EXPORTACIÓN" in s: return "GASTOS DE EXPORTACION"
+    if "FITOSANIT" in s or "CERTIFICADO" in s:   return "CERTIFICADO DE FITOSANITARIOS"
+    if "TRANSPORTE" in s and "PERSONAL" in s:    return "TRANSPORTE DE PERSONAL"
+    if "COMPRA" in s and "FLOR" in s:            return "COMPRA DE FLOR A TERCEROS"
+    if "COMIDA" in s:                            return "COMIDA PARA EL PERSONAL"
+    if "RO," in s or ("TEL" in s and "RTA" in s) or "RTA.ALIM" in s: return "RO, TEL, RTA.ALIM."
+    return None
     try:
         f = float(v)
         return f if f == f else 0.0
@@ -431,7 +452,8 @@ def _parse_me(rows: list) -> dict:
 
 # ─── Extractor principal ──────────────────────────────────────────────────────
 def extraer_datos(xls: pd.ExcelFile) -> dict:
-    all_data  = []
+    all_data      = []
+    all_servicios = []
 
     # 1. Clasificar hojas
     hojas_validas = []   # [(titulo, code_int)]
@@ -576,6 +598,29 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             if not cat:
                 continue
             if cat == "COSTO_STOP":
+                # Continuar leyendo servicios desde aquí
+                for j in range(i + 1, min(i + 20, len(data))):
+                    srow   = data[j]
+                    slabel = next((str(srow[c]).strip() for c in range(5)
+                                   if c < len(srow) and srow[c] and len(str(srow[c]).strip()) > 3), None)
+                    if not slabel:
+                        continue
+                    serv = norm_serv(slabel)
+                    if not serv:
+                        continue
+                    mxn_r = {rn: sv(srow[jj]) for jj, rn in mxn_ranch_cols.items() if jj < len(srow)}
+                    usd_r = {rn: sv(srow[jj]) for jj, rn in usd_ranch_cols.items() if jj < len(srow)}
+                    all_servicios.append({
+                        "semana":      code,
+                        "year":        year,
+                        "week":        ww,
+                        "date_range":  date_range,
+                        "servicio":    serv,
+                        "mxn_total":   round(sv(srow[mxn_total_col]) if mxn_total_col < len(srow) else 0, 2),
+                        "usd_total":   round(sv(srow[usd_total_col]) if usd_total_col and usd_total_col < len(srow) else 0, 2),
+                        "mxn_ranches": mxn_r,
+                        "usd_ranches": usd_r,
+                    })
                 break
 
             mxn_ranches = {rn: sv(row[j]) for j, rn in mxn_ranch_cols.items() if j < len(row)}
@@ -626,15 +671,40 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         weeks_per_year.setdefault(r["year"], set()).add(r["week"])
     weeks_per_year = {yr: sorted(wks) for yr, wks in weeks_per_year.items()}
 
+    # ── Resumen de servicios por servicio/año ──────────────────────────────────
+    servs_found = {r["servicio"] for r in all_servicios}
+    servs = [s for s in SERVICIOS_ORDEN if s in servs_found]
+
+    servicios_summary: dict = {serv: {yr: {"usd": 0.0, "mxn": 0.0, "ranches": {}, "ranches_mxn": {}}
+                                       for yr in years} for serv in servs}
+    for r in all_servicios:
+        s = servicios_summary.get(r["servicio"], {}).get(r["year"])
+        if not s:
+            continue
+        s["usd"] += r["usd_total"]
+        s["mxn"] += r["mxn_total"]
+        for rn, v in r["usd_ranches"].items():
+            s["ranches"][rn] = round(s["ranches"].get(rn, 0) + v, 2)
+        for rn, v in r["mxn_ranches"].items():
+            s["ranches_mxn"][rn] = round(s["ranches_mxn"].get(rn, 0) + v, 2)
+    for serv in servs:
+        for yr in years:
+            d = servicios_summary[serv][yr]
+            d["usd"] = round(d["usd"], 2)
+            d["mxn"] = round(d["mxn"], 2)
+
     return {
-        "years":           years,
-        "categories":      cats,
-        "ranches":         ranches,
-        "summary":         summary,
-        "weeks_per_year":  weeks_per_year,
-        "weekly_detail":   all_data,
-        "productos":       productos,
-        "productos_debug": productos_debug,
+        "years":               years,
+        "categories":          cats,
+        "ranches":             ranches,
+        "summary":             summary,
+        "weeks_per_year":      weeks_per_year,
+        "weekly_detail":       all_data,
+        "productos":           productos,
+        "productos_debug":     productos_debug,
+        "servicios":           servs,
+        "servicios_summary":   servicios_summary,
+        "servicios_detail":    all_servicios,
     }
 
 
