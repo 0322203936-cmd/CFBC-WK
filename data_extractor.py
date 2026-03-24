@@ -111,6 +111,21 @@ def norm_cat(s: str):
     if "RENOVACION" in s:                         return "RENOVACION DE SIEMBRA"
     if "MATERIAL DE EMP" in s:                    return "MATERIAL DE EMPAQUE"
     if "COSTO DE MAT" in s:                       return "COSTO_STOP"
+    if "COSTO DE SERV" in s:                       return "SERVICIOS_START"
+    return None
+
+
+def norm_subcat_servicios(s: str):
+    """Normaliza las subcategorías de la sección COSTO DE SERVICIOS."""
+    s = str(s).upper().strip()
+    if "ELECTRIC" in s:                            return "Electricidad"
+    if "FLETE" in s or "ACARREO" in s:             return "Fletes y Acarreos"
+    if "EXPORTAC" in s:                            return "Gastos de Exportación"
+    if "FITOSANIT" in s or "CERTIF" in s:          return "Certificado Fitosanitario"
+    if "TRANSPORTE" in s and "PERSONAL" in s:      return "Transporte de Personal"
+    if "COMPRA" in s and "FLOR" in s:              return "Compra de Flor a Terceros"
+    if "COMIDA" in s:                              return "Comida para el Personal"
+    if "RTA" in s or ("TEL" in s and "RO" in s):  return "RO, TEL, RTA.Alim"
     return None
 
 
@@ -431,7 +446,8 @@ def _parse_me(rows: list) -> dict:
 
 # ─── Extractor principal ──────────────────────────────────────────────────────
 def extraer_datos(xls: pd.ExcelFile) -> dict:
-    all_data  = []
+    all_data       = []
+    servicios_data = []   # datos de COSTO DE SERVICIOS
 
     # 1. Clasificar hojas
     hojas_validas = []   # [(titulo, code_int)]
@@ -566,32 +582,64 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             elif usd_total_col and j > usd_total_col:
                 usd_ranch_cols[j] = rn
 
-        for i in range(exec_idx + 1, min(exec_idx + 18, len(data))):
+        in_servicios = False
+        for i in range(exec_idx + 1, min(exec_idx + 40, len(data))):
             row   = data[i]
             label = next((str(row[c]).strip() for c in range(5)
                           if c < len(row) and row[c] and len(str(row[c]).strip()) > 3), None)
             if not label:
                 continue
+
             cat = norm_cat(label)
-            if not cat:
+            if not cat and not in_servicios:
                 continue
             if cat == "COSTO_STOP":
                 break
 
+            # ── Detectar inicio de la sección COSTO DE SERVICIOS ──
+            if cat == "SERVICIOS_START":
+                in_servicios = True
+                continue
+
             mxn_ranches = {rn: sv(row[j]) for j, rn in mxn_ranch_cols.items() if j < len(row)}
             usd_ranches = {rn: sv(row[j]) for j, rn in usd_ranch_cols.items() if j < len(row)}
 
-            all_data.append({
-                "semana":      code,
-                "year":        year,
-                "week":        ww,
-                "date_range":  date_range,
-                "categoria":   cat,
-                "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
-                "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
-                "mxn_ranches": mxn_ranches,
-                "usd_ranches": usd_ranches,
-            })
+            if in_servicios:
+                # Intentar normalizar como subcategoría de servicios
+                subcat = norm_subcat_servicios(label)
+                if not subcat:
+                    # Si encontramos otra categoría principal, salimos de servicios
+                    if cat and cat not in ("SERVICIOS_START",):
+                        in_servicios = False
+                        # procesar como categoría normal abajo
+                    else:
+                        continue
+                else:
+                    servicios_data.append({
+                        "semana":      code,
+                        "year":        year,
+                        "week":        ww,
+                        "date_range":  date_range,
+                        "subcat":      subcat,
+                        "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
+                        "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
+                        "mxn_ranches": mxn_ranches,
+                        "usd_ranches": usd_ranches,
+                    })
+                    continue
+
+            if not in_servicios and cat and cat not in ("SERVICIOS_START",):
+                all_data.append({
+                    "semana":      code,
+                    "year":        year,
+                    "week":        ww,
+                    "date_range":  date_range,
+                    "categoria":   cat,
+                    "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
+                    "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
+                    "mxn_ranches": mxn_ranches,
+                    "usd_ranches": usd_ranches,
+                })
 
     cats_found = {r["categoria"] for r in all_data}
     cats  = [c for c in CATEGORIAS_ORDEN if c in cats_found]
@@ -635,6 +683,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         "weekly_detail":   all_data,
         "productos":       productos,
         "productos_debug": productos_debug,
+        "servicios_data":  servicios_data,
     }
 
 
