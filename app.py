@@ -256,22 +256,25 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .productos-close{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.65rem;padding:2px 6px;font-family:'IBM Plex Mono',monospace;font-weight:400;transition:color .15s;flex-shrink:0}
 .productos-close:hover{color:var(--text)}
 .productos-table-wrap{margin-top:0;border:none;border-radius:0;overflow:visible}
-.productos-table{width:100%;border-collapse:collapse;background:transparent}
-.productos-table thead{background:transparent;border-bottom:1px solid var(--border)}
-.productos-table th{padding:6px 12px 6px 0;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-family:'Syne',sans-serif;text-align:right}
-.productos-table th:first-child{text-align:left;padding-left:0}
-.productos-table th:nth-child(2){text-align:left}
-.productos-table tbody tr{border-bottom:1px solid var(--border)}
-.productos-table tbody tr:hover{background:var(--accent-soft)}
+.productos-table{width:100%;border-collapse:collapse;background:transparent;table-layout:fixed}
+.productos-table thead{background:transparent;border-bottom:2px solid var(--border)}
+.productos-table th{padding:4px 8px;font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-align:right;white-space:nowrap}
+.productos-table th:nth-child(1){text-align:left;width:100px}
+.productos-table th:nth-child(2){text-align:left;width:auto}
+.productos-table th:nth-child(3){width:80px}
+.productos-table th:nth-child(4){width:100px}
+.productos-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s ease}
+.productos-table tbody tr:hover{background:rgba(10,124,82,.06)}
 .productos-table tbody tr:last-child{border-bottom:none}
-.productos-table tbody tr.total-row{border-top:2px solid var(--border);border-bottom:none;background:var(--surface2)}
-.productos-table tbody tr.total-row:hover{background:var(--accent-soft)}
-.productos-table td{padding:7px 12px 7px 0;font-size:.68rem;font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--text)}
-.productos-table td:first-child{color:var(--muted);font-size:.62rem;text-align:left;padding-left:0}
-.productos-table td:nth-child(2){font-weight:400;text-align:left;color:var(--text)}
-.productos-table td:nth-child(3){color:var(--muted);font-size:.64rem}
-.productos-table td:nth-child(4){font-weight:600;font-size:.7rem}
-.productos-table tbody tr.total-row td{font-weight:700;color:var(--navy);font-size:.72rem}
+.productos-table tbody tr.grp-header td{background:#f1f5f9;padding:5px 8px;font-size:.6rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--navy);letter-spacing:.5px;border-top:2px solid var(--border);border-left:3px solid var(--green)}
+.productos-table tbody tr.total-row{border-top:2px solid var(--border);border-bottom:none;background:rgba(10,124,82,.06)}
+.productos-table tbody tr.total-row:hover{background:rgba(10,124,82,.1)}
+.productos-table td{padding:4px 8px;font-size:.67rem;font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--text)}
+.productos-table td:nth-child(1){text-align:left;color:var(--dim);font-size:.58rem;letter-spacing:.3px}
+.productos-table td:nth-child(2){text-align:left;font-weight:600;color:var(--text)}
+.productos-table td:nth-child(3){color:var(--muted);font-size:.63rem}
+.productos-table td:nth-child(4){font-weight:700;font-size:.68rem}
+.productos-table tbody tr.total-row td{font-weight:700;color:var(--navy);font-size:.7rem}
 .no-prod{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:16px 0;text-align:left}
 
 </style>
@@ -465,10 +468,10 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <table class="productos-table">
       <thead>
         <tr>
-          <th style="min-width:120px">Detalles</th>
-          <th style="text-align:left; min-width:200px">Producto</th>
-          <th style="min-width:80px">Cantidad</th>
-          <th style="min-width:100px">Monto</th>
+          <th>Detalles</th>
+          <th>Producto</th>
+          <th>Cantidad</th>
+          <th>Monto</th>
         </tr>
       </thead>
       <tbody id="productosContent">
@@ -1276,26 +1279,44 @@ function showProductos(rancho, tipo, weekNum, yr, src) {
 
   if(!list.length){
     document.getElementById('productosContent').innerHTML =
-      '<tr><td colspan="3" class="no-prod" style="padding:16px 0">Sin productos disponibles para este rancho.<br>'+
+      '<tr><td colspan="4" class="no-prod" style="padding:16px 0">Sin productos disponibles para este rancho.<br>'+
       '<span style="font-size:.58rem;color:#94a3b8;line-height:1.8">'+debugInfo+'</span></td></tr>';
   } else {
     var totalGasto = 0;
     var totalUnidades = 0;
-    var rows = list.map(function(p){
-      var gasto    = p[2] ? parseFloat(p[2]) : 0;
-      var unidades = p[1] ? parseFloat(p[1]) : 0;
-      totalGasto    += gasto;
-      totalUnidades += unidades;
-      var gastoStr    = gasto    !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-      var unidadesStr = unidades !== 0 ? Math.abs(unidades).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}) : '—';
-      var detalle = p[3] ? p[3] : '—';
-      return '<tr>'+
-        '<td style="color:var(--muted);font-size:.62rem">'+detalle+'</td>'+
-        '<td>'+p[0]+'</td>'+
-        '<td>'+unidadesStr+'</td>'+
-        '<td style="color:'+(gasto<0?'#dc2626':'#0a7c52')+'">'+gastoStr+'</td>'+
-        '</tr>';
-    }).join('');
+
+    // Agrupar por ubicacion (col 3)
+    var grupos = {};
+    var gruposOrder = [];
+    list.forEach(function(p){
+      var det = p[3] ? p[3] : '—';
+      if(!grupos[det]){ grupos[det]=[]; gruposOrder.push(det); }
+      grupos[det].push(p);
+    });
+
+    var rows = '';
+    gruposOrder.forEach(function(det){
+      // Fila de encabezado de grupo (solo si hay más de 1 grupo)
+      if(gruposOrder.length > 1){
+        rows += '<tr class="grp-header"><td colspan="4">'+det+'</td></tr>';
+      }
+      grupos[det].forEach(function(p){
+        var gasto    = p[2] ? parseFloat(p[2]) : 0;
+        var unidades = p[1] ? parseFloat(p[1]) : 0;
+        totalGasto    += gasto;
+        totalUnidades += unidades;
+        var gastoStr    = gasto    !== 0 ? '$' + Math.abs(gasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+        var unidadesStr = unidades !== 0 ? Math.abs(unidades).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}) : '—';
+        var detalleCell = gruposOrder.length > 1 ? '' : (det !== '—' ? det : '');
+        rows += '<tr>'+
+          '<td>'+detalleCell+'</td>'+
+          '<td>'+p[0]+'</td>'+
+          '<td>'+unidadesStr+'</td>'+
+          '<td style="color:'+(gasto<0?'#dc2626':'#0a7c52')+'">'+gastoStr+'</td>'+
+          '</tr>';
+      });
+    });
+
     var totalGastoStr    = '$' + Math.abs(totalGasto).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
     var totalUnidadesStr = Math.abs(totalUnidades).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
     var totalRow = '<tr class="total-row">'+
