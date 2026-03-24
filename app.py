@@ -790,8 +790,10 @@ function updateWeekSlider(){
   var sl=document.getElementById('weekSlider');
   sl.min=allWeeks[0]; sl.max=allWeeks[allWeeks.length-1]; sl.value=wn;
   document.getElementById('weekNumLabel').textContent='Semana '+wFmt(wn);
-  var recs=DATA.weekly_detail.filter(function(r){return r.week===wn&&r.date_range;});
-  recs.sort(function(a,b){return b.year-a.year;});
+  // Usar el año activo para mostrar la fecha correcta
+  var activeYr=activeYrList(); var yr=activeYr[activeYr.length-1];
+  var recs=DATA.weekly_detail.filter(function(r){return r.week===wn&&r.year===yr&&r.date_range;});
+  if(!recs.length) recs=DATA.weekly_detail.filter(function(r){return r.week===wn&&r.date_range;});
   document.getElementById('weekDateLabel').textContent=recs.length?recs[0].date_range:'';
   var avail=DATA.years.filter(function(yr){return DATA.weekly_detail.some(function(r){return r.week===wn&&r.year===yr;});});
   document.getElementById('weekAvail').textContent='Disponible en: '+avail.join(', ');
@@ -849,7 +851,7 @@ function toggleYear(y){
   var active=DATA.years.filter(function(yr){return state.activeYears[yr];});
   if(state.activeYears[y]&&active.length>1) delete state.activeYears[y];
   else state.activeYears[y]=true;
-  buildYearChips(); renderView(); refreshServSiAbierto();
+  buildYearChips(); renderView(); updateWeekSlider(); refreshServSiAbierto();
 }
 function setRanchYear(yr){
   state.ranchYear=yr;
