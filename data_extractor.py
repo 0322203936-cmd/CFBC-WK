@@ -539,8 +539,14 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         data     = [r + [""] * (max_cols - len(r)) for r in raw]
 
         date_range = ""
-        if len(data) > 3 and len(data[3]) > 1:
-            date_range = str(data[3][1]).strip()
+        for _dr in range(min(8, len(data))):
+            for _dc in range(min(5, len(data[_dr]))):
+                _v = str(data[_dr][_dc]).strip()
+                if _v and " al " in _v.lower() and len(_v) > 8:
+                    date_range = _v
+                    break
+            if date_range:
+                break
 
         exec_idx = -1
         for i, row in enumerate(data):
