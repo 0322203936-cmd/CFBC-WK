@@ -253,7 +253,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 @keyframes pnl-in{from{opacity:0}to{opacity:1}}
 
 /* Header — barra oscura estilo Power BI */
-.pnl-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px 6px 12px;background:#1e2e3d;gap:10px;border-bottom:2px solid #0a7c52}
+.pnl-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px 6px 12px;background:#6e5173;gap:10px;border-bottom:2px solid #0a7c52}
 .pnl-hdr-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
 .pnl-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1}
 .pnl-title{font-size:.73rem;font-weight:700;color:#e2e8f0;font-family:'IBM Plex Mono',monospace;white-space:nowrap;letter-spacing:.2px}
