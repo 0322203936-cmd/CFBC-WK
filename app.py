@@ -271,33 +271,35 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .pnl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 .pnl-scroll::-webkit-scrollbar{height:3px}
 .pnl-scroll::-webkit-scrollbar-thumb{background:#cbd5e1}
-.pnl-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace}
+.pnl-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;table-layout:fixed}
 .pnl-tbl thead tr{background:#f1f5f9;border-bottom:1px solid #cbd5e1}
-.pnl-tbl th{padding:5px 10px;font-size:.58rem;text-transform:uppercase;letter-spacing:.6px;color:#475569;font-weight:700;white-space:nowrap;text-align:right;border-right:1px solid #e2e8f0}
+.pnl-tbl th{padding:5px 8px;font-size:.58rem;text-transform:uppercase;letter-spacing:.6px;color:#475569;font-weight:700;white-space:nowrap;text-align:right;border-right:1px solid #e2e8f0}
 .pnl-tbl th:last-child{border-right:none}
-.pnl-tbl th:first-child{text-align:left;width:108px}
-.pnl-tbl th:nth-child(2){text-align:left}
+.pnl-tbl th:first-child{text-align:left;width:90px}
+.pnl-tbl th:nth-child(2){text-align:left;width:auto}
+.pnl-tbl th:nth-child(3){width:62px}
+.pnl-tbl th:nth-child(4){width:96px}
 .pnl-tbl tbody tr{border-bottom:1px solid #f1f5f9;transition:background .08s}
 .pnl-tbl tbody tr:nth-child(even) td{background:#fafafa}
 .pnl-tbl tbody tr:hover td{background:#eff6f2!important}
-.pnl-tbl td{padding:4px 10px;font-size:.67rem;color:var(--text);text-align:right;vertical-align:middle;font-variant-numeric:tabular-nums;border-right:1px solid #f1f5f9}
+.pnl-tbl td{padding:3px 8px;font-size:.66rem;color:var(--text);text-align:right;vertical-align:middle;font-variant-numeric:tabular-nums;border-right:1px solid #f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnl-tbl td:last-child{border-right:none}
-.pnl-tbl td:first-child{text-align:left;color:#64748b;font-size:.6rem}
+.pnl-tbl td:first-child{text-align:left;color:#64748b;font-size:.59rem}
 .pnl-tbl td:nth-child(2){text-align:left;font-weight:500;color:var(--text)}
-.pnl-tbl td.qty{color:#475569;font-size:.64rem}
-.pnl-tbl td.amt{font-weight:600;font-size:.67rem}
+.pnl-tbl td.qty{color:#475569;font-size:.63rem}
+.pnl-tbl td.amt{font-weight:600;font-size:.66rem}
 .pnl-tbl td.amt.pos{color:#0a7c52}
 .pnl-tbl td.amt.neg{color:#dc2626}
 
 /* Group header rows */
-.pnl-grp td{padding:4px 10px!important;font-size:.6rem!important;font-weight:700!important;letter-spacing:.4px!important;color:#1e293b!important;background:#e8edf2!important;border-top:1px solid #cbd5e1!important;border-bottom:1px solid #cbd5e1!important}
-.pnl-grp td:first-child{border-left:3px solid #0a7c52!important;padding-left:7px!important}
-.pnl-grp-sub{font-weight:400!important;font-size:.57rem!important;color:#64748b!important;margin-left:6px}
-.pnl-grp td.pnl-grp-amt{font-weight:700!important;font-size:.63rem!important;color:#0a7c52!important;text-align:right!important;font-style:normal!important}
+.pnl-grp td{padding:3px 8px!important;font-size:.59rem!important;font-weight:700!important;letter-spacing:.4px!important;color:#1e293b!important;background:#e8edf2!important;border-top:1px solid #cbd5e1!important;border-bottom:1px solid #cbd5e1!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnl-grp td:first-child{border-left:3px solid #0a7c52!important;padding-left:5px!important}
+.pnl-grp-sub{font-weight:400!important;font-size:.56rem!important;color:#64748b!important;margin-left:5px}
+.pnl-grp td.pnl-grp-amt{font-weight:700!important;font-size:.62rem!important;color:#0a7c52!important;text-align:right!important;font-style:normal!important}
 
 /* Total row */
-.pnl-tbl tr.pnl-total td{background:#e8f4ee!important;border-top:2px solid #0a7c52;padding:5px 10px!important;font-weight:700!important;font-size:.67rem!important;color:#0f2044!important}
-.pnl-tbl tr.pnl-total td.amt{color:#0a7c52!important;font-size:.69rem!important}
+.pnl-tbl tr.pnl-total td{background:#e8f4ee!important;border-top:2px solid #0a7c52;padding:4px 8px!important;font-weight:700!important;font-size:.66rem!important;color:#0f2044!important}
+.pnl-tbl tr.pnl-total td.amt{color:#0a7c52!important;font-size:.68rem!important}
 .pnl-tbl tr.pnl-total td:first-child{color:#0a7c52!important;letter-spacing:.4px}
 
 /* Footer strip — una sola línea */
