@@ -589,7 +589,7 @@ var DATA = JSON.parse(_raw);
 // ═══════════════════════════════════════════
 var state = {
   cat:'', currency:'usd', activeYears:{}, ranchYear:'all',
-  view:'semana', weekIdx:0, fromWeek:1, toWeek:52
+  view:'semana', weekIdx:0, fromWeek:1, toWeek:52, servFilter:null
 };
 var lastProductos = null; // guarda {rancho, tipo, src} para refrescar con semana nueva
 var allWeeks = [];
@@ -856,13 +856,20 @@ function setRanchYear(yr){
   DATA.years.forEach(function(y){var b=document.getElementById('ranchYr'+y);if(b) b.classList.toggle('active',yr===y);});
   renderRanchBars();
 }
-function prevWeek(){ if(state.weekIdx>0){state.weekIdx--;updateWeekSlider();renderSemana();refreshProductosSiAbierto();} }
-function nextWeek(){ if(state.weekIdx<allWeeks.length-1){state.weekIdx++;updateWeekSlider();renderSemana();refreshProductosSiAbierto();} }
+function prevWeek(){ if(state.weekIdx>0){state.weekIdx--;updateWeekSlider();renderSemana();refreshProductosSiAbierto();refreshServSiAbierto();} }
+function nextWeek(){ if(state.weekIdx<allWeeks.length-1){state.weekIdx++;updateWeekSlider();renderSemana();refreshProductosSiAbierto();refreshServSiAbierto();} }
 function onWeekSlider(val){
   var wn=parseInt(val), idx=allWeeks.indexOf(wn);
   if(idx<0){ idx=0; var mn=Math.abs(allWeeks[0]-wn); allWeeks.forEach(function(w,i){var d=Math.abs(w-wn);if(d<mn){mn=d;idx=i;}});}
-  state.weekIdx=idx; updateWeekSlider(); renderSemana(); refreshProductosSiAbierto();
+  state.weekIdx=idx; updateWeekSlider(); renderSemana(); refreshProductosSiAbierto(); refreshServSiAbierto();
 }
+function refreshServSiAbierto(){
+  var section=document.getElementById('serviciosSection');
+  if(section && section.style.display!=='none'){
+    renderServPanel(state.servFilter);
+  }
+}
+
 function refreshProductosSiAbierto(){
   var section = document.getElementById('productosSection');
   if(lastProductos && section.style.display !== 'none'){
@@ -1498,7 +1505,8 @@ function buildServSelect(){
 }
 
 function selectServ(val){
-  renderServPanel(val||null);
+  state.servFilter = val||null;
+  renderServPanel(state.servFilter);
 }
 
 function renderServPanel(subcatFilter){
