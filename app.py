@@ -7,20 +7,10 @@ Streamlit — carga datos con Python, renderiza el HTML original tal cual
 import json
 import base64
 import os
-import importlib.util
 import streamlit as st
 import streamlit.components.v1 as components
 
-_extractor_dir = os.path.dirname(__file__)
-_extractor_path = os.path.join(_extractor_dir, "data_extractor.py")
-if not os.path.exists(_extractor_path):
-    _extractor_path = os.path.join(_extractor_dir, "data_extractor (17).py")
-_extractor_spec = importlib.util.spec_from_file_location("data_extractor_runtime", _extractor_path)
-if _extractor_spec is None or _extractor_spec.loader is None:
-    raise ImportError(f"No se pudo cargar data_extractor desde {_extractor_path}")
-_extractor_mod = importlib.util.module_from_spec(_extractor_spec)
-_extractor_spec.loader.exec_module(_extractor_mod)
-get_datos = _extractor_mod.get_datos
+from data_extractor import get_datos
 
 # Cargar imagen de flores desde el repositorio
 _flores_b64 = ""
@@ -323,44 +313,6 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .pnl-empty-ico{width:28px;height:28px;margin:0 auto 8px;opacity:.2;stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round}
 .no-prod{font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--dim);padding:16px 0;text-align:left}
 
-/* ── SERVICIOS — comparativo por rancho ─────────────────────── */
-.svc-shell{display:grid;gap:20px}
-.svc-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:stretch}
-.svc-title-card{position:relative;padding:22px 24px;border-radius:18px;background:linear-gradient(135deg,#f8fafc,#edf7f1 58%,#fff7ed);border:1px solid rgba(148,163,184,.25);overflow:hidden;box-shadow:0 12px 32px rgba(15,32,68,.08)}
-.svc-title-card::before{content:'';position:absolute;inset:auto -20% -55% auto;width:280px;height:280px;background:radial-gradient(circle,rgba(10,124,82,.18),transparent 62%);pointer-events:none}
-.svc-eyebrow{font-size:.68rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--green);font-family:'IBM Plex Mono',monospace;font-weight:700}
-.svc-title{font-size:1.55rem;line-height:1.05;font-weight:800;color:var(--navy);max-width:14ch;margin-top:8px}
-.svc-sub{margin-top:10px;font-size:.78rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;max-width:56ch}
-.svc-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.svc-kpi{background:linear-gradient(180deg,#fff,#f8fafc);border:1px solid rgba(226,232,240,.95);border-radius:18px;padding:18px 18px 16px;min-height:122px;box-shadow:0 10px 24px rgba(15,23,42,.06)}
-.svc-kpi-lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
-.svc-kpi-val{margin-top:12px;font-size:1.45rem;font-weight:800;color:var(--navy);line-height:1.05}
-.svc-kpi-sub{margin-top:8px;font-size:.7rem;color:var(--muted);font-family:'IBM Plex Mono',monospace}
-.svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
-.svc-card{background:linear-gradient(180deg,#fff,#f8fafc);border:1px solid rgba(226,232,240,.95);border-radius:20px;overflow:hidden;box-shadow:0 12px 28px rgba(15,23,42,.07)}
-.svc-card-top{padding:16px 18px 14px;color:#fff;position:relative;overflow:hidden}
-.svc-card-top::after{content:'';position:absolute;inset:auto -18px -34px auto;width:110px;height:110px;background:radial-gradient(circle,rgba(255,255,255,.28),transparent 62%)}
-.svc-ranch{font-size:1.08rem;font-weight:800;letter-spacing:.3px;text-transform:uppercase}
-.svc-total{margin-top:10px;font-size:1.65rem;font-weight:800;letter-spacing:-.6px}
-.svc-card-body{padding:16px 18px 18px;display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:start}
-.svc-donut{width:88px;height:88px;border-radius:50%;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
-.svc-donut::after{content:'';position:absolute;inset:17px;background:var(--surface);border-radius:50%;box-shadow:0 0 0 1px rgba(226,232,240,.9)}
-.svc-donut-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;font-size:.72rem;font-weight:800;color:var(--navy);font-family:'IBM Plex Mono',monospace}
-.svc-list{display:grid;gap:7px}
-.svc-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.72rem}
-.svc-dot{width:10px;height:10px;border-radius:3px;box-shadow:0 0 0 1px rgba(15,23,42,.05)}
-.svc-name{color:var(--text);line-height:1.2}
-.svc-amt{color:var(--navy);font-family:'IBM Plex Mono',monospace;font-weight:700}
-.svc-empty{padding:34px 20px;border:1px dashed var(--border);border-radius:18px;background:linear-gradient(180deg,#fff,#f8fafc);text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace}
-@media(max-width:1100px){
-  .svc-hero{grid-template-columns:1fr}
-}
-@media(max-width:760px){
-  .svc-kpis{grid-template-columns:1fr}
-  .svc-card-body{grid-template-columns:1fr}
-  .svc-donut{margin:0 auto}
-}
-
 </style>
 </head>
 <body>
@@ -387,7 +339,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <span class="cat-select-label" style="background:rgba(110,81,115,0.85);color:#fff;padding:3px 8px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18);">Categoría</span>
     <!-- Selector 1 -->
     <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
-      <select class="cat-select" id="catSelect" onchange="selectMaterial(this.value)" style="background:transparent;font-weight:700;color:#fff;"></select>
+      <select class="cat-select" id="catSelect" onchange="selectCat(this.value)" style="background:transparent;font-weight:700;color:#fff;"></select>
       <span class="cat-arrow" style="color:#fff;">▾</span>
     </div>
     <!-- Selector 2 -->
@@ -399,7 +351,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     </div>
     <!-- Selector 3 -->
     <div class="cat-select-outer" style="background:rgba(110,81,115,0.88);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
-      <select class="cat-select" id="servSelect" onclick="activateServices()" onchange="selectService(this.value)" style="background:transparent;font-weight:700;color:#fff;">
+      <select class="cat-select" id="servSelect" style="background:transparent;font-weight:700;color:#fff;">
         <option value="" disabled selected>COSTO DE SERVICIOS</option>
       </select>
       <span class="cat-arrow" style="color:#fff;">▾</span>
@@ -552,41 +504,6 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
       </div>
     </div>
 
-</div>
-</div>
-<div id="viewServicios" style="display:none">
-  <div class="week-nav">
-    <button class="week-nav-btn" onclick="prevWeek()">◀</button>
-    <div class="week-info">
-      <div class="week-num" id="svcWeekNumLabel">Semana W—</div>
-      <div class="week-date" id="svcWeekDateLabel">—</div>
-    </div>
-    <input type="range" class="week-slider" id="svcWeekSlider" min="1" max="52" value="1" oninput="onWeekSlider(this.value)">
-    <button class="week-nav-btn" onclick="nextWeek()">▶</button>
-    <span class="week-avail" id="svcWeekAvail"></span>
-  </div>
-  <div class="main">
-    <div class="svc-shell">
-      <div class="svc-hero">
-        <div class="svc-title-card">
-          <div class="svc-eyebrow">Costo de servicios</div>
-          <div class="svc-title">Comparativo de gastos por rancho</div>
-          <div class="svc-sub" id="svcSubhead">Selecciona una semana para ver la mezcla de servicios por rancho.</div>
-        </div>
-        <div class="svc-kpis" id="svcKpis"></div>
-      </div>
-      <div id="servicesRanchGrid" class="svc-grid"></div>
-      <div class="row2">
-        <div class="card">
-          <div class="card-hdr"><span class="card-title">Gasto por Rancho</span><span class="card-note" id="svcPieNote">USD</span></div>
-          <div class="chart-wrap medium"><div id="chartServicesPie"></div></div>
-        </div>
-        <div class="card">
-          <div class="card-hdr"><span class="card-title">Comparación de Gastos por Rancho</span><span class="card-note" id="svcBarNote">USD</span></div>
-          <div class="chart-wrap medium"><div id="chartServicesBar"></div></div>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 <div id="productosSection" class="pnl">
@@ -629,7 +546,7 @@ var DATA = JSON.parse(_raw);
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════
 var state = {
-  cat:'', currency:'usd', activeYears:{}, ranchYear:'all', dataMode:'materials',
+  cat:'', currency:'usd', activeYears:{}, ranchYear:'all',
   view:'semana', weekIdx:0, fromWeek:1, toWeek:52
 };
 var lastProductos = null; // guarda {rancho, tipo, src} para refrescar con semana nueva
@@ -639,16 +556,6 @@ var RANCH_COLORS = {
   'Prop-RM':'#047857','PosCo-RM':'#1d4ed8','Campo-RM':'#b45309',
   'Isabela':'#7c3aed','HOOPS':'#c2410c','Cecilia':'#be185d',
   'Cecilia 25':'#047857','Christina':'#0369a1','Albahaca-RM':'#6d28d9','Campo-VI':'#64748b'
-};
-var SERVICE_COLORS = {
-  'ELECTRICIDAD':'#84cc16',
-  'FLETES Y ACARREOS':'#f59e0b',
-  'GASTOS DE EXPORTACION':'#0ea5e9',
-  'CERTIFICADO FITOSANITARIO':'#14b8a6',
-  'TRANSPORTE DE PERSONAL':'#3b82f6',
-  'COMPRA DE FLOR A TERCEROS':'#f97316',
-  'COMIDA PARA EL PERSONAL':'#8b5cf6',
-  'RO, TEL, RTA.ALIM':'#10b981'
 };
 var RANCH_ORDER = ['Prop-RM','PosCo-RM','Campo-RM','Isabela','HOOPS','Cecilia','Cecilia 25','Christina','Albahaca-RM','Campo-VI'];
 var KEY_RANCHES = ['Prop-RM','PosCo-RM','Campo-RM','Isabela','Cecilia','Cecilia 25','Christina'];
@@ -666,9 +573,9 @@ function inicializar() {
     if(!td) return;
     showProductos(td.dataset.r, td.dataset.t, parseInt(td.dataset.w), parseInt(td.dataset.y), td.dataset.src || 'pr');
   });
-  var years = DATA.years, cats = DATA.categories || [];
+  var years = DATA.years, cats = DATA.categories;
   var prefCat = 'MATERIAL DE EMPAQUE';
-  state.cat = cats.indexOf(prefCat) > -1 ? prefCat : (cats[0] || '');
+  state.cat = cats.indexOf(prefCat) > -1 ? prefCat : cats[0];
   // Solo mostrar año más reciente al inicio
   state.activeYears = {};
   var latestYr = years[years.length-1];
@@ -676,7 +583,6 @@ function inicializar() {
 
   var wSet = {};
   DATA.weekly_detail.forEach(function(r){ wSet[r.week] = 1; });
-  (DATA.services_weekly_detail || []).forEach(function(r){ wSet[r.week] = 1; });
   allWeeks = Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
   state.weekIdx = allWeeks.length - 1;
 
@@ -697,7 +603,7 @@ function inicializar() {
 
   // header removido
 
-  buildCatSelect(); buildServiceSelect(); buildYearChips(); updateWeekSlider(); updateRangeSliders(); renderView();
+  buildCatSelect(); buildYearChips(); updateWeekSlider(); updateRangeSliders(); renderView();
   document.getElementById('loader').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   var by=document.getElementById('badgeYears');
@@ -718,57 +624,6 @@ function destroyChart(id){ var el=document.getElementById(id); if(el) Plotly.pur
 function getAnnualVal(cat,yr){ var d=(DATA.summary[cat]||{})[yr]; if(!d) return 0; return state.currency==='usd'?d.usd:d.mxn; }
 function activeYrList(){ return DATA.years.filter(function(y){return state.activeYears[y];}); }
 function wFmt(n){ return 'W'+String(n).padStart(2,'0'); }
-function getServiceYears(){ return (DATA.services_years && DATA.services_years.length) ? DATA.services_years : DATA.years; }
-function getPrimaryYear(){
-  var yrs=activeYrList().slice().sort(function(a,b){return b-a;});
-  return yrs[0] || getServiceYears()[getServiceYears().length-1] || DATA.years[DATA.years.length-1];
-}
-function hasServicesData(){ return !!((DATA.services_weekly_detail||[]).length); }
-function fmtCompact(n){
-  if(n===null||n===undefined||isNaN(n)) return '—';
-  return (n<0?'-$':'$')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:1});
-}
-function getServiceRecords(weekNum,yearNum){
-  return (DATA.services_weekly_detail||[]).filter(function(r){
-    if(weekNum!==undefined&&r.week!==weekNum) return false;
-    if(yearNum!==undefined&&r.year!==yearNum) return false;
-    return true;
-  });
-}
-function getServiceSnapshot(weekNum,yearNum){
-  var records=getServiceRecords(weekNum,yearNum), ranchMap={}, catTotals={}, total=0, dateRange='';
-  records.forEach(function(r){
-    var totalVal=state.currency==='usd'?r.usd_total:r.mxn_total;
-    total+=totalVal;
-    catTotals[r.categoria]=(catTotals[r.categoria]||0)+totalVal;
-    if(!dateRange&&r.date_range) dateRange=r.date_range;
-    var src=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;
-    Object.keys(src||{}).forEach(function(rn){
-      var v=src[rn]||0;
-      if(!v) return;
-      if(!ranchMap[rn]) ranchMap[rn]={total:0,categories:{}};
-      ranchMap[rn].total+=v;
-      ranchMap[rn].categories[r.categoria]=(ranchMap[rn].categories[r.categoria]||0)+v;
-    });
-  });
-  Object.keys(ranchMap).forEach(function(rn){ ranchMap[rn].total=Math.round(ranchMap[rn].total*100)/100; });
-  Object.keys(catTotals).forEach(function(cat){ catTotals[cat]=Math.round(catTotals[cat]*100)/100; });
-  return {records:records,ranchMap:ranchMap,catTotals:catTotals,total:Math.round(total*100)/100,dateRange:dateRange};
-}
-function buildServiceDonut(categories,total){
-  if(!total) return 'conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg)';
-  var start=0, parts=[];
-  (DATA.services_categories||[]).forEach(function(cat){
-    var val=categories[cat]||0;
-    if(!val) return;
-    var deg=(val/total)*360;
-    var end=start+deg;
-    parts.push((SERVICE_COLORS[cat]||'#94a3b8')+' '+start.toFixed(2)+'deg '+end.toFixed(2)+'deg');
-    start=end;
-  });
-  if(start<360) parts.push('#e2e8f0 '+start.toFixed(2)+'deg 360deg');
-  return 'conic-gradient('+parts.join(', ')+')';
-}
 
 function getDetail(cat,weekNum,yearNum){
   return DATA.weekly_detail.filter(function(r){
@@ -831,24 +686,12 @@ function isCombined(cat){ return cat===CAT_MIRFE || cat===CAT_MIPE; }
 
 function buildCatSelect(){
   var el=document.getElementById('catSelect');
-  el.innerHTML='<option value="" disabled'+(state.dataMode==='materials'?'':' selected')+'>COSTO DE MATERIALES</option>' +
+  el.innerHTML='<option value="" disabled>COSTO DE MATERIALES</option>' +
   DATA.categories.map(function(c){
     var label = c===CAT_MIRFE ? c+' (MIRFE)' : c===CAT_MIPE ? c+' (MIPE)' : c;
-    return '<option value="'+c.replace(/"/g,'&quot;')+'"'+(state.dataMode==='materials'&&c===state.cat?' selected':'')+'>'+label+'</option>';
+    return '<option value="'+c.replace(/"/g,'&quot;')+'"'+(c===state.cat?' selected':'')+'>'+label+'</option>';
   }).join('');
   document.getElementById('catCount').textContent=(DATA.categories.indexOf(state.cat)+1)+' / '+DATA.categories.length;
-}
-
-function buildServiceSelect(){
-  var el=document.getElementById('servSelect');
-  if(!el) return;
-  if(!hasServicesData()){
-    el.innerHTML='<option value="" disabled selected>SIN DATOS DE SERVICIOS</option>';
-    return;
-  }
-  el.innerHTML=''
-    + '<option value="" disabled'+(state.dataMode==='services'?'':' selected')+'>COSTO DE SERVICIOS</option>'
-    + '<option value="__overview__"'+(state.dataMode==='services'?' selected':'')+'>Comparativo por rancho</option>';
 }
 
 // Obtener datos combinados MIRFE+MIPE para una semana y año
@@ -902,24 +745,14 @@ function buildYearChips(){
 function updateWeekSlider(){
   if(!allWeeks.length) return;
   var wn=allWeeks[state.weekIdx];
+  var sl=document.getElementById('weekSlider');
+  sl.min=allWeeks[0]; sl.max=allWeeks[allWeeks.length-1]; sl.value=wn;
+  document.getElementById('weekNumLabel').textContent='Semana '+wFmt(wn);
   var recs=DATA.weekly_detail.filter(function(r){return r.week===wn&&r.date_range;});
-  if(!recs.length) recs=(DATA.services_weekly_detail||[]).filter(function(r){return r.week===wn&&r.date_range;});
   recs.sort(function(a,b){return b.year-a.year;});
-  var dateText=recs.length?recs[0].date_range:'';
-  var avail=DATA.years.filter(function(yr){
-    return DATA.weekly_detail.some(function(r){return r.week===wn&&r.year===yr;})
-      || (DATA.services_weekly_detail||[]).some(function(r){return r.week===wn&&r.year===yr;});
-  });
-  [
-    {slider:'weekSlider',num:'weekNumLabel',date:'weekDateLabel',avail:'weekAvail'},
-    {slider:'svcWeekSlider',num:'svcWeekNumLabel',date:'svcWeekDateLabel',avail:'svcWeekAvail'}
-  ].forEach(function(ids){
-    var sl=document.getElementById(ids.slider);
-    if(sl){ sl.min=allWeeks[0]; sl.max=allWeeks[allWeeks.length-1]; sl.value=wn; }
-    var num=document.getElementById(ids.num); if(num) num.textContent='Semana '+wFmt(wn);
-    var dt=document.getElementById(ids.date); if(dt) dt.textContent=dateText;
-    var av=document.getElementById(ids.avail); if(av) av.textContent='Disponible en: '+avail.join(', ');
-  });
+  document.getElementById('weekDateLabel').textContent=recs.length?recs[0].date_range:'';
+  var avail=DATA.years.filter(function(yr){return DATA.weekly_detail.some(function(r){return r.week===wn&&r.year===yr;});});
+  document.getElementById('weekAvail').textContent='Disponible en: '+avail.join(', ');
 }
 function updateRangeSliders(){
   var f=state.fromWeek, t=state.toWeek;
@@ -936,7 +769,6 @@ function updateRangeSliders(){
 // ═══════════════════════════════════════════
 function setView(v){
   closeProductos();
-  state.dataMode='materials';
   state.view=v;
   // Al entrar a tendencia, activar solo 2026
   if(v==='tendencia'){
@@ -945,67 +777,24 @@ function setView(v){
     else state.activeYears[DATA.years[DATA.years.length-1]]=true;
     buildYearChips();
   }
-  buildCatSelect();
-  buildServiceSelect();
+  ['anual','semana','tendencia'].forEach(function(name){
+    document.getElementById('view'+name.charAt(0).toUpperCase()+name.slice(1)).style.display=v===name?'':'none';
+    document.getElementById('vt'+name.charAt(0).toUpperCase()+name.slice(1)).classList.toggle('active',v===name);
+  });
   renderView();
 }
 function renderView(){
-  var tabs=document.querySelector('.view-tabs');
-  if(state.dataMode==='services'){
-    if(tabs) tabs.style.display='none';
-    ['Anual','Semana','Tendencia'].forEach(function(name){
-      var el=document.getElementById('view'+name); if(el) el.style.display='none';
-    });
-    var svc=document.getElementById('viewServicios'); if(svc) svc.style.display='';
-    renderServices();
-  } else {
-    if(tabs) tabs.style.display='flex';
-    var svc=document.getElementById('viewServicios'); if(svc) svc.style.display='none';
-    ['anual','semana','tendencia'].forEach(function(name){
-      document.getElementById('view'+name.charAt(0).toUpperCase()+name.slice(1)).style.display=state.view===name?'':'none';
-      document.getElementById('vt'+name.charAt(0).toUpperCase()+name.slice(1)).classList.toggle('active',state.view===name);
-    });
-    if(state.view==='anual')           renderAnual();
-    else if(state.view==='semana')     renderSemana();
-    else if(state.view==='tendencia')  renderTendencia();
-  }
+  if(state.view==='anual')           renderAnual();
+  else if(state.view==='semana')     renderSemana();
+  else if(state.view==='tendencia')  renderTendencia();
   setTimeout(initScrollHints,80);
 }
-function selectMaterial(cat){
+function selectCat(cat){
   closeProductos();
-  state.dataMode='materials';
   state.cat=cat;
   document.getElementById('catCount').textContent=(DATA.categories.indexOf(cat)+1)+' / '+DATA.categories.length;
-  buildCatSelect();
-  buildServiceSelect();
   renderView();
 }
-function selectCat(cat){ selectMaterial(cat); }
-function activateServices(){
-  if(!hasServicesData()) return;
-  closeProductos();
-  state.dataMode='services';
-  var primary=getPrimaryYear();
-  state.activeYears={};
-  if(primary!==undefined&&primary!==null) state.activeYears[primary]=true;
-  var serviceWeeks=(DATA.services_weekly_detail||[])
-    .filter(function(r){ return r.year===primary; })
-    .map(function(r){ return r.week; })
-    .filter(function(v,i,a){ return a.indexOf(v)===i; })
-    .sort(function(a,b){ return a-b; });
-  if(serviceWeeks.length){
-    var latestIdx=allWeeks.indexOf(serviceWeeks[serviceWeeks.length-1]);
-    if(latestIdx>=0) state.weekIdx=latestIdx;
-  }
-  updateWeekSlider();
-  var serv=document.getElementById('servSelect');
-  if(serv) serv.value='__overview__';
-  buildCatSelect();
-  buildServiceSelect();
-  buildYearChips();
-  renderView();
-}
-function selectService(val){ if(val==='__overview__') activateServices(); }
 function setCurrency(cur){
   state.currency=cur;
   document.getElementById('btnUSD').classList.toggle('active',cur==='usd');
@@ -1013,13 +802,6 @@ function setCurrency(cur){
   renderView();
 }
 function toggleYear(y){
-  if(state.dataMode==='services'){
-    state.activeYears={};
-    state.activeYears[y]=true;
-    buildYearChips();
-    renderView();
-    return;
-  }
   var active=DATA.years.filter(function(yr){return state.activeYears[yr];});
   if(state.activeYears[y]&&active.length>1) delete state.activeYears[y];
   else state.activeYears[y]=true;
@@ -1031,15 +813,14 @@ function setRanchYear(yr){
   DATA.years.forEach(function(y){var b=document.getElementById('ranchYr'+y);if(b) b.classList.toggle('active',yr===y);});
   renderRanchBars();
 }
-function prevWeek(){ if(state.weekIdx>0){state.weekIdx--;updateWeekSlider();renderView();refreshProductosSiAbierto();} }
-function nextWeek(){ if(state.weekIdx<allWeeks.length-1){state.weekIdx++;updateWeekSlider();renderView();refreshProductosSiAbierto();} }
+function prevWeek(){ if(state.weekIdx>0){state.weekIdx--;updateWeekSlider();renderSemana();refreshProductosSiAbierto();} }
+function nextWeek(){ if(state.weekIdx<allWeeks.length-1){state.weekIdx++;updateWeekSlider();renderSemana();refreshProductosSiAbierto();} }
 function onWeekSlider(val){
   var wn=parseInt(val), idx=allWeeks.indexOf(wn);
   if(idx<0){ idx=0; var mn=Math.abs(allWeeks[0]-wn); allWeeks.forEach(function(w,i){var d=Math.abs(w-wn);if(d<mn){mn=d;idx=i;}});}
-  state.weekIdx=idx; updateWeekSlider(); renderView(); refreshProductosSiAbierto();
+  state.weekIdx=idx; updateWeekSlider(); renderSemana(); refreshProductosSiAbierto();
 }
 function refreshProductosSiAbierto(){
-  if(state.dataMode==='services') return;
   var section = document.getElementById('productosSection');
   if(lastProductos && section.style.display !== 'none'){
     var weekNum = allWeeks[state.weekIdx];
@@ -1052,91 +833,14 @@ function onRangeChange(){
   var f=parseInt(document.getElementById('fromSlider').value);
   var t=parseInt(document.getElementById('toSlider').value);
   if(f>t){var tmp=f;f=t;t=tmp;}
-  state.fromWeek=f; state.toWeek=t; updateRangeSliders(); renderView();
+  state.fromWeek=f; state.toWeek=t; updateRangeSliders(); renderTendencia();
 }
 function resetRange(){
   var latestYear = DATA.years[DATA.years.length-1];
   var wks = DATA.weekly_detail.filter(function(r){return r.year===latestYear;}).map(function(r){return r.week;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort(function(a,b){return a-b;});
   state.toWeek   = wks[wks.length-1] || allWeeks[allWeeks.length-1] || 52;
   state.fromWeek = wks[wks.length-2] || wks[0] || state.toWeek;
-  updateRangeSliders(); renderView();
-}
-
-function renderServices(){
-  var weekNum=allWeeks[state.weekIdx] || 1;
-  var yr=getPrimaryYear();
-  var snap=getServiceSnapshot(weekNum, yr);
-  var ranchEntries=Object.keys(snap.ranchMap).map(function(rn){ return {name:rn,data:snap.ranchMap[rn]}; })
-    .sort(function(a,b){ return b.data.total-a.data.total; });
-  var catEntries=(DATA.services_categories||[]).map(function(cat){ return {name:cat,val:snap.catTotals[cat]||0}; })
-    .filter(function(item){ return item.val>0; })
-    .sort(function(a,b){ return b.val-a.val; });
-  var totalLabel=state.currency==='usd'?'USD':'MXN';
-  var sub=document.getElementById('svcSubhead');
-  if(sub) sub.textContent='Semana '+wFmt(weekNum)+' · '+yr+(snap.dateRange?' · '+snap.dateRange:'')+' · '+totalLabel;
-  document.getElementById('svcPieNote').textContent=totalLabel+' · '+yr;
-  document.getElementById('svcBarNote').textContent=totalLabel+' · '+yr;
-
-  var kpiWrap=document.getElementById('svcKpis');
-  var grid=document.getElementById('servicesRanchGrid');
-  if(!ranchEntries.length){
-    if(kpiWrap) kpiWrap.innerHTML='';
-    if(grid) grid.innerHTML='<div class="svc-empty">No hay datos de servicios para '+wFmt(weekNum)+' · '+yr+'.</div>';
-    destroyChart('chartServicesPie');
-    destroyChart('chartServicesBar');
-    return;
-  }
-
-  var maxRanch=ranchEntries[0];
-  var topCat=catEntries[0] || {name:'—',val:0};
-  if(kpiWrap) kpiWrap.innerHTML=''
-    + '<div class="svc-kpi"><div class="svc-kpi-lbl">Total de gastos</div><div class="svc-kpi-val">'+fmt(snap.total)+'</div><div class="svc-kpi-sub">'+ranchEntries.length+' ranchos con movimiento</div></div>'
-    + '<div class="svc-kpi"><div class="svc-kpi-lbl">Rancho con más gastos</div><div class="svc-kpi-val" style="color:'+(RANCH_COLORS[maxRanch.name]||'#0f2044')+'">'+maxRanch.name+'</div><div class="svc-kpi-sub">'+fmt(maxRanch.data.total)+'</div></div>'
-    + '<div class="svc-kpi"><div class="svc-kpi-lbl">Categoría más costosa</div><div class="svc-kpi-val" style="color:'+(SERVICE_COLORS[topCat.name]||'#0f2044')+'">'+topCat.name+'</div><div class="svc-kpi-sub">'+fmt(topCat.val)+'</div></div>';
-
-  if(grid) grid.innerHTML=ranchEntries.map(function(entry){
-    var rn=entry.name, data=entry.data, col=RANCH_COLORS[rn]||'#64748b';
-    var share=snap.total>0?(data.total/snap.total*100):0;
-    var rows=(DATA.services_categories||[]).map(function(cat){
-      var val=data.categories[cat]||0;
-      if(!val) return '';
-      return '<div class="svc-row">'
-        + '<span class="svc-dot" style="background:'+(SERVICE_COLORS[cat]||'#94a3b8')+'"></span>'
-        + '<span class="svc-name">'+cat+'</span>'
-        + '<span class="svc-amt">'+fmtCompact(val)+'</span>'
-        + '</div>';
-    }).join('');
-    return '<div class="svc-card">'
-      + '<div class="svc-card-top" style="background:linear-gradient(135deg,'+col+','+col+'cc)">'
-      + '<div class="svc-ranch">'+rn+'</div>'
-      + '<div class="svc-total">'+fmt(data.total)+'</div>'
-      + '</div>'
-      + '<div class="svc-card-body">'
-      + '<div class="svc-donut" style="background:'+buildServiceDonut(data.categories,data.total)+'"><div class="svc-donut-center">'+share.toFixed(0)+'%</div></div>'
-      + '<div class="svc-list">'+rows+'</div>'
-      + '</div>'
-      + '</div>';
-  }).join('');
-
-  Plotly.newPlot('chartServicesPie', [{
-    type:'pie',
-    labels:ranchEntries.map(function(entry){ return entry.name; }),
-    values:ranchEntries.map(function(entry){ return entry.data.total; }),
-    text:ranchEntries.map(function(entry){ return fmt(entry.data.total); }),
-    textinfo:'label+percent',
-    hovertemplate:'<b>%{label}</b><br>%{text}<extra></extra>',
-    marker:{colors:ranchEntries.map(function(entry){ return RANCH_COLORS[entry.name]||'#94a3b8'; }),line:{color:'#fff',width:2}}
-  }], plotlyLayout({margin:{t:0,r:0,b:0,l:0},legend:{orientation:'h',y:-0.08}}), plotlyCfg());
-
-  Plotly.newPlot('chartServicesBar', [{
-    type:'bar',
-    x:ranchEntries.map(function(entry){ return entry.name; }),
-    y:ranchEntries.map(function(entry){ return entry.data.total; }),
-    marker:{color:ranchEntries.map(function(entry){ return RANCH_COLORS[entry.name]||'#94a3b8'; })},
-    text:ranchEntries.map(function(entry){ return fmt(entry.data.total); }),
-    textposition:'outside',
-    hovertemplate:'<b>%{x}</b><br>%{text}<extra></extra>'
-  }], plotlyLayout({yaxis:{tickformat:'$,.0f'},margin:{t:10,r:10,b:50,l:60}}), plotlyCfg());
+  updateRangeSliders(); renderTendencia();
 }
 
 // ═══════════════════════════════════════════
