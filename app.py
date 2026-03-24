@@ -851,7 +851,23 @@ function toggleYear(y){
   var active=DATA.years.filter(function(yr){return state.activeYears[yr];});
   if(state.activeYears[y]&&active.length>1) delete state.activeYears[y];
   else state.activeYears[y]=true;
-  buildYearChips(); renderView(); updateWeekSlider(); refreshServSiAbierto();
+  buildYearChips();
+  // Reconstruir allWeeks según los años activos
+  var singleYr=activeYrList();
+  if(singleYr.length===1){
+    var yrVal=singleYr[0];
+    var yWks=DATA.weekly_detail
+      .filter(function(r){return r.year===yrVal;})
+      .map(function(r){return r.week;})
+      .filter(function(v,i,a){return a.indexOf(v)===i;})
+      .sort(function(a,b){return a-b;});
+    if(yWks.length){ allWeeks=yWks; state.weekIdx=yWks.length-1; }
+  } else {
+    var wSet={}; DATA.weekly_detail.forEach(function(r){wSet[r.week]=1;});
+    allWeeks=Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
+    state.weekIdx=allWeeks.length-1;
+  }
+  renderView(); updateWeekSlider(); refreshServSiAbierto();
 }
 function setRanchYear(yr){
   state.ranchYear=yr;
