@@ -1609,7 +1609,7 @@ function renderServPanel(subcatFilter){
       textinfo:'label+percent',hole:0.35,
       hovertemplate:'<b>%{label}</b><br>%{text}<extra></extra>',
       text:pieR.map(function(r){return fmt(ranchTotals[r]||0);})
-    }],plotlyLayout({margin:{t:10,r:10,b:10,l:10},height:200,showlegend:false}),plotlyCfg());
+    }],plotlyLayout({margin:{t:25,r:10,b:10,l:10},height:200,showlegend:false}),plotlyCfg());
   }
 
   var section=document.getElementById('serviciosSection');
