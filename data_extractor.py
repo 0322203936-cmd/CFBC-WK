@@ -350,6 +350,7 @@ def _parse_me(rows: list) -> dict:
     RANCH_MAP = {
         'VIV': 'Prop-RM',
         'POS': 'PosCo-RM',
+        'LIM': 'LIMPIEZA',
         'RAM': 'Campo-RM',
         'ISA': 'Isabela',
         'CEC': 'Cecilia',
