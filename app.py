@@ -283,6 +283,11 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .cell-neg { color: #dc2626 !important; font-weight: 600; }
 .cell-muted { color: #999 !important; }
 .cell-total { font-weight: 700 !important; color: #1e3a5f !important; }
+.prod-link {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
 </style>
 </head>
 <body>
@@ -475,6 +480,25 @@ function sumDetail(recs, currency) {
 // INICIALIZAR
 // ═══════════════════════════════════════════════════════════
 function inicializar() {
+  if (!window._prodLinkBound) {
+    document.addEventListener('click', function(e) {
+      var el = e.target.closest('.prod-link');
+      if (!el) return;
+      var row = {
+        _cat: decodeURIComponent(el.dataset.cat || ''),
+        _year: parseInt(el.dataset.year || '0', 10),
+        _week: parseInt(el.dataset.week || '0', 10),
+        _fromWeek: parseInt(el.dataset.from || el.dataset.week || '0', 10),
+        _toWeek: parseInt(el.dataset.to || el.dataset.week || '0', 10),
+      };
+      var ranch = decodeURIComponent(el.dataset.ranch || '');
+      showProdPanel(row, { ranch: ranch || null });
+      e.stopPropagation();
+      e.preventDefault();
+    });
+    window._prodLinkBound = true;
+  }
+
   // Estado inicial
   var prefCat = 'MATERIAL DE EMPAQUE';
   state.cat = DATA.categories.indexOf(prefCat) > -1 ? prefCat : DATA.categories[0];
@@ -994,13 +1018,31 @@ function renderComparativo() {
     return b.week - a.week;
   });
 
+  function makeProdLink(label, row, ranch) {
+    var cat = encodeURIComponent(row._cat || '');
+    var year = row._year || '';
+    var week = row._week || '';
+    var fromW = row._fromWeek || week;
+    var toW = row._toWeek || week;
+    var ranchEnc = encodeURIComponent(ranch || '');
+    return '<span class="prod-link" data-cat="' + cat + '" data-year="' + year + '" data-week="' + week + '" data-from="' + fromW + '" data-to="' + toW + '" data-ranch="' + ranchEnc + '">' + label + '</span>';
+  }
+
   var cols = [
     { field: 'year', headerName: 'AÑO', width: 62, pinned: 'left', filter: 'agNumberColumnFilter', type: 'numericColumn' },
     { field: 'week_lbl',  headerName: 'SEMANA', width: 78, pinned: 'left', filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="font-weight:700;color:#1e3a5f;cursor:pointer" title="Ver productos de la semana">' + (p.value||'') + '</span>'; } },
+      cellRenderer: function(p) {
+        var lbl = '<span style="font-weight:700;color:#1e3a5f" title="Ver productos de la semana">' + (p.value||'') + '</span>';
+        return makeProdLink(lbl, p.data || {}, '');
+      } },
     { field: 'date_range', headerName: 'PERIODO', width: 148, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#666">' + (p.value||'') + '</span>'; } },
-    { field: 'total', headerName: 'TOTAL ' + sym, width: 115, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+    { field: 'total', headerName: 'TOTAL ' + sym, width: 115, type: 'numericColumn', filter: 'agNumberColumnFilter',
+      cellRenderer: function(p) {
+        var v = p.value;
+        if (v === null || v === undefined || v === 0 || isNaN(v)) return '<span style="color:#bbb">—</span>';
+        return makeProdLink('<span style="color:#1e3a5f;font-weight:600">' + fmt(v) + '</span>', p.data || {}, '');
+      } },
     { field: 'deltaAmt', headerName: 'Δ $ vs año ant.', width: 120, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
     { field: 'deltaPct', headerName: 'Δ %', width: 74, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
   ];
@@ -1016,7 +1058,7 @@ function renderComparativo() {
       cellRenderer: function(p) {
         var v = p.value;
         if (!v || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
-        return '<span style="color:' + rcol + ';font-weight:600;cursor:pointer" title="Ver productos del rancho">' + fmt(v) + '</span>';
+        return makeProdLink('<span style="color:' + rcol + ';font-weight:600" title="Ver productos del rancho">' + fmt(v) + '</span>', p.data || {}, rn);
       }
     });
   });
@@ -1355,8 +1397,9 @@ function showProdPanel(rowData, opts) {
 
   var rows = [];
   for (var wk = wkStart; wk <= wkEnd; wk++) {
-    var wkCode = yr * 100 + wk;
-    var weekData = ds[wkCode];
+    var wkCodeLong = (yr * 100) + wk;
+    var wkCodeShort = ((yr % 100) * 100) + wk;
+    var weekData = ds[wkCodeShort] || ds[String(wkCodeShort)] || ds[wkCodeLong] || ds[String(wkCodeLong)];
     if (!weekData) continue;
 
     Object.keys(weekData).forEach(function(ranch) {
@@ -1366,7 +1409,7 @@ function showProdPanel(rowData, opts) {
         if (tipoFilter && tipo !== tipoFilter) return;
         (byTipo[tipo] || []).forEach(function(item) {
           rows.push({
-            week_code: wkCode,
+            week_code: wkCodeShort,
             rancho: ranch,
             tipo: tipo,
             producto: item[0] || '',
