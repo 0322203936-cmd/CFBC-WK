@@ -2,7 +2,6 @@
 app.py
 Centro Floricultor de Baja California
 Streamlit — AG Grid data-dense, Excel-style, full-screen
-
 """
 
 import json
@@ -1078,20 +1077,39 @@ function renderServicios() {
   var yrs  = getActiveYears();
   var sym  = state.currency.toUpperCase();
 
-  // Build rows from weekly_detail records with SV: prefix categories
+  // Build rows from servicios_data (estructura nueva del extractor)
+  // Fallback: weekly_detail con categorias SV: para compatibilidad.
   var svRows = {};
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    if (!r.categoria || !r.categoria.startsWith('SV:')) return;
-    var subcat = r.categoria.replace('SV:','');
-    if (!svRows[subcat]) svRows[subcat] = {};
-    RANCH_ORDER.forEach(function(rn) {
-      var src = state.currency === 'usd' ? r.usd_ranches : r.mxn_ranches;
-      var v   = src[rn] || 0;
-      if (v > 0) svRows[subcat][rn] = (svRows[subcat][rn] || 0) + v;
+  if (Array.isArray(DATA.servicios_data) && DATA.servicios_data.length) {
+    DATA.servicios_data.forEach(function(r) {
+      if (!state.activeYears[r.year]) return;
+      var subcat = (r.subcat || '').trim();
+      if (!subcat) return;
+      if (!svRows[subcat]) svRows[subcat] = {};
+
+      var src = state.currency === 'usd' ? (r.usd_ranches || {}) : (r.mxn_ranches || {});
+      RANCH_ORDER.forEach(function(rn) {
+        var v = src[rn] || 0;
+        if (v > 0) svRows[subcat][rn] = (svRows[subcat][rn] || 0) + v;
+      });
+
+      var total = state.currency === 'usd' ? r.usd_total : r.mxn_total;
+      svRows[subcat]._total = (svRows[subcat]._total || 0) + (total || 0);
     });
-    svRows[subcat]._total = (svRows[subcat]._total || 0) + (state.currency === 'usd' ? r.usd_total : r.mxn_total);
-  });
+  } else {
+    DATA.weekly_detail.forEach(function(r) {
+      if (!state.activeYears[r.year]) return;
+      if (!r.categoria || !r.categoria.startsWith('SV:')) return;
+      var subcat = r.categoria.replace('SV:','');
+      if (!svRows[subcat]) svRows[subcat] = {};
+      RANCH_ORDER.forEach(function(rn) {
+        var src = state.currency === 'usd' ? r.usd_ranches : r.mxn_ranches;
+        var v   = src[rn] || 0;
+        if (v > 0) svRows[subcat][rn] = (svRows[subcat][rn] || 0) + v;
+      });
+      svRows[subcat]._total = (svRows[subcat]._total || 0) + (state.currency === 'usd' ? r.usd_total : r.mxn_total);
+    });
+  }
 
   var cols = [
     { field: 'subcat', headerName: 'SUBCATEGORÍA', pinned: 'left', width: 210, filter: 'agTextColumnFilter',
@@ -1120,7 +1138,12 @@ function renderServicios() {
   });
 
   var grandTotal = Object.values(svRows).reduce(function(s,r) { return s + (r._total||0); }, 0);
-  var rows = SV_SUBCATS.filter(function(sc) { return svRows[sc]; }).map(function(sc) {
+  var orderedSubcats = SV_SUBCATS.filter(function(sc) { return svRows[sc]; });
+  Object.keys(svRows).forEach(function(sc) {
+    if (orderedSubcats.indexOf(sc) === -1) orderedSubcats.push(sc);
+  });
+
+  var rows = orderedSubcats.map(function(sc) {
     var data = svRows[sc] || {};
     var row = { subcat: sc, total: data._total || 0 };
     row.pct = grandTotal > 0 ? (data._total || 0) / grandTotal * 100 : 0;
