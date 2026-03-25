@@ -2,6 +2,7 @@
 app.py
 Centro Floricultor de Baja California
 Streamlit — AG Grid data-dense, Excel-style, full-screen
+
 """
 
 import json
