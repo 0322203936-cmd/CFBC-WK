@@ -1,1294 +1,572 @@
 """
 app.py
 Centro Floricultor de Baja California
-Streamlit — AG Grid data-dense, Excel-style, full-screen
+Vista empresarial enfocada en datos, sin graficas.
 """
 
-import json
-import base64
-import os
-import streamlit as st
-import streamlit.components.v1 as components
+from __future__ import annotations
 
-from data_extractor import get_datos
+import importlib
+import importlib.util
+from pathlib import Path
+
+import pandas as pd
+import streamlit as st
+
+
+def _resolve_get_datos():
+    """Importa get_datos aunque el archivo tenga sufijo '(n)'."""
+    try:
+        module = importlib.import_module("data_extractor")
+        if hasattr(module, "get_datos"):
+            return module.get_datos
+    except Exception:
+        pass
+
+    base_dir = Path(__file__).resolve().parent
+    candidates = sorted(
+        base_dir.glob("data_extractor*.py"),
+        key=lambda p: (p.name != "data_extractor.py", p.name),
+    )
+
+    for candidate in candidates:
+        spec = importlib.util.spec_from_file_location("data_extractor_dynamic", candidate)
+        if not spec or not spec.loader:
+            continue
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        if hasattr(module, "get_datos"):
+            return module.get_datos
+
+    raise ImportError("No se encontro get_datos en ningun data_extractor*.py")
+
+
+get_datos = _resolve_get_datos()
 
 st.set_page_config(
-    page_title="CFBC WK",
+    page_title="CFBC Data Console",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-st.markdown("""
+st.markdown(
+    """
 <style>
   #MainMenu, header, footer { display: none !important; }
-  .stApp { background: #f0f0f0; }
-  .block-container { padding: 0 !important; max-width: 100% !important; }
-  section[data-testid="stSidebar"] { display: none !important; }
+  .block-container {
+    max-width: 100% !important;
+    padding-top: 0.6rem !important;
+    padding-bottom: 0.5rem !important;
+    padding-left: 0.9rem !important;
+    padding-right: 0.9rem !important;
+  }
+  .stMetric {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.5rem 0.7rem;
+    background: #ffffff;
+  }
+  div[data-testid="stHorizontalBlock"] > div {
+    gap: 0.55rem;
+  }
+  .stTabs [data-baseweb="tab-list"] {
+    gap: 0.15rem;
+  }
+  .stTabs [data-baseweb="tab"] {
+    height: 2.1rem;
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+  }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
+
+
+def _to_float(value) -> float:
+    try:
+        if isinstance(value, str):
+            value = value.replace("$", "").replace(",", "").strip()
+        return float(value)
+    except Exception:
+        return 0.0
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_data():
+def load_data() -> dict:
     return get_datos()
+
+
+def _build_weekly_df(data: dict) -> pd.DataFrame:
+    rows = []
+    for item in data.get("weekly_detail", []):
+        rows.append(
+            {
+                "year": int(item.get("year", 0)),
+                "week": int(item.get("week", 0)),
+                "categoria": str(item.get("categoria", "")),
+                "date_range": str(item.get("date_range", "")),
+                "usd_total": _to_float(item.get("usd_total", 0)),
+                "mxn_total": _to_float(item.get("mxn_total", 0)),
+                "usd_ranches": item.get("usd_ranches", {}) or {},
+                "mxn_ranches": item.get("mxn_ranches", {}) or {},
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _build_servicios_df(data: dict) -> pd.DataFrame:
+    rows = []
+    for item in data.get("servicios_data", []):
+        rows.append(
+            {
+                "year": int(item.get("year", 0)),
+                "week": int(item.get("week", 0)),
+                "subcat": str(item.get("subcat", "")),
+                "date_range": str(item.get("date_range", "")),
+                "usd_total": _to_float(item.get("usd_total", 0)),
+                "mxn_total": _to_float(item.get("mxn_total", 0)),
+                "usd_ranches": item.get("usd_ranches", {}) or {},
+                "mxn_ranches": item.get("mxn_ranches", {}) or {},
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _flatten_productos(productos: dict, source: str) -> pd.DataFrame:
+    rows = []
+    for code_raw, ranch_map in (productos or {}).items():
+        code = int(code_raw)
+        year = 2000 + (code // 100)
+        week = code % 100
+
+        for ranch, tipos in (ranch_map or {}).items():
+            for tipo, items in (tipos or {}).items():
+                for row in (items or []):
+                    producto = str(row[0]) if len(row) > 0 else ""
+                    unidades = _to_float(row[1]) if len(row) > 1 else 0.0
+                    gasto = _to_float(row[2]) if len(row) > 2 else 0.0
+                    ubicacion = str(row[3]) if len(row) > 3 else ""
+                    rows.append(
+                        {
+                            "source": source,
+                            "year": year,
+                            "week": week,
+                            "rancho": ranch,
+                            "tipo": tipo,
+                            "producto": producto,
+                            "unidades": unidades,
+                            "gasto": gasto,
+                            "ubicacion": ubicacion,
+                        }
+                    )
+
+    return pd.DataFrame(rows)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _build_productos_df(data: dict) -> pd.DataFrame:
+    frames = [
+        _flatten_productos(data.get("productos", {}), "PR"),
+        _flatten_productos(data.get("productos_mp", {}), "MP"),
+        _flatten_productos(data.get("productos_me", {}), "ME"),
+    ]
+    frames = [f for f in frames if not f.empty]
+    if not frames:
+        return pd.DataFrame(
+            columns=["source", "year", "week", "rancho", "tipo", "producto", "unidades", "gasto", "ubicacion"]
+        )
+    return pd.concat(frames, ignore_index=True)
+
+
+def _value_from_row(row: pd.Series, currency: str, ranch: str) -> float:
+    if ranch == "Todos":
+        return float(row["usd_total"] if currency == "USD" else row["mxn_total"])
+
+    key = "usd_ranches" if currency == "USD" else "mxn_ranches"
+    return _to_float((row.get(key) or {}).get(ranch, 0))
+
+
+def _apply_value(df: pd.DataFrame, currency: str, ranch: str) -> pd.DataFrame:
+    out = df.copy()
+    out["valor"] = out.apply(lambda r: _value_from_row(r, currency, ranch), axis=1)
+    return out
+
+
+def _currency_symbol(currency: str) -> str:
+    return "$" if currency == "USD" else "MXN$"
+
+
+def _to_csv_bytes(df: pd.DataFrame) -> bytes:
+    return df.to_csv(index=False).encode("utf-8")
 
 
 try:
     DATA = load_data()
-except Exception as e:
-    st.error(f"❌ Error cargando datos: {e}")
+except Exception as exc:
+    st.error(f"Error cargando datos: {exc}")
     st.stop()
 
 if "error" in DATA:
-    st.error(f"❌ {DATA['error']}")
-    if st.button("🔄 Reintentar"):
+    st.error(DATA["error"])
+    if st.button("Reintentar", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
     st.stop()
 
-data_json = base64.b64encode(
-    json.dumps(DATA, ensure_ascii=True, default=str).encode('utf-8')
-).decode('ascii')
-
-HTML = """<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CFBC — Control Operativo</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-grid.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-theme-alpine.css">
-<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.js"></script>
-<style>
-:root {
-  --navy: #1e3a5f;
-  --green: #16a34a;
-  --red: #dc2626;
-  --amber: #b45309;
-  --blue: #2563eb;
-  --border: #d0d0d0;
-  --mono: 'Consolas','Courier New',monospace;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--mono); font-size: 12px; background: #f0f0f0; overflow-x: hidden; }
-
-/* ── LOADER ─────────────────────────────────────── */
-#loader {
-  position: fixed; inset: 0; background: #fff; z-index: 999;
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 14px;
-}
-.spin {
-  width: 36px; height: 36px;
-  border: 3px solid #e0e0e0; border-top-color: var(--green);
-  border-radius: 50%; animation: spin 0.9s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.load-txt { font-size: 12px; color: #666; letter-spacing: 0.5px; }
-
-/* ── HEADER — single compact bar ─────────────────── */
-.app-hdr {
-  background: var(--navy);
-  border-bottom: 3px solid var(--green);
-  padding: 5px 10px;
-  display: flex;
-  align-items: center;
-  gap: 0;
-  height: 36px;
-  overflow: hidden;
-}
-.hdr-brand {
-  color: #fff; font-size: 12px; font-weight: 700;
-  letter-spacing: 1px; white-space: nowrap;
-  padding-right: 12px; border-right: 1px solid rgba(255,255,255,0.2);
-  flex-shrink: 0;
-}
-.hdr-kpis { display: flex; gap: 0; flex: 1; overflow: hidden; min-width: 0; }
-.hdr-kpi {
-  padding: 0 12px;
-  border-right: 1px solid rgba(255,255,255,0.12);
-  display: flex; align-items: center; gap: 8px;
-  white-space: nowrap; flex-shrink: 0;
-}
-.hdr-kpi-label { color: rgba(255,255,255,0.45); font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
-.hdr-kpi-val { color: #fff; font-size: 12px; font-weight: 700; }
-.hdr-kpi-delta { font-size: 10px; }
-.hdr-kpi-delta.pos { color: #4ade80; }
-.hdr-kpi-delta.neg { color: #f87171; }
-.hdr-btn {
-  margin-left: auto; flex-shrink: 0;
-  font-size: 10px; font-family: var(--mono); font-weight: 700;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 3px;
-  padding: 3px 10px; cursor: pointer; color: rgba(255,255,255,0.85);
-  height: 24px; transition: background 0.1s; white-space: nowrap;
-}
-.hdr-btn:hover { background: rgba(255,255,255,0.2); }
-
-/* ── TOOLBAR — controls row ──────────────────────── */
-.toolbar {
-  background: #ebebeb;
-  border-bottom: 1px solid var(--border);
-  padding: 4px 8px;
-  display: flex; align-items: center; gap: 6px;
-  flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
-  height: 32px;
-}
-.toolbar::-webkit-scrollbar { display: none; }
-.tb-label {
-  font-size: 9px; color: #777;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  white-space: nowrap; flex-shrink: 0;
-}
-.tb-sep { width: 1px; height: 18px; background: #ccc; flex-shrink: 0; }
-select.tb-sel {
-  font-size: 11px; font-family: var(--mono);
-  background: #fff; border: 1px solid #bbb; border-radius: 3px;
-  padding: 2px 6px; color: #222; cursor: pointer; height: 22px;
-  flex-shrink: 0;
-}
-select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
-.tb-btn {
-  font-size: 10px; font-family: var(--mono); font-weight: 700;
-  background: #fff; border: 1px solid #bbb; border-radius: 3px;
-  padding: 2px 8px; cursor: pointer; height: 22px;
-  white-space: nowrap; color: #333; transition: background 0.1s; flex-shrink: 0;
-}
-.tb-btn:hover { background: #ddd; }
-.tb-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
-.tb-btn.green-active { background: var(--green); color: #fff; border-color: var(--green); }
-.tb-grp { display: flex; flex-shrink: 0; }
-.tb-grp .tb-btn { border-radius: 0; border-right-width: 0; }
-.tb-grp .tb-btn:first-child { border-radius: 3px 0 0 3px; }
-.tb-grp .tb-btn:last-child { border-radius: 0 3px 3px 0; border-right-width: 1px; }
-.week-ctr { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.week-ctr span {
-  font-size: 11px; font-weight: 700; color: var(--navy);
-  min-width: 62px; text-align: center;
-}
-.tb-slider { width: 100px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
-.yr-chip {
-  font-size: 10px; font-family: var(--mono); font-weight: 700;
-  padding: 1px 7px; border-radius: 3px; cursor: pointer;
-  border: 1px solid transparent; background: transparent;
-  transition: all 0.1s; flex-shrink: 0;
-}
-.yr-chip.on { background: #fff; }
-.tb-search {
-  font-size: 11px; font-family: var(--mono);
-  border: 1px solid #bbb; border-radius: 3px;
-  padding: 2px 8px; height: 22px; width: 130px;
-  background: #fff;
-}
-.tb-search:focus { outline: 2px solid var(--green); outline-offset: -1px; }
-
-/* ── VIEW TABS ───────────────────────────────────── */
-.view-tabs {
-  background: #f8f8f8;
-  border-bottom: 2px solid #d5d5d5;
-  display: flex; padding: 0; height: 28px;
-}
-.vtab {
-  padding: 0 14px; font-size: 10px; font-weight: 700;
-  font-family: var(--mono); cursor: pointer; border: none;
-  background: transparent; color: #888;
-  border-bottom: 2px solid transparent; margin-bottom: -2px;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  transition: color 0.1s; white-space: nowrap; height: 28px;
-}
-.vtab:hover { color: #333; background: rgba(0,0,0,0.03); }
-.vtab.active { color: var(--green); border-bottom-color: var(--green); background: #fff; }
-
-/* ── GRID CONTAINER ──────────────────────────────── */
-#gridWrap {
-  background: #fff;
-  border: 1px solid #d5d5d5;
-  border-top: none;
-}
-
-/* ── STATUS BAR ──────────────────────────────────── */
-.statusbar {
-  background: #ebebeb; border-top: 1px solid #ccc;
-  padding: 2px 10px; font-size: 10px; color: #666;
-  display: flex; gap: 14px; align-items: center;
-  height: 22px; overflow: hidden;
-}
-.statusbar b { color: #333; }
-.statusbar .st-sep { color: #bbb; }
-
-/* ── PRODUCTOS PANEL ─────────────────────────────── */
-#prodPanel {
-  display: none; background: #fff;
-  border-top: 2px solid var(--green);
-}
-#prodPanel.show { display: block; }
-.prod-hdr {
-  background: #1e3a5f; padding: 5px 10px;
-  display: flex; align-items: center; gap: 10px; height: 28px;
-}
-.prod-hdr-title {
-  color: #fff; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.5px; flex: 1;
-}
-.prod-hdr-meta { color: rgba(255,255,255,0.6); font-size: 10px; }
-.prod-close {
-  background: transparent; border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 3px; color: rgba(255,255,255,0.8);
-  cursor: pointer; font-size: 10px; padding: 1px 8px; font-family: var(--mono);
-}
-.prod-close:hover { border-color: #fff; color: #fff; }
-
-/* ── AG GRID THEME OVERRIDES ─────────────────────── */
-.ag-theme-alpine {
-  --ag-font-family: 'Consolas', 'Courier New', monospace;
-  --ag-font-size: 11px;
-  --ag-row-height: 22px;
-  --ag-header-height: 25px;
-  --ag-cell-horizontal-padding: 6px;
-  --ag-borders: solid 1px;
-  --ag-border-color: #d8d8d8;
-  --ag-secondary-border-color: #e5e5e5;
-  --ag-header-background-color: #e8e8e8;
-  --ag-header-foreground-color: #333;
-  --ag-odd-row-background-color: #fafafa;
-  --ag-even-row-background-color: #ffffff;
-  --ag-row-hover-color: #e8f5e9;
-  --ag-selected-row-background-color: #c8e6c9;
-  --ag-alpine-active-color: #16a34a;
-  --ag-input-focus-border-color: #16a34a;
-  --ag-range-selection-border-color: #16a34a;
-  --ag-header-column-separator-display: block;
-  --ag-header-column-separator-height: 60%;
-  --ag-header-column-separator-color: #ccc;
-}
-.ag-theme-alpine .ag-header-cell {
-  font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.3px;
-}
-.ag-theme-alpine .ag-pinned-left-cols-container {
-  border-right: 2px solid #aaa !important;
-}
-.ag-theme-alpine .ag-row-pinned {
-  background: #e8f5e9 !important;
-  border-top: 2px solid var(--green) !important;
-  font-weight: 700;
-}
-.ag-theme-alpine .ag-row-pinned .ag-cell { color: #1e3a5f !important; }
-.ag-theme-alpine .ag-group-row { background: #eff3fa !important; font-weight: 700; }
-
-/* Inline cell styles injected via cellStyle */
-.cell-pos { color: #16a34a !important; font-weight: 600; }
-.cell-neg { color: #dc2626 !important; font-weight: 600; }
-.cell-muted { color: #999 !important; }
-.cell-total { font-weight: 700 !important; color: #1e3a5f !important; }
-</style>
-</head>
-<body>
-
-<!-- LOADER -->
-<div id="loader">
-  <div class="spin"></div>
-  <div class="load-txt">CFBC — Cargando datos...</div>
-</div>
-
-<!-- APP -->
-<div id="app" style="display:none">
-
-  <!-- HEADER -->
-  <div class="app-hdr">
-    <div class="hdr-brand">CFBC ▸ CONTROL SEMANAL</div>
-    <div class="hdr-kpis" id="hdrKpis"></div>
-    <button class="hdr-btn" onclick="exportCSV()">⬇ CSV</button>
-    <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">⟳</button>
-  </div>
-
-  <!-- TOOLBAR -->
-  <div class="toolbar">
-    <span class="tb-label">Cat</span>
-    <select class="tb-sel" id="catSel" onchange="onCatChange(this.value)" style="max-width:200px"></select>
-    <div class="tb-sep"></div>
-    <div class="tb-grp">
-      <button class="tb-btn active" id="btnUSD" onclick="setCurrency('usd')">USD</button>
-      <button class="tb-btn" id="btnMXN" onclick="setCurrency('mxn')">MXN</button>
-    </div>
-    <div class="tb-sep"></div>
-    <span class="tb-label">Semana</span>
-    <div class="week-ctr">
-      <button class="tb-btn" onclick="prevWeek()">◀</button>
-      <span id="weekLabel">—</span>
-      <button class="tb-btn" onclick="nextWeek()">▶</button>
-    </div>
-    <input type="range" class="tb-slider" id="weekSlider" min="1" max="52" value="1" oninput="onWeekSlider(this.value)">
-    <div class="tb-sep"></div>
-    <span class="tb-label">Años</span>
-    <div id="yearChips" style="display:flex;gap:3px"></div>
-    <div class="tb-sep"></div>
-    <input type="text" class="tb-search" id="quickFilter" placeholder="🔍  filtrar tabla..." oninput="onQuickFilter(this.value)">
-  </div>
-
-  <!-- VIEW TABS -->
-  <div class="view-tabs">
-    <button class="vtab active" id="vtSemana"    onclick="setView('semana')">Semana</button>
-    <button class="vtab"        id="vtAnual"     onclick="setView('anual')">Anual</button>
-    <button class="vtab"        id="vtRancho"    onclick="setView('rancho')">Por Rancho</button>
-    <button class="vtab"        id="vtDetalle"   onclick="setView('detalle')">Detalle Semanal</button>
-    <button class="vtab"        id="vtProductos" onclick="setView('productos')">Productos</button>
-    <button class="vtab"        id="vtServicios" onclick="setView('servicios')">Costo Servicios</button>
-  </div>
-
-  <!-- GRID AREA -->
-  <div id="gridWrap">
-    <div id="myGrid" class="ag-theme-alpine" style="width:100%;height:600px"></div>
-  </div>
-
-  <!-- PRODUCTOS SUB-PANEL -->
-  <div id="prodPanel">
-    <div class="prod-hdr">
-      <div class="prod-hdr-title" id="prodTitle">PRODUCTOS</div>
-      <div class="prod-hdr-meta" id="prodMeta"></div>
-      <button class="prod-close" onclick="closeProdPanel()">✕ CERRAR</button>
-    </div>
-    <div id="prodGrid" class="ag-theme-alpine" style="width:100%;height:300px"></div>
-  </div>
-
-  <!-- STATUS BAR -->
-  <div class="statusbar" id="statusbar">
-    <span>Filas: <b id="stRows">—</b></span>
-    <span class="st-sep">|</span>
-    <span>Total: <b id="stTotal">—</b></span>
-    <span class="st-sep">|</span>
-    <span id="stWeekDate" style="color:#888"></span>
-    <span style="margin-left:auto;color:#aaa;font-size:9px" id="stInfo"></span>
-  </div>
-</div><!-- /app -->
-
-<script>
-// ═══════════════════════════════════════════════════════════
-// DATOS
-// ═══════════════════════════════════════════════════════════
-var _raw = atob('__DATA_JSON__');
-var DATA = JSON.parse(_raw);
-
-// ═══════════════════════════════════════════════════════════
-// CONSTANTES
-// ═══════════════════════════════════════════════════════════
-var RANCH_ORDER = ['Prop-RM','PosCo-RM','Campo-RM','Isabela','HOOPS','Cecilia','Cecilia 25','Christina','Albahaca-RM','Campo-VI'];
-var RANCH_COLORS = {
-  'Prop-RM':'#047857','PosCo-RM':'#1d4ed8','Campo-RM':'#b45309',
-  'Isabela':'#7c3aed','HOOPS':'#c2410c','Cecilia':'#be185d',
-  'Cecilia 25':'#047857','Christina':'#0369a1','Albahaca-RM':'#6d28d9','Campo-VI':'#64748b'
-};
-var YEAR_COLORS = {2021:'#0ea5e9',2022:'#f59e0b',2023:'#22c55e',2024:'#a855f7',2025:'#f97316',2026:'#ef4444'};
-var CAT_MIRFE = 'FERTILIZANTES';
-var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
-
-// ═══════════════════════════════════════════════════════════
-// ESTADO
-// ═══════════════════════════════════════════════════════════
-var state = {
-  cat: '', currency: 'usd', activeYears: {}, view: 'semana',
-  weekIdx: 0
-};
-var allWeeks = [];
-var mainGridApi = null;
-var prodGridApi = null;
-
-// ═══════════════════════════════════════════════════════════
-// FORMATEO
-// ═══════════════════════════════════════════════════════════
-function fmt(n) {
-  if (n === null || n === undefined || n === 0 || isNaN(n)) return '—';
-  var neg = n < 0, s = Math.abs(n);
-  return (neg ? '-$' : '$') + s.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-}
-function fmtFull(n) {
-  if (!n || isNaN(n)) return '—';
-  var neg = n < 0, s = Math.abs(n);
-  return (neg ? '-$' : '$') + s.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-function fmtPct(n) {
-  if (n === null || n === undefined || isNaN(n)) return '—';
-  var sign = n > 0 ? '+' : '';
-  return sign + n.toFixed(1) + '%';
-}
-function wFmt(n) { return 'W' + String(n).padStart(2,'0'); }
-function recargar() { window.location.reload(); }
-
-// ═══════════════════════════════════════════════════════════
-// DATA HELPERS
-// ═══════════════════════════════════════════════════════════
-function getActiveYears() {
-  return DATA.years.filter(function(y) { return state.activeYears[y]; });
-}
-function getWeekDetail(cat, weekNum, yr) {
-  return DATA.weekly_detail.filter(function(r) {
-    return r.categoria === cat && r.week === weekNum && r.year === yr;
-  });
-}
-function sumDetail(recs, currency) {
-  var out = { total: 0, ranches: {} };
-  recs.forEach(function(r) {
-    var v = currency === 'usd' ? r.usd_total : r.mxn_total;
-    out.total += v;
-    var rsrc = currency === 'usd' ? r.usd_ranches : r.mxn_ranches;
-    Object.keys(rsrc || {}).forEach(function(rn) {
-      out.ranches[rn] = (out.ranches[rn] || 0) + rsrc[rn];
-    });
-    if (r.date_range) out.date_range = r.date_range;
-  });
-  return out;
-}
-
-// ═══════════════════════════════════════════════════════════
-// INICIALIZAR
-// ═══════════════════════════════════════════════════════════
-function inicializar() {
-  // Estado inicial
-  var prefCat = 'MATERIAL DE EMPAQUE';
-  state.cat = DATA.categories.indexOf(prefCat) > -1 ? prefCat : DATA.categories[0];
-
-  // Año más reciente activo
-  state.activeYears = {};
-  var latestYr = DATA.years[DATA.years.length - 1];
-  var prevYr = DATA.years[DATA.years.length - 2];
-  if (latestYr) state.activeYears[latestYr] = true;
-  if (prevYr)   state.activeYears[prevYr]   = true;
-
-  // Semanas disponibles
-  var wSet = {};
-  DATA.weekly_detail.forEach(function(r) { wSet[r.week] = 1; });
-  allWeeks = Object.keys(wSet).map(Number).sort(function(a,b) { return a-b; });
-
-  // Ir a la semana más reciente del año más reciente
-  var wksLatest = DATA.weekly_detail
-    .filter(function(r) { return r.year === latestYr; })
-    .map(function(r) { return r.week; })
-    .filter(function(v,i,a) { return a.indexOf(v) === i; })
-    .sort(function(a,b) { return a-b; });
-  var curWeek = wksLatest[wksLatest.length - 1] || allWeeks[allWeeks.length - 1];
-  var idx = allWeeks.indexOf(curWeek);
-  state.weekIdx = idx >= 0 ? idx : allWeeks.length - 1;
-
-  buildCatSelect();
-  buildYearChips();
-  updateWeekControls();
-  buildMainGrid();
-  renderView();
-  updateHeader();
-  document.getElementById('loader').style.display = 'none';
-  document.getElementById('app').style.display   = 'block';
-  setTimeout(resizeGrid, 50);
-}
-
-// ═══════════════════════════════════════════════════════════
-// UI BUILDERS
-// ═══════════════════════════════════════════════════════════
-function buildCatSelect() {
-  var el = document.getElementById('catSel');
-  el.innerHTML = DATA.categories.map(function(c) {
-    return '<option value="' + c.replace(/"/g,'&quot;') + '"' + (c === state.cat ? ' selected' : '') + '>' + c + '</option>';
-  }).join('');
-}
-function buildYearChips() {
-  var el = document.getElementById('yearChips');
-  el.innerHTML = DATA.years.map(function(y) {
-    var col = YEAR_COLORS[y] || '#888';
-    var on = state.activeYears[y] ? ' on' : '';
-    return '<button class="yr-chip' + on + '" id="yrChip' + y + '" style="color:' + col + ';border-color:' + (state.activeYears[y] ? col : 'transparent') + ';background:' + (state.activeYears[y] ? col + '20' : 'transparent') + '" onclick="toggleYear(' + y + ')">' + y + '</button>';
-  }).join('');
-}
-function updateWeekControls() {
-  var wn = allWeeks[state.weekIdx] || 1;
-  var sl = document.getElementById('weekSlider');
-  sl.min = allWeeks[0] || 1; sl.max = allWeeks[allWeeks.length-1] || 52; sl.value = wn;
-  var activeYrs = getActiveYears();
-  var yr = activeYrs[activeYrs.length - 1] || DATA.years[DATA.years.length - 1];
-  var dateText = '';
-  if (DATA.week_date_ranges) dateText = DATA.week_date_ranges[yr + '-' + wn] || DATA.week_date_ranges[String(yr) + '-' + String(wn)] || '';
-  if (!dateText) {
-    var recs = (DATA.weekly_detail || []).filter(function(r) { return r.week === wn && r.year === yr && r.date_range; });
-    if (recs.length) dateText = recs[0].date_range;
-  }
-  document.getElementById('weekLabel').textContent = wFmt(wn) + ' · ' + yr;
-  document.getElementById('stWeekDate').textContent = dateText;
-}
-function updateHeader() {
-  var yrs = getActiveYears();
-  var wn  = allWeeks[state.weekIdx] || 1;
-  var curYr  = yrs[yrs.length - 1];
-  var prevYr = yrs[yrs.length - 2];
-  // Grand total for current week, all categories, current year
-  var grandTotal = 0;
-  DATA.categories.forEach(function(cat) {
-    var recs = getWeekDetail(cat, wn, curYr);
-    recs.forEach(function(r) { grandTotal += state.currency === 'usd' ? r.usd_total : r.mxn_total; });
-  });
-  var prevTotal = 0;
-  if (prevYr) {
-    DATA.categories.forEach(function(cat) {
-      var recs = getWeekDetail(cat, wn, prevYr);
-      recs.forEach(function(r) { prevTotal += state.currency === 'usd' ? r.usd_total : r.mxn_total; });
-    });
-  }
-  var delta = prevTotal > 0 ? (grandTotal - prevTotal) / prevTotal * 100 : null;
-  // Annual total current year
-  var annualTotal = 0;
-  DATA.categories.forEach(function(cat) {
-    var d = (DATA.summary[cat] || {})[curYr];
-    if (d) annualTotal += state.currency === 'usd' ? d.usd : d.mxn;
-  });
-
-  var html = '';
-  html += '<div class="hdr-kpi"><span class="hdr-kpi-label">SEMANA ' + wFmt(wn) + ' · ' + curYr + '</span><span class="hdr-kpi-val">' + fmt(grandTotal) + '</span>';
-  if (delta !== null) {
-    var cls = delta >= 0 ? 'pos' : 'neg';
-    var arrow = delta >= 0 ? '▲' : '▼';
-    html += '<span class="hdr-kpi-delta ' + cls + '">' + arrow + ' ' + Math.abs(delta).toFixed(1) + '%</span>';
-  }
-  html += '</div>';
-  html += '<div class="hdr-kpi"><span class="hdr-kpi-label">ACUM. ANUAL ' + curYr + '</span><span class="hdr-kpi-val">' + fmt(annualTotal) + '</span></div>';
-  html += '<div class="hdr-kpi"><span class="hdr-kpi-label">CATEGORÍA</span><span class="hdr-kpi-val" style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis">' + state.cat + '</span></div>';
-  html += '<div class="hdr-kpi"><span class="hdr-kpi-label">MONEDA</span><span class="hdr-kpi-val">' + state.currency.toUpperCase() + '</span></div>';
-  document.getElementById('hdrKpis').innerHTML = html;
-}
-
-// ═══════════════════════════════════════════════════════════
-// EVENTS
-// ═══════════════════════════════════════════════════════════
-function onCatChange(val) {
-  state.cat = val;
-  renderView();
-  updateHeader();
-}
-function setCurrency(cur) {
-  state.currency = cur;
-  document.getElementById('btnUSD').className = 'tb-btn' + (cur === 'usd' ? ' active' : '');
-  document.getElementById('btnMXN').className = 'tb-btn' + (cur === 'mxn' ? ' active' : '');
-  renderView();
-  updateHeader();
-}
-function toggleYear(y) {
-  var active = DATA.years.filter(function(yr) { return state.activeYears[yr]; });
-  if (state.activeYears[y] && active.length > 1) delete state.activeYears[y];
-  else state.activeYears[y] = true;
-  buildYearChips();
-  renderView();
-  updateHeader();
-}
-function prevWeek() {
-  if (state.weekIdx > 0) { state.weekIdx--; updateWeekControls(); renderView(); updateHeader(); }
-}
-function nextWeek() {
-  if (state.weekIdx < allWeeks.length - 1) { state.weekIdx++; updateWeekControls(); renderView(); updateHeader(); }
-}
-function onWeekSlider(val) {
-  var wn = parseInt(val);
-  var idx = allWeeks.indexOf(wn);
-  if (idx < 0) {
-    idx = 0; var mn = Math.abs(allWeeks[0] - wn);
-    allWeeks.forEach(function(w,i) { var d=Math.abs(w-wn); if(d<mn){mn=d;idx=i;} });
-  }
-  state.weekIdx = idx;
-  updateWeekControls(); renderView(); updateHeader();
-}
-function setView(v) {
-  state.view = v;
-  ['semana','anual','rancho','detalle','productos','servicios'].forEach(function(name) {
-    var el = document.getElementById('vt' + name.charAt(0).toUpperCase() + name.slice(1));
-    if (el) el.className = 'vtab' + (v === name ? ' active' : '');
-  });
-  closeProdPanel();
-  renderView();
-}
-function onQuickFilter(val) {
-  if (mainGridApi) mainGridApi.setQuickFilter(val);
-}
-function exportCSV() {
-  if (mainGridApi) mainGridApi.exportDataAsCsv({ fileName: 'CFBC_' + state.view + '_' + new Date().toISOString().slice(0,10) + '.csv' });
-}
-
-// ═══════════════════════════════════════════════════════════
-// MAIN GRID SETUP
-// ═══════════════════════════════════════════════════════════
-function buildMainGrid() {
-  var el = document.getElementById('myGrid');
-  var opts = {
-    columnDefs: [],
-    rowData: [],
-    rowHeight: 22,
-    headerHeight: 25,
-    defaultColDef: {
-      sortable: true,
-      filter: true,
-      resizable: true,
-      suppressMovable: false,
-    },
-    suppressCellFocus: false,
-    enableCellTextSelection: true,
-    animateRows: false,
-    suppressColumnVirtualisation: false,
-    onGridReady: function(params) { mainGridApi = params.api; },
-    onRowClicked: function(e) { onMainRowClick(e.data); },
-    getRowStyle: function(params) {
-      if (params.node.rowPinned) return { background: '#e8f5e9', fontWeight: '700' };
-      return null;
-    },
-  };
-  new agGrid.Grid(el, opts);
-}
-function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
-  if (!mainGridApi) return;
-  mainGridApi.setColumnDefs(colDefs);
-  mainGridApi.setRowData(rowData);
-  mainGridApi.setPinnedBottomRowData(pinnedBottom || []);
-  mainGridApi.sizeColumnsToFit();
-  document.getElementById('stRows').textContent  = rowData.length;
-  document.getElementById('stTotal').textContent = statusText || '';
-  document.getElementById('stInfo').textContent  = state.view.toUpperCase() + ' · ' + state.cat;
-}
-
-// ═══════════════════════════════════════════════════════════
-// CELL RENDERERS
-// ═══════════════════════════════════════════════════════════
-function moneyRenderer(params) {
-  var v = params.value;
-  if (v === null || v === undefined || v === 0 || isNaN(v)) return '<span style="color:#bbb">—</span>';
-  return '<span style="color:#1e3a5f;font-weight:600">' + fmt(v) + '</span>';
-}
-function deltaRenderer(params) {
-  var v = params.value;
-  if (v === null || v === undefined || isNaN(v)) return '<span style="color:#bbb">—</span>';
-  if (Math.abs(v) < 0.5) return '<span style="color:#999">~0%</span>';
-  var col = v > 0 ? '#16a34a' : '#dc2626';
-  var arrow = v > 0 ? '▲' : '▼';
-  return '<span style="color:' + col + ';font-weight:700">' + arrow + ' ' + Math.abs(v).toFixed(1) + '%</span>';
-}
-function deltaAmtRenderer(params) {
-  var v = params.value;
-  if (!v || isNaN(v)) return '<span style="color:#bbb">—</span>';
-  var col = v > 0 ? '#16a34a' : '#dc2626';
-  var sign = v > 0 ? '+' : '';
-  return '<span style="color:' + col + '">' + sign + fmt(v) + '</span>';
-}
-function barRenderer(maxVal) {
-  return function(params) {
-    var v = params.value;
-    if (!v || isNaN(v)) return '<span style="color:#bbb">—</span>';
-    var pct = Math.min(v / (maxVal || 1) * 54, 54);
-    var color = RANCH_COLORS[params.colDef.field] || '#16a34a';
-    return '<div style="display:flex;align-items:center;gap:4px">' +
-      '<div style="width:' + pct.toFixed(0) + 'px;height:7px;background:' + color + ';border-radius:1px;flex-shrink:0"></div>' +
-      '<span style="color:#333">' + fmt(v) + '</span></div>';
-  };
-}
-function catRenderer(params) {
-  var v = params.value;
-  if (!v) return '';
-  return '<span style="font-weight:700;color:#1e3a5f;font-size:10px">' + v + '</span>';
-}
-function ranchRenderer(ranch) {
-  var col = RANCH_COLORS[ranch] || '#888';
-  return function(params) {
-    var v = params.value;
-    if (!v || isNaN(v) || v === 0) return '<span style="color:#ddd">—</span>';
-    // mini bar proportional
-    var maxV = params.colDef._maxVal || 1;
-    var w = Math.min(v / maxV * 40, 40);
-    return '<div style="display:flex;align-items:center;gap:3px">' +
-      '<div style="width:' + w.toFixed(0) + 'px;height:6px;background:' + col + ';border-radius:1px;flex-shrink:0;min-width:2px"></div>' +
-      '<span style="color:' + col + ';font-weight:600">' + fmt(v) + '</span></div>';
-  };
-}
-
-// ═══════════════════════════════════════════════════════════
-// VIEW ROUTER
-// ═══════════════════════════════════════════════════════════
-function renderView() {
-  if (!mainGridApi) return;
-  document.getElementById('prodPanel').className = '';
-  if      (state.view === 'semana')    renderSemana();
-  else if (state.view === 'anual')     renderAnual();
-  else if (state.view === 'rancho')    renderRancho();
-  else if (state.view === 'detalle')   renderDetalle();
-  else if (state.view === 'productos') renderProductosFull();
-  else if (state.view === 'servicios') renderServicios();
-}
-
-// ═══════════════════════════════════════════════════════════
-// VIEW 1: SEMANA
-// Rows = categories, Cols = [prevYr, curYr, Δ$, Δ%, ranches]
-// ═══════════════════════════════════════════════════════════
-function renderSemana() {
-  var yrs = getActiveYears();
-  var wn  = allWeeks[state.weekIdx] || 1;
-  var cur = yrs[yrs.length - 1];
-  var prev= yrs.length > 1 ? yrs[yrs.length - 2] : null;
-  var sym = state.currency.toUpperCase();
-
-  // Calculate max ranch value across all categories for bar scaling
-  var ranchMaxes = {};
-  RANCH_ORDER.forEach(function(r) { ranchMaxes[r] = 0; });
-  DATA.categories.forEach(function(cat) {
-    var recs = getWeekDetail(cat, wn, cur);
-    var agg  = sumDetail(recs, state.currency);
-    RANCH_ORDER.forEach(function(r) {
-      if ((agg.ranches[r] || 0) > ranchMaxes[r]) ranchMaxes[r] = agg.ranches[r] || 0;
-    });
-  });
-
-  // Build columns
-  var cols = [
-    { field: 'categoria', headerName: 'CATEGORÍA', pinned: 'left', width: 230,
-      cellRenderer: catRenderer, filter: 'agTextColumnFilter' }
-  ];
-  if (prev) {
-    cols.push({ field: 'v' + prev, headerName: String(prev) + ' ' + sym, width: 100,
-      type: 'numericColumn', cellRenderer: moneyRenderer, filter: 'agNumberColumnFilter' });
-  }
-  cols.push({ field: 'v' + cur, headerName: String(cur) + ' ' + sym + ' ★', width: 110,
-    type: 'numericColumn', cellRenderer: moneyRenderer, filter: 'agNumberColumnFilter' });
-  if (prev) {
-    cols.push({ field: 'deltaAmt', headerName: 'Δ $', width: 90,
-      type: 'numericColumn', cellRenderer: deltaAmtRenderer, filter: 'agNumberColumnFilter' });
-    cols.push({ field: 'deltaPct', headerName: 'Δ %', width: 72,
-      type: 'numericColumn', cellRenderer: deltaRenderer, filter: 'agNumberColumnFilter' });
-  }
-  // Ranch columns (for current year)
-  RANCH_ORDER.forEach(function(r) {
-    var col = {
-      field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 110,
-      type: 'numericColumn', filter: 'agNumberColumnFilter',
-      _maxVal: ranchMaxes[r] || 1,
-    };
-    // Check if this ranch+category has products (clickable)
-    var isMant   = (state.cat === 'MANTENIMIENTO');
-    var isMatEmp = (state.cat === 'MATERIAL DE EMPAQUE');
-    var isMirfe  = (state.cat === CAT_MIRFE);
-    var isMipe   = (state.cat === CAT_MIPE);
-    var hasProd  = isMant || isMatEmp || isMirfe || isMipe;
-    var rcolor   = RANCH_COLORS[r] || '#888';
-    var maxV     = ranchMaxes[r] || 1;
-    col.cellRenderer = function(params) {
-      var v = params.value;
-      if (!v || isNaN(v) || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
-      var w = Math.min(v / maxV * 40, 40);
-      var clickAttr = hasProd ? ' title="Ver productos" style="cursor:pointer"' : '';
-      return '<div style="display:flex;align-items:center;gap:3px"' + clickAttr + '>' +
-        '<div style="width:' + w.toFixed(0) + 'px;height:6px;background:' + rcolor + ';border-radius:1px;flex-shrink:0;min-width:2px"></div>' +
-        '<span style="color:' + rcolor + ';font-weight:600">' + fmt(v) + '</span></div>';
-    };
-    cols.push(col);
-  });
-
-  // Build rows
-  var totalRow = { categoria: 'TOTAL' };
-  var grandTotal = { cur: 0, prev: 0, ranches: {} };
-  RANCH_ORDER.forEach(function(r) { grandTotal.ranches[r] = 0; });
-
-  var rows = DATA.categories.map(function(cat) {
-    var row = { categoria: cat, _cat: cat, _week: wn, _year: cur };
-    // Current year
-    var recsCur  = getWeekDetail(cat, wn, cur);
-    var aggCur   = sumDetail(recsCur, state.currency);
-    row['v' + cur] = aggCur.total;
-    grandTotal.cur += aggCur.total;
-    RANCH_ORDER.forEach(function(r) {
-      var fld = 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_');
-      row[fld] = aggCur.ranches[r] || 0;
-      grandTotal.ranches[r] = (grandTotal.ranches[r] || 0) + (aggCur.ranches[r] || 0);
-    });
-    // Prev year
-    if (prev) {
-      var recsPrev = getWeekDetail(cat, wn, prev);
-      var aggPrev  = sumDetail(recsPrev, state.currency);
-      row['v' + prev] = aggPrev.total;
-      grandTotal.prev += aggPrev.total;
-      row.deltaAmt = aggCur.total - aggPrev.total;
-      row.deltaPct = aggPrev.total > 0 ? (aggCur.total - aggPrev.total) / aggPrev.total * 100 : null;
-    }
-    return row;
-  });
-
-  // Total pinned row
-  if (prev) totalRow['v' + prev] = grandTotal.prev;
-  totalRow['v' + cur] = grandTotal.cur;
-  if (prev && grandTotal.prev > 0) {
-    totalRow.deltaAmt = grandTotal.cur - grandTotal.prev;
-    totalRow.deltaPct = (grandTotal.cur - grandTotal.prev) / grandTotal.prev * 100;
-  }
-  RANCH_ORDER.forEach(function(r) {
-    totalRow['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = grandTotal.ranches[r];
-  });
-
-  setMainGrid(cols, rows, [totalRow], fmt(grandTotal.cur) + ' ' + sym);
-}
-
-// ═══════════════════════════════════════════════════════════
-// VIEW 2: ANUAL
-// Rows = categories, Cols = years 2021..2026
-// ═══════════════════════════════════════════════════════════
-function renderAnual() {
-  var yrs = getActiveYears();
-  var sym = state.currency.toUpperCase();
-
-  var cols = [
-    { field: 'categoria', headerName: 'CATEGORÍA', pinned: 'left', width: 230, cellRenderer: catRenderer, filter: 'agTextColumnFilter' }
-  ];
-  yrs.forEach(function(yr) {
-    cols.push({
-      field: 'y' + yr,
-      headerName: String(yr) + (yr === 2026 ? ' YTD' : '') + ' ' + sym,
-      width: 100, type: 'numericColumn',
-      cellRenderer: moneyRenderer, filter: 'agNumberColumnFilter'
-    });
-  });
-  // YoY% last two years
-  if (yrs.length >= 2) {
-    var last = yrs[yrs.length - 1], prev2 = yrs[yrs.length - 2];
-    cols.push({
-      field: 'yoy',
-      headerName: prev2 + '→' + last + ' %',
-      width: 88, type: 'numericColumn',
-      cellRenderer: deltaRenderer, filter: 'agNumberColumnFilter'
-    });
-  }
-  // 5yr CAGR
-  if (yrs.length >= 5) {
-    cols.push({
-      field: 'cagr',
-      headerName: 'CAGR 5yr',
-      width: 82, type: 'numericColumn',
-      cellRenderer: deltaRenderer, filter: 'agNumberColumnFilter'
-    });
-  }
-
-  var totalRow = { categoria: 'TOTAL' };
-  var grandByYear = {};
-  yrs.forEach(function(yr) { grandByYear[yr] = 0; });
-
-  var rows = DATA.categories.map(function(cat) {
-    var row = { categoria: cat };
-    yrs.forEach(function(yr) {
-      var d = (DATA.summary[cat] || {})[yr];
-      var v = d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0;
-      row['y' + yr] = v;
-      grandByYear[yr] = (grandByYear[yr] || 0) + v;
-    });
-    if (yrs.length >= 2) {
-      var l = yrs[yrs.length-1], p = yrs[yrs.length-2];
-      var vl = row['y' + l] || 0, vp = row['y' + p] || 0;
-      row.yoy = vp > 0 ? (vl - vp) / vp * 100 : null;
-    }
-    if (yrs.length >= 5) {
-      var y0 = yrs[yrs.length-5], yn = yrs[yrs.length-1];
-      var v0 = row['y' + y0] || 0, vn = row['y' + yn] || 0;
-      row.cagr = v0 > 0 ? (Math.pow(vn/v0, 1/4) - 1) * 100 : null;
-    }
-    return row;
-  });
-
-  yrs.forEach(function(yr) { totalRow['y' + yr] = grandByYear[yr]; });
-  if (yrs.length >= 2) {
-    var l2 = yrs[yrs.length-1], p2 = yrs[yrs.length-2];
-    totalRow.yoy = grandByYear[p2] > 0 ? (grandByYear[l2] - grandByYear[p2]) / grandByYear[p2] * 100 : null;
-  }
-  var curTotal = grandByYear[yrs[yrs.length-1]] || 0;
-  setMainGrid(cols, rows, [totalRow], fmt(curTotal) + ' ' + sym + ' (año más reciente)');
-}
-
-// ═══════════════════════════════════════════════════════════
-// VIEW 3: POR RANCHO
-// Rows = ranches, Cols = [rancho, prevYr, curYr, Δ$, Δ%, cats...]
-// ═══════════════════════════════════════════════════════════
-function renderRancho() {
-  var yrs  = getActiveYears();
-  var wn   = allWeeks[state.weekIdx] || 1;
-  var cur  = yrs[yrs.length - 1];
-  var prev = yrs.length > 1 ? yrs[yrs.length - 2] : null;
-  var sym  = state.currency.toUpperCase();
-
-  var cols = [
-    { field: 'rancho', headerName: 'RANCHO', pinned: 'left', width: 120,
-      cellRenderer: function(p) {
-        var c = RANCH_COLORS[p.value] || '#888';
-        return '<span style="color:' + c + ';font-weight:700">' + (p.value || '') + '</span>';
-      }, filter: 'agTextColumnFilter' }
-  ];
-  if (prev) cols.push({ field: 'v' + prev, headerName: String(prev) + ' ' + sym, width: 100, type: 'numericColumn', cellRenderer: moneyRenderer });
-  cols.push({ field: 'v' + cur, headerName: String(cur) + ' ' + sym + ' ★', width: 110, type: 'numericColumn', cellRenderer: moneyRenderer });
-  if (prev) {
-    cols.push({ field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', cellRenderer: deltaAmtRenderer });
-    cols.push({ field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', cellRenderer: deltaRenderer });
-  }
-  // Category columns for current year
-  DATA.categories.forEach(function(cat) {
-    cols.push({
-      field: 'cat_' + DATA.categories.indexOf(cat),
-      headerName: cat.length > 22 ? cat.substring(0,20) + '..' : cat,
-      headerTooltip: cat, width: 110, type: 'numericColumn',
-      cellRenderer: moneyRenderer, filter: 'agNumberColumnFilter'
-    });
-  });
-
-  var totalRow = { rancho: 'TOTAL' };
-  var grandCur = 0, grandPrev = 0;
-
-  var rows = RANCH_ORDER.map(function(ranch) {
-    var row = { rancho: ranch };
-    var totalCur = 0, totalPrev = 0;
-    DATA.categories.forEach(function(cat, ci) {
-      var recsCur  = getWeekDetail(cat, wn, cur);
-      var aggCur   = sumDetail(recsCur, state.currency);
-      var v = aggCur.ranches[ranch] || 0;
-      row['cat_' + ci] = v;
-      totalCur += v;
-      if (prev) {
-        var recsPrev = getWeekDetail(cat, wn, prev);
-        var aggPrev  = sumDetail(recsPrev, state.currency);
-        totalPrev += aggPrev.ranches[ranch] || 0;
-      }
-    });
-    row['v' + cur] = totalCur; grandCur += totalCur;
-    if (prev) {
-      row['v' + prev] = totalPrev; grandPrev += totalPrev;
-      row.deltaAmt = totalCur - totalPrev;
-      row.deltaPct = totalPrev > 0 ? (totalCur - totalPrev) / totalPrev * 100 : null;
-    }
-    return row;
-  }).filter(function(r) { return (r['v' + cur] || 0) > 0 || (r['v' + (prev||cur)] || 0) > 0; });
-
-  totalRow['v' + cur] = grandCur;
-  if (prev) { totalRow['v' + prev] = grandPrev; totalRow.deltaAmt = grandCur - grandPrev; totalRow.deltaPct = grandPrev > 0 ? (grandCur-grandPrev)/grandPrev*100 : null; }
-
-  setMainGrid(cols, rows, [totalRow], fmt(grandCur) + ' ' + sym);
-}
-
-// ═══════════════════════════════════════════════════════════
-// VIEW 4: DETALLE SEMANAL
-// Flat table of all weekly_detail rows
-// ═══════════════════════════════════════════════════════════
-function renderDetalle() {
-  var yrs  = getActiveYears();
-  var sym  = state.currency.toUpperCase();
-
-  var cols = [
-    { field: 'year',      headerName: 'AÑO',     width: 60,  filter: 'agNumberColumnFilter', type: 'numericColumn', pinned: 'left' },
-    { field: 'week',      headerName: 'SEM',      width: 55,  filter: 'agNumberColumnFilter', type: 'numericColumn', pinned: 'left',
-      cellRenderer: function(p) { return wFmt(p.value); } },
-    { field: 'categoria', headerName: 'CATEGORÍA', width: 220, filter: 'agTextColumnFilter', pinned: 'left', cellRenderer: catRenderer },
-    { field: 'usd_total', headerName: 'USD',      width: 100, filter: 'agNumberColumnFilter', type: 'numericColumn', cellRenderer: moneyRenderer },
-    { field: 'mxn_total', headerName: 'MXN',      width: 110, filter: 'agNumberColumnFilter', type: 'numericColumn', cellRenderer: moneyRenderer },
-    { field: 'date_range',headerName: 'PERÍODO',  width: 150, filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="color:#888;font-size:10px">' + (p.value||'') + '</span>'; } },
-  ];
-  // Ranch columns
-  RANCH_ORDER.forEach(function(r) {
-    var col2 = RANCH_COLORS[r] || '#888';
-    cols.push({
-      field: 'rn_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 100,
-      filter: 'agNumberColumnFilter', type: 'numericColumn',
-      cellRenderer: function(p) {
-        var v = p.value; if (!v || v < 0.01) return '<span style="color:#ddd">—</span>';
-        return '<span style="color:' + col2 + '">' + fmt(v) + '</span>';
-      }
-    });
-  });
-
-  var rows = [];
-  var grandTotal = 0;
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    var row = {
-      year: r.year, week: r.week, categoria: r.categoria,
-      usd_total: r.usd_total, mxn_total: r.mxn_total,
-      date_range: r.date_range || ''
-    };
-    RANCH_ORDER.forEach(function(rn) {
-      var src = state.currency === 'usd' ? r.usd_ranches : r.mxn_ranches;
-      row['rn_' + rn.replace(/[^a-zA-Z0-9]/g,'_')] = src[rn] || 0;
-    });
-    grandTotal += state.currency === 'usd' ? r.usd_total : r.mxn_total;
-    rows.push(row);
-  });
-  rows.sort(function(a,b) { return b.year !== a.year ? b.year - a.year : b.week - a.week; });
-  setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' (' + rows.length + ' registros)');
-}
-
-// ═══════════════════════════════════════════════════════════
-// VIEW 5: PRODUCTOS (PR + MP + ME)
-// ═══════════════════════════════════════════════════════════
-function renderProductosFull() {
-  var cols = [
-    { field: 'tipo',     headerName: 'TIPO',     width: 60,  filter: 'agTextColumnFilter', pinned: 'left' },
-    { field: 'cat',      headerName: 'CAT',      width: 55,  filter: 'agTextColumnFilter', pinned: 'left',
-      cellRenderer: function(p) { var m = {'PR':'#16a34a','MP':'#7c3aed','ME':'#0369a1'}; return '<span style="color:'+(m[p.value]||'#666')+';font-weight:700">'+(p.value||'')+'</span>'; } },
-    { field: 'week_code',headerName: 'WK',       width: 72,  filter: 'agNumberColumnFilter' },
-    { field: 'rancho',   headerName: 'RANCHO',   width: 105, filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="color:'+(RANCH_COLORS[p.value]||'#666')+';font-weight:600">'+(p.value||'')+'</span>'; } },
-    { field: 'producto', headerName: 'PRODUCTO', width: 240, filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="color:#1e3a5f">' + (p.value||'') + '</span>'; } },
-    { field: 'unidades', headerName: 'UNID.',    width: 80,  filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="color:#555">' + (p.value||'—') + '</span>'; } },
-    { field: 'gasto',    headerName: 'GASTO',    width: 100, filter: 'agNumberColumnFilter', type: 'numericColumn', cellRenderer: moneyRenderer },
-  ];
-
-  var rows = [];
-  function flattenProd(dataSet, label) {
-    if (!dataSet) return;
-    Object.keys(dataSet).forEach(function(wkCode) {
-      var byRanch = dataSet[wkCode];
-      Object.keys(byRanch).forEach(function(ranch) {
-        var byTipo = byRanch[ranch];
-        Object.keys(byTipo).forEach(function(tipo) {
-          var items = byTipo[tipo];
-          if (!Array.isArray(items)) return;
-          items.forEach(function(item) {
-            rows.push({
-              cat: label, tipo: tipo, week_code: parseInt(wkCode) || wkCode,
-              rancho: ranch, producto: item[0] || '',
-              unidades: item[1] || '—', gasto: parseFloat(item[2]) || 0
-            });
-          });
-        });
-      });
-    });
-  }
-  flattenProd(DATA.productos,    'PR');
-  flattenProd(DATA.productos_mp, 'MP');
-  flattenProd(DATA.productos_me, 'ME');
-  rows.sort(function(a,b) {
-    if (b.week_code !== a.week_code) return (b.week_code||0) - (a.week_code||0);
-    return (a.rancho||'').localeCompare(b.rancho||'');
-  });
-  var total = rows.reduce(function(s,r) { return s + (r.gasto||0); }, 0);
-  setMainGrid(cols, rows, [], fmt(total) + ' · ' + rows.length + ' registros');
-}
-
-// ═══════════════════════════════════════════════════════════
-// VIEW 6: COSTO SERVICIOS
-// ═══════════════════════════════════════════════════════════
-var SV_SUBCATS = ['Electricidad','Fletes y Acarreos','Gastos de Exportación','Certificado Fitosanitario',
-  'Transporte de Personal','Compra de Flor a Terceros','Comida para el Personal','RO, TEL, RTA.Alim'];
-function renderServicios() {
-  var yrs  = getActiveYears();
-  var sym  = state.currency.toUpperCase();
-
-  // Build rows from weekly_detail records with SV: prefix categories
-  var svRows = {};
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    if (!r.categoria || !r.categoria.startsWith('SV:')) return;
-    var subcat = r.categoria.replace('SV:','');
-    if (!svRows[subcat]) svRows[subcat] = {};
-    RANCH_ORDER.forEach(function(rn) {
-      var src = state.currency === 'usd' ? r.usd_ranches : r.mxn_ranches;
-      var v   = src[rn] || 0;
-      if (v > 0) svRows[subcat][rn] = (svRows[subcat][rn] || 0) + v;
-    });
-    svRows[subcat]._total = (svRows[subcat]._total || 0) + (state.currency === 'usd' ? r.usd_total : r.mxn_total);
-  });
-
-  var cols = [
-    { field: 'subcat', headerName: 'SUBCATEGORÍA', pinned: 'left', width: 210, filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="font-weight:700;color:#1e3a5f">'+(p.value||'')+'</span>'; } },
-    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', cellRenderer: moneyRenderer },
-    { field: 'pct',   headerName: '% DEL TOTAL', width: 85,  type: 'numericColumn',
-      cellRenderer: function(p) {
-        var v = p.value; if (!v) return '—';
-        var w = Math.min(v / 100 * 55, 55);
-        return '<div style="display:flex;align-items:center;gap:4px">' +
-          '<div style="width:' + w.toFixed(0) + 'px;height:6px;background:#16a34a;border-radius:1px"></div>' +
-          '<span>' + v.toFixed(1) + '%</span></div>';
-      }
-    },
-  ];
-  RANCH_ORDER.forEach(function(r) {
-    var col3 = RANCH_COLORS[r] || '#888';
-    cols.push({
-      field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 100, type: 'numericColumn', filter: 'agNumberColumnFilter',
-      cellRenderer: function(p) {
-        var v = p.value; if (!v || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
-        return '<span style="color:' + col3 + '">' + fmt(v) + '</span>';
-      }
-    });
-  });
-
-  var grandTotal = Object.values(svRows).reduce(function(s,r) { return s + (r._total||0); }, 0);
-  var rows = SV_SUBCATS.filter(function(sc) { return svRows[sc]; }).map(function(sc) {
-    var data = svRows[sc] || {};
-    var row = { subcat: sc, total: data._total || 0 };
-    row.pct = grandTotal > 0 ? (data._total || 0) / grandTotal * 100 : 0;
-    RANCH_ORDER.forEach(function(r) {
-      row['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = data[r] || 0;
-    });
-    return row;
-  });
-  rows.sort(function(a,b) { return b.total - a.total; });
-  var totalRow = { subcat: 'TOTAL', total: grandTotal, pct: 100 };
-  RANCH_ORDER.forEach(function(r) {
-    totalRow['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] =
-      rows.reduce(function(s,row) { return s + (row['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')]||0); }, 0);
-  });
-  setMainGrid(cols, rows, [totalRow], fmt(grandTotal) + ' ' + sym);
-}
-
-// ═══════════════════════════════════════════════════════════
-// PRODUCTOS SUBPANEL (click on cell)
-// ═══════════════════════════════════════════════════════════
-function onMainRowClick(data) {
-  if (!data || state.view !== 'semana') return;
-  showProdPanel(data);
-}
-function showProdPanel(rowData) {
-  var cat   = rowData._cat;
-  var wn    = rowData._week;
-  var yr    = rowData._year;
-  if (!cat || !wn || !yr) return;
-
-  var isMant   = cat === 'MANTENIMIENTO';
-  var isMatEmp = cat === 'MATERIAL DE EMPAQUE';
-  var isMirfe  = cat === CAT_MIRFE;
-  var isMipe   = cat === CAT_MIPE;
-  if (!isMant && !isMatEmp && !isMirfe && !isMipe) return;
-
-  var src    = isMant ? 'mp' : isMatEmp ? 'me' : 'pr';
-  var wkCode = yr * 100 + wn;
-  var dsMap  = { pr: DATA.productos, mp: DATA.productos_mp, me: DATA.productos_me };
-  var ds     = dsMap[src] || {};
-  var weekData = ds[wkCode];
-
-  if (!weekData || !Object.keys(weekData).length) {
-    document.getElementById('prodTitle').textContent = cat + ' — Sin datos de productos';
-    document.getElementById('prodPanel').className = 'show';
-    if (prodGridApi) prodGridApi.setRowData([]);
-    return;
-  }
-  document.getElementById('prodTitle').textContent = cat + ' ▸ ' + wFmt(wn) + ' · ' + yr;
-  document.getElementById('prodPanel').className = 'show';
-
-  // Flatten prod data
-  var rows = [];
-  Object.keys(weekData).forEach(function(ranch) {
-    var byTipo = weekData[ranch];
-    Object.keys(byTipo).forEach(function(tipo) {
-      (byTipo[tipo] || []).forEach(function(item) {
-        rows.push({ rancho: ranch, tipo: tipo, producto: item[0]||'', unidades: item[1]||'', gasto: parseFloat(item[2])||0 });
-      });
-    });
-  });
-  rows.sort(function(a,b) { return b.gasto - a.gasto; });
-
-  var total = rows.reduce(function(s,r) { return s + r.gasto; }, 0);
-  document.getElementById('prodMeta').textContent = rows.length + ' registros · ' + fmt(total);
-
-  if (!prodGridApi) {
-    var prodEl = document.getElementById('prodGrid');
-    var opts2 = {
-      columnDefs: [], rowData: [],
-      rowHeight: 20, headerHeight: 23,
-      defaultColDef: { sortable: true, filter: true, resizable: true },
-      onGridReady: function(p) { prodGridApi = p.api; prodGridApi.setColumnDefs(getProdCols()); prodGridApi.setRowData(rows); prodGridApi.sizeColumnsToFit(); }
-    };
-    new agGrid.Grid(prodEl, opts2);
-  } else {
-    prodGridApi.setColumnDefs(getProdCols());
-    prodGridApi.setRowData(rows);
-    prodGridApi.sizeColumnsToFit();
-  }
-}
-function getProdCols() {
-  return [
-    { field: 'rancho', headerName: 'RANCHO', width: 110, pinned: 'left', filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="color:'+(RANCH_COLORS[p.value]||'#666')+';font-weight:600">'+(p.value||'')+'</span>'; } },
-    { field: 'tipo',   headerName: 'TIPO',   width: 65, filter: 'agTextColumnFilter' },
-    { field: 'producto', headerName: 'PRODUCTO', width: 280, filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="color:#1e3a5f">'+(p.value||'')+'</span>'; } },
-    { field: 'unidades', headerName: 'UNID.', width: 90 },
-    { field: 'gasto', headerName: 'GASTO USD', width: 100, type: 'numericColumn', cellRenderer: moneyRenderer },
-  ];
-}
-function closeProdPanel() {
-  document.getElementById('prodPanel').className = '';
-}
-
-// ═══════════════════════════════════════════════════════════
-// RESIZE HELPER
-// ═══════════════════════════════════════════════════════════
-function resizeGrid() {
-  var reserved = 36 + 32 + 28 + 22 + 40; // hdr + toolbar + tabs + statusbar + margin
-  var h = Math.max(window.innerHeight - reserved, 500);
-  document.getElementById('myGrid').style.height = h + 'px';
-  if (mainGridApi) mainGridApi.sizeColumnsToFit();
-}
-window.addEventListener('resize', resizeGrid);
-
-// ═══════════════════════════════════════════════════════════
-// HEIGHT REPORTING TO STREAMLIT
-// ═══════════════════════════════════════════════════════════
-function reportHeight() {
-  var h = document.body.scrollHeight + 40;
-  window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 700) }, '*');
-}
-var ro = new ResizeObserver(reportHeight);
-ro.observe(document.body);
-reportHeight();
-setInterval(reportHeight, 500);
-
-// ═══════════════════════════════════════════════════════════
-// ERROR HANDLER
-// ═══════════════════════════════════════════════════════════
-window.onerror = function(msg, src, line) {
-  document.getElementById('loader').innerHTML =
-    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border-radius:8px;border:1px solid #fecaca;max-width:600px">' +
-    '<b>ERROR JS:</b> ' + msg + '<br><small>línea ' + line + '</small></div>';
-  return true;
-};
-
-// ═══════════════════════════════════════════════════════════
-// ARRANCAR
-// ═══════════════════════════════════════════════════════════
-// Reconstruir weekly_series desde weekly_detail si no existe
-if (!DATA.weekly_series) {
-  DATA.weekly_series = {};
-  DATA.categories.forEach(function(cat) { DATA.weekly_series[cat] = {}; });
-  DATA.weekly_detail.forEach(function(r) {
-    if (r.usd_total > 0) {
-      if (!DATA.weekly_series[r.categoria]) DATA.weekly_series[r.categoria] = {};
-      var key = r.year + '-W' + String(r.week).padStart(2,'0');
-      DATA.weekly_series[r.categoria][key] = (DATA.weekly_series[r.categoria][key] || 0) + r.usd_total;
-    }
-  });
-}
-// Wait for AG Grid to load
-if (typeof agGrid === 'undefined') {
-  var checkAG = setInterval(function() {
-    if (typeof agGrid !== 'undefined') { clearInterval(checkAG); inicializar(); }
-  }, 100);
-} else {
-  inicializar();
-}
-</script>
-
-<script>
-// Streamlit iframe height sync
-function reportHeight() {
-  var h = document.getElementById('app')
-    ? document.getElementById('app').getBoundingClientRect().bottom + window.scrollY + 40
-    : document.body.scrollHeight + 40;
-  window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 700) }, '*');
-}
-var ro2 = new ResizeObserver(reportHeight);
-ro2.observe(document.body);
-reportHeight();
-setInterval(reportHeight, 400);
-</script>
-</body>
-</html>"""
-
-html_final = HTML.replace('__DATA_JSON__', data_json)
-components.html(html_final, height=4000, scrolling=False)
+weekly_df = _build_weekly_df(DATA)
+serv_df = _build_servicios_df(DATA)
+prod_df = _build_productos_df(DATA)
+
+if weekly_df.empty:
+    st.warning("No hay datos en weekly_detail para construir la vista.")
+    st.stop()
+
+all_years = sorted(int(y) for y in weekly_df["year"].dropna().unique().tolist())
+all_categories = sorted(c for c in weekly_df["categoria"].dropna().unique().tolist() if c)
+all_ranches = ["Todos"] + sorted(DATA.get("ranches", []))
+
+latest_year = max(all_years)
+
+top_left, top_mid, top_right = st.columns([1.2, 2.8, 1.1])
+top_left.markdown("### CFBC Data Console")
+top_mid.caption(
+    "Vista empresarial orientada a operacion: sin graficas, sin espacios vacios, con foco en datos accionables."
+)
+if top_right.button("Recargar datos", use_container_width=True):
+    st.cache_data.clear()
+    st.rerun()
+
+f1, f2, f3, f4, f5 = st.columns([1.0, 1.0, 1.5, 1.25, 2.0])
+currency = f1.radio("Moneda", ["USD", "MXN"], horizontal=True)
+selected_year = f2.selectbox("Anio", options=all_years, index=all_years.index(latest_year))
+selected_ranch = f3.selectbox("Rancho", options=all_ranches)
+
+weeks_in_year = sorted(weekly_df.loc[weekly_df["year"] == selected_year, "week"].unique().tolist())
+week_min = int(min(weeks_in_year))
+week_max = int(max(weeks_in_year))
+week_range = f4.slider("Semanas", min_value=week_min, max_value=week_max, value=(week_min, week_max))
+
+default_cats = all_categories[:]
+selected_categories = f5.multiselect("Categorias", options=all_categories, default=default_cats)
+
+if not selected_categories:
+    st.warning("Selecciona al menos una categoria.")
+    st.stop()
+
+mask = (
+    (weekly_df["year"] == selected_year)
+    & (weekly_df["week"] >= week_range[0])
+    & (weekly_df["week"] <= week_range[1])
+    & (weekly_df["categoria"].isin(selected_categories))
+)
+
+base_df = weekly_df.loc[mask].copy()
+base_df = _apply_value(base_df, currency, selected_ranch)
+
+prev_year = selected_year - 1
+prev_mask = (
+    (weekly_df["year"] == prev_year)
+    & (weekly_df["week"] >= week_range[0])
+    & (weekly_df["week"] <= week_range[1])
+    & (weekly_df["categoria"].isin(selected_categories))
+)
+prev_df = _apply_value(weekly_df.loc[prev_mask].copy(), currency, selected_ranch)
+
+symbol = _currency_symbol(currency)
+total_actual = float(base_df["valor"].sum())
+total_prev = float(prev_df["valor"].sum())
+delta_abs = total_actual - total_prev
+delta_pct = (delta_abs / total_prev * 100.0) if total_prev else 0.0
+prom_semana = float(base_df.groupby("week")["valor"].sum().mean()) if not base_df.empty else 0.0
+
+cat_totals = base_df.groupby("categoria", as_index=False)["valor"].sum().sort_values("valor", ascending=False)
+top_cat = cat_totals.iloc[0]["categoria"] if not cat_totals.empty else "-"
+top_cat_val = float(cat_totals.iloc[0]["valor"]) if not cat_totals.empty else 0.0
+
+k1, k2, k3, k4, k5 = st.columns(5)
+k1.metric("Total periodo", f"{symbol} {total_actual:,.2f}", f"{delta_abs:,.2f}")
+k2.metric("Variacion vs anio previo", f"{delta_pct:,.2f}%")
+k3.metric("Promedio semanal", f"{symbol} {prom_semana:,.2f}")
+k4.metric("Categoria lider", top_cat)
+k5.metric("Valor categoria lider", f"{symbol} {top_cat_val:,.2f}")
+
+tab1, tab2, tab3, tab4 = st.tabs(["Operacion", "Servicios", "Productos", "Calidad de datos"])
+
+with tab1:
+    st.subheader("Operacion semanal detallada")
+
+    detail = (
+        base_df.groupby(["week", "categoria"], as_index=False)["valor"].sum().rename(columns={"valor": "valor_actual"})
+    )
+    detail_prev = (
+        prev_df.groupby(["week", "categoria"], as_index=False)["valor"].sum().rename(columns={"valor": "valor_prev"})
+    )
+    detail = detail.merge(detail_prev, on=["week", "categoria"], how="left")
+    detail["valor_prev"] = detail["valor_prev"].fillna(0.0)
+    detail["delta_abs"] = detail["valor_actual"] - detail["valor_prev"]
+    detail["delta_pct"] = detail.apply(
+        lambda r: ((r["delta_abs"] / r["valor_prev"]) * 100.0) if r["valor_prev"] else 0.0,
+        axis=1,
+    )
+    detail = detail.sort_values(["week", "valor_actual"], ascending=[False, False])
+
+    st.dataframe(
+        detail,
+        use_container_width=True,
+        height=540,
+        hide_index=True,
+        column_config={
+            "week": st.column_config.NumberColumn("Semana", format="%d"),
+            "categoria": st.column_config.TextColumn("Categoria"),
+            "valor_actual": st.column_config.NumberColumn(f"Actual ({symbol})", format="%.2f"),
+            "valor_prev": st.column_config.NumberColumn(f"Previo ({symbol})", format="%.2f"),
+            "delta_abs": st.column_config.NumberColumn("Delta abs", format="%.2f"),
+            "delta_pct": st.column_config.NumberColumn("Delta %", format="%.2f"),
+        },
+    )
+
+    c1, c2 = st.columns([1.3, 1])
+
+    with c1:
+        st.markdown("#### Matriz categoria x semana")
+        matrix = (
+            detail.pivot_table(index="categoria", columns="week", values="valor_actual", aggfunc="sum", fill_value=0)
+            .sort_index()
+        )
+        if not matrix.empty:
+            matrix["Total"] = matrix.sum(axis=1)
+        st.dataframe(matrix, use_container_width=True, height=360)
+
+    with c2:
+        st.markdown("#### Ranking por rancho")
+        ranch_totals: dict[str, float] = {}
+        ranch_map_col = "usd_ranches" if currency == "USD" else "mxn_ranches"
+
+        for _, row in base_df.iterrows():
+            buckets = row.get(ranch_map_col) or {}
+            for ranch_name, value in buckets.items():
+                ranch_totals[ranch_name] = ranch_totals.get(ranch_name, 0.0) + _to_float(value)
+
+        ranch_rank = pd.DataFrame(
+            [{"rancho": k, "valor": v} for k, v in ranch_totals.items()]
+        ).sort_values("valor", ascending=False)
+
+        if not ranch_rank.empty:
+            grand = float(ranch_rank["valor"].sum())
+            ranch_rank["participacion_pct"] = ranch_rank["valor"].apply(lambda v: (v / grand * 100.0) if grand else 0.0)
+            st.dataframe(
+                ranch_rank,
+                use_container_width=True,
+                height=360,
+                hide_index=True,
+                column_config={
+                    "rancho": st.column_config.TextColumn("Rancho"),
+                    "valor": st.column_config.NumberColumn(f"Valor ({symbol})", format="%.2f"),
+                    "participacion_pct": st.column_config.NumberColumn("Part. %", format="%.2f"),
+                },
+            )
+        else:
+            st.info("No hay datos de ranchos para el filtro actual.")
+
+    st.download_button(
+        label="Descargar detalle operativo (CSV)",
+        data=_to_csv_bytes(detail),
+        file_name=f"operacion_{selected_year}_{week_range[0]}_{week_range[1]}.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+
+with tab2:
+    st.subheader("Costo de servicios")
+
+    if serv_df.empty:
+        st.info("No hay servicios_data disponibles.")
+    else:
+        serv_filtered = serv_df[
+            (serv_df["year"] == selected_year)
+            & (serv_df["week"] >= week_range[0])
+            & (serv_df["week"] <= week_range[1])
+        ].copy()
+
+        if not serv_filtered.empty:
+            serv_filtered = _apply_value(serv_filtered, currency, selected_ranch)
+
+            subcats = sorted(serv_filtered["subcat"].dropna().unique().tolist())
+            selected_subcats = st.multiselect("Subcategorias", options=subcats, default=subcats)
+            if selected_subcats:
+                serv_filtered = serv_filtered[serv_filtered["subcat"].isin(selected_subcats)]
+
+            serv_table = (
+                serv_filtered.groupby(["week", "subcat"], as_index=False)["valor"].sum().sort_values(["week", "valor"], ascending=[False, False])
+            )
+
+            st.dataframe(
+                serv_table,
+                use_container_width=True,
+                height=520,
+                hide_index=True,
+                column_config={
+                    "week": st.column_config.NumberColumn("Semana", format="%d"),
+                    "subcat": st.column_config.TextColumn("Subcategoria"),
+                    "valor": st.column_config.NumberColumn(f"Valor ({symbol})", format="%.2f"),
+                },
+            )
+
+            subcat_rank = (
+                serv_filtered.groupby("subcat", as_index=False)["valor"].sum().sort_values("valor", ascending=False)
+            )
+            st.markdown("#### Ranking subcategorias")
+            st.dataframe(
+                subcat_rank,
+                use_container_width=True,
+                height=260,
+                hide_index=True,
+                column_config={
+                    "subcat": st.column_config.TextColumn("Subcategoria"),
+                    "valor": st.column_config.NumberColumn(f"Valor ({symbol})", format="%.2f"),
+                },
+            )
+
+            st.download_button(
+                label="Descargar servicios (CSV)",
+                data=_to_csv_bytes(serv_table),
+                file_name=f"servicios_{selected_year}_{week_range[0]}_{week_range[1]}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        else:
+            st.info("No hay registros de servicios para ese rango.")
+
+with tab3:
+    st.subheader("Productos PR / MP / ME")
+
+    if prod_df.empty:
+        st.info("No hay datos de productos disponibles.")
+    else:
+        p1, p2, p3 = st.columns([1.1, 1.1, 2.2])
+        selected_sources = p1.multiselect("Origen", options=["PR", "MP", "ME"], default=["PR", "MP", "ME"])
+        selected_tipo = p2.multiselect("Tipo", options=sorted(prod_df["tipo"].dropna().unique().tolist()), default=[])
+        search_text = p3.text_input("Buscar producto", value="")
+
+        p_mask = (
+            (prod_df["year"] == selected_year)
+            & (prod_df["week"] >= week_range[0])
+            & (prod_df["week"] <= week_range[1])
+        )
+
+        prod_filtered = prod_df.loc[p_mask].copy()
+        if selected_sources:
+            prod_filtered = prod_filtered[prod_filtered["source"].isin(selected_sources)]
+        if selected_ranch != "Todos":
+            prod_filtered = prod_filtered[prod_filtered["rancho"] == selected_ranch]
+        if selected_tipo:
+            prod_filtered = prod_filtered[prod_filtered["tipo"].isin(selected_tipo)]
+        if search_text.strip():
+            term = search_text.strip().lower()
+            prod_filtered = prod_filtered[prod_filtered["producto"].str.lower().str.contains(term, na=False)]
+
+        prod_filtered = prod_filtered.sort_values(["week", "gasto"], ascending=[False, False])
+
+        st.dataframe(
+            prod_filtered,
+            use_container_width=True,
+            height=500,
+            hide_index=True,
+            column_config={
+                "source": st.column_config.TextColumn("Origen"),
+                "year": st.column_config.NumberColumn("Anio", format="%d"),
+                "week": st.column_config.NumberColumn("Semana", format="%d"),
+                "rancho": st.column_config.TextColumn("Rancho"),
+                "tipo": st.column_config.TextColumn("Tipo"),
+                "producto": st.column_config.TextColumn("Producto"),
+                "unidades": st.column_config.NumberColumn("Unidades", format="%.2f"),
+                "gasto": st.column_config.NumberColumn(f"Gasto ({symbol})", format="%.2f"),
+                "ubicacion": st.column_config.TextColumn("Ubicacion"),
+            },
+        )
+
+        top_products = (
+            prod_filtered.groupby(["source", "producto"], as_index=False)["gasto"]
+            .sum()
+            .sort_values("gasto", ascending=False)
+            .head(25)
+        )
+        st.markdown("#### Top 25 productos por gasto")
+        st.dataframe(
+            top_products,
+            use_container_width=True,
+            height=280,
+            hide_index=True,
+            column_config={
+                "source": st.column_config.TextColumn("Origen"),
+                "producto": st.column_config.TextColumn("Producto"),
+                "gasto": st.column_config.NumberColumn(f"Gasto ({symbol})", format="%.2f"),
+            },
+        )
+
+        st.download_button(
+            label="Descargar productos (CSV)",
+            data=_to_csv_bytes(prod_filtered),
+            file_name=f"productos_{selected_year}_{week_range[0]}_{week_range[1]}.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+
+with tab4:
+    st.subheader("Calidad y cobertura de datos")
+
+    q1, q2, q3, q4 = st.columns(4)
+    q1.metric("Registros weekly_detail", f"{len(weekly_df):,}")
+    q2.metric("Registros servicios_data", f"{len(serv_df):,}")
+    q3.metric("Registros productos", f"{len(prod_df):,}")
+    max_week = int(weekly_df.loc[weekly_df["year"] == latest_year, "week"].max())
+    q4.metric("Ultimo corte", f"{latest_year}-W{max_week:02d}")
+
+    cov_rows = []
+    for y in all_years:
+        weeks = sorted(weekly_df.loc[weekly_df["year"] == y, "week"].unique().tolist())
+        if not weeks:
+            continue
+        expected = int(max(weeks) - min(weeks) + 1)
+        observed = len(weeks)
+        missing = expected - observed
+        cov_rows.append(
+            {
+                "anio": y,
+                "semana_min": int(min(weeks)),
+                "semana_max": int(max(weeks)),
+                "esperadas": expected,
+                "observadas": observed,
+                "faltantes": missing,
+                "cobertura_pct": (observed / expected * 100.0) if expected else 0.0,
+            }
+        )
+
+    cov_df = pd.DataFrame(cov_rows).sort_values("anio", ascending=False)
+    st.markdown("#### Cobertura por anio")
+    st.dataframe(
+        cov_df,
+        use_container_width=True,
+        height=300,
+        hide_index=True,
+        column_config={
+            "anio": st.column_config.NumberColumn("Anio", format="%d"),
+            "semana_min": st.column_config.NumberColumn("Semana min", format="%d"),
+            "semana_max": st.column_config.NumberColumn("Semana max", format="%d"),
+            "esperadas": st.column_config.NumberColumn("Esperadas", format="%d"),
+            "observadas": st.column_config.NumberColumn("Observadas", format="%d"),
+            "faltantes": st.column_config.NumberColumn("Faltantes", format="%d"),
+            "cobertura_pct": st.column_config.NumberColumn("Cobertura %", format="%.2f"),
+        },
+    )
+
+    invalid_cats = weekly_df[weekly_df["categoria"].isna() | (weekly_df["categoria"].astype(str).str.strip() == "")]
+    invalid_weeks = weekly_df[(weekly_df["week"] <= 0) | (weekly_df["week"] > 53)]
+
+    i1, i2 = st.columns(2)
+    i1.metric("Categorias vacias", f"{len(invalid_cats):,}")
+    i2.metric("Semanas fuera de rango", f"{len(invalid_weeks):,}")
+
+st.caption("CFBC Data Console - Modo empresarial: informacion densa, accionable y exportable.")
