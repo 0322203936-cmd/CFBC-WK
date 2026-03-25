@@ -931,25 +931,30 @@ function renderAnual() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// VIEW 3: COMPARATIVO (Mes vs Mes y Año vs Año)
+// VIEW 3: COMPARATIVO (Semana vs Semana y Año vs Año)
 // ═══════════════════════════════════════════════════════════
 function renderComparativo() {
-  var yrs = getActiveYears();
   var sym = state.currency.toUpperCase();
 
   var map = {};
   DATA.weekly_detail.forEach(function(r) {
     if (!state.activeYears[r.year]) return;
     if (r.categoria !== state.cat) return;
-    var m = monthFromRecord(r);
-    var key = r.year + '-' + m;
+    var wk = parseInt(r.week || 0);
+    if (!wk) return;
+    var key = r.year + '-' + wk;
     if (!map[key]) {
-      map[key] = { year: r.year, month: m, total: 0, ranches: {}, weekMin: r.week, weekMax: r.week };
+      map[key] = {
+        year: r.year,
+        week: wk,
+        total: 0,
+        ranches: {},
+        date_range: r.date_range || ''
+      };
     }
     var rec = map[key];
     rec.total += state.currency === 'usd' ? (r.usd_total || 0) : (r.mxn_total || 0);
-    rec.weekMin = Math.min(rec.weekMin, r.week || rec.weekMin);
-    rec.weekMax = Math.max(rec.weekMax, r.week || rec.weekMax);
+    if (!rec.date_range && r.date_range) rec.date_range = r.date_range;
 
     var src = state.currency === 'usd' ? (r.usd_ranches || {}) : (r.mxn_ranches || {});
     RANCH_ORDER.forEach(function(rn) {
@@ -962,19 +967,21 @@ function renderComparativo() {
     var rec = map[k];
     var row = {
       year: rec.year,
-      month: rec.month,
-      mes: monthLabel(rec.month),
+      week: rec.week,
+      week_lbl: wFmt(rec.week),
+      date_range: rec.date_range || '',
       total: rec.total,
       _cat: state.cat,
       _year: rec.year,
-      _fromWeek: rec.weekMin,
-      _toWeek: rec.weekMax,
+      _week: rec.week,
+      _fromWeek: rec.week,
+      _toWeek: rec.week,
     };
     RANCH_ORDER.forEach(function(rn) {
       row[ranchFieldName(rn)] = rec.ranches[rn] || 0;
     });
 
-    var prevKey = (rec.year - 1) + '-' + rec.month;
+    var prevKey = (rec.year - 1) + '-' + rec.week;
     var prevRec = map[prevKey];
     var prevTotal = prevRec ? prevRec.total : 0;
     row.deltaAmt = rec.total - prevTotal;
@@ -984,13 +991,15 @@ function renderComparativo() {
 
   rows.sort(function(a,b) {
     if (b.year !== a.year) return b.year - a.year;
-    return b.month - a.month;
+    return b.week - a.week;
   });
 
   var cols = [
     { field: 'year', headerName: 'AÑO', width: 62, pinned: 'left', filter: 'agNumberColumnFilter', type: 'numericColumn' },
-    { field: 'mes',  headerName: 'MES', width: 65, pinned: 'left', filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="font-weight:700;color:#1e3a5f">' + (p.value||'') + '</span>'; } },
+    { field: 'week_lbl',  headerName: 'SEMANA', width: 78, pinned: 'left', filter: 'agTextColumnFilter',
+      cellRenderer: function(p) { return '<span style="font-weight:700;color:#1e3a5f;cursor:pointer" title="Ver productos de la semana">' + (p.value||'') + '</span>'; } },
+    { field: 'date_range', headerName: 'PERIODO', width: 148, filter: 'agTextColumnFilter',
+      cellRenderer: function(p) { return '<span style="color:#666">' + (p.value||'') + '</span>'; } },
     { field: 'total', headerName: 'TOTAL ' + sym, width: 115, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
     { field: 'deltaAmt', headerName: 'Δ $ vs año ant.', width: 120, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
     { field: 'deltaPct', headerName: 'Δ %', width: 74, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
@@ -1013,7 +1022,7 @@ function renderComparativo() {
   });
 
   var grand = rows.reduce(function(s,r){ return s + (r.total || 0); }, 0);
-  var totalRow = { year: '', mes: 'TOTAL', total: grand, deltaAmt: null, deltaPct: null };
+  var totalRow = { year: '', week_lbl: 'TOTAL', date_range: '', total: grand, deltaAmt: null, deltaPct: null };
   RANCH_ORDER.forEach(function(rn) {
     var fld = ranchFieldName(rn);
     totalRow[fld] = rows.reduce(function(s,r){ return s + (r[fld] || 0); }, 0);
@@ -1299,7 +1308,7 @@ function onMainCellClick(evt) {
     return;
   }
   if (state.view === 'comparativo') {
-    if (clickedRanch || clickedField === 'total' || clickedField === 'mes') {
+    if (clickedRanch || clickedField === 'total' || clickedField === 'week_lbl' || clickedField === 'week') {
       showProdPanel(data, { ranch: clickedRanch || null });
     }
     return;
