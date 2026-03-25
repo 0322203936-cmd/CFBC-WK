@@ -4,6 +4,7 @@ Centro Floricultor de Baja California
 - Hojas WK  → Excel en OneDrive (pandas + requests)
 - Hojas PR  → Google Sheets (gspread + service account)
 - Hojas MP  → Google Sheets (gspread + service account) — MANTENIMIENTO
+
 """
 
 import re
