@@ -7,23 +7,11 @@ Centro Floricultor de Baja California
 """
 
 import re
-import os
-import json
 import requests
 import pandas as pd
+import gspread
 from io import BytesIO
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-
-try:
-    import gspread
-except Exception:
-    gspread = None
-
-try:
-    from google.oauth2.service_account import Credentials
-except Exception:
-    Credentials = None
+from google.oauth2.service_account import Credentials
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets.readonly",
@@ -57,29 +45,12 @@ SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
 
 
 # ─── Descarga del Excel ───────────────────────────────────────────────────────
-def _build_http_session() -> requests.Session:
-    """Sesion HTTP con reintentos para OneDrive/SharePoint."""
-    session = requests.Session()
-    retry = Retry(
-        total=3,
-        connect=3,
-        read=3,
-        backoff_factor=0.8,
-        status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=frozenset(["GET"]),
-    )
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
-    return session
-
-
 def descargar_excel() -> BytesIO | None:
     """Descarga el archivo .xlsx desde OneDrive y lo retorna como BytesIO."""
     # OneDrive requiere el parámetro download=1 para descarga directa
     download_url = ONEDRIVE_URL.replace("?e=", "?download=1&e=")
     try:
-        response = _build_http_session().get(download_url, timeout=30)
+        response = requests.get(download_url, timeout=30)
         response.raise_for_status()
         return BytesIO(response.content)
     except Exception as e:
@@ -723,35 +694,24 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
 
 
 # ─── Conexión a Google Sheets ─────────────────────────────────────────────────
-def get_gsheets_client(credentials_path: str = "credentials.json"):
-    if gspread is None or Credentials is None:
-        raise RuntimeError("Dependencias de Google no instaladas (gspread/google-auth).")
-
-    secrets_account = None
-
-    try:
-        import streamlit as st
-        if "gcp_service_account" in st.secrets:
-            secrets_account = dict(st.secrets["gcp_service_account"])
-    except Exception:
-        secrets_account = None
-
-    env_account = None
-    if not secrets_account:
-        raw = os.getenv("GCP_SERVICE_ACCOUNT_JSON", "").strip()
-        if raw:
-            try:
-                env_account = json.loads(raw)
-            except json.JSONDecodeError:
-                print("⚠️  GCP_SERVICE_ACCOUNT_JSON no es JSON valido.")
-
-    if secrets_account:
-        creds = Credentials.from_service_account_info(secrets_account, scopes=SCOPES)
-    elif env_account:
-        creds = Credentials.from_service_account_info(env_account, scopes=SCOPES)
+def get_gsheets_client(credentials_path: str = "credentials.json") -> gspread.Client:
+    import streamlit as st
+    if "gcp_service_account" in st.secrets:
+        info = {
+            "type":                        st.secrets["gcp_service_account"]["type"],
+            "project_id":                  st.secrets["gcp_service_account"]["project_id"],
+            "private_key_id":              st.secrets["gcp_service_account"]["private_key_id"],
+            "private_key":                 st.secrets["gcp_service_account"]["private_key"],
+            "client_email":                st.secrets["gcp_service_account"]["client_email"],
+            "client_id":                   st.secrets["gcp_service_account"]["client_id"],
+            "auth_uri":                    st.secrets["gcp_service_account"]["auth_uri"],
+            "token_uri":                   st.secrets["gcp_service_account"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["gcp_service_account"]["auth_provider_x509_cert_url"],
+            "client_x509_cert_url":        st.secrets["gcp_service_account"]["client_x509_cert_url"],
+        }
+        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     else:
         creds = Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
-
     return gspread.authorize(creds)
 
 
@@ -764,10 +724,6 @@ def _fetch_pr_desde_sheets(spreadsheet_name: str = "WK 2026-08") -> tuple[dict, 
     productos       = {}
     productos_debug = {"hojas_pr_encontradas": []}
 
-    if gspread is None or Credentials is None:
-        print("⚠️  PR: gspread/google-auth no disponibles; se omite lectura de Google Sheets.")
-        return productos, productos_debug
-
     try:
         client = get_gsheets_client()
 
@@ -776,7 +732,7 @@ def _fetch_pr_desde_sheets(spreadsheet_name: str = "WK 2026-08") -> tuple[dict, 
             try:
                 ss = client.open(name)
                 break
-            except Exception:
+            except gspread.SpreadsheetNotFound:
                 pass
 
         if ss is None:
@@ -844,10 +800,6 @@ def _fetch_mp_desde_sheets(spreadsheet_name: str = "WK 2026-08") -> tuple[dict, 
     productos_mp       = {}
     productos_mp_debug = {"hojas_mp_encontradas": []}
 
-    if gspread is None or Credentials is None:
-        print("⚠️  MP: gspread/google-auth no disponibles; se omite lectura de Google Sheets.")
-        return productos_mp, productos_mp_debug
-
     try:
         client = get_gsheets_client()
 
@@ -856,7 +808,7 @@ def _fetch_mp_desde_sheets(spreadsheet_name: str = "WK 2026-08") -> tuple[dict, 
             try:
                 ss = client.open(name)
                 break
-            except Exception:
+            except gspread.SpreadsheetNotFound:
                 pass
 
         if ss is None:
@@ -929,10 +881,6 @@ def _fetch_me_desde_sheets(spreadsheet_name: str = "WK 2026-08") -> tuple[dict, 
     productos_me       = {}
     productos_me_debug = {"hojas_me_encontradas": []}
 
-    if gspread is None or Credentials is None:
-        print("⚠️  ME: gspread/google-auth no disponibles; se omite lectura de Google Sheets.")
-        return productos_me, productos_me_debug
-
     try:
         client = get_gsheets_client()
 
@@ -941,7 +889,7 @@ def _fetch_me_desde_sheets(spreadsheet_name: str = "WK 2026-08") -> tuple[dict, 
             try:
                 ss = client.open(name)
                 break
-            except Exception:
+            except gspread.SpreadsheetNotFound:
                 pass
 
         if ss is None:
