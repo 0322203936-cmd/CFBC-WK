@@ -1324,9 +1324,16 @@ function showProdPanel(rowData, opts) {
   var isMatEmp = cat === 'MATERIAL DE EMPAQUE';
   var isMirfe  = cat === CAT_MIRFE;
   var isMipe   = cat === CAT_MIPE;
-  if (!isMant && !isMatEmp && !isMirfe && !isMipe) return;
 
-  var src    = isMant ? 'mp' : isMatEmp ? 'me' : 'pr';
+  // Regla: abrir siempre desde comparativo/semana/rancho.
+  // Fuente preferente por categoría; fallback general a PR.
+  var src = isMant ? 'mp' : (isMatEmp ? 'me' : 'pr');
+  var tipoFilter = null;
+  if (src === 'pr') {
+    if (isMirfe) tipoFilter = 'MIRFE';
+    else if (isMipe) tipoFilter = 'MIPE';
+  }
+
   var dsMap  = { pr: DATA.productos, mp: DATA.productos_mp, me: DATA.productos_me };
   var ds     = dsMap[src] || {};
 
@@ -1347,6 +1354,7 @@ function showProdPanel(rowData, opts) {
       if (ranchFilter && ranch !== ranchFilter) return;
       var byTipo = weekData[ranch];
       Object.keys(byTipo).forEach(function(tipo) {
+        if (tipoFilter && tipo !== tipoFilter) return;
         (byTipo[tipo] || []).forEach(function(item) {
           rows.push({
             week_code: wkCode,
