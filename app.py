@@ -1018,22 +1018,29 @@ function renderComparativo() {
     return b.week - a.week;
   });
 
-  function makeProdLink(label, row, ranch) {
-    var cat = encodeURIComponent(row._cat || '');
-    var year = row._year || '';
-    var week = row._week || '';
-    var fromW = row._fromWeek || week;
-    var toW = row._toWeek || week;
-    var ranchEnc = encodeURIComponent(ranch || '');
-    return '<span class="prod-link" data-cat="' + cat + '" data-year="' + year + '" data-week="' + week + '" data-from="' + fromW + '" data-to="' + toW + '" data-ranch="' + ranchEnc + '">' + label + '</span>';
+  function makeProdNode(text, row, ranch, color, weight, title) {
+    var span = document.createElement('span');
+    span.className = 'prod-link';
+    span.textContent = text;
+    span.style.color = color || '#1e3a5f';
+    span.style.fontWeight = weight || '600';
+    span.title = title || 'Ver productos';
+    span.addEventListener('click', function(ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      showProdPanel(row, { ranch: ranch || null });
+    });
+    return span;
   }
 
   var cols = [
     { field: 'year', headerName: 'AÑO', width: 62, pinned: 'left', filter: 'agNumberColumnFilter', type: 'numericColumn' },
     { field: 'week_lbl',  headerName: 'SEMANA', width: 78, pinned: 'left', filter: 'agTextColumnFilter',
       cellRenderer: function(p) {
-        var lbl = '<span style="font-weight:700;color:#1e3a5f" title="Ver productos de la semana">' + (p.value||'') + '</span>';
-        return makeProdLink(lbl, p.data || {}, '');
+        if (!p.data || !p.data._cat || !p.data._year || !p.data._week) {
+          return '<span style="font-weight:700;color:#1e3a5f">' + (p.value||'') + '</span>';
+        }
+        return makeProdNode(String(p.value||''), p.data, '', '#1e3a5f', '700', 'Ver productos de la semana');
       } },
     { field: 'date_range', headerName: 'PERIODO', width: 148, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#666">' + (p.value||'') + '</span>'; } },
@@ -1041,7 +1048,10 @@ function renderComparativo() {
       cellRenderer: function(p) {
         var v = p.value;
         if (v === null || v === undefined || v === 0 || isNaN(v)) return '<span style="color:#bbb">—</span>';
-        return makeProdLink('<span style="color:#1e3a5f;font-weight:600">' + fmt(v) + '</span>', p.data || {}, '');
+        if (!p.data || !p.data._cat || !p.data._year || !p.data._week) {
+          return '<span style="color:#1e3a5f;font-weight:600">' + fmt(v) + '</span>';
+        }
+        return makeProdNode(fmt(v), p.data, '', '#1e3a5f', '600', 'Ver productos de la semana');
       } },
     { field: 'deltaAmt', headerName: 'Δ $ vs año ant.', width: 120, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
     { field: 'deltaPct', headerName: 'Δ %', width: 74, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
@@ -1058,7 +1068,10 @@ function renderComparativo() {
       cellRenderer: function(p) {
         var v = p.value;
         if (!v || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
-        return makeProdLink('<span style="color:' + rcol + ';font-weight:600" title="Ver productos del rancho">' + fmt(v) + '</span>', p.data || {}, rn);
+        if (!p.data || !p.data._cat || !p.data._year || !p.data._week) {
+          return '<span style="color:' + rcol + ';font-weight:600">' + fmt(v) + '</span>';
+        }
+        return makeProdNode(fmt(v), p.data, rn, rcol, '600', 'Ver productos del rancho');
       }
     });
   });
@@ -1422,36 +1435,47 @@ function showProdPanel(rowData, opts) {
   }
 
   var rangeText = wkStart === wkEnd ? (wFmt(wkStart) + ' · ' + yr) : (wFmt(wkStart) + '→' + wFmt(wkEnd) + ' · ' + yr);
+
+  // Mostrar panel siempre al abrir detalle (aunque no haya filas)
+  document.getElementById('prodPanel').className = 'show';
+
+  // Inicializar grid de productos en primer uso
+  if (!prodGridApi) {
+    var prodElInit = document.getElementById('prodGrid');
+    var initOpts = {
+      columnDefs: getProdCols(), rowData: [],
+      rowHeight: 20, headerHeight: 23,
+      defaultColDef: { sortable: true, filter: true, resizable: true },
+      onGridReady: function(p) { prodGridApi = p.api; prodGridApi.sizeColumnsToFit(); }
+    };
+    new agGrid.Grid(prodElInit, initOpts);
+  }
+
   if (rows.length === 0) {
     document.getElementById('prodTitle').textContent = cat + ' — Sin datos de productos';
     document.getElementById('prodMeta').textContent = rangeText + (ranchFilter ? (' · ' + ranchFilter) : '');
-    document.getElementById('prodPanel').className = 'show';
-    if (prodGridApi) prodGridApi.setRowData([]);
+    if (prodGridApi) {
+      prodGridApi.setColumnDefs(getProdCols());
+      prodGridApi.setRowData([]);
+      prodGridApi.sizeColumnsToFit();
+    }
+    setTimeout(function(){ document.getElementById('prodPanel').scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 50);
     return;
   }
 
   document.getElementById('prodTitle').textContent = cat + ' ▸ ' + rangeText + (ranchFilter ? (' · ' + ranchFilter) : '');
-  document.getElementById('prodPanel').className = 'show';
 
   rows.sort(function(a,b) { return b.gasto - a.gasto; });
 
   var total = rows.reduce(function(s,r) { return s + r.gasto; }, 0);
   document.getElementById('prodMeta').textContent = rows.length + ' registros · ' + fmt(total);
 
-  if (!prodGridApi) {
-    var prodEl = document.getElementById('prodGrid');
-    var opts2 = {
-      columnDefs: [], rowData: [],
-      rowHeight: 20, headerHeight: 23,
-      defaultColDef: { sortable: true, filter: true, resizable: true },
-      onGridReady: function(p) { prodGridApi = p.api; prodGridApi.setColumnDefs(getProdCols()); prodGridApi.setRowData(rows); prodGridApi.sizeColumnsToFit(); }
-    };
-    new agGrid.Grid(prodEl, opts2);
-  } else {
+  if (prodGridApi) {
     prodGridApi.setColumnDefs(getProdCols());
     prodGridApi.setRowData(rows);
     prodGridApi.sizeColumnsToFit();
   }
+  setTimeout(function(){ document.getElementById('prodPanel').scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 50);
 }
 function getProdCols() {
   return [
