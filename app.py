@@ -1562,7 +1562,6 @@ function showProdPanel(rowData, opts) {
       prodGridApi.setRowData([]);
       prodGridApi.sizeColumnsToFit();
     }
-    setTimeout(function(){ document.getElementById('prodPanel').scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 50);
     return;
   }
 
@@ -1578,7 +1577,6 @@ function showProdPanel(rowData, opts) {
     prodGridApi.setRowData(rows);
     prodGridApi.sizeColumnsToFit();
   }
-  setTimeout(function(){ document.getElementById('prodPanel').scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 50);
 }
 function getProdCols() {
   return [
