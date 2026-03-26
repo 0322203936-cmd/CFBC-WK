@@ -433,12 +433,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
     <span class="range-badge" id="rangeBadge">W01 → W52</span>
     <div class="tb-sep"></div>
-    <span class="tb-label">Ver por</span>
-    <div class="tb-grp">
-      <button class="tb-btn active" id="rtgYear" onclick="setRangeTableGroup('year')">Año→Sem</button>
-      <button class="tb-btn"        id="rtgWeek" onclick="setRangeTableGroup('week')">Sem→Año</button>
-    </div>
-    <div class="tb-sep"></div>
     <button class="tb-btn" onclick="resetRange()">↺ Reset</button>
   </div>
 
@@ -1139,12 +1133,7 @@ function renderComparativo() {
         return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#bbb') + ';font-size:10px">' + (v > 0 ? fmt(v) : '—') + '</td>';
       }).join('');
 
-      var hdr = '<tr class="cmp-grp-hdr"><td colspan="2" style="color:' + col + '">📅 ' + yr + ' — Total del rango</td>' +
-        '<td style="color:' + col + '">' + fmt(yearTotal) + '</td>' +
-        '<td class="delta-cell ' + yCls + '">' + (yDiff !== null ?
-          '<span class="delta-amt">' + ySign + fmt(yDiff) + '</span><span class="delta-pct">' + ySign + (yPct || '0') + '% vs ' + yrs[yi - 1] + '</span>' :
-          '<span class="delta-amt chg-0">— base</span>') + '</td>' +
-        ranchHdrCells + '</tr>';
+      var hdr = '';
 
       // Filas de semanas dentro del año
       var prevWkVal = null;
@@ -1160,7 +1149,7 @@ function renderComparativo() {
           return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + '">' + (v > 0 ? fmt(v) : '—') + '</td>';
         }).join('');
         return '<tr class="cmp-row">' +
-          '<td style="color:' + col + ';font-weight:600">' + wFmt(w) + '</td>' +
+          '<td style="color:' + col + ';font-weight:600">' + String(yr).slice(2) + String(w).padStart(2,'0') + '</td>' +
           '<td style="color:#999;font-size:10px">' + (d && d.date_range ? d.date_range : '—') + '</td>' +
           '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + '">' + fmt(val) + '</td>' +
           dCell + ranchCells + '</tr>';
