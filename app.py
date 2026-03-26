@@ -775,7 +775,10 @@ function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
   mainGridApi.setColumnDefs(colDefs);
   mainGridApi.setRowData(rowData);
   mainGridApi.setPinnedBottomRowData(pinnedBottom || []);
-  mainGridApi.sizeColumnsToFit();
+  // Dejar que AG Grid renderice el DOM antes de ajustar columnas
+  setTimeout(function() {
+    mainGridApi.sizeColumnsToFit();
+  }, 80);
   document.getElementById('stRows').textContent  = rowData.length;
   document.getElementById('stTotal').textContent = statusText || '';
   document.getElementById('stInfo').textContent  = state.view.toUpperCase() + ' · ' + state.cat;
