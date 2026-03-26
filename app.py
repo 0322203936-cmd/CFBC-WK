@@ -1021,6 +1021,21 @@ function setRangeTableGroup(g) {
   renderComparativo();
 }
 
+// Extrae solo "Mes Año" de strings como "Del 02 al 08 de Marzo 2026"
+function fmtMes(dr) {
+  if (!dr) return '—';
+  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var lower = dr.toLowerCase();
+  for (var i = 0; i < MESES.length; i++) {
+    if (lower.indexOf(MESES[i]) > -1) {
+      var m = MESES[i].charAt(0).toUpperCase() + MESES[i].slice(1);
+      var yrMatch = dr.match(/\b(20\d{2})\b/);
+      return m + (yrMatch ? ' ' + yrMatch[1] : '');
+    }
+  }
+  return dr;
+}
+
 // Agrega todos los registros de una lista en un objeto {usd,mxn,ranches,ranches_mxn,date_range}
 function aggregateRecs(recs) {
   var out = { usd: 0, mxn: 0, ranches: {}, ranches_mxn: {}, date_range: '' };
@@ -1131,7 +1146,7 @@ function renderComparativo() {
         }).join('');
         return '<tr class="cmp-row">' +
           '<td style="color:' + col + ';font-weight:600">' + String(yr).slice(2) + String(w).padStart(2,'0') + '</td>' +
-          '<td style="color:#999;font-size:10px">' + (d && d.date_range ? d.date_range : '—') + '</td>' +
+          '<td style="color:#999;font-size:10px">' + fmtMes(d && d.date_range) + '</td>' +
           '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + '">' + fmt(val) + '</td>' +
           dCell + ranchCells + '</tr>';
       }).join('');
@@ -1150,7 +1165,7 @@ function renderComparativo() {
       yrs.forEach(function(yr) { if (weekData[yr][w] && weekData[yr][w].date_range) dateEx = weekData[yr][w].date_range; });
 
       var hdr = '<tr class="cmp-grp-hdr"><td colspan="2" style="color:var(--green)">📆 ' + wFmt(w) +
-        (dateEx ? ' <span style="font-size:9px;color:#999;font-weight:400">' + dateEx + '</span>' : '') +
+        (dateEx ? ' <span style="font-size:9px;color:#999;font-weight:400">' + fmtMes(dateEx) + '</span>' : '') +
         '</td><td colspan="' + (1 + ranchCols.length) + '"></td></tr>';
 
       var prevYrVal = null;
