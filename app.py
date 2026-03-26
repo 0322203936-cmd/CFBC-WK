@@ -758,10 +758,6 @@ function buildMainGrid() {
     suppressColumnVirtualisation: false,
     onGridReady: function(params) { mainGridApi = params.api; },
     onCellClicked: function(e) { onMainCellClick(e); },
-    getRowStyle: function(params) {
-      if (params.node.rowPinned) return { background: '#e8f5e9', fontWeight: '700' };
-      return null;
-    },
   };
   new agGrid.Grid(el, opts);
 }
@@ -913,7 +909,6 @@ function renderSemana() {
   });
 
   // Build rows
-  var totalRow = { categoria: 'TOTAL' };
   var grandTotal = { cur: 0, prev: 0, ranches: {} };
   RANCH_ORDER.forEach(function(r) { grandTotal.ranches[r] = 0; });
 
@@ -939,17 +934,6 @@ function renderSemana() {
       row.deltaPct = aggPrev.total > 0 ? (aggCur.total - aggPrev.total) / aggPrev.total * 100 : null;
     }
     return row;
-  });
-
-  // Total pinned row
-  if (prev) totalRow['v' + prev] = grandTotal.prev;
-  totalRow['v' + cur] = grandTotal.cur;
-  if (prev && grandTotal.prev > 0) {
-    totalRow.deltaAmt = grandTotal.cur - grandTotal.prev;
-    totalRow.deltaPct = (grandTotal.cur - grandTotal.prev) / grandTotal.prev * 100;
-  }
-  RANCH_ORDER.forEach(function(r) {
-    totalRow['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = grandTotal.ranches[r];
   });
 
   setMainGrid(cols, rows, [], fmt(grandTotal.cur) + ' ' + sym);
@@ -994,7 +978,6 @@ function renderAnual() {
     });
   }
 
-  var totalRow = { categoria: 'TOTAL' };
   var grandByYear = {};
   yrs.forEach(function(yr) { grandByYear[yr] = 0; });
 
@@ -1019,11 +1002,6 @@ function renderAnual() {
     return row;
   });
 
-  yrs.forEach(function(yr) { totalRow['y' + yr] = grandByYear[yr]; });
-  if (yrs.length >= 2) {
-    var l2 = yrs[yrs.length-1], p2 = yrs[yrs.length-2];
-    totalRow.yoy = grandByYear[p2] > 0 ? (grandByYear[l2] - grandByYear[p2]) / grandByYear[p2] * 100 : null;
-  }
   var curTotal = grandByYear[yrs[yrs.length-1]] || 0;
   setMainGrid(cols, rows, [], fmt(curTotal) + ' ' + sym + ' (año más reciente)');
 }
@@ -1154,14 +1132,7 @@ function renderComparativo() {
     return row;
   });
 
-  // Fila total
   var grandTotal = rows.reduce(function(s,r){ return s + (r.total || 0); }, 0);
-  var totalRow = { year: null, semanas: '', total: grandTotal, avg: null, deltaAmt: null, deltaPct: null };
-  RANCH_ORDER.forEach(function(rn) {
-    var fld = 'r_' + rn.replace(/[^a-zA-Z0-9]/g,'_');
-    totalRow[fld] = rows.reduce(function(s,r){ return s + (r[fld] || 0); }, 0);
-  });
-
   setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' · ' + wFmt(fromW) + '→' + wFmt(toW) + ' · ' + state.cat);
 }
 
@@ -1199,7 +1170,6 @@ function renderRancho() {
     });
   });
 
-  var totalRow = { rancho: 'TOTAL' };
   var grandCur = 0, grandPrev = 0;
 
   var rows = RANCH_ORDER.map(function(ranch) {
@@ -1225,9 +1195,6 @@ function renderRancho() {
     }
     return row;
   }).filter(function(r) { return (r['v' + cur] || 0) > 0 || (r['v' + (prev||cur)] || 0) > 0; });
-
-  totalRow['v' + cur] = grandCur;
-  if (prev) { totalRow['v' + prev] = grandPrev; totalRow.deltaAmt = grandCur - grandPrev; totalRow.deltaPct = grandPrev > 0 ? (grandCur-grandPrev)/grandPrev*100 : null; }
 
   setMainGrid(cols, rows, [], fmt(grandCur) + ' ' + sym);
 }
@@ -1419,11 +1386,6 @@ function renderServicios() {
     return row;
   });
   rows.sort(function(a,b) { return b.total - a.total; });
-  var totalRow = { subcat: 'TOTAL', total: grandTotal, pct: 100 };
-  RANCH_ORDER.forEach(function(r) {
-    totalRow['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] =
-      rows.reduce(function(s,row) { return s + (row['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')]||0); }, 0);
-  });
   setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym);
 }
 
