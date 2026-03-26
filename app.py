@@ -956,7 +956,7 @@ function renderSemana() {
     totalRow['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = grandTotal.ranches[r];
   });
 
-  setMainGrid(cols, rows, [totalRow], fmt(grandTotal.cur) + ' ' + sym);
+  setMainGrid(cols, rows, [], fmt(grandTotal.cur) + ' ' + sym);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1029,7 +1029,7 @@ function renderAnual() {
     totalRow.yoy = grandByYear[p2] > 0 ? (grandByYear[l2] - grandByYear[p2]) / grandByYear[p2] * 100 : null;
   }
   var curTotal = grandByYear[yrs[yrs.length-1]] || 0;
-  setMainGrid(cols, rows, [totalRow], fmt(curTotal) + ' ' + sym + ' (año más reciente)');
+  setMainGrid(cols, rows, [], fmt(curTotal) + ' ' + sym + ' (año más reciente)');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1166,7 +1166,7 @@ function renderComparativo() {
     totalRow[fld] = rows.reduce(function(s,r){ return s + (r[fld] || 0); }, 0);
   });
 
-  setMainGrid(cols, rows, [totalRow], fmt(grandTotal) + ' ' + sym + ' · ' + wFmt(fromW) + '→' + wFmt(toW) + ' · ' + state.cat);
+  setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' · ' + wFmt(fromW) + '→' + wFmt(toW) + ' · ' + state.cat);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1233,7 +1233,7 @@ function renderRancho() {
   totalRow['v' + cur] = grandCur;
   if (prev) { totalRow['v' + prev] = grandPrev; totalRow.deltaAmt = grandCur - grandPrev; totalRow.deltaPct = grandPrev > 0 ? (grandCur-grandPrev)/grandPrev*100 : null; }
 
-  setMainGrid(cols, rows, [totalRow], fmt(grandCur) + ' ' + sym);
+  setMainGrid(cols, rows, [], fmt(grandCur) + ' ' + sym);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1428,7 +1428,7 @@ function renderServicios() {
     totalRow['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] =
       rows.reduce(function(s,row) { return s + (row['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')]||0); }, 0);
   });
-  setMainGrid(cols, rows, [totalRow], fmt(grandTotal) + ' ' + sym);
+  setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1580,9 +1580,9 @@ function closeProdPanel() {
 // RESIZE HELPER
 // ═══════════════════════════════════════════════════════════
 function resizeGrid() {
-  var reserved = 36 + 32 + 28 + 22 + 40; // hdr + toolbar + tabs + statusbar + margin
-  var h = Math.max(window.innerHeight - reserved, 500);
-  document.getElementById('myGrid').style.height = h + 'px';
+  // window.innerHeight dentro del iframe = height del componente (4000px), no la pantalla
+  var GRID_H = 580;
+  document.getElementById('myGrid').style.height = GRID_H + 'px';
   if (mainGridApi) mainGridApi.sizeColumnsToFit();
 }
 window.addEventListener('resize', resizeGrid);
@@ -1591,7 +1591,8 @@ window.addEventListener('resize', resizeGrid);
 // HEIGHT REPORTING TO STREAMLIT
 // ═══════════════════════════════════════════════════════════
 function reportHeight() {
-  var h = document.body.scrollHeight + 40;
+  var appEl = document.getElementById('app');
+  var h = appEl ? appEl.scrollHeight + 60 : document.body.scrollHeight + 60;
   window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 700) }, '*');
 }
 var ro = new ResizeObserver(reportHeight);
@@ -1634,21 +1635,9 @@ if (typeof agGrid === 'undefined') {
 }
 </script>
 
-<script>
-// Streamlit iframe height sync
-function reportHeight() {
-  var h = document.getElementById('app')
-    ? document.getElementById('app').getBoundingClientRect().bottom + window.scrollY + 40
-    : document.body.scrollHeight + 40;
-  window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 700) }, '*');
-}
-var ro2 = new ResizeObserver(reportHeight);
-ro2.observe(document.body);
-reportHeight();
-setInterval(reportHeight, 400);
-</script>
+
 </body>
 </html>"""
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
-components.html(html_final, height=4000, scrolling=False)
+components.html(html_final, height=900, scrolling=False)
