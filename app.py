@@ -303,6 +303,69 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   text-decoration: underline dotted;
   text-underline-offset: 2px;
 }
+
+/* ── COMPARATIVO TABLE ───────────────────────── */
+#comparativoWrap {
+  display: none;
+  background: #fff;
+  border: 1px solid #d5d5d5;
+  border-top: none;
+  overflow: hidden;
+}
+#comparativoWrap.show { display: block; }
+.cmp-stat-strip {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 8px 10px; background: #f4f4f4;
+  border-bottom: 1px solid #d5d5d5;
+}
+.cmp-stat-box {
+  background: #fff; border: 1px solid #ddd; border-radius: 4px;
+  padding: 6px 12px; min-width: 130px;
+}
+.cmp-stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; }
+.cmp-stat-val   { font-size: 14px; font-weight: 700; margin: 2px 0 1px; }
+.cmp-stat-sub   { font-size: 9px; color: #aaa; }
+.cmp-tbl-wrap   { overflow-x: auto; -webkit-overflow-scrolling: touch;
+                  scrollbar-width: thin; scrollbar-color: #ccc transparent;
+                  max-height: calc(100vh - 260px); overflow-y: auto; }
+.cmp-tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
+.cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+.cmp-tbl {
+  border-collapse: collapse; width: 100%;
+  font-family: var(--mono); font-size: 11px;
+}
+.cmp-tbl th {
+  padding: 5px 8px; background: #e8e8e8; color: #444;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.3px; white-space: nowrap;
+  border-bottom: 2px solid #ccc; border-right: 1px solid #ddd;
+  position: sticky; top: 0; z-index: 2; text-align: right;
+}
+.cmp-tbl th:first-child, .cmp-tbl th:nth-child(2) { text-align: left; }
+.cmp-tbl td {
+  padding: 4px 8px; border-bottom: 1px solid #eee;
+  border-right: 1px solid #f0f0f0; white-space: nowrap;
+  text-align: right;
+}
+.cmp-tbl td:first-child, .cmp-tbl td:nth-child(2) { text-align: left; }
+.cmp-grp-hdr td {
+  background: #eff3fa; font-weight: 700;
+  border-top: 2px solid #ccc; font-size: 11px;
+  padding: 5px 8px;
+}
+.cmp-grp-hdr td:first-child { border-left: 3px solid #16a34a; }
+.cmp-row:hover td { background: #f0faf4; }
+.cmp-total-row td {
+  background: rgba(22,163,74,.06); font-weight: 700;
+  border-top: 1px solid rgba(22,163,74,.2); color: #16a34a;
+}
+.cmp-total-row td:first-child { border-left: 3px solid rgba(22,163,74,.4); }
+.delta-cell { font-size: 10px; white-space: nowrap; }
+.delta-amt  { display: block; }
+.delta-pct  { display: block; font-size: 9px; opacity: 0.8; }
+.chg-pos { color: #16a34a; font-weight: 600; }
+.chg-neg { color: #dc2626; font-weight: 600; }
+.chg-0   { color: #aaa; }
 </style>
 </head>
 <body>
@@ -370,12 +433,29 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
     <span class="range-badge" id="rangeBadge">W01 → W52</span>
     <div class="tb-sep"></div>
+    <span class="tb-label">Ver por</span>
+    <div class="tb-grp">
+      <button class="tb-btn active" id="rtgYear" onclick="setRangeTableGroup('year')">Año→Sem</button>
+      <button class="tb-btn"        id="rtgWeek" onclick="setRangeTableGroup('week')">Sem→Año</button>
+    </div>
+    <div class="tb-sep"></div>
     <button class="tb-btn" onclick="resetRange()">↺ Reset</button>
   </div>
 
   <!-- GRID AREA -->
   <div id="gridWrap">
     <div id="myGrid" class="ag-theme-alpine" style="width:100%;height:500px"></div>
+  </div>
+
+  <!-- COMPARATIVO TABLE (reemplaza gridWrap en vista comparativo) -->
+  <div id="comparativoWrap">
+    <div class="cmp-stat-strip" id="cmpStats"></div>
+    <div class="cmp-tbl-wrap">
+      <table class="cmp-tbl">
+        <thead id="cmpHead"></thead>
+        <tbody id="cmpBody"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- PRODUCTOS SUB-PANEL -->
@@ -691,6 +771,16 @@ function setView(v) {
   // Mostrar/ocultar barra de rango solo en comparativo
   var rb = document.getElementById('rangeBar');
   if (rb) rb.className = 'range-bar' + (v === 'comparativo' ? ' show' : '');
+  // Alternar entre AG Grid y tabla comparativo
+  var gw  = document.getElementById('gridWrap');
+  var cmp = document.getElementById('comparativoWrap');
+  if (v === 'comparativo') {
+    if (gw)  gw.style.display  = 'none';
+    if (cmp) cmp.className = 'show';
+  } else {
+    if (gw)  gw.style.display  = '';
+    if (cmp) cmp.className = '';
+  }
   closeProdPanel();
   renderView();
 }
@@ -731,7 +821,7 @@ function resetRange() {
     .filter(function(v,i,a){ return a.indexOf(v) === i; })
     .sort(function(a,b){ return a - b; });
   state.toWeek   = wks[wks.length - 1] || allWeeks[allWeeks.length - 1] || 52;
-  state.fromWeek = wks[0] || 1;
+  state.fromWeek = wks[wks.length - 2] || wks[0] || state.toWeek;
   updateRangeSliders();
   if (state.view === 'comparativo') renderComparativo();
 }
@@ -945,133 +1035,208 @@ function renderAnual() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// VIEW 3: COMPARATIVO (filtrado por rango W## → W##)
-// Rows = una fila por año, mostrando total del rango + ranches
+// VIEW 3: COMPARATIVO (tabla agrupada, equivale al Tendencia original)
 // ═══════════════════════════════════════════════════════════
-function renderComparativo() {
-  var sym  = state.currency.toUpperCase();
-  var yrs  = getActiveYears();
-  var fromW = state.fromWeek;
-  var toW   = state.toWeek;
+var rangeTableGroup = 'year'; // 'year' = Año→Semana | 'week' = Semana→Año
 
-  // ── Agregar datos por año dentro del rango ──────────────
-  var map = {};
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    if (r.categoria !== state.cat) return;
-    var wk = parseInt(r.week || 0);
-    if (!wk || wk < fromW || wk > toW) return;
-    var yr = r.year;
-    if (!map[yr]) {
-      map[yr] = { year: yr, total: 0, ranches: {}, weeks: [], date_first: '', date_last: '' };
-    }
-    var rec = map[yr];
-    rec.total += state.currency === 'usd' ? (r.usd_total || 0) : (r.mxn_total || 0);
-    if (rec.weeks.indexOf(wk) === -1) rec.weeks.push(wk);
-    if (!rec.date_first && r.date_range) rec.date_first = r.date_range;
-    if (r.date_range) rec.date_last = r.date_range;
-    var src = state.currency === 'usd' ? (r.usd_ranches || {}) : (r.mxn_ranches || {});
-    RANCH_ORDER.forEach(function(rn) {
-      var v = src[rn] || 0;
-      if (v) rec.ranches[rn] = (rec.ranches[rn] || 0) + v;
+function setRangeTableGroup(g) {
+  rangeTableGroup = g;
+  document.getElementById('rtgYear').className = 'tb-btn' + (g === 'year' ? ' active' : '');
+  document.getElementById('rtgWeek').className = 'tb-btn' + (g === 'week' ? ' active' : '');
+  renderComparativo();
+}
+
+// Agrega todos los registros de una lista en un objeto {usd,mxn,ranches,ranches_mxn,date_range}
+function aggregateRecs(recs) {
+  var out = { usd: 0, mxn: 0, ranches: {}, ranches_mxn: {}, date_range: '' };
+  recs.forEach(function(r) {
+    out.usd += r.usd_total; out.mxn += r.mxn_total;
+    if (r.date_range) out.date_range = r.date_range;
+    Object.keys(r.usd_ranches || {}).forEach(function(rn) { out.ranches[rn] = (out.ranches[rn] || 0) + r.usd_ranches[rn]; });
+    Object.keys(r.mxn_ranches || {}).forEach(function(rn) { out.ranches_mxn[rn] = (out.ranches_mxn[rn] || 0) + r.mxn_ranches[rn]; });
+  });
+  out.usd = Math.round(out.usd * 100) / 100;
+  out.mxn = Math.round(out.mxn * 100) / 100;
+  return out;
+}
+
+// Retorna {yr: {usd,mxn,ranches,ranches_mxn,weekly:{wk:val}}} para el rango
+function getRangeByYear(cat, fromW, toW) {
+  var res = {};
+  getActiveYears().forEach(function(yr) {
+    var recs = DATA.weekly_detail.filter(function(r) {
+      return r.categoria === cat && r.year === yr && r.week >= fromW && r.week <= toW;
+    });
+    if (!recs.length) return;
+    var ag = aggregateRecs(recs);
+    ag.weekly = {};
+    recs.forEach(function(r) {
+      ag.weekly[r.week] = (ag.weekly[r.week] || 0) + (state.currency === 'usd' ? r.usd_total : r.mxn_total);
+    });
+    res[yr] = ag;
+  });
+  return res;
+}
+
+// Celda de delta: valor actual vs anterior
+function deltaCellHtml(val, prev) {
+  if (prev === null || prev === undefined || prev === 0) return '<td class="delta-cell chg-0">—</td>';
+  var diff = val - prev;
+  var p = ((diff / prev) * 100).toFixed(1);
+  var cls = diff > 0 ? 'chg-pos' : diff < 0 ? 'chg-neg' : 'chg-0';
+  var sign = diff > 0 ? '+' : '';
+  return '<td class="delta-cell ' + cls + '"><span class="delta-amt">' + sign + fmt(diff) + '</span>' +
+         '<span class="delta-pct">' + sign + p + '%</span></td>';
+}
+
+function renderComparativo() {
+  var f    = state.fromWeek, t = state.toWeek;
+  var yrs  = getActiveYears();
+  var sym  = state.currency.toUpperCase();
+  var byYear = getRangeByYear(state.cat, f, t);
+
+  var rangeWeeks = allWeeks.filter(function(w) { return w >= f && w <= t; });
+  var ranchCols  = RANCH_ORDER;
+
+  // ── Stat strip por año ──────────────────────────────────
+  var statsHtml = yrs.map(function(yr) {
+    var d   = byYear[yr];
+    var val = d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0;
+    var wks = d ? Object.keys(d.weekly || {}).length : 0;
+    var avg = wks > 0 ? val / wks : 0;
+    var col = YEAR_COLORS[yr] || '#888';
+    return '<div class="cmp-stat-box" style="border-color:' + col + '44">' +
+      '<div class="cmp-stat-label">' + yr + ' · ' + sym + '</div>' +
+      '<div class="cmp-stat-val" style="color:' + col + '">' + fmt(val) + '</div>' +
+      '<div class="cmp-stat-sub">' + fmt(avg) + '/sem · ' + wks + ' semanas</div>' +
+      '</div>';
+  }).join('');
+  document.getElementById('cmpStats').innerHTML = statsHtml;
+
+  // ── Precargar weekData ──────────────────────────────────
+  var weekData = {};
+  yrs.forEach(function(yr) {
+    weekData[yr] = {};
+    rangeWeeks.forEach(function(w) {
+      var recs = DATA.weekly_detail.filter(function(r) {
+        return r.categoria === state.cat && r.year === yr && r.week === w;
+      });
+      if (recs.length) weekData[yr][w] = aggregateRecs(recs);
     });
   });
 
-  // ── Helper para crear nodo clickeable de productos ──────
-  function makeProdLink(text, yr, color, weight) {
-    var wkMin = Math.min.apply(null, (map[yr] ? map[yr].weeks : [fromW]));
-    var wkMax = Math.max.apply(null, (map[yr] ? map[yr].weeks : [toW]));
-    var rowData = {
-      _cat: state.cat,
-      _year: yr,
-      _week: wkMin,
-      _fromWeek: wkMin,
-      _toWeek: wkMax
-    };
-    var span = document.createElement('span');
-    span.className = 'prod-link';
-    span.textContent = text;
-    span.style.color = color || '#1e3a5f';
-    span.style.fontWeight = weight || '600';
-    span.style.cursor = 'pointer';
-    span.title = 'Ver productos · ' + wFmt(wkMin) + '→' + wFmt(wkMax);
-    span.addEventListener('click', function(ev) {
-      ev.preventDefault(); ev.stopPropagation();
-      showProdPanel(rowData, { ranch: null });
-    });
-    return span;
+  var head, body;
+
+  if (rangeTableGroup === 'year') {
+    // ── MODO: Año → Semana ─────────────────────────────────
+    // Cabecera
+    head = '<tr><th>Semana</th><th>Fecha</th><th>Total ' + sym + '</th><th>Δ$ vs sem ant.</th>' +
+      ranchCols.map(function(r) { return '<th>' + r + '</th>'; }).join('') + '</tr>';
+
+    body = yrs.map(function(yr, yi) {
+      var col = YEAR_COLORS[yr] || '#888';
+      var yearTotal = byYear[yr] ? (state.currency === 'usd' ? byYear[yr].usd : byYear[yr].mxn) : 0;
+      var prevYrD = yi > 0 ? byYear[yrs[yi - 1]] : null;
+      var prevYrVal = prevYrD ? (state.currency === 'usd' ? prevYrD.usd : prevYrD.mxn) : null;
+      var yDiff = prevYrVal !== null ? yearTotal - prevYrVal : null;
+      var yPct  = (prevYrVal !== null && prevYrVal !== 0) ? ((yearTotal - prevYrVal) / prevYrVal * 100).toFixed(1) : null;
+      var yCls  = yDiff === null ? 'chg-0' : yDiff > 0 ? 'chg-pos' : 'chg-neg';
+      var ySign = yDiff !== null && yDiff > 0 ? '+' : '';
+
+      // Fila de cabecera del año con totales y deltas por rancho
+      var ranchHdrCells = ranchCols.map(function(r) {
+        var d = byYear[yr]; if (!d) return '<td>—</td>';
+        var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
+        var v = src[r] || 0;
+        return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#bbb') + ';font-size:10px">' + (v > 0 ? fmt(v) : '—') + '</td>';
+      }).join('');
+
+      var hdr = '<tr class="cmp-grp-hdr"><td colspan="2" style="color:' + col + '">📅 ' + yr + ' — Total del rango</td>' +
+        '<td style="color:' + col + '">' + fmt(yearTotal) + '</td>' +
+        '<td class="delta-cell ' + yCls + '">' + (yDiff !== null ?
+          '<span class="delta-amt">' + ySign + fmt(yDiff) + '</span><span class="delta-pct">' + ySign + (yPct || '0') + '% vs ' + yrs[yi - 1] + '</span>' :
+          '<span class="delta-amt chg-0">— base</span>') + '</td>' +
+        ranchHdrCells + '</tr>';
+
+      // Filas de semanas dentro del año
+      var prevWkVal = null;
+      var wkRows = rangeWeeks.map(function(w) {
+        var d   = weekData[yr][w];
+        var val = d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0;
+        var dCell = deltaCellHtml(val, prevWkVal);
+        if (val > 0) prevWkVal = val;
+        var ranchCells = ranchCols.map(function(r) {
+          if (!d) return '<td style="color:#ddd">—</td>';
+          var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
+          var v = src[r] || 0;
+          return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + '">' + (v > 0 ? fmt(v) : '—') + '</td>';
+        }).join('');
+        return '<tr class="cmp-row">' +
+          '<td style="color:' + col + ';font-weight:600">' + wFmt(w) + '</td>' +
+          '<td style="color:#999;font-size:10px">' + (d && d.date_range ? d.date_range : '—') + '</td>' +
+          '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + '">' + fmt(val) + '</td>' +
+          dCell + ranchCells + '</tr>';
+      }).join('');
+
+      return hdr + wkRows;
+    }).join('');
+
+  } else {
+    // ── MODO: Semana → Año ─────────────────────────────────
+    head = '<tr><th>Año</th><th>Total ' + sym + '</th><th>Δ$ vs año ant.</th>' +
+      ranchCols.map(function(r) { return '<th>' + r + '</th>'; }).join('') + '</tr>';
+
+    body = rangeWeeks.map(function(w) {
+      // Buscar fecha de referencia para esta semana
+      var dateEx = '';
+      yrs.forEach(function(yr) { if (weekData[yr][w] && weekData[yr][w].date_range) dateEx = weekData[yr][w].date_range; });
+
+      var hdr = '<tr class="cmp-grp-hdr"><td colspan="2" style="color:var(--green)">📆 ' + wFmt(w) +
+        (dateEx ? ' <span style="font-size:9px;color:#999;font-weight:400">' + dateEx + '</span>' : '') +
+        '</td><td colspan="' + (1 + ranchCols.length) + '"></td></tr>';
+
+      var prevYrVal = null;
+      var yrRows = yrs.map(function(yr) {
+        var col = YEAR_COLORS[yr] || '#888';
+        var d   = weekData[yr][w];
+        var val = d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0;
+        var dCell = deltaCellHtml(val, prevYrVal);
+        if (val > 0) prevYrVal = val;
+        var ranchCells = ranchCols.map(function(r) {
+          if (!d) return '<td style="color:#ddd">—</td>';
+          var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
+          var v = src[r] || 0;
+          return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + '">' + (v > 0 ? fmt(v) : '—') + '</td>';
+        }).join('');
+        return '<tr class="cmp-row">' +
+          '<td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + col + ';margin-right:5px"></span>' +
+          '<strong style="color:' + col + '">' + yr + '</strong></td>' +
+          '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + '">' + fmt(val) + '</td>' +
+          dCell + ranchCells + '</tr>';
+      }).join('');
+
+      // Fila de total de la semana (suma de todos los años)
+      var wkTotal = yrs.reduce(function(acc, yr) {
+        var d = weekData[yr][w];
+        return acc + (d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0);
+      }, 0);
+      var totalRow = '<tr class="cmp-total-row"><td>TOTAL</td><td>' + fmt(wkTotal) +
+        '</td><td colspan="' + (1 + ranchCols.length) + '"></td></tr>';
+
+      return hdr + yrRows + totalRow;
+    }).join('');
   }
 
-  // ── Columnas ────────────────────────────────────────────
-  var cols = [
-    { field: 'year', headerName: 'AÑO', width: 65, pinned: 'left',
-      filter: 'agNumberColumnFilter', type: 'numericColumn',
-      cellRenderer: function(p) {
-        var col = YEAR_COLORS[p.value] || '#888';
-        return '<span style="color:' + col + ';font-weight:700">' + (p.value||'TOTAL') + '</span>';
-      }
-    },
-    { field: 'semanas', headerName: 'SEMS', width: 55, filter: 'agNumberColumnFilter', type: 'numericColumn' },
-    { field: 'total', headerName: 'TOTAL ' + sym, width: 115, type: 'numericColumn', filter: 'agNumberColumnFilter',
-      cellRenderer: function(p) {
-        var v = p.value;
-        if (!v || isNaN(v) || v === 0) return '<span style="color:#bbb">—</span>';
-        if (!p.data || !p.data.year) return '<span style="color:#1e3a5f;font-weight:700">' + fmt(v) + '</span>';
-        return makeProdLink(fmt(v), p.data.year, '#1e3a5f', '600');
-      }
-    },
-    { field: 'deltaAmt', headerName: 'Δ $ vs ant.', width: 110, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
-    { field: 'deltaPct', headerName: 'Δ %',         width: 72,  type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
-    { field: 'avg',      headerName: 'PROM/SEM',    width: 95,  type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
-  ];
+  document.getElementById('cmpHead').innerHTML = head;
+  document.getElementById('cmpBody').innerHTML = body;
 
-  // Columnas de rancho con click para ver productos del rancho
-  RANCH_ORDER.forEach(function(rn) {
-    var rcol = RANCH_COLORS[rn] || '#888';
-    cols.push({
-      field: 'r_' + rn.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: rn, width: 105,
-      type: 'numericColumn', filter: 'agNumberColumnFilter',
-      cellRenderer: function(p) {
-        var v = p.value;
-        if (!v || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
-        if (!p.data || !p.data.year) return '<span style="color:' + rcol + ';font-weight:700">' + fmt(v) + '</span>';
-        var link = makeProdLink(fmt(v), p.data.year, rcol, '600');
-        // Override ranch filter in the click handler
-        link.addEventListener('click', function(ev) {
-          ev.preventDefault(); ev.stopPropagation();
-          var yr   = p.data.year;
-          var wkMin = Math.min.apply(null, (map[yr] ? map[yr].weeks : [fromW]));
-          var wkMax = Math.max.apply(null, (map[yr] ? map[yr].weeks : [toW]));
-          showProdPanel({ _cat: state.cat, _year: yr, _week: wkMin, _fromWeek: wkMin, _toWeek: wkMax }, { ranch: rn });
-        }, true);
-        return link;
-      }
-    });
-  });
-
-  // ── Filas ───────────────────────────────────────────────
-  var rows = yrs.map(function(yr, i) {
-    var rec = map[yr] || { total: 0, ranches: {}, weeks: [] };
-    var prevRec = i > 0 ? (map[yrs[i-1]] || null) : null;
-    var prevTotal = prevRec ? prevRec.total : 0;
-    var semsCount = rec.weeks.length;
-    var row = {
-      year: yr,
-      semanas: semsCount,
-      total: rec.total,
-      avg: semsCount > 0 ? rec.total / semsCount : 0,
-      deltaAmt: prevTotal > 0 ? rec.total - prevTotal : null,
-      deltaPct: prevTotal > 0 ? (rec.total - prevTotal) / prevTotal * 100 : null,
-    };
-    RANCH_ORDER.forEach(function(rn) {
-      row['r_' + rn.replace(/[^a-zA-Z0-9]/g,'_')] = rec.ranches[rn] || 0;
-    });
-    return row;
-  });
-
-  var grandTotal = rows.reduce(function(s,r){ return s + (r.total || 0); }, 0);
-  setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' · ' + wFmt(fromW) + '→' + wFmt(toW) + ' · ' + state.cat);
+  // Status bar
+  var grandTotal = yrs.reduce(function(s, yr) {
+    var d = byYear[yr]; return s + (d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0);
+  }, 0);
+  document.getElementById('stRows').textContent  = rangeWeeks.length + ' sem × ' + yrs.length + ' años';
+  document.getElementById('stTotal').textContent = fmt(grandTotal) + ' ' + sym;
+  document.getElementById('stInfo').textContent  = 'COMPARATIVO · ' + state.cat + ' · ' + wFmt(f) + '→' + wFmt(t);
 }
 
 // ═══════════════════════════════════════════════════════════
