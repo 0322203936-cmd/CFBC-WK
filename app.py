@@ -635,13 +635,10 @@ function updateHeader() {
   // Annual total current year for SELECTED category
   var annualTotal = 0;
   if (isCombined(state.cat)) {
-    var dm = (DATA.summary[CAT_MIRFE] || {})[curYr];
-    if (dm) annualTotal += state.currency === 'usd' ? dm.usd : dm.mxn;
-    var dp = (DATA.summary[CAT_MIPE] || {})[curYr];
-    if (dp) annualTotal += state.currency === 'usd' ? dp.usd : dp.mxn;
+    annualTotal += sumDetail(DATA.weekly_detail.filter(function(r) { return r.categoria === CAT_MIRFE && r.year === curYr; }), state.currency).total;
+    annualTotal += sumDetail(DATA.weekly_detail.filter(function(r) { return r.categoria === CAT_MIPE && r.year === curYr; }), state.currency).total;
   } else {
-    var d = (DATA.summary[state.cat] || {})[curYr];
-    if (d) annualTotal += state.currency === 'usd' ? d.usd : d.mxn;
+    annualTotal += sumDetail(DATA.weekly_detail.filter(function(r) { return r.categoria === state.cat && r.year === curYr; }), state.currency).total;
   }
 
   var html = '';
@@ -957,11 +954,8 @@ function renderAnual() {
   var grandTotal = 0;
 
   var getYrAgg = function(cat, yr) {
-    var d = (DATA.summary[cat] || {})[yr] || {usd:0, mxn:0, ranches:{}, ranches_mxn:{}};
-    return {
-      total: state.currency === 'usd' ? d.usd : d.mxn,
-      ranches: state.currency === 'usd' ? d.ranches : d.ranches_mxn
-    };
+    var recs = DATA.weekly_detail.filter(function(r) { return r.categoria === cat && r.year === yr; });
+    return sumDetail(recs, state.currency);
   };
 
   if (isCombined(state.cat)) {
@@ -1005,7 +999,7 @@ function renderAnual() {
 
 // ═══════════════════════════════════════════════════════════
 // VIEW 3: COMPARATIVO (filtrado por rango W## → W##)
-// Rows = una fila por año, mostrando total del rango + ranches
+// Rows = una fila por SEMANA en el rango (para la categoría activa)
 // ═══════════════════════════════════════════════════════════
 function renderComparativo() {
   var sym  = state.currency.toUpperCase();
@@ -1013,131 +1007,88 @@ function renderComparativo() {
   var fromW = state.fromWeek;
   var toW   = state.toWeek;
 
-  // ── Agregar datos por año dentro del rango ──────────────
-  var map = {};
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    var isCatMatch = false;
-    if (isCombined(state.cat)) {
-      isCatMatch = (r.categoria === CAT_MIRFE || r.categoria === CAT_MIPE);
-    } else {
-      isCatMatch = (r.categoria === state.cat);
-    }
-    if (!isCatMatch) return;
-    
-    var wk = parseInt(r.week || 0);
-    if (!wk || wk < fromW || wk > toW) return;
-    var yr = r.year;
-    if (!map[yr]) {
-      map[yr] = { year: yr, total: 0, ranches: {}, weeks: [], date_first: '', date_last: '' };
-    }
-    var rec = map[yr];
-    rec.total += state.currency === 'usd' ? (r.usd_total || 0) : (r.mxn_total || 0);
-    if (rec.weeks.indexOf(wk) === -1) rec.weeks.push(wk);
-    if (!rec.date_first && r.date_range) rec.date_first = r.date_range;
-    if (r.date_range) rec.date_last = r.date_range;
-    var src = state.currency === 'usd' ? (r.usd_ranches || {}) : (r.mxn_ranches || {});
-    RANCH_ORDER.forEach(function(rn) {
-      var v = src[rn] || 0;
-      if (v) rec.ranches[rn] = (rec.ranches[rn] || 0) + v;
-    });
-  });
-
-  // ── Helper para crear nodo clickeable de productos ──────
-  function makeProdLink(text, yr, color, weight) {
-    var wkMin = Math.min.apply(null, (map[yr] ? map[yr].weeks : [fromW]));
-    var wkMax = Math.max.apply(null, (map[yr] ? map[yr].weeks : [toW]));
-    var rowData = {
-      _cat: state.cat,
-      _year: yr,
-      _week: wkMin,
-      _fromWeek: wkMin,
-      _toWeek: wkMax
-    };
-    var span = document.createElement('span');
-    span.className = 'prod-link';
-    span.textContent = text;
-    span.style.color = color || '#1e3a5f';
-    span.style.fontWeight = weight || '600';
-    span.style.cursor = 'pointer';
-    span.title = 'Ver productos · ' + wFmt(wkMin) + '→' + wFmt(wkMax);
-    span.addEventListener('click', function(ev) {
-      ev.preventDefault(); ev.stopPropagation();
-      showProdPanel(rowData, { ranch: null });
-    });
-    return span;
-  }
-
-  // ── Columnas ────────────────────────────────────────────
   var cols = [
-    { field: 'year', headerName: 'AÑO', width: 65, pinned: 'left',
-      filter: 'agNumberColumnFilter', type: 'numericColumn',
-      cellRenderer: function(p) {
-        var col = YEAR_COLORS[p.value] || '#888';
-        return '<span style="color:' + col + ';font-weight:700">' + (p.value||'TOTAL') + '</span>';
-      }
-    },
-    { field: 'semanas', headerName: 'SEMS', width: 55, filter: 'agNumberColumnFilter', type: 'numericColumn' },
-    { field: 'total', headerName: 'TOTAL ' + sym, width: 115, type: 'numericColumn', filter: 'agNumberColumnFilter',
-      cellRenderer: function(p) {
-        var v = p.value;
-        if (!v || isNaN(v) || v === 0) return '<span style="color:#bbb">—</span>';
-        if (!p.data || !p.data.year) return '<span style="color:#1e3a5f;font-weight:700">' + fmt(v) + '</span>';
-        return makeProdLink(fmt(v), p.data.year, '#1e3a5f', '600');
-      }
-    },
-    { field: 'deltaAmt', headerName: 'Δ $ vs ant.', width: 110, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
-    { field: 'deltaPct', headerName: 'Δ %',         width: 72,  type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
-    { field: 'avg',      headerName: 'PROM/SEM',    width: 95,  type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+    { field: 'week', headerName: 'SEMANA', width: 90, pinned: 'left', filter: 'agTextColumnFilter',
+      cellRenderer: function(p) { return '<span style="font-weight:800;color:#1e3a5f">' + (p.value === 'TOTAL' ? 'TOTAL' : wFmt(p.value)) + '</span>'; } }
   ];
 
-  // Columnas de rancho con click para ver productos del rancho
-  RANCH_ORDER.forEach(function(rn) {
-    var rcol = RANCH_COLORS[rn] || '#888';
+  yrs.forEach(function(yr) {
     cols.push({
-      field: 'r_' + rn.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: rn, width: 105,
-      type: 'numericColumn', filter: 'agNumberColumnFilter',
-      cellRenderer: function(p) {
-        var v = p.value;
-        if (!v || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
-        if (!p.data || !p.data.year) return '<span style="color:' + rcol + ';font-weight:700">' + fmt(v) + '</span>';
-        var link = makeProdLink(fmt(v), p.data.year, rcol, '600');
-        // Override ranch filter in the click handler
-        link.addEventListener('click', function(ev) {
-          ev.preventDefault(); ev.stopPropagation();
-          var yr   = p.data.year;
-          var wkMin = Math.min.apply(null, (map[yr] ? map[yr].weeks : [fromW]));
-          var wkMax = Math.max.apply(null, (map[yr] ? map[yr].weeks : [toW]));
-          showProdPanel({ _cat: state.cat, _year: yr, _week: wkMin, _fromWeek: wkMin, _toWeek: wkMax }, { ranch: rn });
-        }, true);
-        return link;
+      field: 'y' + yr, headerName: String(yr) + ' ' + sym, width: 110, type: 'numericColumn',
+      filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer
+    });
+  });
+
+  var curYr = yrs[yrs.length - 1];
+  var prevYr = yrs.length > 1 ? yrs[yrs.length - 2] : null;
+
+  if (prevYr) {
+    cols.push({ field: 'deltaAmt', headerName: 'Δ $ ' + prevYr + '→' + curYr, width: 120, type: 'numericColumn', cellRenderer: deltaAmtRenderer });
+    cols.push({ field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', cellRenderer: deltaRenderer });
+  }
+
+  RANCH_ORDER.forEach(function(r) {
+    cols.push({
+      field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'), headerName: r, width: 100, type: 'numericColumn',
+      filter: 'agNumberColumnFilter', cellRenderer: ranchRenderer(r)
+    });
+  });
+
+  var rows = [];
+  var totals = { deltaAmt: 0 };
+  yrs.forEach(function(yr) { totals['y' + yr] = 0; });
+  RANCH_ORDER.forEach(function(rn) { totals['r_' + rn.replace(/[^a-zA-Z0-9]/g,'_')] = 0; });
+
+  for (var w = fromW; w <= toW; w++) {
+    if (allWeeks.indexOf(w) === -1) continue;
+    var row = { week: w, _cat: state.cat, _fromWeek: w, _toWeek: w };
+    var hasValidData = false;
+
+    yrs.forEach(function(yr) {
+      var agg;
+      if (isCombined(state.cat)) {
+        var c1 = sumDetail(getWeekDetail(CAT_MIRFE, w, yr), state.currency);
+        var c2 = sumDetail(getWeekDetail(CAT_MIPE, w, yr), state.currency);
+        agg = { total: c1.total + c2.total, ranches: {} };
+        if (yr === curYr) {
+          RANCH_ORDER.forEach(function(rn) { agg.ranches[rn] = (c1.ranches[rn]||0) + (c2.ranches[rn]||0); });
+        }
+      } else {
+        agg = sumDetail(getWeekDetail(state.cat, w, yr), state.currency);
+      }
+      row['y' + yr] = agg.total;
+      totals['y' + yr] += agg.total;
+      if (agg.total > 0) hasValidData = true;
+
+      if (yr === curYr) {
+        RANCH_ORDER.forEach(function(rn) {
+          var rv = agg.ranches[rn] || 0;
+          row['r_' + rn.replace(/[^a-zA-Z0-9]/g,'_')] = rv;
+          totals['r_' + rn.replace(/[^a-zA-Z0-9]/g,'_')] += rv;
+        });
       }
     });
+
+    if (prevYr) {
+      row.deltaAmt = (row['y' + curYr] || 0)  - (row['y' + prevYr] || 0);
+      row.deltaPct = (row['y' + prevYr] > 0) ? row.deltaAmt / row['y' + prevYr] * 100 : null;
+      totals.deltaAmt += row.deltaAmt;
+    }
+
+    if (hasValidData) rows.push(row);
+  }
+
+  var bottomRow = { week: 'TOTAL' };
+  yrs.forEach(function(yr) { bottomRow['y' + yr] = totals['y' + yr]; });
+  if (prevYr) {
+    bottomRow.deltaAmt = totals.deltaAmt;
+    bottomRow.deltaPct = (totals['y' + prevYr] > 0) ? totals.deltaAmt / totals['y' + prevYr] * 100 : null;
+  }
+  RANCH_ORDER.forEach(function(rn) {
+    bottomRow['r_' + rn.replace(/[^a-zA-Z0-9]/g,'_')] = totals['r_' + rn.replace(/[^a-zA-Z0-9]/g,'_')];
   });
 
-  // ── Filas ───────────────────────────────────────────────
-  var rows = yrs.map(function(yr, i) {
-    var rec = map[yr] || { total: 0, ranches: {}, weeks: [] };
-    var prevRec = i > 0 ? (map[yrs[i-1]] || null) : null;
-    var prevTotal = prevRec ? prevRec.total : 0;
-    var semsCount = rec.weeks.length;
-    var row = {
-      year: yr,
-      semanas: semsCount,
-      total: rec.total,
-      avg: semsCount > 0 ? rec.total / semsCount : 0,
-      deltaAmt: prevTotal > 0 ? rec.total - prevTotal : null,
-      deltaPct: prevTotal > 0 ? (rec.total - prevTotal) / prevTotal * 100 : null,
-    };
-    RANCH_ORDER.forEach(function(rn) {
-      row['r_' + rn.replace(/[^a-zA-Z0-9]/g,'_')] = rec.ranches[rn] || 0;
-    });
-    return row;
-  });
-
-  var grandTotal = rows.reduce(function(s,r){ return s + (r.total || 0); }, 0);
-  setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' · ' + wFmt(fromW) + '→' + wFmt(toW) + ' · ' + state.cat);
+  setMainGrid(cols, rows, [bottomRow], fmt(totals['y' + curYr]) + ' ' + sym + ' · ' + state.cat + ' (' + wFmt(fromW) + '→' + wFmt(toW) + ')');
 }
 
 // ═══════════════════════════════════════════════════════════
