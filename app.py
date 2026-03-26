@@ -176,13 +176,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   transition: all 0.1s; flex-shrink: 0;
 }
 .yr-chip.on { background: #fff; }
-.tb-search {
-  font-size: 11px; font-family: var(--mono);
-  border: 1px solid #bbb; border-radius: 3px;
-  padding: 2px 8px; height: 22px; width: 130px;
-  background: #fff;
-}
-.tb-search:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 /* ── RANGE CONTROL BAR (Comparativo) ────────────── */
 .range-bar {
@@ -407,8 +400,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <div class="tb-sep"></div>
     <span class="tb-label">Años</span>
     <div id="yearChips" style="display:flex;gap:3px"></div>
-    <div class="tb-sep"></div>
-    <input type="text" class="tb-search" id="quickFilter" placeholder="🔍  filtrar tabla..." oninput="onQuickFilter(this.value)">
   </div>
 
   <!-- VIEW TABS -->
@@ -760,9 +751,6 @@ function setView(v) {
   }
   closeProdPanel();
   renderView();
-}
-function onQuickFilter(val) {
-  if (mainGridApi) mainGridApi.setQuickFilter(val);
 }
 function exportCSV() {
   if (mainGridApi) mainGridApi.exportDataAsCsv({ fileName: 'CFBC_' + state.view + '_' + new Date().toISOString().slice(0,10) + '.csv' });
