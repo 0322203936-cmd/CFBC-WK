@@ -1669,7 +1669,7 @@ if (typeof agGrid === 'undefined') {
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
 
-# ─── Barra de descarga XLSX (encima del grid) ────────────────────────────────
+# ─── Barra XLSX — pegada visualmente al header del iframe ────────────────────
 available_weeks = sorted(
     {
         str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2)
@@ -1683,34 +1683,56 @@ if available_weeks:
 
     st.markdown("""
     <style>
-      .dl-bar { background:#1e3a5f; padding:3px 10px 3px 10px;
-        display:flex; align-items:center; gap:6px; margin-bottom:-12px; }
-      .dl-bar-label { color:rgba(255,255,255,0.55); font-size:10px;
-        font-family:monospace; letter-spacing:.5px; white-space:nowrap; }
-      div[data-testid="stSelectbox"] { margin-bottom:0 !important; }
-      div[data-testid="stSelectbox"] > label { display:none !important; }
-      div[data-testid="stSelectbox"] > div > div {
-        min-height:24px !important; height:24px !important;
-        font-size:11px !important; font-family:monospace !important;
-        padding:0 8px !important; background:#2a4a72 !important;
-        border:1px solid rgba(255,255,255,0.2) !important;
-        border-radius:3px !important; color:#fff !important;
+      /* Quitar todo el padding/gap entre elementos Streamlit */
+      .stApp > div > div > div > div { gap: 0 !important; }
+      /* Barra que simula el header del iframe */
+      [data-testid="stHorizontalBlock"] {
+        background: #1e3a5f !important;
+        border-bottom: 3px solid #16a34a !important;
+        padding: 4px 10px !important;
+        margin: 0 !important;
+        height: 36px !important;
+        align-items: center !important;
+        gap: 6px !important;
       }
-      div[data-testid="stButton"] > button {
-        height:24px !important; padding:0 10px !important;
-        font-size:10px !important; font-family:monospace !important;
-        font-weight:700 !important; background:rgba(255,255,255,0.1) !important;
-        border:1px solid rgba(255,255,255,0.25) !important;
-        border-radius:3px !important; color:rgba(255,255,255,0.85) !important;
-        line-height:1 !important; margin-top:0 !important;
+      /* Quitar label del selectbox */
+      [data-testid="stHorizontalBlock"] label { display:none !important; }
+      /* Selectbox compacto */
+      [data-testid="stHorizontalBlock"] [data-testid="stSelectbox"] > div > div {
+        background: rgba(255,255,255,0.1) !important;
+        border: 1px solid rgba(255,255,255,0.25) !important;
+        border-radius: 3px !important;
+        color: #fff !important;
+        font-family: monospace !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        min-height: 24px !important;
+        height: 24px !important;
+        padding: 0 8px !important;
       }
-      div[data-testid="stButton"] > button:hover {
-        background:rgba(255,255,255,0.2) !important;
+      /* Botón compacto */
+      [data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        background: rgba(255,255,255,0.1) !important;
+        border: 1px solid rgba(255,255,255,0.25) !important;
+        border-radius: 3px !important;
+        color: rgba(255,255,255,0.85) !important;
+        font-family: monospace !important;
+        font-size: 10px !important;
+        font-weight: 700 !important;
+        height: 24px !important;
+        padding: 0 10px !important;
+        line-height: 1 !important;
       }
+      [data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+        background: rgba(255,255,255,0.2) !important;
+      }
+      /* Quitar margen superior del iframe */
+      [data-testid="stIFrame"] { margin-top: 0 !important; }
+      iframe { margin-top: 0 !important; display: block !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns([0.8, 0.7, 8])
+    c1, c2, c3 = st.columns([0.6, 0.5, 9])
     with c1:
         selected_wk = st.selectbox(
             "wk", options=available_weeks,
