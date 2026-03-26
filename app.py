@@ -777,10 +777,12 @@ function updateRangeSliders() {
   var fLbl = document.getElementById('fromWeekLabel');
   var tLbl = document.getElementById('toWeekLabel');
   var badge = document.getElementById('rangeBadge');
-  if (fLbl) fLbl.textContent = wFmt(f);
-  if (tLbl) tLbl.textContent = wFmt(t);
+  var latestYr = DATA.years[DATA.years.length - 1];
+  var yy = String(latestYr).slice(2);
+  if (fLbl) fLbl.textContent = yy + String(f).padStart(2, '0');
+  if (tLbl) tLbl.textContent = yy + String(t).padStart(2, '0');
   var count = allWeeks.filter(function(w){ return w >= f && w <= t; }).length;
-  if (badge) badge.textContent = wFmt(f) + ' → ' + wFmt(t) + ' · ' + count + ' sem';
+  if (badge) badge.textContent = yy + String(f).padStart(2,'0') + ' → ' + yy + String(t).padStart(2,'0') + ' · ' + count + ' sem';
 }
 function onRangeChange() {
   var f = parseInt(document.getElementById('fromSlider').value);
