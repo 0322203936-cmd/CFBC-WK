@@ -377,7 +377,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <div class="hdr-brand">CFBC ▸ CONTROL SEMANAL</div>
     <div class="hdr-kpis" id="hdrKpis"></div>
     <button class="hdr-btn" onclick="exportCSV()">⬇ CSV</button>
-    <button class="hdr-btn" onclick="exportXLSX()" style="margin-left:4px">⬇ XLSX</button>
     <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">⟳</button>
   </div>
 
@@ -755,39 +754,6 @@ function setView(v) {
 }
 function exportCSV() {
   if (mainGridApi) mainGridApi.exportDataAsCsv({ fileName: 'CFBC_' + state.view + '_' + new Date().toISOString().slice(0,10) + '.csv' });
-}
-function exportXLSX() {
-  var wn  = allWeeks[state.weekIdx] || 1;
-  var yrs = getActiveYears();
-  var yr  = yrs[yrs.length - 1] || DATA.years[DATA.years.length - 1];
-  var code = String(yr % 100) + String(wn).padStart(2, '0');  // ej: "2610"
-
-  var sheets = DATA.wk_sheets_b64 || {};
-  var availableKeys = Object.keys(sheets);
-
-  // Búsqueda flexible: código exacto, o sin cero inicial en semana
-  var b64 = sheets[code]
-    || sheets[String(yr % 100) + String(wn)]
-    || sheets[String(yr) + String(wn).padStart(2,'0')]
-    || null;
-
-  if (!b64) {
-    alert('No hay hoja WK' + code + ' disponible.\nHojas disponibles: ' + (availableKeys.length ? availableKeys.join(', ') : 'ninguna (revisar openpyxl en servidor)'));
-    return;
-  }
-
-  var binary = atob(b64);
-  var bytes = new Uint8Array(binary.length);
-  for (var i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
-  var blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'WK' + code + '.xlsx';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 function updateRangeSliders() {
   var f = state.fromWeek, t = state.toWeek;
@@ -1704,3 +1670,52 @@ if (typeof agGrid === 'undefined') {
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
 components.html(html_final, height=800, scrolling=False)
+
+# ─── Descarga de hoja WK como XLSX ───────────────────────────────────────────
+st.markdown("""
+<style>
+  .wk-dl-bar {
+    background:#1e3a5f; padding:6px 12px; display:flex;
+    align-items:center; gap:10px; margin-top:-6px;
+  }
+  .wk-dl-bar label { color:rgba(255,255,255,0.6); font-size:11px;
+    font-family:monospace; white-space:nowrap; }
+  div[data-testid="stSelectbox"] > div { min-width:120px !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# Construir lista de semanas disponibles (código YYWW)
+available_weeks = sorted(
+    {
+        str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2)
+        for r in DATA.get("weekly_detail", [])
+    },
+    reverse=True
+)
+
+if available_weeks:
+    from data_extractor import get_sheet_xlsx
+
+    col1, col2, col3 = st.columns([1.2, 1, 6])
+    with col1:
+        selected_wk = st.selectbox(
+            "⬇ Descargar hoja WK",
+            options=available_weeks,
+            format_func=lambda c: f"WK{c}",
+            label_visibility="visible",
+        )
+    with col2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Descargar XLSX", key="dl_xlsx"):
+            with st.spinner(f"Preparando WK{selected_wk}..."):
+                xlsx_bytes = get_sheet_xlsx(selected_wk)
+            if xlsx_bytes:
+                st.download_button(
+                    label=f"💾 WK{selected_wk}.xlsx",
+                    data=xlsx_bytes,
+                    file_name=f"WK{selected_wk}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="dl_xlsx_btn",
+                )
+            else:
+                st.error(f"No se encontró la hoja WK{selected_wk} en el archivo.")
