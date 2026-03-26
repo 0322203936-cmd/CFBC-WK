@@ -376,7 +376,8 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   <div class="app-hdr">
     <div class="hdr-brand">CFBC ▸ CONTROL SEMANAL</div>
     <div class="hdr-kpis" id="hdrKpis"></div>
-    <button class="hdr-btn" onclick="recargar()">⟳</button>
+    <button class="hdr-btn" onclick="exportCSV()">⬇ CSV</button>
+    <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">⟳</button>
   </div>
 
   <!-- TOOLBAR -->
@@ -1668,8 +1669,22 @@ if (typeof agGrid === 'undefined') {
 </html>"""
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
+components.html(html_final, height=800, scrolling=False)
 
-# ─── Barra XLSX — pegada visualmente al header del iframe ────────────────────
+# ─── Descarga de hoja WK como XLSX ───────────────────────────────────────────
+st.markdown("""
+<style>
+  .wk-dl-bar {
+    background:#1e3a5f; padding:6px 12px; display:flex;
+    align-items:center; gap:10px; margin-top:-6px;
+  }
+  .wk-dl-bar label { color:rgba(255,255,255,0.6); font-size:11px;
+    font-family:monospace; white-space:nowrap; }
+  div[data-testid="stSelectbox"] > div { min-width:120px !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# Construir lista de semanas disponibles (código YYWW)
 available_weeks = sorted(
     {
         str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2)
@@ -1681,66 +1696,17 @@ available_weeks = sorted(
 if available_weeks:
     from data_extractor import get_sheet_xlsx
 
-    st.markdown("""
-    <style>
-      /* Quitar todo el padding/gap entre elementos Streamlit */
-      .stApp > div > div > div > div { gap: 0 !important; }
-      /* Barra que simula el header del iframe */
-      [data-testid="stHorizontalBlock"] {
-        background: #1e3a5f !important;
-        border-bottom: 3px solid #16a34a !important;
-        padding: 4px 10px !important;
-        margin: 0 !important;
-        height: 36px !important;
-        align-items: center !important;
-        gap: 6px !important;
-      }
-      /* Quitar label del selectbox */
-      [data-testid="stHorizontalBlock"] label { display:none !important; }
-      /* Selectbox compacto */
-      [data-testid="stHorizontalBlock"] [data-testid="stSelectbox"] > div > div {
-        background: rgba(255,255,255,0.1) !important;
-        border: 1px solid rgba(255,255,255,0.25) !important;
-        border-radius: 3px !important;
-        color: #fff !important;
-        font-family: monospace !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        min-height: 24px !important;
-        height: 24px !important;
-        padding: 0 8px !important;
-      }
-      /* Botón compacto */
-      [data-testid="stHorizontalBlock"] button[kind="secondary"] {
-        background: rgba(255,255,255,0.1) !important;
-        border: 1px solid rgba(255,255,255,0.25) !important;
-        border-radius: 3px !important;
-        color: rgba(255,255,255,0.85) !important;
-        font-family: monospace !important;
-        font-size: 10px !important;
-        font-weight: 700 !important;
-        height: 24px !important;
-        padding: 0 10px !important;
-        line-height: 1 !important;
-      }
-      [data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
-        background: rgba(255,255,255,0.2) !important;
-      }
-      /* Quitar margen superior del iframe */
-      [data-testid="stIFrame"] { margin-top: 0 !important; }
-      iframe { margin-top: 0 !important; display: block !important; }
-    </style>
-    """, unsafe_allow_html=True)
-
-    c1, c2, c3 = st.columns([0.6, 0.5, 9])
-    with c1:
+    col1, col2, col3 = st.columns([1.2, 1, 6])
+    with col1:
         selected_wk = st.selectbox(
-            "wk", options=available_weeks,
+            "⬇ Descargar hoja WK",
+            options=available_weeks,
             format_func=lambda c: f"WK{c}",
-            label_visibility="collapsed",
+            label_visibility="visible",
         )
-    with c2:
-        if st.button("⬇ XLSX", key="dl_xlsx"):
+    with col2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Descargar XLSX", key="dl_xlsx"):
             with st.spinner(f"Preparando WK{selected_wk}..."):
                 xlsx_bytes = get_sheet_xlsx(selected_wk)
             if xlsx_bytes:
@@ -1752,6 +1718,4 @@ if available_weeks:
                     key="dl_xlsx_btn",
                 )
             else:
-                st.error(f"No se encontró WK{selected_wk}.")
-
-components.html(html_final, height=800, scrolling=False)
+                st.error(f"No se encontró la hoja WK{selected_wk} en el archivo.")
