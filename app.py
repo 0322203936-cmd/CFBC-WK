@@ -71,7 +71,6 @@ HTML = """<!DOCTYPE html>
   --mono: 'Consolas','Courier New',monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
 body { font-family: var(--mono); font-size: 12px; background: #f0f0f0; overflow-x: hidden; }
 
 /* ── LOADER ─────────────────────────────────────── */
@@ -224,24 +223,10 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .vtab.active { color: var(--green); border-bottom-color: var(--green); background: #fff; }
 
 /* ── GRID CONTAINER ──────────────────────────────── */
-#app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
 #gridWrap {
   background: #fff;
   border: 1px solid #d5d5d5;
   border-top: none;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-#myGrid {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
 }
 
 /* ── STATUS BAR ──────────────────────────────────── */
@@ -396,7 +381,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
   <!-- GRID AREA -->
   <div id="gridWrap">
-    <div id="myGrid" class="ag-theme-alpine" style="width:100%"></div>
+    <div id="myGrid" class="ag-theme-alpine" style="width:100%;height:500px"></div>
   </div>
 
   <!-- PRODUCTOS SUB-PANEL -->
@@ -588,7 +573,8 @@ function inicializar() {
   updateHeader();
   document.getElementById('loader').style.display = 'none';
   document.getElementById('app').style.display   = 'block';
-  setTimeout(resizeGrid, 50);
+  setTimeout(resizeGrid, 80);
+  setTimeout(resizeGrid, 300); // segundo llamado por si AG Grid tarda en inicializar
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -862,6 +848,7 @@ function renderView() {
   else if (state.view === 'detalle')   renderDetalle();
   else if (state.view === 'productos') renderProductosFull();
   else if (state.view === 'servicios') renderServicios();
+  setTimeout(resizeGrid, 30);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1595,6 +1582,26 @@ function closeProdPanel() {
 // RESIZE HELPER
 // ═══════════════════════════════════════════════════════════
 function resizeGrid() {
+  // Medir la altura real de todos los elementos fijos alrededor del grid
+  var hdr      = document.querySelector('.app-hdr');
+  var toolbar  = document.querySelector('.toolbar');
+  var tabs     = document.querySelector('.view-tabs');
+  var rangeBar = document.querySelector('.range-bar');
+  var statusbar= document.querySelector('.statusbar');
+  var prodPanel= document.getElementById('prodPanel');
+
+  var used = 0;
+  if (hdr)       used += hdr.offsetHeight;
+  if (toolbar)   used += toolbar.offsetHeight;
+  if (tabs)      used += tabs.offsetHeight;
+  if (rangeBar && rangeBar.classList.contains('show')) used += rangeBar.offsetHeight;
+  if (statusbar) used += statusbar.offsetHeight;
+  if (prodPanel && prodPanel.classList.contains('show')) used += prodPanel.offsetHeight;
+
+  // document.documentElement.clientHeight = altura real del iframe
+  var available = document.documentElement.clientHeight - used - 4;
+  var h = Math.max(available, 300);
+  document.getElementById('myGrid').style.height = h + 'px';
   if (mainGridApi) mainGridApi.sizeColumnsToFit();
 }
 window.addEventListener('resize', resizeGrid);
@@ -1652,4 +1659,4 @@ if (typeof agGrid === 'undefined') {
 </html>"""
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
-components.html(html_final, height=900, scrolling=False)
+components.html(html_final, height=800, scrolling=False)
