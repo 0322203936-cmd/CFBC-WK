@@ -823,7 +823,6 @@ function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
   mainGridApi.setPinnedBottomRowData([]);   // limpiar siempre primero
   mainGridApi.setColumnDefs(colDefs);
   mainGridApi.setRowData(rowData);
-  mainGridApi.sizeColumnsToFit();
   document.getElementById('stTotal').textContent = statusText || '';
 }
 
@@ -1549,7 +1548,7 @@ function showProdPanel(rowData, opts) {
       columnDefs: getProdCols(), rowData: [],
       rowHeight: 20, headerHeight: 23,
       defaultColDef: { sortable: true, filter: true, resizable: true },
-      onGridReady: function(p) { prodGridApi = p.api; prodGridApi.sizeColumnsToFit(); }
+      onGridReady: function(p) { prodGridApi = p.api; }
     };
     new agGrid.Grid(prodElInit, initOpts);
   }
@@ -1560,7 +1559,6 @@ function showProdPanel(rowData, opts) {
     if (prodGridApi) {
       prodGridApi.setColumnDefs(getProdCols());
       prodGridApi.setRowData([]);
-      prodGridApi.sizeColumnsToFit();
     }
     return;
   }
@@ -1575,7 +1573,6 @@ function showProdPanel(rowData, opts) {
   if (prodGridApi) {
     prodGridApi.setColumnDefs(getProdCols());
     prodGridApi.setRowData(rows);
-    prodGridApi.sizeColumnsToFit();
   }
 }
 function getProdCols() {
@@ -1634,7 +1631,6 @@ function resizeGrid() {
   var available = document.documentElement.clientHeight - used - 4;
   var h = Math.max(available, 300);
   document.getElementById('myGrid').style.height = h + 'px';
-  if (mainGridApi) mainGridApi.sizeColumnsToFit();
 }
 window.addEventListener('resize', resizeGrid);
 
