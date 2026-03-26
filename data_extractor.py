@@ -444,70 +444,6 @@ def _parse_me(rows: list) -> dict:
     return result
 
 
-# ─── Extractor de hojas WK como xlsx con formato completo ────────────────────
-def _extract_wk_sheets_b64(archivo_bytes: bytes) -> dict:
-    """
-    Carga el Excel con openpyxl y extrae cada hoja WK#### como un xlsx
-    independiente (con formato completo) codificado en base64.
-    Retorna: { "2611": "base64...", "2610": "base64...", ... }
-    """
-    result = {}
-    try:
-        wb = openpyxl.load_workbook(BytesIO(archivo_bytes))
-        for sname in wb.sheetnames:
-            sname_clean = sname.strip()
-            wk_match = re.match(r'^WK\s*(\d{4})$', sname_clean, re.IGNORECASE)
-            if not wk_match:
-                continue
-            code = int(wk_match.group(1))
-            year = 2000 + (code // 100)
-            if not (2018 <= year <= 2030):
-                continue
-
-            src_ws = wb[sname]
-
-            # Nuevo workbook con solo esta hoja
-            new_wb = openpyxl.Workbook()
-            new_ws = new_wb.active
-            new_ws.title = sname_clean
-
-            # Copiar celdas con estilos
-            for row in src_ws.iter_rows():
-                for cell in row:
-                    new_cell = new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
-                    if cell.has_style:
-                        new_cell.font           = copy(cell.font)
-                        new_cell.border         = copy(cell.border)
-                        new_cell.fill           = copy(cell.fill)
-                        new_cell.number_format  = cell.number_format
-                        new_cell.protection     = copy(cell.protection)
-                        new_cell.alignment      = copy(cell.alignment)
-
-            # Copiar celdas fusionadas
-            for merge in src_ws.merged_cells.ranges:
-                new_ws.merge_cells(str(merge))
-
-            # Copiar dimensiones de columnas y filas
-            for col_letter, col_dim in src_ws.column_dimensions.items():
-                new_ws.column_dimensions[col_letter].width  = col_dim.width
-                new_ws.column_dimensions[col_letter].hidden = col_dim.hidden
-            for row_num, row_dim in src_ws.row_dimensions.items():
-                new_ws.row_dimensions[row_num].height = row_dim.height
-                new_ws.row_dimensions[row_num].hidden = row_dim.hidden
-
-            # Guardar a bytes y codificar
-            buf = BytesIO()
-            new_wb.save(buf)
-            buf.seek(0)
-            result[str(code)] = base64.b64encode(buf.read()).decode('ascii')
-            print(f"   📥 WK{code} lista para descarga ({len(result[str(code)])} chars b64)")
-
-    except Exception as e:
-        print(f"⚠️  Error extrayendo hojas WK como xlsx: {e}")
-
-    return result
-
-
 # ─── Extractor principal ──────────────────────────────────────────────────────
 def extraer_datos(xls: pd.ExcelFile) -> dict:
     all_data       = []
@@ -1032,22 +968,14 @@ def get_datos(spreadsheet_name: str = "WK 2026-08") -> dict:
     if archivo is None:
         return {"error": "No se pudo descargar el archivo de OneDrive."}
 
-    # Guardar bytes antes de que pandas consuma el BytesIO
-    archivo_bytes = archivo.getvalue()
-
     try:
-        xls = pd.ExcelFile(BytesIO(archivo_bytes))
+        xls = pd.ExcelFile(archivo)
     except Exception as e:
         return {"error": f"No se pudo abrir el Excel: {e}"}
 
     resultado = extraer_datos(xls)
 
     if "error" not in resultado:
-        # 1b. Extraer hojas WK como xlsx con formato completo
-        print("\n" + "=" * 60)
-        print("📥 EXTRAYENDO HOJAS WK COMO XLSX (descarga directa)")
-        print("=" * 60)
-        resultado["wk_sheets_b64"] = _extract_wk_sheets_b64(archivo_bytes)
         # 2. Leer PR desde Google Sheets
         print("\n" + "=" * 60)
         print("🔍 LEYENDO HOJAS PR DESDE GOOGLE SHEETS")
@@ -1073,3 +1001,67 @@ def get_datos(spreadsheet_name: str = "WK 2026-08") -> dict:
         resultado["productos_me_debug"] = productos_me_debug
 
     return resultado
+
+
+# ─── Descarga de una hoja WK#### como xlsx con formato completo ───────────────
+def get_sheet_xlsx(week_code: str) -> bytes | None:
+    """
+    Descarga el Excel de OneDrive y extrae la hoja WK{week_code} (ej: "2610")
+    como un archivo .xlsx independiente con formato completo.
+    Retorna los bytes del xlsx, o None si no se encontró.
+    """
+    archivo = descargar_excel()
+    if archivo is None:
+        return None
+
+    archivo_bytes = archivo.getvalue()
+    sheet_name = f"WK{week_code}"
+
+    try:
+        wb = openpyxl.load_workbook(BytesIO(archivo_bytes))
+
+        # Buscar la hoja (con o sin espacio: "WK2610" o "WK 2610")
+        target = None
+        for sname in wb.sheetnames:
+            normalized = re.sub(r'\s+', '', sname.strip()).upper()
+            if normalized == sheet_name.upper():
+                target = sname
+                break
+
+        if target is None:
+            return None
+
+        src_ws = wb[target]
+        new_wb = openpyxl.Workbook()
+        new_ws = new_wb.active
+        new_ws.title = target
+
+        for row in src_ws.iter_rows():
+            for cell in row:
+                new_cell = new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
+                if cell.has_style:
+                    new_cell.font          = copy(cell.font)
+                    new_cell.border        = copy(cell.border)
+                    new_cell.fill          = copy(cell.fill)
+                    new_cell.number_format = cell.number_format
+                    new_cell.protection    = copy(cell.protection)
+                    new_cell.alignment     = copy(cell.alignment)
+
+        for merge in src_ws.merged_cells.ranges:
+            new_ws.merge_cells(str(merge))
+
+        for col_letter, col_dim in src_ws.column_dimensions.items():
+            new_ws.column_dimensions[col_letter].width  = col_dim.width
+            new_ws.column_dimensions[col_letter].hidden = col_dim.hidden
+        for row_num, row_dim in src_ws.row_dimensions.items():
+            new_ws.row_dimensions[row_num].height = row_dim.height
+            new_ws.row_dimensions[row_num].hidden = row_dim.hidden
+
+        buf = BytesIO()
+        new_wb.save(buf)
+        buf.seek(0)
+        return buf.read()
+
+    except Exception as e:
+        print(f"⚠️  Error extrayendo hoja {sheet_name}: {e}")
+        return None
