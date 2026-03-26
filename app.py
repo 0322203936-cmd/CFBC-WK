@@ -672,7 +672,7 @@ function updateWeekControls() {
     var recs = (DATA.weekly_detail || []).filter(function(r) { return r.week === wn && r.year === yr && r.date_range; });
     if (recs.length) dateText = recs[0].date_range;
   }
-  document.getElementById('weekLabel').textContent = wFmt(wn) + ' · ' + yr;
+  document.getElementById('weekLabel').textContent = String(yr).slice(2) + String(wn).padStart(2, '0');
 }
 function updateHeader() {
   var yrs = getActiveYears();
