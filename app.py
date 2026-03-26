@@ -1132,12 +1132,17 @@ function renderComparativo() {
           if (!d) return '<td style="color:#ddd">—</td>';
           var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
           var v = src[r] || 0;
-          return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + '">' + (v > 0 ? fmt(v) : '—') + '</td>';
+          var rEnc = encodeURIComponent(r);
+          return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + (v > 0 ? ';cursor:pointer' : '') + '"' +
+            (v > 0 ? ' onclick="showProdFromCmp(' + yr + ',' + w + ',decodeURIComponent(\'' + rEnc + '\'))"' : '') +
+            '>' + (v > 0 ? fmt(v) : '—') + '</td>';
         }).join('');
         return '<tr class="cmp-row">' +
           '<td style="color:' + col + ';font-weight:600">' + String(yr).slice(2) + String(w).padStart(2,'0') + '</td>' +
           '<td style="color:#999;font-size:10px">' + fmtMes(d && d.date_range) + '</td>' +
-          '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + '">' + fmt(val) + '</td>' +
+          '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + (val > 0 ? ';cursor:pointer' : '') + '"' +
+            (val > 0 ? ' onclick="showProdFromCmp(' + yr + ',' + w + ',null)"' : '') +
+          '>' + fmt(val) + '</td>' +
           dCell + ranchCells + '</tr>';
       }).join('');
 
@@ -1169,12 +1174,17 @@ function renderComparativo() {
           if (!d) return '<td style="color:#ddd">—</td>';
           var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
           var v = src[r] || 0;
-          return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + '">' + (v > 0 ? fmt(v) : '—') + '</td>';
+          var rEnc = encodeURIComponent(r);
+          return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + (v > 0 ? ';cursor:pointer' : '') + '"' +
+            (v > 0 ? ' onclick="showProdFromCmp(' + yr + ',' + w + ',decodeURIComponent(\'' + rEnc + '\'))"' : '') +
+            '>' + (v > 0 ? fmt(v) : '—') + '</td>';
         }).join('');
         return '<tr class="cmp-row">' +
           '<td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + col + ';margin-right:5px"></span>' +
           '<strong style="color:' + col + '">' + yr + '</strong></td>' +
-          '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + '">' + fmt(val) + '</td>' +
+          '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + (val > 0 ? ';cursor:pointer' : '') + '"' +
+            (val > 0 ? ' onclick="showProdFromCmp(' + yr + ',' + w + ',null)"' : '') +
+          '>' + fmt(val) + '</td>' +
           dCell + ranchCells + '</tr>';
       }).join('');
 
@@ -1586,6 +1596,12 @@ function getProdCols() {
 }
 function closeProdPanel() {
   document.getElementById('prodPanel').className = '';
+}
+
+// ── HELPER: abrir productos desde tabla comparativo ──
+function showProdFromCmp(yr, wk, ranch) {
+  var rowData = { _cat: state.cat, _year: yr, _week: wk, _fromWeek: wk, _toWeek: wk };
+  showProdPanel(rowData, { ranch: ranch || null });
 }
 
 // ═══════════════════════════════════════════════════════════
