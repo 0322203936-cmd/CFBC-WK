@@ -291,12 +291,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .ag-theme-alpine .ag-pinned-left-cols-container {
   border-right: 2px solid #aaa !important;
 }
-.ag-theme-alpine .ag-row-pinned {
-  background: #e8f5e9 !important;
-  border-top: 2px solid var(--green) !important;
-  font-weight: 700;
-}
-.ag-theme-alpine .ag-row-pinned .ag-cell { color: #1e3a5f !important; }
 .ag-theme-alpine .ag-group-row { background: #eff3fa !important; font-weight: 700; }
 
 /* Inline cell styles injected via cellStyle */
@@ -773,9 +767,9 @@ function buildMainGrid() {
 }
 function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
   if (!mainGridApi) return;
+  mainGridApi.setPinnedBottomRowData([]);   // limpiar siempre primero
   mainGridApi.setColumnDefs(colDefs);
   mainGridApi.setRowData(rowData);
-  mainGridApi.setPinnedBottomRowData(pinnedBottom || []);
   mainGridApi.sizeColumnsToFit();
   document.getElementById('stRows').textContent  = rowData.length;
   document.getElementById('stTotal').textContent = statusText || '';
