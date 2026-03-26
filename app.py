@@ -184,6 +184,27 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 }
 .tb-search:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
+/* ── RANGE CONTROL BAR (Comparativo) ────────────── */
+.range-bar {
+  display: none;
+  background: #f4f4f4;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 10px;
+  align-items: center; gap: 8px;
+  height: 30px; overflow: hidden;
+}
+.range-bar.show { display: flex; }
+.range-val {
+  font-size: 11px; font-weight: 700; color: var(--navy);
+  font-family: var(--mono); min-width: 36px; text-align: center;
+}
+.range-badge {
+  font-size: 10px; font-family: var(--mono);
+  background: #e8f5e9; border: 1px solid #a7d7b4;
+  color: var(--green); padding: 1px 8px; border-radius: 3px;
+  white-space: nowrap; flex-shrink: 0;
+}
+
 /* ── VIEW TABS ───────────────────────────────────── */
 .view-tabs {
   background: #f8f8f8;
@@ -344,6 +365,20 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <button class="vtab"        id="vtServicios" onclick="setView('servicios')">Costo Servicios</button>
   </div>
 
+  <!-- RANGE CONTROL BAR (solo visible en comparativo) -->
+  <div class="range-bar" id="rangeBar">
+    <span class="tb-label">Desde</span>
+    <span class="range-val" id="fromWeekLabel">W01</span>
+    <input type="range" class="tb-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
+    <span style="color:#aaa;font-size:11px">→</span>
+    <span class="tb-label">Hasta</span>
+    <span class="range-val" id="toWeekLabel">W52</span>
+    <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
+    <span class="range-badge" id="rangeBadge">W01 → W52</span>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" onclick="resetRange()">↺ Reset</button>
+  </div>
+
   <!-- GRID AREA -->
   <div id="gridWrap">
     <div id="myGrid" class="ag-theme-alpine" style="width:100%;height:600px"></div>
@@ -395,7 +430,7 @@ var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 // ═══════════════════════════════════════════════════════════
 var state = {
   cat: '', currency: 'usd', activeYears: {}, view: 'semana',
-  weekIdx: 0
+  weekIdx: 0, fromWeek: 1, toWeek: 52
 };
 var allWeeks = [];
 var mainGridApi = null;
@@ -525,9 +560,14 @@ function inicializar() {
   var idx = allWeeks.indexOf(curWeek);
   state.weekIdx = idx >= 0 ? idx : allWeeks.length - 1;
 
+  // Rango inicial: todas las semanas del año más reciente
+  state.fromWeek = wksLatest[0] || allWeeks[0] || 1;
+  state.toWeek   = wksLatest[wksLatest.length - 1] || allWeeks[allWeeks.length - 1] || 52;
+
   buildCatSelect();
   buildYearChips();
   updateWeekControls();
+  updateRangeSliders();
   buildMainGrid();
   renderView();
   updateHeader();
@@ -653,6 +693,9 @@ function setView(v) {
     var el = document.getElementById('vt' + name.charAt(0).toUpperCase() + name.slice(1));
     if (el) el.className = 'vtab' + (v === name ? ' active' : '');
   });
+  // Mostrar/ocultar barra de rango solo en comparativo
+  var rb = document.getElementById('rangeBar');
+  if (rb) rb.className = 'range-bar' + (v === 'comparativo' ? ' show' : '');
   closeProdPanel();
   renderView();
 }
@@ -661,6 +704,41 @@ function onQuickFilter(val) {
 }
 function exportCSV() {
   if (mainGridApi) mainGridApi.exportDataAsCsv({ fileName: 'CFBC_' + state.view + '_' + new Date().toISOString().slice(0,10) + '.csv' });
+}
+function updateRangeSliders() {
+  var f = state.fromWeek, t = state.toWeek;
+  var fEl = document.getElementById('fromSlider');
+  var tEl = document.getElementById('toSlider');
+  var min = allWeeks[0] || 1, max = allWeeks[allWeeks.length-1] || 52;
+  if (fEl) { fEl.min = min; fEl.max = max; fEl.value = f; }
+  if (tEl) { tEl.min = min; tEl.max = max; tEl.value = t; }
+  var fLbl = document.getElementById('fromWeekLabel');
+  var tLbl = document.getElementById('toWeekLabel');
+  var badge = document.getElementById('rangeBadge');
+  if (fLbl) fLbl.textContent = wFmt(f);
+  if (tLbl) tLbl.textContent = wFmt(t);
+  var count = allWeeks.filter(function(w){ return w >= f && w <= t; }).length;
+  if (badge) badge.textContent = wFmt(f) + ' → ' + wFmt(t) + ' · ' + count + ' sem';
+}
+function onRangeChange() {
+  var f = parseInt(document.getElementById('fromSlider').value);
+  var t = parseInt(document.getElementById('toSlider').value);
+  if (f > t) { var tmp = f; f = t; t = tmp; }
+  state.fromWeek = f; state.toWeek = t;
+  updateRangeSliders();
+  if (state.view === 'comparativo') renderComparativo();
+}
+function resetRange() {
+  var latestYr = DATA.years[DATA.years.length - 1];
+  var wks = DATA.weekly_detail
+    .filter(function(r){ return r.year === latestYr; })
+    .map(function(r){ return r.week; })
+    .filter(function(v,i,a){ return a.indexOf(v) === i; })
+    .sort(function(a,b){ return a - b; });
+  state.toWeek   = wks[wks.length - 1] || allWeeks[allWeeks.length - 1] || 52;
+  state.fromWeek = wks[0] || 1;
+  updateRangeSliders();
+  if (state.view === 'comparativo') renderComparativo();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -955,31 +1033,31 @@ function renderAnual() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// VIEW 3: COMPARATIVO (Semana vs Semana y Año vs Año)
+// VIEW 3: COMPARATIVO (filtrado por rango W## → W##)
+// Rows = una fila por año, mostrando total del rango + ranches
 // ═══════════════════════════════════════════════════════════
 function renderComparativo() {
-  var sym = state.currency.toUpperCase();
+  var sym  = state.currency.toUpperCase();
+  var yrs  = getActiveYears();
+  var fromW = state.fromWeek;
+  var toW   = state.toWeek;
 
+  // ── Agregar datos por año dentro del rango ──────────────
   var map = {};
   DATA.weekly_detail.forEach(function(r) {
     if (!state.activeYears[r.year]) return;
     if (r.categoria !== state.cat) return;
     var wk = parseInt(r.week || 0);
-    if (!wk) return;
-    var key = r.year + '-' + wk;
-    if (!map[key]) {
-      map[key] = {
-        year: r.year,
-        week: wk,
-        total: 0,
-        ranches: {},
-        date_range: r.date_range || ''
-      };
+    if (!wk || wk < fromW || wk > toW) return;
+    var yr = r.year;
+    if (!map[yr]) {
+      map[yr] = { year: yr, total: 0, ranches: {}, weeks: [], date_first: '', date_last: '' };
     }
-    var rec = map[key];
+    var rec = map[yr];
     rec.total += state.currency === 'usd' ? (r.usd_total || 0) : (r.mxn_total || 0);
-    if (!rec.date_range && r.date_range) rec.date_range = r.date_range;
-
+    if (rec.weeks.indexOf(wk) === -1) rec.weeks.push(wk);
+    if (!rec.date_first && r.date_range) rec.date_first = r.date_range;
+    if (r.date_range) rec.date_last = r.date_range;
     var src = state.currency === 'usd' ? (r.usd_ranches || {}) : (r.mxn_ranches || {});
     RANCH_ORDER.forEach(function(rn) {
       var v = src[rn] || 0;
@@ -987,103 +1065,108 @@ function renderComparativo() {
     });
   });
 
-  var rows = Object.keys(map).map(function(k) {
-    var rec = map[k];
-    var row = {
-      year: rec.year,
-      week: rec.week,
-      week_lbl: wFmt(rec.week),
-      date_range: rec.date_range || '',
-      total: rec.total,
+  // ── Helper para crear nodo clickeable de productos ──────
+  function makeProdLink(text, yr, color, weight) {
+    var wkMin = Math.min.apply(null, (map[yr] ? map[yr].weeks : [fromW]));
+    var wkMax = Math.max.apply(null, (map[yr] ? map[yr].weeks : [toW]));
+    var rowData = {
       _cat: state.cat,
-      _year: rec.year,
-      _week: rec.week,
-      _fromWeek: rec.week,
-      _toWeek: rec.week,
+      _year: yr,
+      _week: wkMin,
+      _fromWeek: wkMin,
+      _toWeek: wkMax
     };
-    RANCH_ORDER.forEach(function(rn) {
-      row[ranchFieldName(rn)] = rec.ranches[rn] || 0;
-    });
-
-    var prevKey = (rec.year - 1) + '-' + rec.week;
-    var prevRec = map[prevKey];
-    var prevTotal = prevRec ? prevRec.total : 0;
-    row.deltaAmt = rec.total - prevTotal;
-    row.deltaPct = prevTotal > 0 ? ((rec.total - prevTotal) / prevTotal * 100) : null;
-    return row;
-  });
-
-  rows.sort(function(a,b) {
-    if (b.year !== a.year) return b.year - a.year;
-    return b.week - a.week;
-  });
-
-  function makeProdNode(text, row, ranch, color, weight, title) {
     var span = document.createElement('span');
     span.className = 'prod-link';
     span.textContent = text;
     span.style.color = color || '#1e3a5f';
     span.style.fontWeight = weight || '600';
-    span.title = title || 'Ver productos';
+    span.style.cursor = 'pointer';
+    span.title = 'Ver productos · ' + wFmt(wkMin) + '→' + wFmt(wkMax);
     span.addEventListener('click', function(ev) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      showProdPanel(row, { ranch: ranch || null });
+      ev.preventDefault(); ev.stopPropagation();
+      showProdPanel(rowData, { ranch: null });
     });
     return span;
   }
 
+  // ── Columnas ────────────────────────────────────────────
   var cols = [
-    { field: 'year', headerName: 'AÑO', width: 62, pinned: 'left', filter: 'agNumberColumnFilter', type: 'numericColumn' },
-    { field: 'week_lbl',  headerName: 'SEMANA', width: 78, pinned: 'left', filter: 'agTextColumnFilter',
+    { field: 'year', headerName: 'AÑO', width: 65, pinned: 'left',
+      filter: 'agNumberColumnFilter', type: 'numericColumn',
       cellRenderer: function(p) {
-        if (!p.data || !p.data._cat || !p.data._year || !p.data._week) {
-          return '<span style="font-weight:700;color:#1e3a5f">' + (p.value||'') + '</span>';
-        }
-        return makeProdNode(String(p.value||''), p.data, '', '#1e3a5f', '700', 'Ver productos de la semana');
-      } },
-    { field: 'date_range', headerName: 'PERIODO', width: 148, filter: 'agTextColumnFilter',
-      cellRenderer: function(p) { return '<span style="color:#666">' + (p.value||'') + '</span>'; } },
+        var col = YEAR_COLORS[p.value] || '#888';
+        return '<span style="color:' + col + ';font-weight:700">' + (p.value||'TOTAL') + '</span>';
+      }
+    },
+    { field: 'semanas', headerName: 'SEMS', width: 55, filter: 'agNumberColumnFilter', type: 'numericColumn' },
     { field: 'total', headerName: 'TOTAL ' + sym, width: 115, type: 'numericColumn', filter: 'agNumberColumnFilter',
       cellRenderer: function(p) {
         var v = p.value;
-        if (v === null || v === undefined || v === 0 || isNaN(v)) return '<span style="color:#bbb">—</span>';
-        if (!p.data || !p.data._cat || !p.data._year || !p.data._week) {
-          return '<span style="color:#1e3a5f;font-weight:600">' + fmt(v) + '</span>';
-        }
-        return makeProdNode(fmt(v), p.data, '', '#1e3a5f', '600', 'Ver productos de la semana');
-      } },
-    { field: 'deltaAmt', headerName: 'Δ $ vs año ant.', width: 120, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
-    { field: 'deltaPct', headerName: 'Δ %', width: 74, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
+        if (!v || isNaN(v) || v === 0) return '<span style="color:#bbb">—</span>';
+        if (!p.data || !p.data.year) return '<span style="color:#1e3a5f;font-weight:700">' + fmt(v) + '</span>';
+        return makeProdLink(fmt(v), p.data.year, '#1e3a5f', '600');
+      }
+    },
+    { field: 'deltaAmt', headerName: 'Δ $ vs ant.', width: 110, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
+    { field: 'deltaPct', headerName: 'Δ %',         width: 72,  type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
+    { field: 'avg',      headerName: 'PROM/SEM',    width: 95,  type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
   ];
 
+  // Columnas de rancho con click para ver productos del rancho
   RANCH_ORDER.forEach(function(rn) {
     var rcol = RANCH_COLORS[rn] || '#888';
     cols.push({
-      field: ranchFieldName(rn),
-      headerName: rn,
-      width: 105,
-      type: 'numericColumn',
-      filter: 'agNumberColumnFilter',
+      field: 'r_' + rn.replace(/[^a-zA-Z0-9]/g,'_'),
+      headerName: rn, width: 105,
+      type: 'numericColumn', filter: 'agNumberColumnFilter',
       cellRenderer: function(p) {
         var v = p.value;
         if (!v || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
-        if (!p.data || !p.data._cat || !p.data._year || !p.data._week) {
-          return '<span style="color:' + rcol + ';font-weight:600">' + fmt(v) + '</span>';
-        }
-        return makeProdNode(fmt(v), p.data, rn, rcol, '600', 'Ver productos del rancho');
+        if (!p.data || !p.data.year) return '<span style="color:' + rcol + ';font-weight:700">' + fmt(v) + '</span>';
+        var link = makeProdLink(fmt(v), p.data.year, rcol, '600');
+        // Override ranch filter in the click handler
+        link.addEventListener('click', function(ev) {
+          ev.preventDefault(); ev.stopPropagation();
+          var yr   = p.data.year;
+          var wkMin = Math.min.apply(null, (map[yr] ? map[yr].weeks : [fromW]));
+          var wkMax = Math.max.apply(null, (map[yr] ? map[yr].weeks : [toW]));
+          showProdPanel({ _cat: state.cat, _year: yr, _week: wkMin, _fromWeek: wkMin, _toWeek: wkMax }, { ranch: rn });
+        }, true);
+        return link;
       }
     });
   });
 
-  var grand = rows.reduce(function(s,r){ return s + (r.total || 0); }, 0);
-  var totalRow = { year: '', week_lbl: 'TOTAL', date_range: '', total: grand, deltaAmt: null, deltaPct: null };
+  // ── Filas ───────────────────────────────────────────────
+  var rows = yrs.map(function(yr, i) {
+    var rec = map[yr] || { total: 0, ranches: {}, weeks: [] };
+    var prevRec = i > 0 ? (map[yrs[i-1]] || null) : null;
+    var prevTotal = prevRec ? prevRec.total : 0;
+    var semsCount = rec.weeks.length;
+    var row = {
+      year: yr,
+      semanas: semsCount,
+      total: rec.total,
+      avg: semsCount > 0 ? rec.total / semsCount : 0,
+      deltaAmt: prevTotal > 0 ? rec.total - prevTotal : null,
+      deltaPct: prevTotal > 0 ? (rec.total - prevTotal) / prevTotal * 100 : null,
+    };
+    RANCH_ORDER.forEach(function(rn) {
+      row['r_' + rn.replace(/[^a-zA-Z0-9]/g,'_')] = rec.ranches[rn] || 0;
+    });
+    return row;
+  });
+
+  // Fila total
+  var grandTotal = rows.reduce(function(s,r){ return s + (r.total || 0); }, 0);
+  var totalRow = { year: null, semanas: '', total: grandTotal, avg: null, deltaAmt: null, deltaPct: null };
   RANCH_ORDER.forEach(function(rn) {
-    var fld = ranchFieldName(rn);
+    var fld = 'r_' + rn.replace(/[^a-zA-Z0-9]/g,'_');
     totalRow[fld] = rows.reduce(function(s,r){ return s + (r[fld] || 0); }, 0);
   });
 
-  setMainGrid(cols, rows, [totalRow], fmt(grand) + ' ' + sym + ' · ' + state.cat);
+  setMainGrid(cols, rows, [totalRow], fmt(grandTotal) + ' ' + sym + ' · ' + wFmt(fromW) + '→' + wFmt(toW) + ' · ' + state.cat);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1497,9 +1580,9 @@ function closeProdPanel() {
 // RESIZE HELPER
 // ═══════════════════════════════════════════════════════════
 function resizeGrid() {
-  // Usar altura fija confiable en lugar de window.innerHeight (que en iframe = 4000px)
-  var GRID_H = 580;
-  document.getElementById('myGrid').style.height = GRID_H + 'px';
+  var reserved = 36 + 32 + 28 + 22 + 40; // hdr + toolbar + tabs + statusbar + margin
+  var h = Math.max(window.innerHeight - reserved, 500);
+  document.getElementById('myGrid').style.height = h + 'px';
   if (mainGridApi) mainGridApi.sizeColumnsToFit();
 }
 window.addEventListener('resize', resizeGrid);
@@ -1508,8 +1591,7 @@ window.addEventListener('resize', resizeGrid);
 // HEIGHT REPORTING TO STREAMLIT
 // ═══════════════════════════════════════════════════════════
 function reportHeight() {
-  var appEl = document.getElementById('app');
-  var h = appEl ? appEl.scrollHeight + 60 : document.body.scrollHeight + 60;
+  var h = document.body.scrollHeight + 40;
   window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 700) }, '*');
 }
 var ro = new ResizeObserver(reportHeight);
@@ -1552,9 +1634,21 @@ if (typeof agGrid === 'undefined') {
 }
 </script>
 
-
+<script>
+// Streamlit iframe height sync
+function reportHeight() {
+  var h = document.getElementById('app')
+    ? document.getElementById('app').getBoundingClientRect().bottom + window.scrollY + 40
+    : document.body.scrollHeight + 40;
+  window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 700) }, '*');
+}
+var ro2 = new ResizeObserver(reportHeight);
+ro2.observe(document.body);
+reportHeight();
+setInterval(reportHeight, 400);
+</script>
 </body>
 </html>"""
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
-components.html(html_final, height=900, scrolling=False)
+components.html(html_final, height=4000, scrolling=False)
