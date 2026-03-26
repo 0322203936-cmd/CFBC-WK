@@ -703,17 +703,15 @@ function updateHeader() {
   var d = (DATA.summary[state.cat] || {})[curYr];
   if (d) annualTotal = state.currency === 'usd' ? d.usd : d.mxn;
 
+  var semCode = String(curYr).slice(2) + String(wn).padStart(2, '0');
   var html = '';
-  html += '<div class="hdr-kpi"><span class="hdr-kpi-label">SEMANA ' + wFmt(wn) + ' · ' + curYr + '</span><span class="hdr-kpi-val">' + fmt(grandTotal) + '</span>';
+  html += '<div class="hdr-kpi"><span class="hdr-kpi-label">SEMANA ' + semCode + '</span><span class="hdr-kpi-val">' + fmt(grandTotal) + '</span>';
   if (delta !== null) {
     var cls = delta >= 0 ? 'pos' : 'neg';
     var arrow = delta >= 0 ? '▲' : '▼';
     html += '<span class="hdr-kpi-delta ' + cls + '">' + arrow + ' ' + Math.abs(delta).toFixed(1) + '%</span>';
   }
   html += '</div>';
-  html += '<div class="hdr-kpi"><span class="hdr-kpi-label">ACUM. ANUAL ' + curYr + '</span><span class="hdr-kpi-val">' + fmt(annualTotal) + '</span></div>';
-  html += '<div class="hdr-kpi"><span class="hdr-kpi-label">CATEGORÍA</span><span class="hdr-kpi-val" style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis">' + state.cat + '</span></div>';
-  html += '<div class="hdr-kpi"><span class="hdr-kpi-label">MONEDA</span><span class="hdr-kpi-val">' + state.currency.toUpperCase() + '</span></div>';
   document.getElementById('hdrKpis').innerHTML = html;
 }
 
