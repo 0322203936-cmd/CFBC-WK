@@ -377,6 +377,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <div class="hdr-brand">CFBC ▸ CONTROL SEMANAL</div>
     <div class="hdr-kpis" id="hdrKpis"></div>
     <button class="hdr-btn" onclick="exportCSV()">⬇ CSV</button>
+    <button class="hdr-btn" onclick="exportXLSX()" style="margin-left:4px">⬇ XLSX</button>
     <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">⟳</button>
   </div>
 
@@ -754,6 +755,31 @@ function setView(v) {
 }
 function exportCSV() {
   if (mainGridApi) mainGridApi.exportDataAsCsv({ fileName: 'CFBC_' + state.view + '_' + new Date().toISOString().slice(0,10) + '.csv' });
+}
+function exportXLSX() {
+  // Obtener semana y año activos — igual que el weekLabel
+  var wn  = allWeeks[state.weekIdx] || 1;
+  var yrs = getActiveYears();
+  var yr  = yrs[yrs.length - 1] || DATA.years[DATA.years.length - 1];
+  var code = String(yr % 100) + String(wn).padStart(2, '0');  // ej: "2611"
+
+  var sheets = DATA.wk_sheets_b64 || {};
+  var b64 = sheets[code];
+  if (!b64) { alert('No hay hoja WK' + code + ' disponible para descargar.'); return; }
+
+  // Decodificar base64 → bytes → Blob → descarga
+  var binary = atob(b64);
+  var bytes = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
+  var blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'WK' + code + '.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 function updateRangeSliders() {
   var f = state.fromWeek, t = state.toWeek;
