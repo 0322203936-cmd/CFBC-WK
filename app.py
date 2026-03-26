@@ -984,17 +984,7 @@ function renderComparativo() {
     var hasValidData = false;
 
     yrs.forEach(function(yr) {
-      var agg;
-      if (isCombined(state.cat)) {
-        var c1 = sumDetail(getWeekDetail(CAT_MIRFE, w, yr), state.currency);
-        var c2 = sumDetail(getWeekDetail(CAT_MIPE, w, yr), state.currency);
-        agg = { total: c1.total + c2.total, ranches: {} };
-        if (yr === curYr) {
-          RANCH_ORDER.forEach(function(rn) { agg.ranches[rn] = (c1.ranches[rn]||0) + (c2.ranches[rn]||0); });
-        }
-      } else {
-        agg = sumDetail(getWeekDetail(state.cat, w, yr), state.currency);
-      }
+      var agg = sumDetail(getWeekDetail(state.cat, w, yr), state.currency);
       row['y' + yr] = agg.total;
       totals['y' + yr] += agg.total;
       if (agg.total > 0) hasValidData = true;
