@@ -71,6 +71,7 @@ HTML = """<!DOCTYPE html>
   --mono: 'Consolas','Courier New',monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
 body { font-family: var(--mono); font-size: 12px; background: #f0f0f0; overflow-x: hidden; }
 
 /* ── LOADER ─────────────────────────────────────── */
@@ -223,10 +224,24 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .vtab.active { color: var(--green); border-bottom-color: var(--green); background: #fff; }
 
 /* ── GRID CONTAINER ──────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
 #gridWrap {
   background: #fff;
   border: 1px solid #d5d5d5;
   border-top: none;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#myGrid {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
 }
 
 /* ── STATUS BAR ──────────────────────────────────── */
@@ -381,7 +396,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
   <!-- GRID AREA -->
   <div id="gridWrap">
-    <div id="myGrid" class="ag-theme-alpine" style="width:100%;height:600px"></div>
+    <div id="myGrid" class="ag-theme-alpine" style="width:100%"></div>
   </div>
 
   <!-- PRODUCTOS SUB-PANEL -->
@@ -1580,9 +1595,6 @@ function closeProdPanel() {
 // RESIZE HELPER
 // ═══════════════════════════════════════════════════════════
 function resizeGrid() {
-  // window.innerHeight dentro del iframe = height del componente (4000px), no la pantalla
-  var GRID_H = 580;
-  document.getElementById('myGrid').style.height = GRID_H + 'px';
   if (mainGridApi) mainGridApi.sizeColumnsToFit();
 }
 window.addEventListener('resize', resizeGrid);
