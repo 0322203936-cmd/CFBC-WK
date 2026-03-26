@@ -757,17 +757,25 @@ function exportCSV() {
   if (mainGridApi) mainGridApi.exportDataAsCsv({ fileName: 'CFBC_' + state.view + '_' + new Date().toISOString().slice(0,10) + '.csv' });
 }
 function exportXLSX() {
-  // Obtener semana y año activos — igual que el weekLabel
   var wn  = allWeeks[state.weekIdx] || 1;
   var yrs = getActiveYears();
   var yr  = yrs[yrs.length - 1] || DATA.years[DATA.years.length - 1];
-  var code = String(yr % 100) + String(wn).padStart(2, '0');  // ej: "2611"
+  var code = String(yr % 100) + String(wn).padStart(2, '0');  // ej: "2610"
 
   var sheets = DATA.wk_sheets_b64 || {};
-  var b64 = sheets[code];
-  if (!b64) { alert('No hay hoja WK' + code + ' disponible para descargar.'); return; }
+  var availableKeys = Object.keys(sheets);
 
-  // Decodificar base64 → bytes → Blob → descarga
+  // Búsqueda flexible: código exacto, o sin cero inicial en semana
+  var b64 = sheets[code]
+    || sheets[String(yr % 100) + String(wn)]
+    || sheets[String(yr) + String(wn).padStart(2,'0')]
+    || null;
+
+  if (!b64) {
+    alert('No hay hoja WK' + code + ' disponible.\nHojas disponibles: ' + (availableKeys.length ? availableKeys.join(', ') : 'ninguna (revisar openpyxl en servidor)'));
+    return;
+  }
+
   var binary = atob(b64);
   var bytes = new Uint8Array(binary.length);
   for (var i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
