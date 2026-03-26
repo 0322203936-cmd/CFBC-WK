@@ -1132,17 +1132,16 @@ function renderComparativo() {
           if (!d) return '<td style="color:#ddd">—</td>';
           var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
           var v = src[r] || 0;
-          var rEnc = encodeURIComponent(r);
-          return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + (v > 0 ? ';cursor:pointer' : '') + '"' +
-            (v > 0 ? ' onclick="showProdFromCmp(' + yr + ',' + w + ',decodeURIComponent(\'' + rEnc + '\'))"' : '') +
-            '>' + (v > 0 ? fmt(v) : '—') + '</td>';
+          var style = 'color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + (v > 0 ? ';cursor:pointer' : '');
+          var attrs = v > 0 ? ' class="cmp-clickable" data-yr="' + yr + '" data-wk="' + w + '" data-ranch="' + r + '"' : '';
+          return '<td style="' + style + '"' + attrs + '>' + (v > 0 ? fmt(v) : '—') + '</td>';
         }).join('');
+        var totalStyle = 'color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + (val > 0 ? ';cursor:pointer' : '');
+        var totalAttrs = val > 0 ? ' class="cmp-clickable" data-yr="' + yr + '" data-wk="' + w + '" data-ranch=""' : '';
         return '<tr class="cmp-row">' +
           '<td style="color:' + col + ';font-weight:600">' + String(yr).slice(2) + String(w).padStart(2,'0') + '</td>' +
           '<td style="color:#999;font-size:10px">' + fmtMes(d && d.date_range) + '</td>' +
-          '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + (val > 0 ? ';cursor:pointer' : '') + '"' +
-            (val > 0 ? ' onclick="showProdFromCmp(' + yr + ',' + w + ',null)"' : '') +
-          '>' + fmt(val) + '</td>' +
+          '<td style="' + totalStyle + '"' + totalAttrs + '>' + fmt(val) + '</td>' +
           dCell + ranchCells + '</tr>';
       }).join('');
 
@@ -1174,17 +1173,16 @@ function renderComparativo() {
           if (!d) return '<td style="color:#ddd">—</td>';
           var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
           var v = src[r] || 0;
-          var rEnc = encodeURIComponent(r);
-          return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + (v > 0 ? ';cursor:pointer' : '') + '"' +
-            (v > 0 ? ' onclick="showProdFromCmp(' + yr + ',' + w + ',decodeURIComponent(\'' + rEnc + '\'))"' : '') +
-            '>' + (v > 0 ? fmt(v) : '—') + '</td>';
+          var style = 'color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + (v > 0 ? ';cursor:pointer' : '');
+          var attrs = v > 0 ? ' class="cmp-clickable" data-yr="' + yr + '" data-wk="' + w + '" data-ranch="' + r + '"' : '';
+          return '<td style="' + style + '"' + attrs + '>' + (v > 0 ? fmt(v) : '—') + '</td>';
         }).join('');
+        var totalStyle2 = 'color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + (val > 0 ? ';cursor:pointer' : '');
+        var totalAttrs2 = val > 0 ? ' class="cmp-clickable" data-yr="' + yr + '" data-wk="' + w + '" data-ranch=""' : '';
         return '<tr class="cmp-row">' +
           '<td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + col + ';margin-right:5px"></span>' +
           '<strong style="color:' + col + '">' + yr + '</strong></td>' +
-          '<td style="color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + (val > 0 ? ';cursor:pointer' : '') + '"' +
-            (val > 0 ? ' onclick="showProdFromCmp(' + yr + ',' + w + ',null)"' : '') +
-          '>' + fmt(val) + '</td>' +
+          '<td style="' + totalStyle2 + '"' + totalAttrs2 + '>' + fmt(val) + '</td>' +
           dCell + ranchCells + '</tr>';
       }).join('');
 
@@ -1603,6 +1601,16 @@ function showProdFromCmp(yr, wk, ranch) {
   var rowData = { _cat: state.cat, _year: yr, _week: wk, _fromWeek: wk, _toWeek: wk };
   showProdPanel(rowData, { ranch: ranch || null });
 }
+
+// Delegated click para celdas clickeables de comparativo
+document.addEventListener('click', function(e) {
+  var td = e.target.closest('td.cmp-clickable');
+  if (!td) return;
+  var yr    = parseInt(td.dataset.yr);
+  var wk    = parseInt(td.dataset.wk);
+  var ranch = td.dataset.ranch || null;
+  showProdFromCmp(yr, wk, ranch || null);
+});
 
 // ═══════════════════════════════════════════════════════════
 // RESIZE HELPER
