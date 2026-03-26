@@ -464,12 +464,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
   <!-- STATUS BAR -->
   <div class="statusbar" id="statusbar">
-    <span>Filas: <b id="stRows">—</b></span>
-    <span class="st-sep">|</span>
     <span>Total: <b id="stTotal">—</b></span>
-    <span class="st-sep">|</span>
-    <span id="stWeekDate" style="color:#888"></span>
-    <span style="margin-left:auto;color:#aaa;font-size:9px" id="stInfo"></span>
   </div>
 </div><!-- /app -->
 
@@ -678,7 +673,6 @@ function updateWeekControls() {
     if (recs.length) dateText = recs[0].date_range;
   }
   document.getElementById('weekLabel').textContent = wFmt(wn) + ' · ' + yr;
-  document.getElementById('stWeekDate').textContent = dateText;
 }
 function updateHeader() {
   var yrs = getActiveYears();
@@ -849,9 +843,7 @@ function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
   mainGridApi.setColumnDefs(colDefs);
   mainGridApi.setRowData(rowData);
   mainGridApi.sizeColumnsToFit();
-  document.getElementById('stRows').textContent  = rowData.length;
   document.getElementById('stTotal').textContent = statusText || '';
-  document.getElementById('stInfo').textContent  = state.view.toUpperCase() + ' · ' + state.cat;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1209,9 +1201,7 @@ function renderComparativo() {
   var grandTotal = yrs.reduce(function(s, yr) {
     var d = byYear[yr]; return s + (d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0);
   }, 0);
-  document.getElementById('stRows').textContent  = rangeWeeks.length + ' sem × ' + yrs.length + ' años';
   document.getElementById('stTotal').textContent = fmt(grandTotal) + ' ' + sym;
-  document.getElementById('stInfo').textContent  = 'COMPARATIVO · ' + state.cat + ' · ' + wFmt(f) + '→' + wFmt(t);
 }
 
 // ═══════════════════════════════════════════════════════════
