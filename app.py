@@ -430,6 +430,8 @@ var allWeeks = [];
 var mainGridApi = null;
 var prodGridApi = null;
 
+function isCombined(cat) { return cat === CAT_MIRFE || cat === CAT_MIPE; }
+
 // ═══════════════════════════════════════════════════════════
 // FORMATEO
 // ═══════════════════════════════════════════════════════════
@@ -577,7 +579,8 @@ function inicializar() {
 function buildCatSelect() {
   var el = document.getElementById('catSel');
   el.innerHTML = DATA.categories.map(function(c) {
-    return '<option value="' + c.replace(/"/g,'&quot;') + '"' + (c === state.cat ? ' selected' : '') + '>' + c + '</option>';
+    var label = c === CAT_MIRFE ? c + ' (MIRFE)' : c === CAT_MIPE ? c + ' (MIPE)' : c;
+    return '<option value="' + c.replace(/"/g,'&quot;') + '"' + (c === state.cat ? ' selected' : '') + '>' + label + '</option>';
   }).join('');
 }
 function buildYearChips() {
@@ -608,26 +611,38 @@ function updateHeader() {
   var wn  = allWeeks[state.weekIdx] || 1;
   var curYr  = yrs[yrs.length - 1];
   var prevYr = yrs[yrs.length - 2];
-  // Grand total for current week, all categories, current year
+  // Grand total for current week, SELECTED category, current year
   var grandTotal = 0;
-  DATA.categories.forEach(function(cat) {
-    var recs = getWeekDetail(cat, wn, curYr);
-    recs.forEach(function(r) { grandTotal += state.currency === 'usd' ? r.usd_total : r.mxn_total; });
-  });
+  var sumRecs = function(recs) { recs.forEach(function(r) { grandTotal += state.currency === 'usd' ? r.usd_total : r.mxn_total; }); };
+  if (isCombined(state.cat)) {
+    sumRecs(getWeekDetail(CAT_MIRFE, wn, curYr));
+    sumRecs(getWeekDetail(CAT_MIPE, wn, curYr));
+  } else {
+    sumRecs(getWeekDetail(state.cat, wn, curYr));
+  }
+
   var prevTotal = 0;
   if (prevYr) {
-    DATA.categories.forEach(function(cat) {
-      var recs = getWeekDetail(cat, wn, prevYr);
-      recs.forEach(function(r) { prevTotal += state.currency === 'usd' ? r.usd_total : r.mxn_total; });
-    });
+    var sumPrev = function(recs) { recs.forEach(function(r) { prevTotal += state.currency === 'usd' ? r.usd_total : r.mxn_total; }); };
+    if (isCombined(state.cat)) {
+      sumPrev(getWeekDetail(CAT_MIRFE, wn, prevYr));
+      sumPrev(getWeekDetail(CAT_MIPE, wn, prevYr));
+    } else {
+      sumPrev(getWeekDetail(state.cat, wn, prevYr));
+    }
   }
   var delta = prevTotal > 0 ? (grandTotal - prevTotal) / prevTotal * 100 : null;
-  // Annual total current year
+  // Annual total current year for SELECTED category
   var annualTotal = 0;
-  DATA.categories.forEach(function(cat) {
-    var d = (DATA.summary[cat] || {})[curYr];
+  if (isCombined(state.cat)) {
+    var dm = (DATA.summary[CAT_MIRFE] || {})[curYr];
+    if (dm) annualTotal += state.currency === 'usd' ? dm.usd : dm.mxn;
+    var dp = (DATA.summary[CAT_MIPE] || {})[curYr];
+    if (dp) annualTotal += state.currency === 'usd' ? dp.usd : dp.mxn;
+  } else {
+    var d = (DATA.summary[state.cat] || {})[curYr];
     if (d) annualTotal += state.currency === 'usd' ? d.usd : d.mxn;
-  });
+  }
 
   var html = '';
   html += '<div class="hdr-kpi"><span class="hdr-kpi-label">SEMANA ' + wFmt(wn) + ' · ' + curYr + '</span><span class="hdr-kpi-val">' + fmt(grandTotal) + '</span>';
@@ -843,167 +858,149 @@ function renderView() {
 
 // ═══════════════════════════════════════════════════════════
 // VIEW 1: SEMANA
-// Rows = categories, Cols = [prevYr, curYr, Δ$, Δ%, ranches]
+// Rows = years (or years x MIRFE/MIPE), Cols = [Year, Week, Cat, Total, Delta, ranches]
 // ═══════════════════════════════════════════════════════════
 function renderSemana() {
   var yrs = getActiveYears();
   var wn  = allWeeks[state.weekIdx] || 1;
-  var cur = yrs[yrs.length - 1];
-  var prev= yrs.length > 1 ? yrs[yrs.length - 2] : null;
   var sym = state.currency.toUpperCase();
 
-  // Calculate max ranch value across all categories for bar scaling
-  var ranchMaxes = {};
-  RANCH_ORDER.forEach(function(r) { ranchMaxes[r] = 0; });
-  DATA.categories.forEach(function(cat) {
-    var recs = getWeekDetail(cat, wn, cur);
-    var agg  = sumDetail(recs, state.currency);
-    RANCH_ORDER.forEach(function(r) {
-      if ((agg.ranches[r] || 0) > ranchMaxes[r]) ranchMaxes[r] = agg.ranches[r] || 0;
-    });
-  });
-
-  // Build columns
   var cols = [
-    { field: 'categoria', headerName: 'CATEGORÍA', pinned: 'left', width: 230,
-      cellRenderer: catRenderer, filter: 'agTextColumnFilter' }
+    { field: 'year', headerName: 'AÑO', pinned: 'left', width: 70, type: 'numericColumn', filter: 'agNumberColumnFilter',
+      cellRenderer: function(p) { return '<span style="color:'+(YEAR_COLORS[p.value]||'#888')+';font-weight:700">'+p.value+'</span>'; } },
+    { field: 'week', headerName: 'SEM', width: 60, type: 'numericColumn', filter: 'agNumberColumnFilter',
+      cellRenderer: function(p){ return wFmt(p.value); } },
+    { field: 'cat_label', headerName: 'CATEGORÍA', width: 170, filter: 'agTextColumnFilter', cellRenderer: catRenderer },
+    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+    { field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
+    { field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
   ];
-  if (prev) {
-    cols.push({ field: 'v' + prev, headerName: String(prev) + ' ' + sym, width: 100,
-      type: 'numericColumn', cellRenderer: moneyRenderer, filter: 'agNumberColumnFilter' });
-  }
-  cols.push({ field: 'v' + cur, headerName: String(cur) + ' ' + sym + ' ★', width: 110,
-    type: 'numericColumn', cellRenderer: moneyRenderer, filter: 'agNumberColumnFilter' });
-  if (prev) {
-    cols.push({ field: 'deltaAmt', headerName: 'Δ $', width: 90,
-      type: 'numericColumn', cellRenderer: deltaAmtRenderer, filter: 'agNumberColumnFilter' });
-    cols.push({ field: 'deltaPct', headerName: 'Δ %', width: 72,
-      type: 'numericColumn', cellRenderer: deltaRenderer, filter: 'agNumberColumnFilter' });
-  }
-  // Ranch columns (for current year)
   RANCH_ORDER.forEach(function(r) {
-    var col = {
+    cols.push({
       field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 110,
-      type: 'numericColumn', filter: 'agNumberColumnFilter',
-      _maxVal: ranchMaxes[r] || 1,
-    };
-    // Check if this ranch+category has products (clickable)
-    var isMant   = (state.cat === 'MANTENIMIENTO');
-    var isMatEmp = (state.cat === 'MATERIAL DE EMPAQUE');
-    var isMirfe  = (state.cat === CAT_MIRFE);
-    var isMipe   = (state.cat === CAT_MIPE);
-    var hasProd  = isMant || isMatEmp || isMirfe || isMipe;
-    var rcolor   = RANCH_COLORS[r] || '#888';
-    var maxV     = ranchMaxes[r] || 1;
-    col.cellRenderer = function(params) {
-      var v = params.value;
-      if (!v || isNaN(v) || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
-      var w = Math.min(v / maxV * 40, 40);
-      var clickAttr = hasProd ? ' title="Ver productos" style="cursor:pointer"' : '';
-      return '<div style="display:flex;align-items:center;gap:3px"' + clickAttr + '>' +
-        '<div style="width:' + w.toFixed(0) + 'px;height:6px;background:' + rcolor + ';border-radius:1px;flex-shrink:0;min-width:2px"></div>' +
-        '<span style="color:' + rcolor + ';font-weight:600">' + fmt(v) + '</span></div>';
-    };
-    cols.push(col);
-  });
-
-  // Build rows
-  var grandTotal = { cur: 0, prev: 0, ranches: {} };
-  RANCH_ORDER.forEach(function(r) { grandTotal.ranches[r] = 0; });
-
-  var rows = DATA.categories.map(function(cat) {
-    var row = { categoria: cat, _cat: cat, _week: wn, _year: cur };
-    // Current year
-    var recsCur  = getWeekDetail(cat, wn, cur);
-    var aggCur   = sumDetail(recsCur, state.currency);
-    row['v' + cur] = aggCur.total;
-    grandTotal.cur += aggCur.total;
-    RANCH_ORDER.forEach(function(r) {
-      var fld = 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_');
-      row[fld] = aggCur.ranches[r] || 0;
-      grandTotal.ranches[r] = (grandTotal.ranches[r] || 0) + (aggCur.ranches[r] || 0);
+      headerName: r, width: 100, type: 'numericColumn', filter: 'agNumberColumnFilter',
+      cellRenderer: ranchRenderer(r)
     });
-    // Prev year
-    if (prev) {
-      var recsPrev = getWeekDetail(cat, wn, prev);
-      var aggPrev  = sumDetail(recsPrev, state.currency);
-      row['v' + prev] = aggPrev.total;
-      grandTotal.prev += aggPrev.total;
-      row.deltaAmt = aggCur.total - aggPrev.total;
-      row.deltaPct = aggPrev.total > 0 ? (aggCur.total - aggPrev.total) / aggPrev.total * 100 : null;
-    }
-    return row;
   });
 
-  setMainGrid(cols, rows, [], fmt(grandTotal.cur) + ' ' + sym);
+  var rows = [];
+  var grandTotal = 0;
+  
+  if (isCombined(state.cat)) {
+    yrs.forEach(function(yr, i) {
+      var prevYr = i > 0 ? yrs[i-1] : null;
+      var processCat = function(cLabel, realCat) {
+        var recs = getWeekDetail(realCat, wn, yr);
+        var agg = sumDetail(recs, state.currency);
+        var row = { year: yr, week: wn, cat_label: cLabel, _cat: realCat, _year: yr, _week: wn };
+        row.total = agg.total;
+        if (prevYr) {
+          var recsP = getWeekDetail(realCat, wn, prevYr);
+          var aggP = sumDetail(recsP, state.currency);
+          row.deltaAmt = agg.total - aggP.total;
+          row.deltaPct = aggP.total > 0 ? (agg.total - aggP.total) / aggP.total * 100 : null;
+        }
+        RANCH_ORDER.forEach(function(r) { row['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = agg.ranches[r] || 0; });
+        rows.push(row);
+        if (yr === yrs[yrs.length-1]) grandTotal += agg.total;
+      };
+      processCat('MIRFE', CAT_MIRFE);
+      processCat('MIPE', CAT_MIPE);
+    });
+  } else {
+    yrs.forEach(function(yr, i) {
+      var prevYr = i > 0 ? yrs[i-1] : null;
+      var recs = getWeekDetail(state.cat, wn, yr);
+      var agg = sumDetail(recs, state.currency);
+      var row = { year: yr, week: wn, cat_label: state.cat, _cat: state.cat, _year: yr, _week: wn };
+      row.total = agg.total;
+      if (prevYr) {
+        var recsP = getWeekDetail(state.cat, wn, prevYr);
+        var aggP = sumDetail(recsP, state.currency);
+        row.deltaAmt = agg.total - aggP.total;
+        row.deltaPct = aggP.total > 0 ? (agg.total - aggP.total) / aggP.total * 100 : null;
+      }
+      RANCH_ORDER.forEach(function(r) { row['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = agg.ranches[r] || 0; });
+      rows.push(row);
+      if (yr === yrs[yrs.length-1]) grandTotal += agg.total;
+    });
+  }
+
+  setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' · AÑO ' + yrs[yrs.length-1]);
 }
 
 // ═══════════════════════════════════════════════════════════
 // VIEW 2: ANUAL
-// Rows = categories, Cols = years 2021..2026
+// Rows = years, Cols = [Year, Cat, Total, Delta, ranches...]
 // ═══════════════════════════════════════════════════════════
 function renderAnual() {
   var yrs = getActiveYears();
   var sym = state.currency.toUpperCase();
 
   var cols = [
-    { field: 'categoria', headerName: 'CATEGORÍA', pinned: 'left', width: 230, cellRenderer: catRenderer, filter: 'agTextColumnFilter' }
+    { field: 'year', headerName: 'AÑO', pinned: 'left', width: 70, type: 'numericColumn', filter: 'agNumberColumnFilter',
+      cellRenderer: function(p) { return '<span style="color:'+(YEAR_COLORS[p.value]||'#888')+';font-weight:700">'+p.value+'</span>'; } },
+    { field: 'cat_label', headerName: 'CATEGORÍA', width: 170, filter: 'agTextColumnFilter', cellRenderer: catRenderer },
+    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+    { field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
+    { field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
   ];
-  yrs.forEach(function(yr) {
+  RANCH_ORDER.forEach(function(r) {
     cols.push({
-      field: 'y' + yr,
-      headerName: String(yr) + (yr === 2026 ? ' YTD' : '') + ' ' + sym,
-      width: 100, type: 'numericColumn',
-      cellRenderer: moneyRenderer, filter: 'agNumberColumnFilter'
+      field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
+      headerName: r, width: 100, type: 'numericColumn', filter: 'agNumberColumnFilter',
+      cellRenderer: ranchRenderer(r)
     });
   });
-  // YoY% last two years
-  if (yrs.length >= 2) {
-    var last = yrs[yrs.length - 1], prev2 = yrs[yrs.length - 2];
-    cols.push({
-      field: 'yoy',
-      headerName: prev2 + '→' + last + ' %',
-      width: 88, type: 'numericColumn',
-      cellRenderer: deltaRenderer, filter: 'agNumberColumnFilter'
+
+  var rows = [];
+  var grandTotal = 0;
+
+  var getYrAgg = function(cat, yr) {
+    var d = (DATA.summary[cat] || {})[yr] || {usd:0, mxn:0, ranches:{}, ranches_mxn:{}};
+    return {
+      total: state.currency === 'usd' ? d.usd : d.mxn,
+      ranches: state.currency === 'usd' ? d.ranches : d.ranches_mxn
+    };
+  };
+
+  if (isCombined(state.cat)) {
+    yrs.forEach(function(yr, i) {
+      var prevYr = i > 0 ? yrs[i-1] : null;
+      var processCat = function(cLabel, realCat) {
+        var agg = getYrAgg(realCat, yr);
+        var row = { year: yr, cat_label: cLabel, _cat: realCat, _year: yr };
+        row.total = agg.total;
+        if (prevYr) {
+          var aggP = getYrAgg(realCat, prevYr);
+          row.deltaAmt = agg.total - aggP.total;
+          row.deltaPct = aggP.total > 0 ? (agg.total - aggP.total) / aggP.total * 100 : null;
+        }
+        RANCH_ORDER.forEach(function(r) { row['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = agg.ranches[r] || 0; });
+        rows.push(row);
+        if (yr === yrs[yrs.length-1]) grandTotal += agg.total;
+      };
+      processCat('MIRFE', CAT_MIRFE);
+      processCat('MIPE', CAT_MIPE);
+    });
+  } else {
+    yrs.forEach(function(yr, i) {
+      var prevYr = i > 0 ? yrs[i-1] : null;
+      var agg = getYrAgg(state.cat, yr);
+      var row = { year: yr, cat_label: state.cat, _cat: state.cat, _year: yr };
+      row.total = agg.total;
+      if (prevYr) {
+        var aggP = getYrAgg(state.cat, prevYr);
+        row.deltaAmt = agg.total - aggP.total;
+        row.deltaPct = aggP.total > 0 ? (agg.total - aggP.total) / aggP.total * 100 : null;
+      }
+      RANCH_ORDER.forEach(function(r) { row['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = agg.ranches[r] || 0; });
+      rows.push(row);
+      if (yr === yrs[yrs.length-1]) grandTotal += agg.total;
     });
   }
-  // 5yr CAGR
-  if (yrs.length >= 5) {
-    cols.push({
-      field: 'cagr',
-      headerName: 'CAGR 5yr',
-      width: 82, type: 'numericColumn',
-      cellRenderer: deltaRenderer, filter: 'agNumberColumnFilter'
-    });
-  }
 
-  var grandByYear = {};
-  yrs.forEach(function(yr) { grandByYear[yr] = 0; });
-
-  var rows = DATA.categories.map(function(cat) {
-    var row = { categoria: cat };
-    yrs.forEach(function(yr) {
-      var d = (DATA.summary[cat] || {})[yr];
-      var v = d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0;
-      row['y' + yr] = v;
-      grandByYear[yr] = (grandByYear[yr] || 0) + v;
-    });
-    if (yrs.length >= 2) {
-      var l = yrs[yrs.length-1], p = yrs[yrs.length-2];
-      var vl = row['y' + l] || 0, vp = row['y' + p] || 0;
-      row.yoy = vp > 0 ? (vl - vp) / vp * 100 : null;
-    }
-    if (yrs.length >= 5) {
-      var y0 = yrs[yrs.length-5], yn = yrs[yrs.length-1];
-      var v0 = row['y' + y0] || 0, vn = row['y' + yn] || 0;
-      row.cagr = v0 > 0 ? (Math.pow(vn/v0, 1/4) - 1) * 100 : null;
-    }
-    return row;
-  });
-
-  var curTotal = grandByYear[yrs[yrs.length-1]] || 0;
-  setMainGrid(cols, rows, [], fmt(curTotal) + ' ' + sym + ' (año más reciente)');
+  setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' · AÑO ' + yrs[yrs.length-1]);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1020,7 +1017,14 @@ function renderComparativo() {
   var map = {};
   DATA.weekly_detail.forEach(function(r) {
     if (!state.activeYears[r.year]) return;
-    if (r.categoria !== state.cat) return;
+    var isCatMatch = false;
+    if (isCombined(state.cat)) {
+      isCatMatch = (r.categoria === CAT_MIRFE || r.categoria === CAT_MIPE);
+    } else {
+      isCatMatch = (r.categoria === state.cat);
+    }
+    if (!isCatMatch) return;
+    
     var wk = parseInt(r.week || 0);
     if (!wk || wk < fromW || wk > toW) return;
     var yr = r.year;
@@ -1138,7 +1142,8 @@ function renderComparativo() {
 
 // ═══════════════════════════════════════════════════════════
 // VIEW 4: POR RANCHO
-// Rows = ranches, Cols = [rancho, prevYr, curYr, Δ$, Δ%, cats...]
+// Rows = ranches, Cols = [rancho, prevYr, curYr, Δ$, Δ%] 
+// (For the selected category)
 // ═══════════════════════════════════════════════════════════
 function renderRancho() {
   var yrs  = getActiveYears();
@@ -1148,45 +1153,43 @@ function renderRancho() {
   var sym  = state.currency.toUpperCase();
 
   var cols = [
-    { field: 'rancho', headerName: 'RANCHO', pinned: 'left', width: 120,
+    { field: 'rancho', headerName: 'RANCHO', pinned: 'left', width: 140,
       cellRenderer: function(p) {
         var c = RANCH_COLORS[p.value] || '#888';
         return '<span style="color:' + c + ';font-weight:700">' + (p.value || '') + '</span>';
       }, filter: 'agTextColumnFilter' }
   ];
-  if (prev) cols.push({ field: 'v' + prev, headerName: String(prev) + ' ' + sym, width: 100, type: 'numericColumn', cellRenderer: moneyRenderer });
-  cols.push({ field: 'v' + cur, headerName: String(cur) + ' ' + sym + ' ★', width: 110, type: 'numericColumn', cellRenderer: moneyRenderer });
+  if (prev) cols.push({ field: 'v' + prev, headerName: String(prev) + ' ' + sym, width: 120, type: 'numericColumn', cellRenderer: moneyRenderer });
+  cols.push({ field: 'v' + cur, headerName: String(cur) + ' ' + sym + ' ★', width: 120, type: 'numericColumn', cellRenderer: moneyRenderer });
   if (prev) {
-    cols.push({ field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', cellRenderer: deltaAmtRenderer });
-    cols.push({ field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', cellRenderer: deltaRenderer });
+    cols.push({ field: 'deltaAmt', headerName: 'Δ $', width: 100, type: 'numericColumn', cellRenderer: deltaAmtRenderer });
+    cols.push({ field: 'deltaPct', headerName: 'Δ %', width: 90, type: 'numericColumn', cellRenderer: deltaRenderer });
   }
-  // Category columns for current year
-  DATA.categories.forEach(function(cat) {
-    cols.push({
-      field: 'cat_' + DATA.categories.indexOf(cat),
-      headerName: cat.length > 22 ? cat.substring(0,20) + '..' : cat,
-      headerTooltip: cat, width: 110, type: 'numericColumn',
-      cellRenderer: moneyRenderer, filter: 'agNumberColumnFilter'
-    });
-  });
 
   var grandCur = 0, grandPrev = 0;
 
   var rows = RANCH_ORDER.map(function(ranch) {
     var row = { rancho: ranch, _cat: state.cat, _week: wn, _year: cur, _fromWeek: wn, _toWeek: wn };
     var totalCur = 0, totalPrev = 0;
-    DATA.categories.forEach(function(cat, ci) {
-      var recsCur  = getWeekDetail(cat, wn, cur);
-      var aggCur   = sumDetail(recsCur, state.currency);
-      var v = aggCur.ranches[ranch] || 0;
-      row['cat_' + ci] = v;
-      totalCur += v;
+    
+    if (isCombined(state.cat)) {
+      [CAT_MIRFE, CAT_MIPE].forEach(function(cat) {
+        var aC = sumDetail(getWeekDetail(cat, wn, cur), state.currency);
+        totalCur += aC.ranches[ranch] || 0;
+        if (prev) {
+          var aP = sumDetail(getWeekDetail(cat, wn, prev), state.currency);
+          totalPrev += aP.ranches[ranch] || 0;
+        }
+      });
+    } else {
+      var aC = sumDetail(getWeekDetail(state.cat, wn, cur), state.currency);
+      totalCur += aC.ranches[ranch] || 0;
       if (prev) {
-        var recsPrev = getWeekDetail(cat, wn, prev);
-        var aggPrev  = sumDetail(recsPrev, state.currency);
-        totalPrev += aggPrev.ranches[ranch] || 0;
+        var aP = sumDetail(getWeekDetail(state.cat, wn, prev), state.currency);
+        totalPrev += aP.ranches[ranch] || 0;
       }
-    });
+    }
+    
     row['v' + cur] = totalCur; grandCur += totalCur;
     if (prev) {
       row['v' + prev] = totalPrev; grandPrev += totalPrev;
@@ -1196,7 +1199,7 @@ function renderRancho() {
     return row;
   }).filter(function(r) { return (r['v' + cur] || 0) > 0 || (r['v' + (prev||cur)] || 0) > 0; });
 
-  setMainGrid(cols, rows, [], fmt(grandCur) + ' ' + sym);
+  setMainGrid(cols, rows, [], fmt(grandCur) + ' ' + sym + ' · ' + state.cat);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1235,6 +1238,14 @@ function renderDetalle() {
   var grandTotal = 0;
   DATA.weekly_detail.forEach(function(r) {
     if (!state.activeYears[r.year]) return;
+    var isCatMatch = false;
+    if (isCombined(state.cat)) {
+      isCatMatch = (r.categoria === CAT_MIRFE || r.categoria === CAT_MIPE);
+    } else {
+      isCatMatch = (r.categoria === state.cat);
+    }
+    if (!isCatMatch) return;
+
     var row = {
       year: r.year, week: r.week, categoria: r.categoria,
       usd_total: r.usd_total, mxn_total: r.mxn_total,
@@ -1248,7 +1259,7 @@ function renderDetalle() {
     rows.push(row);
   });
   rows.sort(function(a,b) { return b.year !== a.year ? b.year - a.year : b.week - a.week; });
-  setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' (' + rows.length + ' registros)');
+  setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' (' + rows.length + ' registros) · ' + state.cat);
 }
 
 // ═══════════════════════════════════════════════════════════
