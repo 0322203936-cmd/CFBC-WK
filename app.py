@@ -1693,18 +1693,38 @@ if (typeof agGrid === 'undefined') {
 html_final = HTML.replace('__DATA_JSON__', data_json)
 components.html(html_final, height=800, scrolling=False)
 
-# ─── Descarga de hoja WK como XLSX ───────────────────────────────────────────
+# ─── Barra inferior: Descarga XLSX + Panel Crear Hoja WK ─────────────────────
 st.markdown("""
 <style>
-  .wk-dl-bar {
-    background:#1e3a5f; padding:6px 12px; display:flex;
-    align-items:center; gap:10px; margin-top:-6px;
-  }
-  .wk-dl-bar label { color:rgba(255,255,255,0.6); font-size:11px;
-    font-family:monospace; white-space:nowrap; }
   div[data-testid="stSelectbox"] > div { min-width:120px !important; }
+
+  /* Botón ☰ estilo toolbar */
+  div[data-testid="stButton"] button[kind="secondary"].menu-btn {
+    font-family: monospace; font-size: 14px;
+    background: #1e3a5f; color: #fff;
+    border: none; border-radius: 4px;
+    padding: 2px 10px; height: 38px;
+  }
+
+  /* Panel crear hoja */
+  .crear-panel {
+    background: #1e3a5f;
+    border-top: 3px solid #16a34a;
+    padding: 14px 18px 12px;
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .crear-panel-title {
+    color: rgba(255,255,255,0.55); font-size: 10px;
+    font-family: monospace; text-transform: uppercase;
+    letter-spacing: 0.6px; white-space: nowrap;
+  }
 </style>
 """, unsafe_allow_html=True)
+
+# Estado del panel
+if "show_crear_panel" not in st.session_state:
+    st.session_state.show_crear_panel = False
 
 # Construir lista de semanas disponibles (código YYWW)
 available_weeks = sorted(
@@ -1716,9 +1736,11 @@ available_weeks = sorted(
 )
 
 if available_weeks:
-    from data_extractor import get_sheet_xlsx
+    from data_extractor import get_sheet_xlsx, crear_hoja_wk
 
-    col1, col2, col3 = st.columns([1.2, 1, 6])
+    # ── Fila de controles ─────────────────────────────────────────────────────
+    col1, col2, col3, col_menu = st.columns([1.2, 1, 5, 0.18])
+
     with col1:
         selected_wk = st.selectbox(
             "⬇ Descargar hoja WK",
@@ -1726,6 +1748,7 @@ if available_weeks:
             format_func=lambda c: f"WK{c}",
             label_visibility="visible",
         )
+
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Descargar XLSX", key="dl_xlsx"):
@@ -1741,3 +1764,66 @@ if available_weeks:
                 )
             else:
                 st.error(f"No se encontró la hoja WK{selected_wk} en el archivo.")
+
+    with col_menu:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("☰", key="toggle_crear", help="Crear nueva hoja WK en SharePoint"):
+            st.session_state.show_crear_panel = not st.session_state.show_crear_panel
+
+    # ── Panel: Crear nueva hoja WK ────────────────────────────────────────────
+    if st.session_state.show_crear_panel:
+        st.markdown(
+            '<div class="crear-panel">'
+            '<span class="crear-panel-title">➕ Nueva hoja WK en SharePoint</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        pc1, pc2, pc3, pc4 = st.columns([1.2, 0.8, 0.8, 4])
+
+        with pc1:
+            nuevo_nombre = st.text_input(
+                "Nombre de la hoja",
+                placeholder="Ej: WK2518",
+                key="nuevo_wk_nombre",
+                label_visibility="visible",
+            ).strip().upper()
+
+        with pc2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            crear_clicked = st.button("✚ Crear hoja", key="btn_crear_hoja", type="primary")
+
+        with pc3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("✕ Cerrar", key="btn_cerrar_panel"):
+                st.session_state.show_crear_panel = False
+                st.rerun()
+
+        if crear_clicked:
+            if not nuevo_nombre:
+                st.warning("⚠️ Escribe el nombre de la hoja antes de crear.")
+            elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
+                st.warning("⚠️ El nombre debe tener formato WK#### (ej: WK2518).")
+            else:
+                # Leer credenciales desde st.secrets  (sección [sharepoint])
+                try:
+                    tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                    client_id     = st.secrets["sharepoint"]["client_id"]
+                    client_secret = st.secrets["sharepoint"]["client_secret"]
+                except KeyError as e:
+                    st.error(
+                        f"❌ Falta la credencial **{e}** en los secrets de Streamlit. "
+                        "Revisa que `.streamlit/secrets.toml` tenga la sección [sharepoint]."
+                    )
+                    st.stop()
+
+                with st.spinner(f"Creando hoja {nuevo_nombre} en SharePoint…"):
+                    resultado = crear_hoja_wk(
+                        nuevo_nombre, tenant_id, client_id, client_secret
+                    )
+
+                if resultado.get("ok"):
+                    st.success(resultado["mensaje"])
+                    st.cache_data.clear()   # Refrescar datos al recargar
+                else:
+                    st.error(f"❌ {resultado['error']}")
