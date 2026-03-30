@@ -615,6 +615,107 @@ def get_datos() -> dict:
     return resultado
 
 
+# ─── Crear nueva hoja WK en SharePoint via Microsoft Graph API ───────────────
+def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
+    """
+    Crea una nueva hoja en el Excel WK de SharePoint copiando el formato
+    de la hoja WK más reciente como plantilla.
+
+    Requiere una App Registration en Azure AD con permisos:
+        Files.ReadWrite  (o Sites.ReadWrite.All)
+
+    Args:
+        nombre_hoja:   Nombre de la nueva hoja, ej: "WK2518"
+        tenant_id:     Directory (tenant) ID de Azure AD
+        client_id:     Application (client) ID
+        client_secret: Client secret value
+
+    Returns:
+        {"ok": True, "mensaje": "..."} o {"ok": False, "error": "..."}
+    """
+    import json as _json
+
+    # 1. Obtener token OAuth2 (client credentials flow)
+    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    token_resp = requests.post(token_url, data={
+        "grant_type":    "client_credentials",
+        "client_id":     client_id,
+        "client_secret": client_secret,
+        "scope":         "https://graph.microsoft.com/.default",
+    }, timeout=20)
+
+    if token_resp.status_code != 200:
+        return {"ok": False, "error": f"Error obteniendo token: {token_resp.text}"}
+
+    token = token_resp.json().get("access_token")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type":  "application/json",
+    }
+
+    # 2. Resolver el drive item ID desde el link de SharePoint
+    #    Usamos el endpoint /shares para resolver un link compartido
+    import base64 as _b64
+    encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip("=")
+    encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
+
+    resolve_url = f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem"
+    res = requests.get(resolve_url, headers=headers, timeout=20)
+    if res.status_code != 200:
+        return {"ok": False, "error": f"No se pudo resolver el archivo SharePoint: {res.text}"}
+
+    item = res.json()
+    drive_id = item.get("parentReference", {}).get("driveId")
+    item_id  = item.get("id")
+
+    if not drive_id or not item_id:
+        return {"ok": False, "error": "No se pudo obtener driveId o itemId del archivo."}
+
+    # 3. Listar hojas existentes para encontrar la plantilla (WK más reciente)
+    sheets_url = (
+        f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}"
+        f"/workbook/worksheets"
+    )
+    sheets_resp = requests.get(sheets_url, headers=headers, timeout=20)
+    if sheets_resp.status_code != 200:
+        return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
+
+    hojas = sheets_resp.json().get("value", [])
+    nombres = [h["name"].strip() for h in hojas]
+
+    # Verificar que la hoja no exista ya
+    if nombre_hoja.upper() in [n.upper() for n in nombres]:
+        return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe en el archivo."}
+
+    # Encontrar la hoja WK más reciente para usar como plantilla
+    pat_wk = re.compile(r'^WK\s*(\d{4})$', re.IGNORECASE)
+    wk_hojas = []
+    for h in hojas:
+        m = pat_wk.match(h["name"].strip())
+        if m:
+            wk_hojas.append((int(m.group(1)), h["name"].strip(), h["id"]))
+    wk_hojas.sort(reverse=True)
+
+    if not wk_hojas:
+        return {"ok": False, "error": "No se encontró ninguna hoja WK para usar como plantilla."}
+
+    plantilla_id = wk_hojas[0][2]  # ID de la hoja WK más reciente
+
+    # 4. Copiar la hoja plantilla con el nuevo nombre
+    copy_url = (
+        f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}"
+        f"/workbook/worksheets/{plantilla_id}/copy"
+    )
+    copy_body = {"name": nombre_hoja, "index": 0}
+    copy_resp = requests.post(copy_url, headers=headers,
+                              data=_json.dumps(copy_body), timeout=30)
+
+    if copy_resp.status_code in (200, 201, 202):
+        return {"ok": True, "mensaje": f"✅ Hoja '{nombre_hoja}' creada con éxito en SharePoint."}
+    else:
+        return {"ok": False, "error": f"Error al copiar hoja: {copy_resp.text}"}
+
+
 # ─── Descarga de una hoja WK#### como xlsx con formato completo ───────────────
 def get_sheet_xlsx(week_code: str) -> bytes | None:
     """
