@@ -1736,7 +1736,12 @@ available_weeks = sorted(
 )
 
 if available_weeks:
-    from data_extractor import get_sheet_xlsx, crear_hoja_wk
+    from data_extractor import get_sheet_xlsx
+    try:
+        from data_extractor import crear_hoja_wk
+        _crear_disponible = True
+    except ImportError:
+        _crear_disponible = False
 
     # ── Fila de controles ─────────────────────────────────────────────────────
     col1, col2, col3, col_menu = st.columns([1.2, 1, 5, 0.18])
@@ -1767,11 +1772,12 @@ if available_weeks:
 
     with col_menu:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("☰", key="toggle_crear", help="Crear nueva hoja WK en SharePoint"):
-            st.session_state.show_crear_panel = not st.session_state.show_crear_panel
+        if _crear_disponible:
+            if st.button("☰", key="toggle_crear", help="Crear nueva hoja WK en SharePoint"):
+                st.session_state.show_crear_panel = not st.session_state.show_crear_panel
 
     # ── Panel: Crear nueva hoja WK ────────────────────────────────────────────
-    if st.session_state.show_crear_panel:
+    if _crear_disponible and st.session_state.show_crear_panel:
         st.markdown(
             '<div class="crear-panel">'
             '<span class="crear-panel-title">➕ Nueva hoja WK en SharePoint</span>'
