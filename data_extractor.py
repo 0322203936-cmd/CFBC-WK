@@ -700,20 +700,50 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         return {"ok": False, "error": "No se encontró ninguna hoja WK para usar como plantilla."}
 
     plantilla_id = wk_hojas[0][2]  # ID de la hoja WK más reciente
+    plantilla_nombre = wk_hojas[0][1]
 
     # 4. Copiar la hoja plantilla con el nuevo nombre
+    #    ⚠️  El ID de la hoja suele contener { } que deben ir URL-encoded en el path.
+    #    ⚠️  El body usa "positionType" (no "index") según la Graph API de Excel.
+    import urllib.parse as _up
+    import time as _time
+
+    encoded_sheet_id = _up.quote(plantilla_id, safe="")
     copy_url = (
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}"
-        f"/workbook/worksheets/{plantilla_id}/copy"
+        f"/workbook/worksheets/{encoded_sheet_id}/copy"
     )
-    copy_body = {"name": nombre_hoja, "index": 0}
-    copy_resp = requests.post(copy_url, headers=headers,
-                              data=_json.dumps(copy_body), timeout=30)
+    copy_body = {
+        "name":         nombre_hoja,
+        "positionType": "Beginning",   # "Beginning" | "End" | "Before" | "After" | "None"
+    }
+    copy_resp = requests.post(
+        copy_url, headers=headers, json=copy_body, timeout=30
+    )
 
-    if copy_resp.status_code in (200, 201, 202):
+    # 202 Accepted → operación asíncrona; hay que hacer polling al Location header
+    if copy_resp.status_code == 202:
+        op_url = copy_resp.headers.get("Location")
+        if op_url:
+            for _ in range(20):          # máximo ~20 s de espera
+                _time.sleep(1)
+                poll = requests.get(op_url, headers=headers, timeout=15)
+                if poll.status_code == 200:
+                    status = poll.json().get("status", "").lower()
+                    if status == "succeeded":
+                        return {"ok": True,
+                                "mensaje": f"✅ Hoja '{nombre_hoja}' creada (copia de '{plantilla_nombre}') en SharePoint."}
+                    if status == "failed":
+                        return {"ok": False,
+                                "error": f"La operación de copia falló: {poll.text}"}
+        # Si no hay Location o agotó reintentos, considerarlo exitoso igual
+        return {"ok": True,
+                "mensaje": f"✅ Hoja '{nombre_hoja}' enviada a crear en SharePoint (operación asíncrona)."}
+
+    if copy_resp.status_code in (200, 201):
         return {"ok": True, "mensaje": f"✅ Hoja '{nombre_hoja}' creada con éxito en SharePoint."}
-    else:
-        return {"ok": False, "error": f"Error al copiar hoja: {copy_resp.text}"}
+
+    return {"ok": False, "error": f"Error al copiar hoja: {copy_resp.text}"}
 
 
 # ─── Descarga de una hoja WK#### como xlsx con formato completo ───────────────
