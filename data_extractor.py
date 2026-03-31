@@ -618,13 +618,12 @@ def get_datos() -> dict:
 # --- Crear nueva hoja WK en SharePoint via Microsoft Graph API ---
 def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
     """
-    Crea una nueva hoja copiando la WK mas reciente como plantilla.
-    Descarga el archivo, copia la hoja con openpyxl (valores + formatos
-    completos: colores, bordes, merged cells, anchos) y lo re-sube.
-    Requiere Files.ReadWrite en la App Registration de Azure AD.
+    Crea una nueva hoja copiando la WK más reciente como plantilla.
+    Preserva formatos: valores, estilos, anchos, altos, celdas combinadas.
     """
     import urllib.parse as _up
     import base64 as _b64
+    from copy import copy
 
     # 1. Token OAuth2
     token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
@@ -679,7 +678,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         reverse=True,
     )
     if not wk_hojas:
-        return {"ok": False, "error": "No se encontro ninguna hoja WK para plantilla."}
+        return {"ok": False, "error": "No se encontró ninguna hoja WK para plantilla."}
 
     plantilla_nombre = wk_hojas[0][1]
 
@@ -690,22 +689,53 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     print(f'   Archivo descargado: {len(dl_resp.content)//1024} KB')
 
-    # 5. Copiar la hoja con openpyxl — copia fiel de valores + formatos
+    # 5. Copiar la hoja MANUALMENTE (preserva formatos completos)
     try:
         wb = openpyxl.load_workbook(BytesIO(dl_resp.content))
         if plantilla_nombre not in wb.sheetnames:
             return {"ok": False, "error": f"Hoja plantilla '{plantilla_nombre}' no encontrada."}
 
-        new_ws       = wb.copy_worksheet(wb[plantilla_nombre])
-        new_ws.title = nombre_hoja
-        # Mover al inicio
+        src_ws = wb[plantilla_nombre]
+
+        # Crear nueva hoja vacía
+        new_ws = wb.create_sheet(title=nombre_hoja)
+
+        # Copiar valores y estilos celda por celda
+        for row in src_ws.iter_rows():
+            for cell in row:
+                new_cell = new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
+                if cell.has_style:
+                    new_cell.font = copy(cell.font)
+                    new_cell.border = copy(cell.border)
+                    new_cell.fill = copy(cell.fill)
+                    new_cell.number_format = cell.number_format
+                    new_cell.protection = copy(cell.protection)
+                    new_cell.alignment = copy(cell.alignment)
+
+        # Copiar celdas combinadas
+        for merge in src_ws.merged_cells.ranges:
+            new_ws.merge_cells(str(merge))
+
+        # Copiar anchos de columna
+        for col_letter, col_dim in src_ws.column_dimensions.items():
+            new_ws.column_dimensions[col_letter].width = col_dim.width
+            new_ws.column_dimensions[col_letter].hidden = col_dim.hidden
+
+        # Copiar altos de fila
+        for row_num, row_dim in src_ws.row_dimensions.items():
+            new_ws.row_dimensions[row_num].height = row_dim.height
+            new_ws.row_dimensions[row_num].hidden = row_dim.hidden
+
+        # Mover la nueva hoja al principio (opcional, para que aparezca primera)
         wb.move_sheet(new_ws, offset=-(wb.index(new_ws)))
 
+        # Guardar en BytesIO
         buf = BytesIO()
         wb.save(buf)
         modified_bytes = buf.getvalue()
+
     except Exception as e:
-        return {"ok": False, "error": f"Error copiando la hoja: {e}"}
+        return {"ok": False, "error": f"Error copiando la hoja manualmente: {e}"}
 
     # 6. Re-subir el archivo
     up_resp = requests.put(
@@ -724,7 +754,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         "ok": True,
         "mensaje": (
             f"Hoja '{nombre_hoja}' creada con formato completo "
-            f"(copia de '{plantilla_nombre}') en SharePoint."
+            f"(copia manual de '{plantilla_nombre}') en SharePoint."
         ),
     }
 
