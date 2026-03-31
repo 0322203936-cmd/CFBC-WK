@@ -752,7 +752,28 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
     address       = range_data.get("address", "")  # ej: "WK2513!A1:AM55"
     rango_coords  = address.split("!")[-1] if "!" in address else address
 
-    # ── 6. Añadir la nueva hoja vacía ────────────────────────────────────────
+    # -- 5b. Leer formatos de la plantilla ------------------------------------
+    fmt_resp = requests.get(
+        f"{wb_base}/worksheets/{enc_id}/usedRange",
+        headers=hdrs,
+        params={"$select": "numberFormat"},
+        timeout=30,
+    )
+    number_formats = fmt_resp.json().get("numberFormat", []) if fmt_resp.status_code == 200 else []
+
+    fill_resp  = requests.get(f"{wb_base}/worksheets/{enc_id}/usedRange/format/fill",  headers=hdrs, timeout=30)
+    font_resp  = requests.get(f"{wb_base}/worksheets/{enc_id}/usedRange/format/font",  headers=hdrs, timeout=30)
+    align_resp = requests.get(
+        f"{wb_base}/worksheets/{enc_id}/usedRange/format",
+        headers=hdrs,
+        params={"$select": "horizontalAlignment,verticalAlignment,wrapText,columnWidth,rowHeight"},
+        timeout=30,
+    )
+    fill_data  = fill_resp.json()  if fill_resp.status_code  == 200 else {}
+    font_data  = font_resp.json()  if font_resp.status_code  == 200 else {}
+    align_data = align_resp.json() if align_resp.status_code == 200 else {}
+
+    # -- 6. Aniadir la nueva hoja vacia --------------------------------------
     add_resp = requests.post(
         f"{wb_base}/worksheets/add",
         headers=hdrs,
@@ -765,29 +786,41 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     nueva_id  = add_resp.json().get("id", "")
     enc_nueva = _up.quote(nueva_id, safe="")
+    rng_nueva = f"{wb_base}/worksheets/{enc_nueva}/range(address='{rango_coords}')"
 
-    # ── 7. Escribir los valores en la nueva hoja por ID ──────────────────────
-    patch_url = f"{wb_base}/worksheets/{enc_nueva}/range(address='{rango_coords}')"
-    patch_resp = requests.patch(
-        patch_url,
-        headers=hdrs,
-        json={"values": valores},
-        timeout=30,
-    )
+    # -- 7. Escribir valores + numberFormat ----------------------------------
+    values_body = {"values": valores}
+    if number_formats:
+        values_body["numberFormat"] = number_formats
+    patch_resp = requests.patch(rng_nueva, headers=hdrs, json=values_body, timeout=30)
     if patch_resp.status_code not in (200, 201):
         _close_session()
         return {"ok": False, "error": f"Error escribiendo valores en hoja nueva: {patch_resp.text}"}
 
-    # ── 8. Cerrar sesión (confirma los cambios) ───────────────────────────────
+    # -- 8. Fill (color de fondo) --------------------------------------------
+    if fill_data.get("color"):
+        requests.patch(f"{rng_nueva}/format/fill", headers=hdrs, json={"color": fill_data["color"]}, timeout=30)
+
+    # -- 9. Font (negrita, color, tamano, cursiva) ----------------------------
+    font_patch = {k: font_data[k] for k in ("bold","color","italic","size","name","underline") if font_data.get(k) is not None}
+    if font_patch:
+        requests.patch(f"{rng_nueva}/format/font", headers=hdrs, json=font_patch, timeout=30)
+
+    # -- 10. Alineacion, wrapText, ancho/alto --------------------------------
+    fmt_patch = {k: align_data[k] for k in ("horizontalAlignment","verticalAlignment","wrapText","columnWidth","rowHeight") if align_data.get(k) is not None}
+    if fmt_patch:
+        requests.patch(f"{rng_nueva}/format", headers=hdrs, json=fmt_patch, timeout=30)
+
+    # -- 11. Cerrar sesion ---------------------------------------------------
     _close_session()
 
     return {
         "ok": True,
         "mensaje": (
-            f"✅ Hoja '{nombre_hoja}' creada como copia de '{plantilla_nombre}' en SharePoint."
+            f"Hoja '{nombre_hoja}' creada con valores y formatos "
+            f"copiados de '{plantilla_nombre}' en SharePoint."
         ),
     }
-
 
 # ─── Descarga de una hoja WK#### como xlsx con formato completo ───────────────
 def get_sheet_xlsx(week_code: str) -> bytes | None:
