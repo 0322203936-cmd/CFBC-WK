@@ -699,51 +699,79 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
     if not wk_hojas:
         return {"ok": False, "error": "No se encontró ninguna hoja WK para usar como plantilla."}
 
-    plantilla_id = wk_hojas[0][2]  # ID de la hoja WK más reciente
     plantilla_nombre = wk_hojas[0][1]
 
-    # 4. Copiar la hoja plantilla con el nuevo nombre
-    #    ⚠️  El ID de la hoja suele contener { } que deben ir URL-encoded en el path.
-    #    ⚠️  El body usa "positionType" (no "index") según la Graph API de Excel.
+    # Base URL del workbook via Graph API
+    wb_base = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
+
+    # ── 4. Crear sesión persistente (necesaria para operaciones de escritura) ──
+    session_resp = requests.post(
+        f"{wb_base}/createSession",
+        headers=headers,
+        json={"persistChanges": True},
+        timeout=30,
+    )
+    if session_resp.status_code not in (200, 201):
+        return {"ok": False, "error": f"No se pudo abrir sesión en el workbook: {session_resp.text}"}
+
+    session_id = session_resp.json().get("id", "")
+    hdrs = {**headers, "workbook-session-id": session_id}
+
+    def _close_session():
+        try:
+            requests.post(f"{wb_base}/closeSession", headers=hdrs, json={}, timeout=10)
+        except Exception:
+            pass
+
     import urllib.parse as _up
-    import time as _time
 
-    encoded_sheet_id = _up.quote(plantilla_id, safe="")
-    copy_url = (
-        f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}"
-        f"/workbook/worksheets/{encoded_sheet_id}/copy"
+    # ── 5. Leer valores de la hoja plantilla (rango usado) ───────────────────
+    enc_plantilla = _up.quote(f"'{plantilla_nombre}'", safe="")
+    used_range_url = f"{wb_base}/worksheets/{enc_plantilla}/usedRange"
+    range_resp = requests.get(used_range_url, headers=hdrs, timeout=30)
+    if range_resp.status_code != 200:
+        _close_session()
+        return {"ok": False, "error": f"Error leyendo rango de plantilla: {range_resp.text}"}
+
+    range_data  = range_resp.json()
+    valores      = range_data.get("values", [])
+    address      = range_data.get("address", "")   # ej: "WK2513!A1:AM55"
+    # Extraer solo la parte de coordenadas (sin nombre de hoja)
+    rango_coords = address.split("!")[-1] if "!" in address else address
+
+    # ── 6. Añadir la nueva hoja vacía al inicio ───────────────────────────────
+    add_resp = requests.post(
+        f"{wb_base}/worksheets/add",
+        headers=hdrs,
+        json={"name": nombre_hoja, "index": 0},
+        timeout=20,
     )
-    copy_body = {
-        "name":         nombre_hoja,
-        "positionType": "Beginning",   # "Beginning" | "End" | "Before" | "After" | "None"
+    if add_resp.status_code not in (200, 201):
+        _close_session()
+        return {"ok": False, "error": f"Error creando hoja nueva: {add_resp.text}"}
+
+    # ── 7. Escribir los valores en la nueva hoja ──────────────────────────────
+    enc_nueva = _up.quote(f"'{nombre_hoja}'", safe="")
+    patch_url = f"{wb_base}/worksheets/{enc_nueva}/range(address='{rango_coords}')"
+    patch_resp = requests.patch(
+        patch_url,
+        headers=hdrs,
+        json={"values": valores},
+        timeout=30,
+    )
+    if patch_resp.status_code not in (200, 201):
+        _close_session()
+        return {"ok": False, "error": f"Error escribiendo valores en hoja nueva: {patch_resp.text}"}
+
+    # ── 8. Cerrar sesión (confirma los cambios) ───────────────────────────────
+    _close_session()
+
+    return {
+        "ok": True,
+        "mensaje": (
+            f"✅ Hoja '{nombre_hoja}' creada como copia de '{plantilla_nombre}' en SharePoint."
+        ),
     }
-    copy_resp = requests.post(
-        copy_url, headers=headers, json=copy_body, timeout=30
-    )
-
-    # 202 Accepted → operación asíncrona; hay que hacer polling al Location header
-    if copy_resp.status_code == 202:
-        op_url = copy_resp.headers.get("Location")
-        if op_url:
-            for _ in range(20):          # máximo ~20 s de espera
-                _time.sleep(1)
-                poll = requests.get(op_url, headers=headers, timeout=15)
-                if poll.status_code == 200:
-                    status = poll.json().get("status", "").lower()
-                    if status == "succeeded":
-                        return {"ok": True,
-                                "mensaje": f"✅ Hoja '{nombre_hoja}' creada (copia de '{plantilla_nombre}') en SharePoint."}
-                    if status == "failed":
-                        return {"ok": False,
-                                "error": f"La operación de copia falló: {poll.text}"}
-        # Si no hay Location o agotó reintentos, considerarlo exitoso igual
-        return {"ok": True,
-                "mensaje": f"✅ Hoja '{nombre_hoja}' enviada a crear en SharePoint (operación asíncrona)."}
-
-    if copy_resp.status_code in (200, 201):
-        return {"ok": True, "mensaje": f"✅ Hoja '{nombre_hoja}' creada con éxito en SharePoint."}
-
-    return {"ok": False, "error": f"Error al copiar hoja: {copy_resp.text}"}
 
 
 # ─── Descarga de una hoja WK#### como xlsx con formato completo ───────────────
