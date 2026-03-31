@@ -725,33 +725,48 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     import urllib.parse as _up
 
-    # ── 5. Leer valores de la hoja plantilla (rango usado) ───────────────────
-    enc_plantilla = _up.quote(f"'{plantilla_nombre}'", safe="")
-    used_range_url = f"{wb_base}/worksheets/{enc_plantilla}/usedRange"
+    # ID real de la hoja plantilla (viene del paso 3, más confiable que el nombre)
+    plantilla_id = wk_hojas[0][2]
+
+    # ── 5. Leer valores de la hoja plantilla por ID ───────────────────────────
+    # El ID viene con caracteres como {, } que hay que URL-encodear
+    enc_id = _up.quote(plantilla_id, safe="")
+    used_range_url = f"{wb_base}/worksheets/{enc_id}/usedRange"
     range_resp = requests.get(used_range_url, headers=hdrs, timeout=30)
+
+    # Fallback: intentar por nombre si el ID falla
+    if range_resp.status_code != 200:
+        enc_nombre = _up.quote(plantilla_nombre, safe="")
+        used_range_url = f"{wb_base}/worksheets/{enc_nombre}/usedRange"
+        range_resp = requests.get(used_range_url, headers=hdrs, timeout=30)
+
     if range_resp.status_code != 200:
         _close_session()
-        return {"ok": False, "error": f"Error leyendo rango de plantilla: {range_resp.text}"}
+        return {
+            "ok": False,
+            "error": f"Error leyendo rango de plantilla '{plantilla_nombre}' (id={plantilla_id}): {range_resp.text}"
+        }
 
-    range_data  = range_resp.json()
-    valores      = range_data.get("values", [])
-    address      = range_data.get("address", "")   # ej: "WK2513!A1:AM55"
-    # Extraer solo la parte de coordenadas (sin nombre de hoja)
-    rango_coords = address.split("!")[-1] if "!" in address else address
+    range_data   = range_resp.json()
+    valores       = range_data.get("values", [])
+    address       = range_data.get("address", "")  # ej: "WK2513!A1:AM55"
+    rango_coords  = address.split("!")[-1] if "!" in address else address
 
-    # ── 6. Añadir la nueva hoja vacía al inicio ───────────────────────────────
+    # ── 6. Añadir la nueva hoja vacía ────────────────────────────────────────
     add_resp = requests.post(
         f"{wb_base}/worksheets/add",
         headers=hdrs,
-        json={"name": nombre_hoja, "index": 0},
+        json={"name": nombre_hoja},
         timeout=20,
     )
     if add_resp.status_code not in (200, 201):
         _close_session()
         return {"ok": False, "error": f"Error creando hoja nueva: {add_resp.text}"}
 
-    # ── 7. Escribir los valores en la nueva hoja ──────────────────────────────
-    enc_nueva = _up.quote(f"'{nombre_hoja}'", safe="")
+    nueva_id  = add_resp.json().get("id", "")
+    enc_nueva = _up.quote(nueva_id, safe="")
+
+    # ── 7. Escribir los valores en la nueva hoja por ID ──────────────────────
     patch_url = f"{wb_base}/worksheets/{enc_nueva}/range(address='{rango_coords}')"
     patch_resp = requests.patch(
         patch_url,
