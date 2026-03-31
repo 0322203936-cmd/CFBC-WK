@@ -615,212 +615,119 @@ def get_datos() -> dict:
     return resultado
 
 
-# ─── Crear nueva hoja WK en SharePoint via Microsoft Graph API ───────────────
+# --- Crear nueva hoja WK en SharePoint via Microsoft Graph API ---
 def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
     """
-    Crea una nueva hoja en el Excel WK de SharePoint copiando el formato
-    de la hoja WK más reciente como plantilla.
-
-    Requiere una App Registration en Azure AD con permisos:
-        Files.ReadWrite  (o Sites.ReadWrite.All)
-
-    Args:
-        nombre_hoja:   Nombre de la nueva hoja, ej: "WK2518"
-        tenant_id:     Directory (tenant) ID de Azure AD
-        client_id:     Application (client) ID
-        client_secret: Client secret value
-
-    Returns:
-        {"ok": True, "mensaje": "..."} o {"ok": False, "error": "..."}
+    Crea una nueva hoja copiando la WK mas reciente como plantilla.
+    Descarga el archivo, copia la hoja con openpyxl (valores + formatos
+    completos: colores, bordes, merged cells, anchos) y lo re-sube.
+    Requiere Files.ReadWrite en la App Registration de Azure AD.
     """
-    import json as _json
+    import urllib.parse as _up
+    import base64 as _b64
 
-    # 1. Obtener token OAuth2 (client credentials flow)
-    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    # 1. Token OAuth2
+    token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
     token_resp = requests.post(token_url, data={
         "grant_type":    "client_credentials",
         "client_id":     client_id,
         "client_secret": client_secret,
         "scope":         "https://graph.microsoft.com/.default",
     }, timeout=20)
-
     if token_resp.status_code != 200:
         return {"ok": False, "error": f"Error obteniendo token: {token_resp.text}"}
 
-    token = token_resp.json().get("access_token")
+    token = token_resp.json().get('access_token')
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type":  "application/json",
     }
 
-    # 2. Resolver el drive item ID desde el link de SharePoint
-    #    Usamos el endpoint /shares para resolver un link compartido
-    import base64 as _b64
-    encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip("=")
-    encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
-
-    resolve_url = f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem"
-    res = requests.get(resolve_url, headers=headers, timeout=20)
-    if res.status_code != 200:
-        return {"ok": False, "error": f"No se pudo resolver el archivo SharePoint: {res.text}"}
-
-    item = res.json()
-    drive_id = item.get("parentReference", {}).get("driveId")
-    item_id  = item.get("id")
-
-    if not drive_id or not item_id:
-        return {"ok": False, "error": "No se pudo obtener driveId o itemId del archivo."}
-
-    # 3. Listar hojas existentes para encontrar la plantilla (WK más reciente)
-    sheets_url = (
-        f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}"
-        f"/workbook/worksheets"
+    # 2. Resolver driveId + itemId desde el link compartido
+    encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip('=')
+    encoded = 'u!' + encoded.replace('/', '_').replace('+', '-')
+    res = requests.get(
+        f'https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem',
+        headers=headers, timeout=20,
     )
-    sheets_resp = requests.get(sheets_url, headers=headers, timeout=20)
+    if res.status_code != 200:
+        return {"ok": False, "error": f"No se pudo resolver el archivo: {res.text}"}
+
+    item     = res.json()
+    drive_id = item.get('parentReference', {}).get('driveId')
+    item_id  = item.get('id')
+    if not drive_id or not item_id:
+        return {"ok": False, "error": "No se pudo obtener driveId o itemId."}
+
+    graph_item = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}'
+
+    # 3. Listar hojas: verificar duplicados y encontrar plantilla
+    sheets_resp = requests.get(f'{graph_item}/workbook/worksheets', headers=headers, timeout=20)
     if sheets_resp.status_code != 200:
         return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
 
-    hojas = sheets_resp.json().get("value", [])
-    nombres = [h["name"].strip() for h in hojas]
+    hojas   = sheets_resp.json().get('value', [])
+    nombres = [h['name'].strip() for h in hojas]
 
-    # Verificar que la hoja no exista ya
     if nombre_hoja.upper() in [n.upper() for n in nombres]:
         return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe en el archivo."}
 
-    # Encontrar la hoja WK más reciente para usar como plantilla
-    pat_wk = re.compile(r'^WK\s*(\d{4})$', re.IGNORECASE)
-    wk_hojas = []
-    for h in hojas:
-        m = pat_wk.match(h["name"].strip())
-        if m:
-            wk_hojas.append((int(m.group(1)), h["name"].strip(), h["id"]))
-    wk_hojas.sort(reverse=True)
-
+    pat_wk   = re.compile(r'^WK\s*(\d{4})$', re.IGNORECASE)
+    wk_hojas = sorted(
+        [(int(m.group(1)), h['name'].strip())
+         for h in hojas for m in [pat_wk.match(h['name'].strip())] if m],
+        reverse=True,
+    )
     if not wk_hojas:
-        return {"ok": False, "error": "No se encontró ninguna hoja WK para usar como plantilla."}
+        return {"ok": False, "error": "No se encontro ninguna hoja WK para plantilla."}
 
     plantilla_nombre = wk_hojas[0][1]
 
-    # Base URL del workbook via Graph API
-    wb_base = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
+    # 4. Descargar el archivo completo
+    dl_resp = requests.get(f'{graph_item}/content', headers=headers, timeout=120)
+    if dl_resp.status_code != 200:
+        return {"ok": False, "error": f"Error descargando el archivo: {dl_resp.text}"}
 
-    # ── 4. Crear sesión persistente (necesaria para operaciones de escritura) ──
-    session_resp = requests.post(
-        f"{wb_base}/createSession",
-        headers=headers,
-        json={"persistChanges": True},
-        timeout=30,
+    print(f'   Archivo descargado: {len(dl_resp.content)//1024} KB')
+
+    # 5. Copiar la hoja con openpyxl — copia fiel de valores + formatos
+    try:
+        wb = openpyxl.load_workbook(BytesIO(dl_resp.content))
+        if plantilla_nombre not in wb.sheetnames:
+            return {"ok": False, "error": f"Hoja plantilla '{plantilla_nombre}' no encontrada."}
+
+        new_ws       = wb.copy_worksheet(wb[plantilla_nombre])
+        new_ws.title = nombre_hoja
+        # Mover al inicio
+        wb.move_sheet(new_ws, offset=-(wb.index(new_ws)))
+
+        buf = BytesIO()
+        wb.save(buf)
+        modified_bytes = buf.getvalue()
+    except Exception as e:
+        return {"ok": False, "error": f"Error copiando la hoja: {e}"}
+
+    # 6. Re-subir el archivo
+    up_resp = requests.put(
+        f'{graph_item}/content',
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type":  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+        data=modified_bytes,
+        timeout=180,
     )
-    if session_resp.status_code not in (200, 201):
-        return {"ok": False, "error": f"No se pudo abrir sesión en el workbook: {session_resp.text}"}
-
-    session_id = session_resp.json().get("id", "")
-    hdrs = {**headers, "workbook-session-id": session_id}
-
-    def _close_session():
-        try:
-            requests.post(f"{wb_base}/closeSession", headers=hdrs, json={}, timeout=10)
-        except Exception:
-            pass
-
-    import urllib.parse as _up
-
-    # ID real de la hoja plantilla (viene del paso 3, más confiable que el nombre)
-    plantilla_id = wk_hojas[0][2]
-
-    # ── 5. Leer valores de la hoja plantilla por ID ───────────────────────────
-    # El ID viene con caracteres como {, } que hay que URL-encodear
-    enc_id = _up.quote(plantilla_id, safe="")
-    used_range_url = f"{wb_base}/worksheets/{enc_id}/usedRange"
-    range_resp = requests.get(used_range_url, headers=hdrs, timeout=30)
-
-    # Fallback: intentar por nombre si el ID falla
-    if range_resp.status_code != 200:
-        enc_nombre = _up.quote(plantilla_nombre, safe="")
-        used_range_url = f"{wb_base}/worksheets/{enc_nombre}/usedRange"
-        range_resp = requests.get(used_range_url, headers=hdrs, timeout=30)
-
-    if range_resp.status_code != 200:
-        _close_session()
-        return {
-            "ok": False,
-            "error": f"Error leyendo rango de plantilla '{plantilla_nombre}' (id={plantilla_id}): {range_resp.text}"
-        }
-
-    range_data   = range_resp.json()
-    valores       = range_data.get("values", [])
-    address       = range_data.get("address", "")  # ej: "WK2513!A1:AM55"
-    rango_coords  = address.split("!")[-1] if "!" in address else address
-
-    # -- 5b. Leer formatos de la plantilla ------------------------------------
-    fmt_resp = requests.get(
-        f"{wb_base}/worksheets/{enc_id}/usedRange",
-        headers=hdrs,
-        params={"$select": "numberFormat"},
-        timeout=30,
-    )
-    number_formats = fmt_resp.json().get("numberFormat", []) if fmt_resp.status_code == 200 else []
-
-    fill_resp  = requests.get(f"{wb_base}/worksheets/{enc_id}/usedRange/format/fill",  headers=hdrs, timeout=30)
-    font_resp  = requests.get(f"{wb_base}/worksheets/{enc_id}/usedRange/format/font",  headers=hdrs, timeout=30)
-    align_resp = requests.get(
-        f"{wb_base}/worksheets/{enc_id}/usedRange/format",
-        headers=hdrs,
-        params={"$select": "horizontalAlignment,verticalAlignment,wrapText,columnWidth,rowHeight"},
-        timeout=30,
-    )
-    fill_data  = fill_resp.json()  if fill_resp.status_code  == 200 else {}
-    font_data  = font_resp.json()  if font_resp.status_code  == 200 else {}
-    align_data = align_resp.json() if align_resp.status_code == 200 else {}
-
-    # -- 6. Aniadir la nueva hoja vacia --------------------------------------
-    add_resp = requests.post(
-        f"{wb_base}/worksheets/add",
-        headers=hdrs,
-        json={"name": nombre_hoja},
-        timeout=20,
-    )
-    if add_resp.status_code not in (200, 201):
-        _close_session()
-        return {"ok": False, "error": f"Error creando hoja nueva: {add_resp.text}"}
-
-    nueva_id  = add_resp.json().get("id", "")
-    enc_nueva = _up.quote(nueva_id, safe="")
-    rng_nueva = f"{wb_base}/worksheets/{enc_nueva}/range(address='{rango_coords}')"
-
-    # -- 7. Escribir valores + numberFormat ----------------------------------
-    values_body = {"values": valores}
-    if number_formats:
-        values_body["numberFormat"] = number_formats
-    patch_resp = requests.patch(rng_nueva, headers=hdrs, json=values_body, timeout=30)
-    if patch_resp.status_code not in (200, 201):
-        _close_session()
-        return {"ok": False, "error": f"Error escribiendo valores en hoja nueva: {patch_resp.text}"}
-
-    # -- 8. Fill (color de fondo) --------------------------------------------
-    if fill_data.get("color"):
-        requests.patch(f"{rng_nueva}/format/fill", headers=hdrs, json={"color": fill_data["color"]}, timeout=30)
-
-    # -- 9. Font (negrita, color, tamano, cursiva) ----------------------------
-    font_patch = {k: font_data[k] for k in ("bold","color","italic","size","name","underline") if font_data.get(k) is not None}
-    if font_patch:
-        requests.patch(f"{rng_nueva}/format/font", headers=hdrs, json=font_patch, timeout=30)
-
-    # -- 10. Alineacion, wrapText, ancho/alto --------------------------------
-    fmt_patch = {k: align_data[k] for k in ("horizontalAlignment","verticalAlignment","wrapText","columnWidth","rowHeight") if align_data.get(k) is not None}
-    if fmt_patch:
-        requests.patch(f"{rng_nueva}/format", headers=hdrs, json=fmt_patch, timeout=30)
-
-    # -- 11. Cerrar sesion ---------------------------------------------------
-    _close_session()
+    if up_resp.status_code not in (200, 201):
+        return {"ok": False, "error": f"Error subiendo el archivo: {up_resp.text}"}
 
     return {
         "ok": True,
         "mensaje": (
-            f"Hoja '{nombre_hoja}' creada con valores y formatos "
-            f"copiados de '{plantilla_nombre}' en SharePoint."
+            f"Hoja '{nombre_hoja}' creada con formato completo "
+            f"(copia de '{plantilla_nombre}') en SharePoint."
         ),
     }
+
 
 # ─── Descarga de una hoja WK#### como xlsx con formato completo ───────────────
 def get_sheet_xlsx(week_code: str) -> bytes | None:
