@@ -57,6 +57,9 @@ HTML = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CFBC — Control Operativo</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-theme-alpine.css">
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.js"></script>
 <style>
 :root {
   --navy: #1e3a5f;
@@ -251,54 +254,43 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 }
 .prod-close:hover { border-color: #fff; color: #fff; }
 
-/* ── NATIVE TABLE ────────────────────────────── */
-.tbl-scroll {
-  overflow-x: auto; overflow-y: auto;
-  scrollbar-width: thin; scrollbar-color: #bbb transparent;
+/* ── AG GRID THEME OVERRIDES ─────────────────────── */
+.ag-theme-alpine {
+  --ag-font-family: 'Consolas', 'Courier New', monospace;
+  --ag-font-size: 11px;
+  --ag-row-height: 22px;
+  --ag-header-height: 25px;
+  --ag-cell-horizontal-padding: 6px;
+  --ag-borders: solid 1px;
+  --ag-border-color: #d8d8d8;
+  --ag-secondary-border-color: #e5e5e5;
+  --ag-header-background-color: #e8e8e8;
+  --ag-header-foreground-color: #333;
+  --ag-odd-row-background-color: #fafafa;
+  --ag-even-row-background-color: #ffffff;
+  --ag-row-hover-color: #e8f5e9;
+  --ag-selected-row-background-color: #c8e6c9;
+  --ag-alpine-active-color: #16a34a;
+  --ag-input-focus-border-color: #16a34a;
+  --ag-range-selection-border-color: #16a34a;
+  --ag-header-column-separator-display: block;
+  --ag-header-column-separator-height: 60%;
+  --ag-header-column-separator-color: #ccc;
 }
-.tbl-scroll::-webkit-scrollbar { height:5px; width:5px; }
-.tbl-scroll::-webkit-scrollbar-thumb { background:#ccc; border-radius:3px; }
-.dt {
-  border-collapse: collapse; width: 100%;
-  font-family: var(--mono); font-size: 11px;
-}
-.dt th {
-  position: sticky; top: 0; z-index: 5;
-  padding: 4px 8px;
-  background: #dde2ea; color: #333;
+.ag-theme-alpine .ag-header-cell {
   font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.4px;
-  border-bottom: 2px solid #b0b8c8;
-  border-right: 1px solid #c8cdd8;
-  white-space: nowrap; text-align: right;
-  cursor: pointer; user-select: none;
+  text-transform: uppercase; letter-spacing: 0.3px;
 }
-.dt th:first-child, .dt th.th-l { text-align: left; }
-.dt th.s-asc::after  { content: ' ▲'; color: var(--green); font-size:9px; }
-.dt th.s-desc::after { content: ' ▼'; color: var(--green); font-size:9px; }
-.dt td {
-  padding: 3px 8px; height: 22px;
-  border-bottom: 1px solid #ececec;
-  border-right: 1px solid #f0f0f0;
-  white-space: nowrap; text-align: right;
+.ag-theme-alpine .ag-pinned-left-cols-container {
+  border-right: 2px solid #aaa !important;
 }
-.dt td:first-child, .dt td.td-l { text-align: left; }
-.dt tbody tr:nth-child(odd)  td { background: #f9f9fb; }
-.dt tbody tr:nth-child(even) td { background: #ffffff; }
-.dt tbody tr:hover td { background: #e6f4ec !important; cursor:pointer; }
-.dt tr.tr-grp td {
-  background: #dde5f2 !important;
-  font-weight: 700; color: #1e3a5f;
-  border-top: 1px solid #b8c5d9;
-  border-bottom: 1px solid #b8c5d9;
-}
-.dt tr.tr-grp:hover td { background: #cdd8ee !important; }
-.dt tr.tr-sub td:first-child { padding-left: 20px; }
-.dt tr.tr-total td {
-  background: #e8f5ec !important;
-  font-weight: 700; color: #16a34a;
-  border-top: 2px solid rgba(22,163,74,.3);
-}
+.ag-theme-alpine .ag-group-row { background: #eff3fa !important; font-weight: 700; }
+
+/* Inline cell styles injected via cellStyle */
+.cell-pos { color: #16a34a !important; font-weight: 600; }
+.cell-neg { color: #dc2626 !important; font-weight: 600; }
+.cell-muted { color: #999 !important; }
+.cell-total { font-weight: 700 !important; color: #1e3a5f !important; }
 .prod-link {
   cursor: pointer;
   text-decoration: underline dotted;
@@ -435,11 +427,9 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <button class="tb-btn" onclick="resetRange()">↺ Reset</button>
   </div>
 
-  <!-- TABLE AREA -->
+  <!-- GRID AREA -->
   <div id="gridWrap">
-    <div id="tblMain" class="tbl-scroll" style="height:500px">
-      <table class="dt"><thead id="tblHead"></thead><tbody id="tblBody"></tbody></table>
-    </div>
+    <div id="myGrid" class="ag-theme-alpine" style="width:100%;height:500px"></div>
   </div>
 
   <!-- COMPARATIVO TABLE (reemplaza gridWrap en vista comparativo) -->
@@ -460,9 +450,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
       <div class="prod-hdr-meta" id="prodMeta"></div>
       <button class="prod-close" onclick="closeProdPanel()">✕ CERRAR</button>
     </div>
-    <div id="prodWrap" class="tbl-scroll" style="max-height:260px">
-      <table class="dt"><thead id="prodHead"></thead><tbody id="prodBody"></tbody></table>
-    </div>
+    <div id="prodGrid" class="ag-theme-alpine" style="width:100%;height:300px"></div>
   </div>
 
   <!-- STATUS BAR -->
@@ -472,20 +460,11 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 </div><!-- /app -->
 
 <script>
-// Error handler — primero
-function _showErr(msg) {
-  var el = document.getElementById('loader');
-  if (el) el.innerHTML = '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border:2px solid #fecaca;border-radius:6px;max-width:800px;word-break:break-all"><b>❌ ERROR:</b> ' + String(msg) + '</div>';
-}
-window.onerror = function(m,s,l,c,e){ _showErr((e?e.stack:m) + ' [L'+l+']'); return true; };
-
 // ═══════════════════════════════════════════════════════════
 // DATOS
 // ═══════════════════════════════════════════════════════════
-var DATA;
-try {
-  DATA = JSON.parse(atob('__DATA_JSON__'));
-} catch(e) { _showErr('Fallo decodificando datos: ' + e.message); throw e; }
+var _raw = atob('__DATA_JSON__');
+var DATA = JSON.parse(_raw);
 
 // ═══════════════════════════════════════════════════════════
 // CONSTANTES
@@ -509,7 +488,8 @@ var state = {
   weekIdx: 0, fromWeek: 1, toWeek: 52
 };
 var allWeeks = [];
-// Native table — no grid API needed
+var mainGridApi = null;
+var prodGridApi = null;
 
 function isCombined(cat) { return false; } // Cada categoría se muestra por separado
 
@@ -773,18 +753,7 @@ function setView(v) {
   renderView();
 }
 function exportCSV() {
-  var rows = document.querySelectorAll('#tblMain table tr');
-  var lines = [];
-  rows.forEach(function(r){
-    var cells = r.querySelectorAll('th,td');
-    var cols = []; cells.forEach(function(c){ cols.push('"'+c.innerText.replace(/"/g,'""')+'"'); });
-    lines.push(cols.join(','));
-  });
-  var blob = new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'CFBC_'+state.view+'_'+new Date().toISOString().slice(0,10)+'.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  if (mainGridApi) mainGridApi.exportDataAsCsv({ fileName: 'CFBC_' + state.view + '_' + new Date().toISOString().slice(0,10) + '.csv' });
 }
 function updateRangeSliders() {
   var f = state.fromWeek, t = state.toWeek;
@@ -825,95 +794,38 @@ function resetRange() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// NATIVE TABLE ENGINE
+// MAIN GRID SETUP
 // ═══════════════════════════════════════════════════════════
-var _cols = [], _rows = [];
-var _sort = { i: null, asc: true };
-// Row data cache for click handler
-var _rowCache = [];
-
-function buildMainGrid() { /* no-op */ }
-
-function _renderTable(headId, bodyId, cols, rows, isMain) {
-  var thead = document.getElementById(headId);
-  var tbody = document.getElementById(bodyId);
-  if (!thead || !tbody) return;
-
-  if (isMain) _rowCache = rows.slice();
-
-  // Sort
-  var displayRows = rows.slice();
-  if (isMain && _sort.i !== null && cols[_sort.i]) {
-    var sf = cols[_sort.i].field;
-    displayRows.sort(function(a,b){
-      var av=a[sf], bv=b[sf];
-      if(av==null||av===undefined) av=_sort.asc?Infinity:-Infinity;
-      if(bv==null||bv===undefined) bv=_sort.asc?Infinity:-Infinity;
-      if(typeof av==='number'&&typeof bv==='number') return _sort.asc?av-bv:bv-av;
-      return _sort.asc?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));
-    });
-  }
-
-  // Header
-  var totalW = cols.reduce(function(s,c){ return s+(c.width||100); },0);
-  var hh = '<tr>';
-  cols.forEach(function(c,i){
-    var isNum = c.type==='numericColumn';
-    var cls = isNum ? '' : ' th-l';
-    var sc = (isMain && _sort.i===i) ? (' '+ (_sort.asc?'s-asc':'s-desc')) : '';
-    var pct = ((c.width||100)/totalW*100).toFixed(1);
-    var onclick = isMain ? ' onclick="_sortCol('+i+')"' : '';
-    hh += '<th class="'+cls+sc+'" style="width:'+pct+'%"'+onclick+'>'+c.headerName+'</th>';
-  });
-  hh += '</tr>';
-  thead.innerHTML = hh;
-
-  // Body
-  var bh = '';
-  displayRows.forEach(function(row, ri){
-    var trCls = row._grp ? 'tr-grp' : row._total ? 'tr-total' : row._sub ? 'tr-sub' : '';
-    var ridx = isMain ? ' data-ri="'+ri+'"' : '';
-    bh += '<tr class="'+trCls+'"'+ridx+'>';
-    cols.forEach(function(c,ci){
-      var v = row[c.field];
-      var isNum = c.type==='numericColumn';
-      var cls = isNum ? '' : ' td-l';
-      var cidx = isMain ? ' data-ci="'+ci+'"' : '';
-      var cell = c.cellRenderer ? c.cellRenderer({value:v,data:row,colDef:c}) : (v!=null?String(v):'');
-      bh += '<td class="'+cls+'"'+cidx+'>'+cell+'</td>';
-    });
-    bh += '</tr>';
-  });
-  tbody.innerHTML = bh;
+function buildMainGrid() {
+  var el = document.getElementById('myGrid');
+  var opts = {
+    columnDefs: [],
+    rowData: [],
+    rowHeight: 22,
+    headerHeight: 25,
+    defaultColDef: {
+      sortable: true,
+      filter: true,
+      resizable: true,
+      suppressMovable: false,
+    },
+    suppressCellFocus: false,
+    enableCellTextSelection: true,
+    animateRows: false,
+    suppressColumnVirtualisation: false,
+    onGridReady: function(params) { mainGridApi = params.api; },
+    onCellClicked: function(e) { onMainCellClick(e); },
+  };
+  new agGrid.Grid(el, opts);
 }
-
 function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
-  _cols = colDefs; _rows = rowData;
-  _sort = { i: null, asc: true };
-  _renderTable('tblHead','tblBody', colDefs, rowData, true);
-  var st = document.getElementById('stTotal');
-  if (st) st.textContent = statusText || '';
+  if (!mainGridApi) return;
+  mainGridApi.setPinnedBottomRowData([]);   // limpiar siempre primero
+  mainGridApi.setColumnDefs(colDefs);
+  mainGridApi.setRowData(rowData);
+  mainGridApi.sizeColumnsToFit();
+  document.getElementById('stTotal').textContent = statusText || '';
 }
-
-function _sortCol(i) {
-  if (_sort.i===i) _sort.asc=!_sort.asc; else { _sort.i=i; _sort.asc=true; }
-  _renderTable('tblHead','tblBody', _cols, _rows, true);
-}
-
-// Click handler for main table rows
-document.addEventListener('click', function(e){
-  var td = e.target.closest('#tblBody td');
-  if (!td) return;
-  var tr = td.closest('tr'); if (!tr) return;
-  var ri = parseInt(tr.dataset.ri); if (isNaN(ri)) return;
-  var ci = parseInt(td.dataset.ci);
-  var row = _rowCache[ri]; if (!row) return;
-  var colDef = _cols[ci] || {};
-  var clickedRanch = fieldToRanch(colDef.field||'');
-  if (state.view==='semana'||state.view==='rancho'||state.view==='anual') {
-    showProdPanel(row, {ranch: clickedRanch||null});
-  }
-});
 
 // ═══════════════════════════════════════════════════════════
 // CELL RENDERERS
@@ -944,9 +856,9 @@ function barRenderer(maxVal) {
     if (!v || isNaN(v)) return '<span style="color:#bbb">—</span>';
     var pct = Math.min(v / (maxVal || 1) * 54, 54);
     var color = RANCH_COLORS[params.colDef.field] || '#16a34a';
-    return '<span style="display:inline-flex;align-items:center;gap:4px">' +
-      '<span style="display:inline-block;width:' + pct.toFixed(0) + 'px;height:6px;background:' + color + ';border-radius:1px;flex-shrink:0"></span>' +
-      '<span style="color:#333">' + fmt(v) + '</span></span>';
+    return '<div style="display:flex;align-items:center;gap:4px">' +
+      '<div style="width:' + pct.toFixed(0) + 'px;height:7px;background:' + color + ';border-radius:1px;flex-shrink:0"></div>' +
+      '<span style="color:#333">' + fmt(v) + '</span></div>';
   };
 }
 function catRenderer(params) {
@@ -959,7 +871,12 @@ function ranchRenderer(ranch) {
   return function(params) {
     var v = params.value;
     if (!v || isNaN(v) || v === 0) return '<span style="color:#ddd">—</span>';
-    return '<span style="color:' + col + ';font-weight:600">' + fmt(v) + '</span>';
+    // mini bar proportional
+    var maxV = params.colDef._maxVal || 1;
+    var w = Math.min(v / maxV * 40, 40);
+    return '<div style="display:flex;align-items:center;gap:3px">' +
+      '<div style="width:' + w.toFixed(0) + 'px;height:6px;background:' + col + ';border-radius:1px;flex-shrink:0;min-width:2px"></div>' +
+      '<span style="color:' + col + ';font-weight:600">' + fmt(v) + '</span></div>';
   };
 }
 
@@ -967,7 +884,7 @@ function ranchRenderer(ranch) {
 // VIEW ROUTER
 // ═══════════════════════════════════════════════════════════
 function renderView() {
-  try {
+  if (!mainGridApi) return;
   document.getElementById('prodPanel').className = '';
   if      (state.view === 'semana')    renderSemana();
   else if (state.view === 'anual')     renderAnual();
@@ -989,19 +906,19 @@ function renderSemana() {
   var sym = state.currency.toUpperCase();
 
   var cols = [
-    { field: 'year', headerName: 'AÑO', width: 70, type: 'numericColumn',
+    { field: 'year', headerName: 'AÑO', pinned: 'left', width: 70, type: 'numericColumn', filter: 'agNumberColumnFilter',
       cellRenderer: function(p) { return '<span style="color:'+(YEAR_COLORS[p.value]||'#888')+';font-weight:700">'+p.value+'</span>'; } },
-    { field: 'week', headerName: 'SEM', width: 60, type: 'numericColumn',
+    { field: 'week', headerName: 'SEM', width: 60, type: 'numericColumn', filter: 'agNumberColumnFilter',
       cellRenderer: function(p){ return wFmt(p.value); } },
-    { field: 'cat_label', headerName: 'CATEGORÍA', width: 170, cellRenderer: catRenderer },
-    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', cellRenderer: moneyRenderer },
-    { field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', cellRenderer: deltaAmtRenderer },
-    { field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', cellRenderer: deltaRenderer },
+    { field: 'cat_label', headerName: 'CATEGORÍA', width: 170, filter: 'agTextColumnFilter', cellRenderer: catRenderer },
+    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+    { field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
+    { field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
   ];
   RANCH_ORDER.forEach(function(r) {
     cols.push({
       field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 100, type: 'numericColumn',
+      headerName: r, width: 100, type: 'numericColumn', filter: 'agNumberColumnFilter',
       cellRenderer: ranchRenderer(r)
     });
   });
@@ -1038,17 +955,17 @@ function renderAnual() {
   var sym = state.currency.toUpperCase();
 
   var cols = [
-    { field: 'year', headerName: 'AÑO', width: 70, type: 'numericColumn',
+    { field: 'year', headerName: 'AÑO', pinned: 'left', width: 70, type: 'numericColumn', filter: 'agNumberColumnFilter',
       cellRenderer: function(p) { return '<span style="color:'+(YEAR_COLORS[p.value]||'#888')+';font-weight:700">'+p.value+'</span>'; } },
-    { field: 'cat_label', headerName: 'CATEGORÍA', width: 170, cellRenderer: catRenderer },
-    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', cellRenderer: moneyRenderer },
-    { field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', cellRenderer: deltaAmtRenderer },
-    { field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', cellRenderer: deltaRenderer },
+    { field: 'cat_label', headerName: 'CATEGORÍA', width: 170, filter: 'agTextColumnFilter', cellRenderer: catRenderer },
+    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+    { field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
+    { field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
   ];
   RANCH_ORDER.forEach(function(r) {
     cols.push({
       field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 100, type: 'numericColumn',
+      headerName: r, width: 100, type: 'numericColumn', filter: 'agNumberColumnFilter',
       cellRenderer: ranchRenderer(r)
     });
   });
@@ -1304,11 +1221,11 @@ function renderRancho() {
   var sym  = state.currency.toUpperCase();
 
   var cols = [
-    { field: 'rancho', headerName: 'RANCHO', width: 140,
+    { field: 'rancho', headerName: 'RANCHO', pinned: 'left', width: 140,
       cellRenderer: function(p) {
         var c = RANCH_COLORS[p.value] || '#888';
         return '<span style="color:' + c + ';font-weight:700">' + (p.value || '') + '</span>';
-      } }
+      }, filter: 'agTextColumnFilter' }
   ];
   if (prev) cols.push({ field: 'v' + prev, headerName: String(prev) + ' ' + sym, width: 120, type: 'numericColumn', cellRenderer: moneyRenderer });
   cols.push({ field: 'v' + cur, headerName: String(cur) + ' ' + sym + ' ★', width: 120, type: 'numericColumn', cellRenderer: moneyRenderer });
@@ -1351,13 +1268,13 @@ function renderDetalle() {
   var sym  = state.currency.toUpperCase();
 
   var cols = [
-    { field: 'year',      headerName: 'AÑO',     width: 60, type: 'numericColumn' },
-    { field: 'week',      headerName: 'SEM',      width: 55, type: 'numericColumn',
+    { field: 'year',      headerName: 'AÑO',     width: 60,  filter: 'agNumberColumnFilter', type: 'numericColumn', pinned: 'left' },
+    { field: 'week',      headerName: 'SEM',      width: 55,  filter: 'agNumberColumnFilter', type: 'numericColumn', pinned: 'left',
       cellRenderer: function(p) { return wFmt(p.value); } },
-    { field: 'categoria', headerName: 'CATEGORÍA', width: 220, cellRenderer: catRenderer },
-    { field: 'usd_total', headerName: 'USD',      width: 100, type: 'numericColumn', cellRenderer: moneyRenderer },
-    { field: 'mxn_total', headerName: 'MXN',      width: 110, type: 'numericColumn', cellRenderer: moneyRenderer },
-    { field: 'date_range',headerName: 'PERÍODO',  width: 150,
+    { field: 'categoria', headerName: 'CATEGORÍA', width: 220, filter: 'agTextColumnFilter', pinned: 'left', cellRenderer: catRenderer },
+    { field: 'usd_total', headerName: 'USD',      width: 100, filter: 'agNumberColumnFilter', type: 'numericColumn', cellRenderer: moneyRenderer },
+    { field: 'mxn_total', headerName: 'MXN',      width: 110, filter: 'agNumberColumnFilter', type: 'numericColumn', cellRenderer: moneyRenderer },
+    { field: 'date_range',headerName: 'PERÍODO',  width: 150, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#888;font-size:10px">' + (p.value||'') + '</span>'; } },
   ];
   // Ranch columns
@@ -1365,7 +1282,8 @@ function renderDetalle() {
     var col2 = RANCH_COLORS[r] || '#888';
     cols.push({
       field: 'rn_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 100, type: 'numericColumn',
+      headerName: r, width: 100,
+      filter: 'agNumberColumnFilter', type: 'numericColumn',
       cellRenderer: function(p) {
         var v = p.value; if (!v || v < 0.01) return '<span style="color:#ddd">—</span>';
         return '<span style="color:' + col2 + '">' + fmt(v) + '</span>';
@@ -1400,17 +1318,17 @@ function renderDetalle() {
 // ═══════════════════════════════════════════════════════════
 function renderProductosFull() {
   var cols = [
-    { field: 'tipo',     headerName: 'TIPO',     width: 60 },
-    { field: 'cat',      headerName: 'CAT',      width: 55,
+    { field: 'tipo',     headerName: 'TIPO',     width: 60,  filter: 'agTextColumnFilter', pinned: 'left' },
+    { field: 'cat',      headerName: 'CAT',      width: 55,  filter: 'agTextColumnFilter', pinned: 'left',
       cellRenderer: function(p) { var m = {'PR':'#16a34a','MP':'#7c3aed','ME':'#0369a1'}; return '<span style="color:'+(m[p.value]||'#666')+';font-weight:700">'+(p.value||'')+'</span>'; } },
-    { field: 'week_code',headerName: 'WK',       width: 72 },
-    { field: 'rancho',   headerName: 'RANCHO',   width: 105,
+    { field: 'week_code',headerName: 'WK',       width: 72,  filter: 'agNumberColumnFilter' },
+    { field: 'rancho',   headerName: 'RANCHO',   width: 105, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:'+(RANCH_COLORS[p.value]||'#666')+';font-weight:600">'+(p.value||'')+'</span>'; } },
-    { field: 'producto', headerName: 'PRODUCTO', width: 240,
+    { field: 'producto', headerName: 'PRODUCTO', width: 240, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#1e3a5f">' + (p.value||'') + '</span>'; } },
-    { field: 'unidades', headerName: 'UNID.',    width: 80,
+    { field: 'unidades', headerName: 'UNID.',    width: 80,  filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#555">' + (p.value||'—') + '</span>'; } },
-    { field: 'gasto',    headerName: 'GASTO',    width: 100, type: 'numericColumn', cellRenderer: moneyRenderer },
+    { field: 'gasto',    headerName: 'GASTO',    width: 100, filter: 'agNumberColumnFilter', type: 'numericColumn', cellRenderer: moneyRenderer },
   ];
 
   var rows = [];
@@ -1489,16 +1407,16 @@ function renderServicios() {
   }
 
   var cols = [
-    { field: 'subcat', headerName: 'SUBCATEGORÍA', width: 210,
+    { field: 'subcat', headerName: 'SUBCATEGORÍA', pinned: 'left', width: 210, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="font-weight:700;color:#1e3a5f">'+(p.value||'')+'</span>'; } },
     { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', cellRenderer: moneyRenderer },
     { field: 'pct',   headerName: '% DEL TOTAL', width: 85,  type: 'numericColumn',
       cellRenderer: function(p) {
         var v = p.value; if (!v) return '—';
         var w = Math.min(v / 100 * 55, 55);
-        return '<span style="display:inline-flex;align-items:center;gap:4px">' +
-          '<span style="display:inline-block;width:' + w.toFixed(0) + 'px;height:5px;background:#16a34a;border-radius:1px"></span>' +
-          '<span>' + v.toFixed(1) + '%</span></span>';
+        return '<div style="display:flex;align-items:center;gap:4px">' +
+          '<div style="width:' + w.toFixed(0) + 'px;height:6px;background:#16a34a;border-radius:1px"></div>' +
+          '<span>' + v.toFixed(1) + '%</span></div>';
       }
     },
   ];
@@ -1506,7 +1424,7 @@ function renderServicios() {
     var col3 = RANCH_COLORS[r] || '#888';
     cols.push({
       field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 100, type: 'numericColumn',
+      headerName: r, width: 100, type: 'numericColumn', filter: 'agNumberColumnFilter',
       cellRenderer: function(p) {
         var v = p.value; if (!v || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
         return '<span style="color:' + col3 + '">' + fmt(v) + '</span>';
@@ -1536,7 +1454,29 @@ function renderServicios() {
 // ═══════════════════════════════════════════════════════════
 // PRODUCTOS SUBPANEL (click on cell)
 // ═══════════════════════════════════════════════════════════
-// click handler moved to delegated listener in native table engine
+function onMainCellClick(evt) {
+  if (!evt || !evt.data || !evt.colDef) return;
+
+  var data = evt.data;
+  var clickedField = evt.colDef.field || '';
+  var clickedRanch = fieldToRanch(clickedField);
+
+  if (state.view === 'semana') {
+    showProdPanel(data, { ranch: clickedRanch || null });
+    return;
+  }
+  if (state.view === 'comparativo') {
+    if (clickedRanch || clickedField === 'total' || clickedField === 'week_lbl' || clickedField === 'week') {
+      showProdPanel(data, { ranch: clickedRanch || null });
+    }
+    return;
+  }
+  if (state.view === 'rancho') {
+    if (clickedField === 'rancho' || clickedRanch || clickedField.indexOf('cat_') === 0) {
+      showProdPanel(data, { ranch: data.rancho || null });
+    }
+  }
+}
 function showProdPanel(rowData, opts) {
   opts = opts || {};
   var cat   = rowData._cat;
@@ -1599,29 +1539,52 @@ function showProdPanel(rowData, opts) {
 
   var rangeText = wkStart === wkEnd ? (wFmt(wkStart) + ' · ' + yr) : (wFmt(wkStart) + '→' + wFmt(wkEnd) + ' · ' + yr);
 
+  // Mostrar panel siempre al abrir detalle (aunque no haya filas)
   document.getElementById('prodPanel').className = 'show';
+
+  // Inicializar grid de productos en primer uso
+  if (!prodGridApi) {
+    var prodElInit = document.getElementById('prodGrid');
+    var initOpts = {
+      columnDefs: getProdCols(), rowData: [],
+      rowHeight: 20, headerHeight: 23,
+      defaultColDef: { sortable: true, filter: true, resizable: true },
+      onGridReady: function(p) { prodGridApi = p.api; prodGridApi.sizeColumnsToFit(); }
+    };
+    new agGrid.Grid(prodElInit, initOpts);
+  }
 
   if (rows.length === 0) {
     document.getElementById('prodTitle').textContent = cat + ' — Sin datos de productos';
     document.getElementById('prodMeta').textContent = rangeText + (ranchFilter ? (' · ' + ranchFilter) : '');
-    document.getElementById('prodHead').innerHTML = '';
-    document.getElementById('prodBody').innerHTML = '<tr><td colspan="6" style="color:#aaa;text-align:center;padding:12px">Sin registros para este período</td></tr>';
+    if (prodGridApi) {
+      prodGridApi.setColumnDefs(getProdCols());
+      prodGridApi.setRowData([]);
+      prodGridApi.sizeColumnsToFit();
+    }
     return;
   }
 
   document.getElementById('prodTitle').textContent = cat + ' ▸ ' + rangeText + (ranchFilter ? (' · ' + ranchFilter) : '');
+
   rows.sort(function(a,b) { return b.gasto - a.gasto; });
+
   var total = rows.reduce(function(s,r) { return s + r.gasto; }, 0);
   document.getElementById('prodMeta').textContent = rows.length + ' registros · ' + fmt(total);
-  _renderTable('prodHead', 'prodBody', getProdCols(), rows, false);
+
+  if (prodGridApi) {
+    prodGridApi.setColumnDefs(getProdCols());
+    prodGridApi.setRowData(rows);
+    prodGridApi.sizeColumnsToFit();
+  }
 }
 function getProdCols() {
   return [
-    { field: 'week_code', headerName: 'WK', width: 72 },
-    { field: 'rancho', headerName: 'RANCHO', width: 110,
+    { field: 'week_code', headerName: 'WK', width: 72, filter: 'agNumberColumnFilter' },
+    { field: 'rancho', headerName: 'RANCHO', width: 110, pinned: 'left', filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:'+(RANCH_COLORS[p.value]||'#666')+';font-weight:600">'+(p.value||'')+'</span>'; } },
-    { field: 'tipo',   headerName: 'TIPO',   width: 65 },
-    { field: 'producto', headerName: 'PRODUCTO', width: 280,
+    { field: 'tipo',   headerName: 'TIPO',   width: 65, filter: 'agTextColumnFilter' },
+    { field: 'producto', headerName: 'PRODUCTO', width: 280, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#1e3a5f">'+(p.value||'')+'</span>'; } },
     { field: 'unidades', headerName: 'UNID.', width: 90 },
     { field: 'gasto', headerName: 'GASTO USD', width: 100, type: 'numericColumn', cellRenderer: moneyRenderer },
@@ -1670,7 +1633,8 @@ function resizeGrid() {
   // document.documentElement.clientHeight = altura real del iframe
   var available = document.documentElement.clientHeight - used - 4;
   var h = Math.max(available, 300);
-  document.getElementById('tblMain').style.height = h + 'px';
+  document.getElementById('myGrid').style.height = h + 'px';
+  if (mainGridApi) mainGridApi.sizeColumnsToFit();
 }
 window.addEventListener('resize', resizeGrid);
 
@@ -1690,6 +1654,13 @@ setInterval(reportHeight, 500);
 // ═══════════════════════════════════════════════════════════
 // ERROR HANDLER
 // ═══════════════════════════════════════════════════════════
+window.onerror = function(msg, src, line) {
+  document.getElementById('loader').innerHTML =
+    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border-radius:8px;border:1px solid #fecaca;max-width:600px">' +
+    '<b>ERROR JS:</b> ' + msg + '<br><small>línea ' + line + '</small></div>';
+  return true;
+};
+
 // ═══════════════════════════════════════════════════════════
 // ARRANCAR
 // ═══════════════════════════════════════════════════════════
@@ -1705,7 +1676,14 @@ if (!DATA.weekly_series) {
     }
   });
 }
-try { inicializar(); } catch(e) { _showErr('inicializar: '+e.message+'\n'+(e.stack||'')); }
+// Wait for AG Grid to load
+if (typeof agGrid === 'undefined') {
+  var checkAG = setInterval(function() {
+    if (typeof agGrid !== 'undefined') { clearInterval(checkAG); inicializar(); }
+  }, 100);
+} else {
+  inicializar();
+}
 </script>
 
 
