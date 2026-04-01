@@ -252,49 +252,55 @@ select.tb-sel:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
 }
 .prod-close:hover { border-color: #fff; color: #fff; }
 
-/* ── AG GRID THEME — Estilo ejecutivo ─────────────── */
-.ag-theme-alpine {
-  --ag-font-family: Arial, sans-serif;
-  --ag-font-size: 11px;
-  --ag-row-height: 22px;
-  --ag-header-height: 25px;
-  --ag-cell-horizontal-padding: 8px;
-  --ag-borders: solid 1px;
-  --ag-border-color: #cccccc;
-  --ag-secondary-border-color: #e0e0e0;
-  --ag-header-background-color: #fafafa;
-  --ag-header-foreground-color: #333333;
-  --ag-odd-row-background-color: #ffffff;
-  --ag-even-row-background-color: #ffffff;
-  --ag-row-hover-color: #f0f7ff;
-  --ag-selected-row-background-color: #ddeeff;
-  --ag-alpine-active-color: #0071ce;
-  --ag-input-focus-border-color: #0071ce;
-  --ag-range-selection-border-color: #0071ce;
-  --ag-header-column-separator-display: block;
-  --ag-header-column-separator-height: 60%;
-  --ag-header-column-separator-color: #cccccc;
+/* ── TABLA EJECUTIVA PRINCIPAL ────────────────────── */
+.exec-tbl-wrap {
+  overflow-x: auto; overflow-y: auto;
+  max-height: calc(100vh - 200px);
+  scrollbar-width: thin; scrollbar-color: #ccc transparent;
 }
-.ag-theme-alpine .ag-header-cell {
-  font-size: .66rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.3px;
-  color: #333; border-bottom: 1px solid #ccc;
-}
-.ag-theme-alpine .ag-header-row {
-  background: #fafafa;
-}
-.ag-theme-alpine .ag-pinned-left-cols-container {
-  border-right: 2px solid #aaa !important;
-}
-.ag-theme-alpine .ag-row {
-  border-bottom: 1px solid #eeeeee;
-}
-.ag-theme-alpine .ag-group-row {
-  background: #f5f7fa !important; font-weight: 700;
-  border-top: 1px solid #ddd; border-bottom: 1px solid #ddd;
-}
+.exec-tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
+.exec-tbl-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 
-/* Cell classes */
+.exec-tbl {
+  border-collapse: collapse; width: 100%;
+  font-family: var(--font); font-size: .71rem; color: #222;
+}
+.exec-tbl thead th {
+  padding: 3px 10px; background: #fafafa; color: #333;
+  font-size: .66rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.3px; white-space: nowrap;
+  border-bottom: 1px solid #ccc; border-right: 1px solid #e0e0e0;
+  position: sticky; top: 0; z-index: 2;
+  text-align: right; cursor: pointer; user-select: none;
+}
+.exec-tbl thead th:first-child { text-align: left; border-left: none; }
+.exec-tbl thead th.sorted-asc::after  { content: ' ▲'; font-size: .55rem; }
+.exec-tbl thead th.sorted-desc::after { content: ' ▼'; font-size: .55rem; }
+.exec-tbl thead th:hover { background: #f0f7ff; color: var(--blue); }
+
+.exec-tbl tbody td {
+  padding: 2px 10px; border-bottom: 1px solid #eee;
+  border-right: 1px solid #f0f0f0; white-space: nowrap;
+  text-align: right; color: #222;
+}
+.exec-tbl tbody td:first-child { text-align: left; color: #111; }
+.exec-tbl tbody tr:hover td { background: #f0f7ff; }
+
+.exec-tbl tfoot td {
+  padding: 3px 10px; font-weight: 700; color: #111;
+  background: #f5f5f5; border-top: 1px solid #ccc;
+  text-align: right; font-size: .71rem;
+}
+.exec-tbl tfoot td:first-child { text-align: left; }
+
+/* Colores de año en columna */
+.yr-cell { font-weight: 700; }
+.cat-cell { font-weight: 700; color: var(--navy); }
+
+/* Delta cells */
+.chg-pos { color: #16a34a; font-weight: 600; }
+.chg-neg { color: #dc2626; font-weight: 600; }
+.chg-0   { color: #aaa; }
 .cell-pos { color: #16a34a !important; font-weight: 600; }
 .cell-neg { color: #dc2626 !important; font-weight: 600; }
 .cell-muted { color: #999 !important; }
@@ -304,6 +310,27 @@ select.tb-sel:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
   text-decoration: underline dotted;
   text-underline-offset: 2px;
 }
+
+/* Fila de grupo */
+.exec-grp-row td {
+  background: #f5f7fa; font-weight: 700;
+  border-top: 1px solid #ddd; color: #111;
+  font-size: .72rem; padding: 4px 10px;
+}
+.exec-grp-row td:first-child { border-left: 3px solid var(--blue); }
+
+/* Bar render */
+.bar-wrap { display: flex; align-items: center; gap: 5px; }
+.bar-fill { height: 7px; border-radius: 1px; flex-shrink: 0; }
+
+/* Search box */
+.tbl-search {
+  font-size: .70rem; font-family: var(--font);
+  border: 1px solid #bbb; border-radius: 4px;
+  padding: 2px 8px; height: 22px; background: #fff; color: #222;
+  width: 180px; margin-left: auto;
+}
+.tbl-search:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
 
 /* ── COMPARATIVO TABLE — Estilo ejecutivo ────────── */
 #comparativoWrap {
@@ -381,6 +408,161 @@ select.tb-sel:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
 .chg-pos { color: #16a34a; font-weight: 600; }
 .chg-neg { color: #dc2626; font-weight: 600; }
 .chg-0   { color: #aaa; }
+
+/* ═══════════════════════════════════════════════════
+   AG GRID — OVERRIDE EJECUTIVO COMPLETO
+   Fondo blanco, Arial, estilo Walmex/CFBC
+═══════════════════════════════════════════════════ */
+
+/* Variables del tema */
+.ag-theme-alpine {
+  --ag-font-family: Arial, sans-serif !important;
+  --ag-font-size: 11px !important;
+  --ag-row-height: 22px !important;
+  --ag-header-height: 26px !important;
+  --ag-cell-horizontal-padding: 10px !important;
+  --ag-borders: solid 1px !important;
+  --ag-border-color: #cccccc !important;
+  --ag-secondary-border-color: #eeeeee !important;
+  --ag-header-background-color: #fafafa !important;
+  --ag-header-foreground-color: #333333 !important;
+  --ag-background-color: #ffffff !important;
+  --ag-odd-row-background-color: #ffffff !important;
+  --ag-row-hover-color: #f0f7ff !important;
+  --ag-selected-row-background-color: #ddeeff !important;
+  --ag-alpine-active-color: #0071ce !important;
+  --ag-input-focus-border-color: #0071ce !important;
+  --ag-range-selection-border-color: #0071ce !important;
+  --ag-row-border-color: #eeeeee !important;
+  --ag-header-column-separator-display: block !important;
+  --ag-header-column-separator-color: #dddddd !important;
+  background: #fff !important;
+  font-family: Arial, sans-serif !important;
+  font-size: 11px !important;
+}
+
+/* Raíz del grid: fondo blanco */
+.ag-theme-alpine .ag-root-wrapper,
+.ag-theme-alpine .ag-root,
+.ag-theme-alpine .ag-body-viewport,
+.ag-theme-alpine .ag-center-cols-viewport,
+.ag-theme-alpine .ag-body-horizontal-scroll-viewport {
+  background: #fff !important;
+}
+
+/* Header: #fafafa limpio con borde inferior fino */
+.ag-theme-alpine .ag-header,
+.ag-theme-alpine .ag-header-row,
+.ag-theme-alpine .ag-pinned-left-header {
+  background: #fafafa !important;
+  border-bottom: 1px solid #cccccc !important;
+}
+.ag-theme-alpine .ag-header-cell {
+  font-family: Arial, sans-serif !important;
+  font-size: .66rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  color: #444 !important;
+  background: #fafafa !important;
+  border-right: 1px solid #dddddd !important;
+}
+.ag-theme-alpine .ag-header-cell:hover {
+  background: #f0f7ff !important;
+}
+.ag-theme-alpine .ag-header-cell-label {
+  font-family: Arial, sans-serif !important;
+}
+
+/* Filas: todas blancas, sin zebra */
+.ag-theme-alpine .ag-row,
+.ag-theme-alpine .ag-row-even,
+.ag-theme-alpine .ag-row-odd {
+  background: #fff !important;
+  border-bottom: 1px solid #eeeeee !important;
+  font-family: Arial, sans-serif !important;
+  font-size: 11px !important;
+}
+.ag-theme-alpine .ag-row:hover {
+  background: #f0f7ff !important;
+}
+.ag-theme-alpine .ag-row-selected {
+  background: #ddeeff !important;
+}
+
+/* Celdas */
+.ag-theme-alpine .ag-cell {
+  font-family: Arial, sans-serif !important;
+  font-size: 11px !important;
+  color: #222 !important;
+  border-right: 1px solid #f0f0f0 !important;
+  line-height: 22px !important;
+}
+
+/* Columna pinnada izquierda */
+.ag-theme-alpine .ag-pinned-left-cols-container {
+  border-right: 2px solid #bbbbbb !important;
+  background: #fff !important;
+}
+.ag-theme-alpine .ag-pinned-left-cols-container .ag-cell {
+  background: #fff !important;
+}
+.ag-theme-alpine .ag-pinned-left-cols-container .ag-row:hover .ag-cell {
+  background: #f0f7ff !important;
+}
+
+/* Fila de grupo */
+.ag-theme-alpine .ag-row-group,
+.ag-theme-alpine .ag-group-row {
+  background: #f5f7fa !important;
+  font-weight: 700 !important;
+  border-top: 1px solid #dddddd !important;
+}
+
+/* Footer/pinned bottom */
+.ag-theme-alpine .ag-floating-bottom,
+.ag-theme-alpine .ag-row-pinned {
+  background: #f5f5f5 !important;
+  border-top: 1px solid #cccccc !important;
+  font-weight: 700 !important;
+}
+
+/* Scrollbars delgados */
+.ag-theme-alpine ::-webkit-scrollbar { width: 5px; height: 5px; }
+.ag-theme-alpine ::-webkit-scrollbar-track { background: transparent; }
+.ag-theme-alpine ::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
+.ag-theme-alpine .ag-body-horizontal-scroll { height: 6px !important; min-height: 6px !important; }
+.ag-theme-alpine .ag-body-vertical-scroll { width: 6px !important; min-width: 6px !important; }
+
+/* Sort icons */
+.ag-theme-alpine .ag-icon { color: #0071ce !important; }
+
+/* Filter menu */
+.ag-theme-alpine .ag-popup,
+.ag-theme-alpine .ag-filter-toolpanel-header,
+.ag-theme-alpine .ag-menu {
+  background: #fff !important;
+  border: 1px solid #cccccc !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.10) !important;
+  font-family: Arial, sans-serif !important;
+}
+
+/* Status bar */
+.ag-theme-alpine .ag-status-bar {
+  background: #f5f7fa !important;
+  border-top: 1px solid #cccccc !important;
+  font-family: Arial, sans-serif !important;
+  font-size: .68rem !important;
+  color: #666 !important;
+}
+
+/* Quitar sombra interna del grid */
+.ag-theme-alpine .ag-root-wrapper {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
 </style>
 </head>
 <body>
