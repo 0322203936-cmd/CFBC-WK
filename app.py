@@ -332,82 +332,106 @@ select.tb-sel:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
 }
 .tbl-search:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
 
-/* ── COMPARATIVO TABLE — Estilo ejecutivo ────────── */
+/* ── COMPARATIVO TABLE — Estilo limpio Walmex ────── */
 #comparativoWrap {
   display: none;
   background: #fff;
-  border: 1px solid #bbb;
   border-top: none;
   overflow: hidden;
 }
 #comparativoWrap.show { display: block; }
 
-/* Strip de KPIs */
-.cmp-stat-strip {
-  display: flex; gap: 8px; flex-wrap: wrap;
-  padding: 8px 10px; background: #f5f7fa;
-  border-bottom: 1px solid #ddd;
-}
-.cmp-stat-box {
-  background: #fff; border: 1px solid #bbb; border-radius: 4px;
-  padding: 6px 12px; min-width: 130px;
-}
-.cmp-stat-label { font-size: .67rem; text-transform: uppercase; letter-spacing: 0.5px; color: #888; font-weight: 700; }
-.cmp-stat-val   { font-size: 14px; font-weight: 700; margin: 2px 0 1px; color: #111; }
-.cmp-stat-sub   { font-size: .67rem; color: #aaa; }
+/* Sin strip de KPIs */
+.cmp-stat-strip { display: none; }
 
 /* Scroll wrapper */
 .cmp-tbl-wrap {
   overflow-x: auto; -webkit-overflow-scrolling: touch;
   scrollbar-width: thin; scrollbar-color: #ccc transparent;
-  max-height: calc(100vh - 260px); overflow-y: auto;
+  max-height: calc(100vh - 160px); overflow-y: auto;
 }
-.cmp-tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
-.cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+.cmp-tbl-wrap::-webkit-scrollbar { height: 4px; width: 4px; }
+.cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
 
-/* Tabla */
+/* Tabla — sin bordes verticales entre celdas */
 .cmp-tbl {
   border-collapse: collapse; width: 100%;
-  font-family: var(--font); font-size: .71rem;
+  font-family: Arial, sans-serif; font-size: .71rem;
+  background: #fff;
 }
+
+/* Header: fondo muy suave, solo borde inferior */
 .cmp-tbl th {
-  padding: 3px 8px; background: #fafafa; color: #333;
-  font-size: .66rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.3px; white-space: nowrap;
-  border-bottom: 1px solid #ccc; border-right: 1px solid #ddd;
-  position: sticky; top: 0; z-index: 2; text-align: right;
+  padding: 4px 10px;
+  background: #fff;
+  color: #555;
+  font-size: .66rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.2px;
+  white-space: nowrap;
+  border-bottom: 2px solid #ddd;
+  border-right: none;
+  position: sticky; top: 0; z-index: 2;
+  text-align: right;
 }
-.cmp-tbl th:first-child, .cmp-tbl th:nth-child(2) { text-align: left; }
+.cmp-tbl th:first-child { text-align: left; padding-left: 14px; }
+.cmp-tbl th:nth-child(2) { text-align: left; }
+
+/* Celdas: solo borde inferior muy suave, sin bordes laterales */
 .cmp-tbl td {
-  padding: 2px 8px; border-bottom: 1px solid #eee;
-  border-right: 1px solid #f0f0f0; white-space: nowrap;
-  text-align: right; color: #222;
+  padding: 3px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  border-right: none;
+  white-space: nowrap;
+  text-align: right;
+  color: #222;
 }
-.cmp-tbl td:first-child, .cmp-tbl td:nth-child(2) { text-align: left; color: #111; }
+.cmp-tbl td:first-child { text-align: left; color: #111; padding-left: 14px; }
+.cmp-tbl td:nth-child(2) { text-align: left; color: #888; font-size: .67rem; }
 
-/* Fila agrupadora */
+/* Hover limpio, sin fondo azul fuerte */
+.cmp-row:hover td { background: #f7f9fc; }
+
+/* Fila agrupadora de año/semana — fondo muy suave */
 .cmp-grp-hdr td {
-  background: #f5f7fa; font-weight: 700;
-  border-top: 1px solid #ddd; font-size: .72rem;
-  padding: 4px 8px; color: #111;
+  background: #f5f7fa;
+  font-weight: 700;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: .72rem;
+  padding: 5px 10px;
+  color: #111;
 }
-.cmp-grp-hdr td:first-child { border-left: 3px solid var(--blue); }
-.cmp-row:hover td { background: #f0f7ff; }
+.cmp-grp-hdr td:first-child {
+  padding-left: 14px;
+  border-left: none;
+}
 
-/* Fila total */
+/* Fila subtotal — igual al primer sistema */
 .cmp-total-row td {
-  background: #f5f5f5; font-weight: 700;
-  border-top: 1px solid #ddd; color: #111;
+  background: #eef4fb;
+  font-weight: 700;
+  border-top: 1px solid #d0dcea;
+  color: #111;
 }
-.cmp-total-row td:first-child { border-left: 3px solid #ddd; }
+.cmp-total-row td:first-child { padding-left: 14px; }
 
-/* Deltas */
+/* Fila TOTAL GENERAL */
+.cmp-grand-total td {
+  background: #fff;
+  font-weight: 700;
+  border-top: 2px solid #bbb;
+  color: #111;
+  font-size: .73rem;
+}
+.cmp-grand-total td:first-child { padding-left: 14px; }
+
+/* Deltas — solo texto, sin cajitas */
 .delta-cell { font-size: .68rem; white-space: nowrap; }
 .delta-amt  { display: block; }
-.delta-pct  { display: block; font-size: .60rem; opacity: 0.8; }
+.delta-pct  { display: block; font-size: .60rem; opacity: 0.75; }
 .chg-pos { color: #16a34a; font-weight: 600; }
 .chg-neg { color: #dc2626; font-weight: 600; }
-.chg-0   { color: #aaa; }
+.chg-0   { color: #bbb; }
 
 /* ═══════════════════════════════════════════════════
    AG GRID — OVERRIDE EJECUTIVO COMPLETO
@@ -1360,8 +1384,8 @@ function renderComparativo() {
       var dateEx = '';
       yrs.forEach(function(yr) { if (weekData[yr][w] && weekData[yr][w].date_range) dateEx = weekData[yr][w].date_range; });
 
-      var hdr = '<tr class="cmp-grp-hdr"><td colspan="2" style="color:var(--green)">📆 ' + wFmt(w) +
-        (dateEx ? ' <span style="font-size:9px;color:#999;font-weight:400">' + fmtMes(dateEx) + '</span>' : '') +
+      var hdr = '<tr class="cmp-grp-hdr"><td colspan="2">' + wFmt(w) +
+        (dateEx ? ' <span style="font-size:.65rem;color:#999;font-weight:400;margin-left:6px">' + fmtMes(dateEx) + '</span>' : '') +
         '</td><td colspan="' + (1 + ranchCols.length) + '"></td></tr>';
 
       var prevYrVal = null;
@@ -1393,7 +1417,7 @@ function renderComparativo() {
         var d = weekData[yr][w];
         return acc + (d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0);
       }, 0);
-      var totalRow = '<tr class="cmp-total-row"><td>TOTAL</td><td>' + fmt(wkTotal) +
+      var totalRow = '<tr class="cmp-total-row"><td>Subtotal Sem ' + wFmt(w) + '</td><td></td><td>' + fmt(wkTotal) +
         '</td><td colspan="' + (1 + ranchCols.length) + '"></td></tr>';
 
       return hdr + yrRows + totalRow;
@@ -1403,10 +1427,17 @@ function renderComparativo() {
   document.getElementById('cmpHead').innerHTML = head;
   document.getElementById('cmpBody').innerHTML = body;
 
-  // Status bar
+  // Fila TOTAL GENERAL al final
   var grandTotal = yrs.reduce(function(s, yr) {
     var d = byYear[yr]; return s + (d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0);
   }, 0);
+  var nCols = (rangeTableGroup === 'year') ? (2 + ranchCols.length) : (1 + ranchCols.length);
+  var grandRow = '<tr class="cmp-grand-total"><td>TOTAL GENERAL</td>' +
+    (rangeTableGroup === 'week' ? '<td></td>' : '') +
+    '<td>' + fmt(grandTotal) + ' ' + sym + '</td>' +
+    '<td colspan="' + nCols + '"></td></tr>';
+  document.getElementById('cmpBody').innerHTML += grandRow;
+
   document.getElementById('stTotal').textContent = fmt(grandTotal) + ' ' + sym;
 }
 
