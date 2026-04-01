@@ -254,87 +254,57 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 }
 .prod-close:hover { border-color: #fff; color: #fff; }
 
-/* ── AG GRID THEME OVERRIDES ─────────────────────── */
+/* ── AG GRID — COMPACT PIVOT STYLE ──────────────── */
 .ag-theme-alpine {
-  --ag-font-family: 'Consolas', 'Courier New', monospace;
+  --ag-font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
   --ag-font-size: 11px;
-  --ag-row-height: 22px;
-  --ag-header-height: 25px;
-  --ag-cell-horizontal-padding: 6px;
-  --ag-borders: solid 1px;
-  --ag-border-color: #d8d8d8;
-  --ag-secondary-border-color: #e5e5e5;
-  --ag-header-background-color: #e8e8e8;
-  --ag-header-foreground-color: #333;
-  --ag-odd-row-background-color: #fafafa;
-  --ag-even-row-background-color: #ffffff;
-  --ag-row-hover-color: #e8f5e9;
-  --ag-selected-row-background-color: #c8e6c9;
+  --ag-row-height: 20px;
+  --ag-header-height: 26px;
+  --ag-cell-horizontal-padding: 7px;
+  --ag-borders: none;
+  --ag-row-border-color: #f1f5f9;
+  --ag-header-background-color: #1e3a5f;
+  --ag-header-foreground-color: #ffffff;
+  --ag-odd-row-background-color: #ffffff;
+  --ag-even-row-background-color: #f8fafc;
+  --ag-row-hover-color: #eff6ff;
+  --ag-selected-row-background-color: #dbeafe;
   --ag-alpine-active-color: #16a34a;
   --ag-input-focus-border-color: #16a34a;
   --ag-range-selection-border-color: #16a34a;
   --ag-header-column-separator-display: block;
-  --ag-header-column-separator-height: 60%;
-  --ag-header-column-separator-color: #ccc;
+  --ag-header-column-separator-height: 50%;
+  --ag-header-column-separator-color: rgba(255,255,255,0.18);
+  --ag-grid-size: 3px;
 }
+.ag-theme-alpine .ag-header { border-bottom: 2px solid #16a34a !important; }
 .ag-theme-alpine .ag-header-cell {
   font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.3px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: #fff !important;
 }
-.ag-theme-alpine .ag-pinned-left-cols-container {
-  border-right: 2px solid #aaa !important;
+.ag-theme-alpine .ag-header-cell-label { justify-content: flex-end; }
+.ag-theme-alpine .ag-header-cell:first-child .ag-header-cell-label { justify-content: flex-start; }
+.ag-theme-alpine .ag-header-icon,
+.ag-theme-alpine .ag-sort-indicator-icon { color: rgba(255,255,255,0.75) !important; }
+.ag-theme-alpine .ag-pinned-left-cols-container { border-right: 2px solid #cbd5e1 !important; }
+.ag-theme-alpine .ag-pinned-left-header { border-right: 2px solid #0f2d4e !important; }
+.ag-theme-alpine .ag-row { border-bottom: 1px solid #f1f5f9 !important; font-size: 11px; }
+.ag-theme-alpine .ag-row-group {
+  background: linear-gradient(90deg,#eef2ff,#f5f7ff) !important;
+  border-left: 3px solid #4f7ce0 !important;
+  font-weight: 700 !important; color: #1e3a5f !important;
 }
-.ag-theme-alpine .ag-group-row { background: #eff3fa !important; font-weight: 700; }
-
-/* ── Row Group Panel ─────────────────────────────── */
-.ag-theme-alpine .ag-row-group-panel {
-  background: #f0f4f0 !important;
-  border-bottom: 1px solid #c8d8c8 !important;
-  min-height: 26px !important;
-  padding: 2px 8px !important;
-  font-size: 10px !important;
-  font-family: var(--mono) !important;
-  color: #2d5a3d !important;
-}
-.ag-theme-alpine .ag-column-drop-empty-message {
-  color: #7aa87a !important;
-  font-style: italic !important;
-  font-size: 10px !important;
-}
-.ag-theme-alpine .ag-column-drop-cell {
-  background: #16a34a22 !important;
-  border: 1px solid #16a34a66 !important;
-  border-radius: 3px !important;
-  color: #155c30 !important;
-  font-weight: 700 !important;
-}
-/* ── Sidebar ────────────────────────────────────── */
-.ag-theme-alpine .ag-side-bar {
-  border-left: 2px solid var(--border) !important;
-  background: #f8f8f8 !important;
-}
-.ag-theme-alpine .ag-side-button-button {
-  font-size: 9px !important;
-  font-family: var(--mono) !important;
-}
-/* ── Footer/subtotal rows ───────────────────────── */
-.ag-theme-alpine .ag-row-footer {
-  background: rgba(30,58,95,0.05) !important;
-  font-weight: 700 !important;
-  font-style: italic;
-}
-.ag-theme-alpine .ag-row-footer .ag-cell {
-  color: #1e3a5f !important;
-}
-/* Grand total row */
-.ag-theme-alpine .ag-row-footer.ag-row-level--1 {
-  background: rgba(22,163,74,0.09) !important;
-  border-top: 2px solid rgba(22,163,74,0.3) !important;
-}
-.ag-theme-alpine .ag-row-footer.ag-row-level--1 .ag-cell {
-  color: #16a34a !important;
-  font-weight: 700 !important;
-}
+.ag-theme-alpine .ag-floating-filter { background: #f0f4f8 !important; }
+.ag-theme-alpine .ag-root-wrapper { border: none !important; box-shadow: none !important; }
+.ag-theme-alpine .ag-body-horizontal-scroll-viewport::-webkit-scrollbar,
+.ag-theme-alpine .ag-body-vertical-scroll-viewport::-webkit-scrollbar { width:5px; height:5px; }
+.ag-theme-alpine .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb,
+.ag-theme-alpine .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+/* DATA BARS */
+.databar-wrap { display:flex; align-items:center; gap:5px; width:100%; }
+.databar-bar { height:7px; border-radius:2px; flex-shrink:0; min-width:2px; }
+.databar-val { font-weight:600; font-size:11px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 
 /* Inline cell styles injected via cellStyle */
 .cell-pos { color: #16a34a !important; font-weight: 600; }
@@ -375,40 +345,41 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 .cmp-tbl {
   border-collapse: collapse; width: 100%;
-  font-family: var(--mono); font-size: 11px;
+  font-family: -apple-system,'Segoe UI',Arial,sans-serif; font-size: 11px;
 }
 .cmp-tbl th {
-  padding: 5px 8px; background: #e8e8e8; color: #444;
+  padding: 5px 9px; background: #1e3a5f; color: #fff;
   font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.3px; white-space: nowrap;
-  border-bottom: 2px solid #ccc; border-right: 1px solid #ddd;
+  letter-spacing: 0.4px; white-space: nowrap;
+  border-bottom: 2px solid #16a34a; border-right: 1px solid rgba(255,255,255,0.1);
   position: sticky; top: 0; z-index: 2; text-align: right;
 }
 .cmp-tbl th:first-child, .cmp-tbl th:nth-child(2) { text-align: left; }
 .cmp-tbl td {
-  padding: 4px 8px; border-bottom: 1px solid #eee;
-  border-right: 1px solid #f0f0f0; white-space: nowrap;
-  text-align: right;
+  padding: 3px 9px; border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap; text-align: right; font-size: 11px;
 }
 .cmp-tbl td:first-child, .cmp-tbl td:nth-child(2) { text-align: left; }
+.cmp-tbl tr:nth-child(even) td { background: #f8fafc; }
 .cmp-grp-hdr td {
-  background: #eff3fa; font-weight: 700;
-  border-top: 2px solid #ccc; font-size: 11px;
-  padding: 5px 8px;
+  background: linear-gradient(90deg,#eef2ff,#f5f7ff);
+  font-weight: 700; border-top: 2px solid #c7d2fe;
+  font-size: 10px; padding: 4px 9px; color: #1e3a5f;
 }
 .cmp-grp-hdr td:first-child { border-left: 3px solid #16a34a; }
-.cmp-row:hover td { background: #f0faf4; }
+.cmp-row:hover td { background: #eff6ff !important; }
 .cmp-total-row td {
-  background: rgba(22,163,74,.06); font-weight: 700;
-  border-top: 1px solid rgba(22,163,74,.2); color: #16a34a;
+  background: #f0fdf4 !important; font-weight: 700;
+  border-top: 2px solid #bbf7d0; color: #16a34a;
+  font-size: 11px;
 }
-.cmp-total-row td:first-child { border-left: 3px solid rgba(22,163,74,.4); }
+.cmp-total-row td:first-child { border-left: 3px solid #16a34a; }
 .delta-cell { font-size: 10px; white-space: nowrap; }
 .delta-amt  { display: block; }
-.delta-pct  { display: block; font-size: 9px; opacity: 0.8; }
-.chg-pos { color: #16a34a; font-weight: 600; }
-.chg-neg { color: #dc2626; font-weight: 600; }
-.chg-0   { color: #aaa; }
+.delta-pct  { display: block; font-size: 9px; opacity: 0.85; }
+.chg-pos { color: #16a34a; font-weight: 700; }
+.chg-neg { color: #dc2626; font-weight: 700; }
+.chg-0   { color: #94a3b8; }
 </style>
 </head>
 <body>
@@ -853,30 +824,11 @@ function buildMainGrid() {
     rowData: [],
     rowHeight: 22,
     headerHeight: 25,
-    groupHeaderHeight: 26,
     defaultColDef: {
       sortable: true,
       filter: true,
       resizable: true,
       suppressMovable: false,
-      enableRowGroup: true,
-      enableValue: true,
-    },
-    rowGroupPanelShow: 'always',
-    groupDisplayType: 'groupRows',
-    groupDefaultExpanded: 1,
-    suppressAggFuncInHeader: true,
-    groupIncludeFooter: true,
-    groupIncludeTotalFooter: true,
-    sideBar: {
-      toolPanels: [
-        { id: 'columns', labelDefault: 'Columnas', labelKey: 'columns', iconKey: 'columns',
-          toolPanel: 'agColumnsToolPanel',
-          toolPanelParams: { suppressRowGroups: false, suppressValues: false, suppressPivots: true, suppressPivotMode: true } },
-        { id: 'filters', labelDefault: 'Filtros', labelKey: 'filters', iconKey: 'filter',
-          toolPanel: 'agFiltersToolPanel' }
-      ],
-      defaultToolPanel: ''
     },
     suppressCellFocus: false,
     enableCellTextSelection: true,
@@ -884,26 +836,22 @@ function buildMainGrid() {
     suppressColumnVirtualisation: false,
     onGridReady: function(params) { mainGridApi = params.api; },
     onCellClicked: function(e) { onMainCellClick(e); },
-    getRowStyle: function(params) {
-      if (params.node && params.node.footer) {
-        if (params.node.level === -1) return { background: 'rgba(22,163,74,0.10)', fontWeight: '700', color: '#16a34a', borderTop: '2px solid rgba(22,163,74,0.3)' };
-        return { background: 'rgba(30,58,95,0.06)', fontWeight: '700', color: '#1e3a5f' };
-      }
-    },
   };
   new agGrid.Grid(el, opts);
 }
 function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
   if (!mainGridApi) return;
-  // Limpiar agrupaciones previas al cambiar de vista
-  mainGridApi.setRowGroupColumns([]);
-  mainGridApi.setPinnedBottomRowData([]);
-  // Agregar aggFunc sum a todas las columnas numéricas que no la tengan
-  colDefs.forEach(function(c) {
-    if (c.type === 'numericColumn' && !c.aggFunc && c.field && !c.field.startsWith('_')) {
-      c.aggFunc = 'sum';
-    }
+  _clearMaxCache();
+  // Pre-compute column max values for data bars
+  rowData.forEach(function(row) {
+    colDefs.forEach(function(c) {
+      if (c.type === 'numericColumn' && c.field) {
+        var v = row[c.field];
+        if (typeof v === 'number' && v > 0) _registerMax(c.field, v);
+      }
+    });
   });
+  mainGridApi.setPinnedBottomRowData([]);
   mainGridApi.setColumnDefs(colDefs);
   mainGridApi.setRowData(rowData);
   mainGridApi.sizeColumnsToFit();
@@ -913,53 +861,74 @@ function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
 // ═══════════════════════════════════════════════════════════
 // CELL RENDERERS
 // ═══════════════════════════════════════════════════════════
+// ── Shared max-value registry for data bars ──────────────
+var _colMaxCache = {};
+function _registerMax(field, v) {
+  if (v > (_colMaxCache[field] || 0)) _colMaxCache[field] = v;
+}
+function _getMax(field) { return _colMaxCache[field] || 1; }
+function _clearMaxCache() { _colMaxCache = {}; }
+
 function moneyRenderer(params) {
   var v = params.value;
-  if (v === null || v === undefined || v === 0 || isNaN(v)) return '<span style="color:#bbb">—</span>';
-  return '<span style="color:#1e3a5f;font-weight:600">' + fmt(v) + '</span>';
+  if (v === null || v === undefined || v === 0 || isNaN(v))
+    return '<span style="color:#d1d5db;font-size:10px">—</span>';
+  var field = params.colDef && params.colDef.field;
+  var maxV = field ? _getMax(field) : 1;
+  var pct = maxV > 0 ? Math.min(v / maxV, 1) : 0;
+  var barW = Math.round(pct * 48);
+  var intensity = Math.round(40 + pct * 60);
+  var barColor = 'hsl(145,' + intensity + '%,40%)';
+  return '<div class="databar-wrap">' +
+    '<div class="databar-bar" style="width:' + barW + 'px;background:' + barColor + ';opacity:0.75"></div>' +
+    '<span class="databar-val" style="color:#1e3a5f">' + fmt(v) + '</span></div>';
 }
 function deltaRenderer(params) {
   var v = params.value;
-  if (v === null || v === undefined || isNaN(v)) return '<span style="color:#bbb">—</span>';
-  if (Math.abs(v) < 0.5) return '<span style="color:#999">~0%</span>';
-  var col = v > 0 ? '#16a34a' : '#dc2626';
-  var arrow = v > 0 ? '▲' : '▼';
-  return '<span style="color:' + col + ';font-weight:700">' + arrow + ' ' + Math.abs(v).toFixed(1) + '%</span>';
+  if (v === null || v === undefined || isNaN(v)) return '<span style="color:#d1d5db">—</span>';
+  if (Math.abs(v) < 0.5) return '<span style="color:#94a3b8;font-size:10px">~0%</span>';
+  var up = v > 0;
+  var col = up ? '#16a34a' : '#dc2626';
+  var bg  = up ? '#dcfce7' : '#fee2e2';
+  var arrow = up ? '▲' : '▼';
+  return '<span style="background:' + bg + ';color:' + col + ';font-weight:700;font-size:10px;padding:1px 5px;border-radius:3px">' +
+    arrow + ' ' + Math.abs(v).toFixed(1) + '%</span>';
 }
 function deltaAmtRenderer(params) {
   var v = params.value;
-  if (!v || isNaN(v)) return '<span style="color:#bbb">—</span>';
-  var col = v > 0 ? '#16a34a' : '#dc2626';
-  var sign = v > 0 ? '+' : '';
-  return '<span style="color:' + col + '">' + sign + fmt(v) + '</span>';
+  if (!v || isNaN(v)) return '<span style="color:#d1d5db">—</span>';
+  var up = v > 0;
+  var col = up ? '#16a34a' : '#dc2626';
+  var sign = up ? '+' : '';
+  return '<span style="color:' + col + ';font-weight:700;font-size:10px">' + sign + fmt(v) + '</span>';
 }
 function barRenderer(maxVal) {
   return function(params) {
     var v = params.value;
-    if (!v || isNaN(v)) return '<span style="color:#bbb">—</span>';
-    var pct = Math.min(v / (maxVal || 1) * 54, 54);
-    var color = RANCH_COLORS[params.colDef.field] || '#16a34a';
-    return '<div style="display:flex;align-items:center;gap:4px">' +
-      '<div style="width:' + pct.toFixed(0) + 'px;height:7px;background:' + color + ';border-radius:1px;flex-shrink:0"></div>' +
-      '<span style="color:#333">' + fmt(v) + '</span></div>';
+    if (!v || isNaN(v)) return '<span style="color:#d1d5db">—</span>';
+    var pct = Math.min(v / (maxVal || 1), 1);
+    var barW = Math.round(pct * 50);
+    return '<div class="databar-wrap">' +
+      '<div class="databar-bar" style="width:' + barW + 'px;background:#16a34a;opacity:0.65"></div>' +
+      '<span class="databar-val" style="color:#334155">' + fmt(v) + '</span></div>';
   };
 }
 function catRenderer(params) {
   var v = params.value;
   if (!v) return '';
-  return '<span style="font-weight:700;color:#1e3a5f;font-size:10px">' + v + '</span>';
+  return '<span style="font-weight:600;color:#1e3a5f;font-size:10px;letter-spacing:0.2px">' + v + '</span>';
 }
 function ranchRenderer(ranch) {
-  var col = RANCH_COLORS[ranch] || '#888';
+  var col = RANCH_COLORS[ranch] || '#64748b';
   return function(params) {
     var v = params.value;
-    if (!v || isNaN(v) || v === 0) return '<span style="color:#ddd">—</span>';
-    // mini bar proportional
-    var maxV = params.colDef._maxVal || 1;
-    var w = Math.min(v / maxV * 40, 40);
-    return '<div style="display:flex;align-items:center;gap:3px">' +
-      '<div style="width:' + w.toFixed(0) + 'px;height:6px;background:' + col + ';border-radius:1px;flex-shrink:0;min-width:2px"></div>' +
-      '<span style="color:' + col + ';font-weight:600">' + fmt(v) + '</span></div>';
+    if (!v || isNaN(v) || v === 0) return '<span style="color:#e2e8f0">—</span>';
+    var maxV = params.colDef._maxVal || _getMax(params.colDef.field) || 1;
+    var w = Math.min(v / maxV, 1);
+    var barW = Math.round(w * 36);
+    return '<div class="databar-wrap">' +
+      '<div class="databar-bar" style="width:' + barW + 'px;background:' + col + ';opacity:0.7"></div>' +
+      '<span class="databar-val" style="color:' + col + '">' + fmt(v) + '</span></div>';
   };
 }
 
@@ -1631,23 +1600,7 @@ function showProdPanel(rowData, opts) {
     var initOpts = {
       columnDefs: getProdCols(), rowData: [],
       rowHeight: 20, headerHeight: 23,
-      defaultColDef: { sortable: true, filter: true, resizable: true, enableRowGroup: true, enableValue: true },
-      rowGroupPanelShow: 'always',
-      groupDisplayType: 'groupRows',
-      groupDefaultExpanded: 1,
-      suppressAggFuncInHeader: true,
-      groupIncludeFooter: true,
-      groupIncludeTotalFooter: true,
-      sideBar: { toolPanels: [
-        { id: 'columns', labelDefault: 'Columnas', labelKey: 'columns', iconKey: 'columns', toolPanel: 'agColumnsToolPanel' },
-        { id: 'filters', labelDefault: 'Filtros',  labelKey: 'filters',  iconKey: 'filter',  toolPanel: 'agFiltersToolPanel' }
-      ], defaultToolPanel: '' },
-      getRowStyle: function(params) {
-        if (params.node && params.node.footer) {
-          if (params.node.level === -1) return { background: 'rgba(22,163,74,0.10)', fontWeight: '700', color: '#16a34a' };
-          return { background: 'rgba(30,58,95,0.06)', fontWeight: '700', color: '#1e3a5f' };
-        }
-      },
+      defaultColDef: { sortable: true, filter: true, resizable: true },
       onGridReady: function(p) { prodGridApi = p.api; prodGridApi.sizeColumnsToFit(); }
     };
     new agGrid.Grid(prodElInit, initOpts);
@@ -1686,7 +1639,7 @@ function getProdCols() {
     { field: 'producto', headerName: 'PRODUCTO', width: 280, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#1e3a5f">'+(p.value||'')+'</span>'; } },
     { field: 'unidades', headerName: 'UNID.', width: 90 },
-    { field: 'gasto', headerName: 'GASTO USD', width: 100, type: 'numericColumn', aggFunc: 'sum', cellRenderer: moneyRenderer },
+    { field: 'gasto', headerName: 'GASTO USD', width: 100, type: 'numericColumn', cellRenderer: moneyRenderer },
   ];
 }
 function closeProdPanel() {
@@ -1728,9 +1681,6 @@ function resizeGrid() {
   if (rangeBar && rangeBar.classList.contains('show')) used += rangeBar.offsetHeight;
   if (statusbar) used += statusbar.offsetHeight;
   if (prodPanel && prodPanel.classList.contains('show')) used += prodPanel.offsetHeight;
-  // Row group panel (siempre visible en el grid)
-  var rgp = document.querySelector('.ag-row-group-panel');
-  if (rgp && rgp.offsetHeight) used += rgp.offsetHeight;
 
   // document.documentElement.clientHeight = altura real del iframe
   var available = document.documentElement.clientHeight - used - 4;
