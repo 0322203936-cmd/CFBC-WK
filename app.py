@@ -485,10 +485,27 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 <script>
 // ═══════════════════════════════════════════════════════════
+// ERROR HANDLER — primero que todo
+// ═══════════════════════════════════════════════════════════
+function showError(msg, line) {
+  var loader = document.getElementById('loader');
+  if (loader) loader.innerHTML =
+    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border-radius:8px;border:2px solid #fecaca;max-width:700px;word-break:break-all">' +
+    '<b>❌ ERROR JS:</b> ' + String(msg) + (line ? '<br><small>línea ' + line + '</small>' : '') + '</div>';
+}
+window.onerror = function(msg, src, line) { showError(msg, line); return true; };
+
+// ═══════════════════════════════════════════════════════════
 // DATOS
 // ═══════════════════════════════════════════════════════════
-var _raw = atob('__DATA_JSON__');
-var DATA = JSON.parse(_raw);
+var DATA;
+try {
+  var _raw = atob('__DATA_JSON__');
+  DATA = JSON.parse(_raw);
+} catch(e) {
+  showError('Error decodificando datos: ' + e.message);
+  throw e;
+}
 
 // ═══════════════════════════════════════════════════════════
 // CONSTANTES
@@ -961,6 +978,7 @@ function ranchRenderer(ranch) {
 // VIEW ROUTER
 // ═══════════════════════════════════════════════════════════
 function renderView() {
+  try {
   document.getElementById('prodPanel').className = '';
   if      (state.view === 'semana')    renderSemana();
   else if (state.view === 'anual')     renderAnual();
@@ -970,6 +988,7 @@ function renderView() {
   else if (state.view === 'productos') renderProductosFull();
   else if (state.view === 'servicios') renderServicios();
   setTimeout(resizeGrid, 30);
+  } catch(e) { showError('renderView [' + state.view + ']: ' + e.message, null); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1712,16 +1731,6 @@ reportHeight();
 setInterval(reportHeight, 500);
 
 // ═══════════════════════════════════════════════════════════
-// ERROR HANDLER
-// ═══════════════════════════════════════════════════════════
-window.onerror = function(msg, src, line) {
-  document.getElementById('loader').innerHTML =
-    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border-radius:8px;border:1px solid #fecaca;max-width:600px">' +
-    '<b>ERROR JS:</b> ' + msg + '<br><small>línea ' + line + '</small></div>';
-  return true;
-};
-
-// ═══════════════════════════════════════════════════════════
 // ARRANCAR
 // ═══════════════════════════════════════════════════════════
 // Reconstruir weekly_series desde weekly_detail si no existe
@@ -1737,7 +1746,11 @@ if (!DATA.weekly_series) {
   });
 }
 // Inicializar directamente (sin esperar AG Grid)
-inicializar();
+try {
+  inicializar();
+} catch(e) {
+  showError('Error en inicializar(): ' + e.message + ' | ' + e.stack);
+}
 </script>
 
 
