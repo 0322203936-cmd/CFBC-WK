@@ -286,6 +286,56 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 }
 .ag-theme-alpine .ag-group-row { background: #eff3fa !important; font-weight: 700; }
 
+/* ── Row Group Panel ─────────────────────────────── */
+.ag-theme-alpine .ag-row-group-panel {
+  background: #f0f4f0 !important;
+  border-bottom: 1px solid #c8d8c8 !important;
+  min-height: 26px !important;
+  padding: 2px 8px !important;
+  font-size: 10px !important;
+  font-family: var(--mono) !important;
+  color: #2d5a3d !important;
+}
+.ag-theme-alpine .ag-column-drop-empty-message {
+  color: #7aa87a !important;
+  font-style: italic !important;
+  font-size: 10px !important;
+}
+.ag-theme-alpine .ag-column-drop-cell {
+  background: #16a34a22 !important;
+  border: 1px solid #16a34a66 !important;
+  border-radius: 3px !important;
+  color: #155c30 !important;
+  font-weight: 700 !important;
+}
+/* ── Sidebar ────────────────────────────────────── */
+.ag-theme-alpine .ag-side-bar {
+  border-left: 2px solid var(--border) !important;
+  background: #f8f8f8 !important;
+}
+.ag-theme-alpine .ag-side-button-button {
+  font-size: 9px !important;
+  font-family: var(--mono) !important;
+}
+/* ── Footer/subtotal rows ───────────────────────── */
+.ag-theme-alpine .ag-row-footer {
+  background: rgba(30,58,95,0.05) !important;
+  font-weight: 700 !important;
+  font-style: italic;
+}
+.ag-theme-alpine .ag-row-footer .ag-cell {
+  color: #1e3a5f !important;
+}
+/* Grand total row */
+.ag-theme-alpine .ag-row-footer.ag-row-level--1 {
+  background: rgba(22,163,74,0.09) !important;
+  border-top: 2px solid rgba(22,163,74,0.3) !important;
+}
+.ag-theme-alpine .ag-row-footer.ag-row-level--1 .ag-cell {
+  color: #16a34a !important;
+  font-weight: 700 !important;
+}
+
 /* Inline cell styles injected via cellStyle */
 .cell-pos { color: #16a34a !important; font-weight: 600; }
 .cell-neg { color: #dc2626 !important; font-weight: 600; }
@@ -359,85 +409,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .chg-pos { color: #16a34a; font-weight: 600; }
 .chg-neg { color: #dc2626; font-weight: 600; }
 .chg-0   { color: #aaa; }
-
-/* ── PIVOT TABLE ─────────────────────────────────── */
-#pivotWrap {
-  display: none;
-  background: #fff;
-  border: 1px solid #d5d5d5;
-  border-top: none;
-  overflow: hidden;
-}
-#pivotWrap.show { display: block; }
-.pvt-toolbar {
-  background: #f0f4f8;
-  border-bottom: 1px solid #d5d5d5;
-  padding: 5px 10px;
-  display: flex; align-items: center; gap: 8px;
-  flex-wrap: wrap; height: auto; min-height: 32px;
-}
-.pvt-toolbar .tb-label { font-size: 9px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; }
-.pvt-scroll {
-  overflow: auto;
-  max-height: calc(100vh - 200px);
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: #ccc transparent;
-}
-.pvt-scroll::-webkit-scrollbar { height: 5px; width: 5px; }
-.pvt-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-.pvt-tbl {
-  border-collapse: collapse;
-  font-family: 'Consolas','Courier New',monospace;
-  font-size: 11px;
-  white-space: nowrap;
-}
-.pvt-tbl th {
-  padding: 5px 9px;
-  background: #e4eaf2;
-  color: #2c3e50;
-  font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.3px;
-  border: 1px solid #cdd5df;
-  position: sticky; top: 0; z-index: 3;
-  text-align: right; white-space: nowrap;
-}
-.pvt-tbl th.pvt-row-hdr { text-align: left; position: sticky; left: 0; z-index: 4; background: #dce4ef; min-width: 180px; }
-.pvt-tbl td {
-  padding: 4px 9px;
-  border: 1px solid #eaeff5;
-  text-align: right;
-  white-space: nowrap;
-}
-.pvt-tbl td.pvt-row-label {
-  text-align: left;
-  font-weight: 700; color: #1e3a5f;
-  background: #f5f8fc;
-  position: sticky; left: 0; z-index: 2;
-  border-right: 2px solid #b0bec5;
-  font-size: 10px;
-}
-.pvt-tbl td.pvt-row-label.pvt-ranch { font-weight: 600; }
-.pvt-tbl tr:hover td { background: #f0f7ff !important; }
-.pvt-tbl tr:hover td.pvt-row-label { background: #e8f0fa !important; }
-.pvt-tbl td.pvt-total-col {
-  font-weight: 700; color: #1e3a5f;
-  background: #eaf0fb !important;
-  border-left: 2px solid #b0bec5;
-}
-.pvt-tbl tr.pvt-total-row td {
-  background: #e0eaf8 !important;
-  font-weight: 700; color: #16a34a;
-  border-top: 2px solid #9ab5d6;
-}
-.pvt-tbl tr.pvt-total-row td.pvt-row-label { background: #d5e5f5 !important; color: #16a34a; }
-.pvt-cell-val { color: #1e3a5f; }
-.pvt-cell-0 { color: #d0d5dd; }
-.pvt-heat-1 { background: #f0faf4 !important; }
-.pvt-heat-2 { background: #d4f0de !important; }
-.pvt-heat-3 { background: #a8e2bc !important; }
-.pvt-heat-4 { background: #6ccf97 !important; }
-.pvt-heat-5 { background: #34b56c !important; color: #fff !important; }
 </style>
 </head>
 <body>
@@ -490,7 +461,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <button class="vtab"        id="vtDetalle"   onclick="setView('detalle')">Detalle Semanal</button>
     <button class="vtab"        id="vtProductos" onclick="setView('productos')">Productos</button>
     <button class="vtab"        id="vtServicios" onclick="setView('servicios')">Costo Servicios</button>
-    <button class="vtab"        id="vtPivot"     onclick="setView('pivot')">📊 Pivot</button>
   </div>
 
   <!-- RANGE CONTROL BAR (solo visible en comparativo) -->
@@ -520,26 +490,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
         <thead id="cmpHead"></thead>
         <tbody id="cmpBody"></tbody>
       </table>
-    </div>
-  </div>
-
-  <!-- PIVOT TABLE -->
-  <div id="pivotWrap">
-    <div class="pvt-toolbar" id="pvtToolbar">
-      <span class="tb-label">Modo</span>
-      <div class="tb-grp">
-        <button class="tb-btn active" id="pvtBtnCatSem" onclick="setPivotMode('cat_sem')">Cat × Semana</button>
-        <button class="tb-btn" id="pvtBtnCatMes"       onclick="setPivotMode('cat_mes')">Cat × Mes</button>
-        <button class="tb-btn" id="pvtBtnRanchCat"     onclick="setPivotMode('ranch_cat')">Rancho × Cat</button>
-      </div>
-      <div class="tb-sep"></div>
-      <span class="tb-label">Calor</span>
-      <button class="tb-btn" id="pvtHeatBtn" onclick="toggleHeat()">OFF</button>
-      <div class="tb-sep"></div>
-      <span id="pvtSummary" style="font-size:10px;color:#555;font-weight:700"></span>
-    </div>
-    <div class="pvt-scroll">
-      <table class="pvt-tbl" id="pvtTable"></table>
     </div>
   </div>
 
@@ -832,30 +782,22 @@ function onWeekSlider(val) {
 }
 function setView(v) {
   state.view = v;
-  ['semana','anual','comparativo','rancho','detalle','productos','servicios','pivot'].forEach(function(name) {
-    var key = name.charAt(0).toUpperCase() + name.slice(1);
-    var el = document.getElementById('vt' + key);
+  ['semana','anual','comparativo','rancho','detalle','productos','servicios'].forEach(function(name) {
+    var el = document.getElementById('vt' + name.charAt(0).toUpperCase() + name.slice(1));
     if (el) el.className = 'vtab' + (v === name ? ' active' : '');
   });
   // Mostrar/ocultar barra de rango solo en comparativo
   var rb = document.getElementById('rangeBar');
   if (rb) rb.className = 'range-bar' + (v === 'comparativo' ? ' show' : '');
-  // Alternar entre AG Grid, tabla comparativo y pivot
+  // Alternar entre AG Grid y tabla comparativo
   var gw  = document.getElementById('gridWrap');
   var cmp = document.getElementById('comparativoWrap');
-  var pvt = document.getElementById('pivotWrap');
   if (v === 'comparativo') {
     if (gw)  gw.style.display  = 'none';
     if (cmp) cmp.className = 'show';
-    if (pvt) pvt.className = '';
-  } else if (v === 'pivot') {
-    if (gw)  gw.style.display  = 'none';
-    if (cmp) cmp.className = '';
-    if (pvt) pvt.className = 'show';
   } else {
     if (gw)  gw.style.display  = '';
     if (cmp) cmp.className = '';
-    if (pvt) pvt.className = '';
   }
   closeProdPanel();
   renderView();
@@ -911,11 +853,30 @@ function buildMainGrid() {
     rowData: [],
     rowHeight: 22,
     headerHeight: 25,
+    groupHeaderHeight: 26,
     defaultColDef: {
       sortable: true,
       filter: true,
       resizable: true,
       suppressMovable: false,
+      enableRowGroup: true,
+      enableValue: true,
+    },
+    rowGroupPanelShow: 'always',
+    groupDisplayType: 'groupRows',
+    groupDefaultExpanded: 1,
+    suppressAggFuncInHeader: true,
+    groupIncludeFooter: true,
+    groupIncludeTotalFooter: true,
+    sideBar: {
+      toolPanels: [
+        { id: 'columns', labelDefault: 'Columnas', labelKey: 'columns', iconKey: 'columns',
+          toolPanel: 'agColumnsToolPanel',
+          toolPanelParams: { suppressRowGroups: false, suppressValues: false, suppressPivots: true, suppressPivotMode: true } },
+        { id: 'filters', labelDefault: 'Filtros', labelKey: 'filters', iconKey: 'filter',
+          toolPanel: 'agFiltersToolPanel' }
+      ],
+      defaultToolPanel: ''
     },
     suppressCellFocus: false,
     enableCellTextSelection: true,
@@ -923,12 +884,26 @@ function buildMainGrid() {
     suppressColumnVirtualisation: false,
     onGridReady: function(params) { mainGridApi = params.api; },
     onCellClicked: function(e) { onMainCellClick(e); },
+    getRowStyle: function(params) {
+      if (params.node && params.node.footer) {
+        if (params.node.level === -1) return { background: 'rgba(22,163,74,0.10)', fontWeight: '700', color: '#16a34a', borderTop: '2px solid rgba(22,163,74,0.3)' };
+        return { background: 'rgba(30,58,95,0.06)', fontWeight: '700', color: '#1e3a5f' };
+      }
+    },
   };
   new agGrid.Grid(el, opts);
 }
 function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
   if (!mainGridApi) return;
-  mainGridApi.setPinnedBottomRowData([]);   // limpiar siempre primero
+  // Limpiar agrupaciones previas al cambiar de vista
+  mainGridApi.setRowGroupColumns([]);
+  mainGridApi.setPinnedBottomRowData([]);
+  // Agregar aggFunc sum a todas las columnas numéricas que no la tengan
+  colDefs.forEach(function(c) {
+    if (c.type === 'numericColumn' && !c.aggFunc && c.field && !c.field.startsWith('_')) {
+      c.aggFunc = 'sum';
+    }
+  });
   mainGridApi.setColumnDefs(colDefs);
   mainGridApi.setRowData(rowData);
   mainGridApi.sizeColumnsToFit();
@@ -1001,7 +976,6 @@ function renderView() {
   else if (state.view === 'detalle')   renderDetalle();
   else if (state.view === 'productos') renderProductosFull();
   else if (state.view === 'servicios') renderServicios();
-  else if (state.view === 'pivot')     renderPivot();
   setTimeout(resizeGrid, 30);
 }
 
@@ -1657,7 +1631,23 @@ function showProdPanel(rowData, opts) {
     var initOpts = {
       columnDefs: getProdCols(), rowData: [],
       rowHeight: 20, headerHeight: 23,
-      defaultColDef: { sortable: true, filter: true, resizable: true },
+      defaultColDef: { sortable: true, filter: true, resizable: true, enableRowGroup: true, enableValue: true },
+      rowGroupPanelShow: 'always',
+      groupDisplayType: 'groupRows',
+      groupDefaultExpanded: 1,
+      suppressAggFuncInHeader: true,
+      groupIncludeFooter: true,
+      groupIncludeTotalFooter: true,
+      sideBar: { toolPanels: [
+        { id: 'columns', labelDefault: 'Columnas', labelKey: 'columns', iconKey: 'columns', toolPanel: 'agColumnsToolPanel' },
+        { id: 'filters', labelDefault: 'Filtros',  labelKey: 'filters',  iconKey: 'filter',  toolPanel: 'agFiltersToolPanel' }
+      ], defaultToolPanel: '' },
+      getRowStyle: function(params) {
+        if (params.node && params.node.footer) {
+          if (params.node.level === -1) return { background: 'rgba(22,163,74,0.10)', fontWeight: '700', color: '#16a34a' };
+          return { background: 'rgba(30,58,95,0.06)', fontWeight: '700', color: '#1e3a5f' };
+        }
+      },
       onGridReady: function(p) { prodGridApi = p.api; prodGridApi.sizeColumnsToFit(); }
     };
     new agGrid.Grid(prodElInit, initOpts);
@@ -1696,7 +1686,7 @@ function getProdCols() {
     { field: 'producto', headerName: 'PRODUCTO', width: 280, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#1e3a5f">'+(p.value||'')+'</span>'; } },
     { field: 'unidades', headerName: 'UNID.', width: 90 },
-    { field: 'gasto', headerName: 'GASTO USD', width: 100, type: 'numericColumn', cellRenderer: moneyRenderer },
+    { field: 'gasto', headerName: 'GASTO USD', width: 100, type: 'numericColumn', aggFunc: 'sum', cellRenderer: moneyRenderer },
   ];
 }
 function closeProdPanel() {
@@ -1720,284 +1710,9 @@ document.addEventListener('click', function(e) {
 });
 
 // ═══════════════════════════════════════════════════════════
-// VIEW 7: PIVOT TABLE
-// Tres modos: cat_sem | cat_mes | ranch_cat
-// ═══════════════════════════════════════════════════════════
-var pivotMode = 'cat_sem';
-var pivotHeat = false;
-
-function setPivotMode(m) {
-  pivotMode = m;
-  ['CatSem','CatMes','RanchCat'].forEach(function(k) {
-    var id = 'pvtBtn' + k;
-    var el = document.getElementById(id);
-    if (el) el.className = 'tb-btn' + (id === 'pvtBtn' + m.replace('_','').replace(/^./, function(c){return c.toUpperCase();}).replace(/([A-Z])/g, function(c,i){ return i===0?c:c; }) ? '' : '');
-  });
-  // Simpler: just mark active by checking mode
-  document.getElementById('pvtBtnCatSem').className  = 'tb-btn' + (m === 'cat_sem'   ? ' active' : '');
-  document.getElementById('pvtBtnCatMes').className  = 'tb-btn' + (m === 'cat_mes'   ? ' active' : '');
-  document.getElementById('pvtBtnRanchCat').className= 'tb-btn' + (m === 'ranch_cat' ? ' active' : '');
-  renderPivot();
-}
-
-function toggleHeat() {
-  pivotHeat = !pivotHeat;
-  var btn = document.getElementById('pvtHeatBtn');
-  if (btn) { btn.textContent = pivotHeat ? 'ON' : 'OFF'; btn.className = 'tb-btn' + (pivotHeat ? ' green-active' : ''); }
-  renderPivot();
-}
-
-function heatClass(v, maxV) {
-  if (!pivotHeat || !v || !maxV) return '';
-  var r = v / maxV;
-  if (r > 0.8) return ' pvt-heat-5';
-  if (r > 0.6) return ' pvt-heat-4';
-  if (r > 0.4) return ' pvt-heat-3';
-  if (r > 0.2) return ' pvt-heat-2';
-  if (r > 0.0) return ' pvt-heat-1';
-  return '';
-}
-
-function pvtCell(v, maxV) {
-  if (!v || v < 0.01) return '<td class="pvt-cell-0">—</td>';
-  return '<td class="pvt-cell-val' + heatClass(v, maxV) + '">' + fmt(v) + '</td>';
-}
-function pvtTotalCell(v) {
-  if (!v || v < 0.01) return '<td class="pvt-total-col pvt-cell-0">—</td>';
-  return '<td class="pvt-total-col">' + fmt(v) + '</td>';
-}
-
-function renderPivot() {
-  var yrs = getActiveYears();
-  var sym = state.currency.toUpperCase();
-  var tbl = document.getElementById('pvtTable');
-  if (!tbl) return;
-
-  if      (pivotMode === 'cat_sem')   renderPivotCatSem(yrs, sym, tbl);
-  else if (pivotMode === 'cat_mes')   renderPivotCatMes(yrs, sym, tbl);
-  else if (pivotMode === 'ranch_cat') renderPivotRanchCat(yrs, sym, tbl);
-}
-
-// ── Modo 1: Categorías × Semanas ──────────────────────────
-function renderPivotCatSem(yrs, sym, tbl) {
-  var cats = DATA.categories;
-  // Semanas disponibles para los años activos
-  var wkSet = {};
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    wkSet[r.year + '_' + r.week] = { year: r.year, week: r.week };
-  });
-  var colKeys = Object.keys(wkSet).map(function(k) { return wkSet[k]; });
-  colKeys.sort(function(a,b) { return a.year !== b.year ? a.year - b.year : a.week - b.week; });
-
-  // Agregar datos: data[cat][yr_wk] = valor
-  var matrix = {};
-  var colMaxVals = {};
-  var grandMax = 0;
-  cats.forEach(function(cat) { matrix[cat] = {}; });
-
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    var key = r.year + '_' + r.week;
-    var v = state.currency === 'usd' ? r.usd_total : r.mxn_total;
-    matrix[r.categoria] = matrix[r.categoria] || {};
-    matrix[r.categoria][key] = (matrix[r.categoria][key] || 0) + v;
-    colMaxVals[key] = Math.max(colMaxVals[key] || 0, matrix[r.categoria][key]);
-    if (matrix[r.categoria][key] > grandMax) grandMax = matrix[r.categoria][key];
-  });
-
-  // Totales por fila y columna
-  var rowTotals = {};
-  var colTotals = {};
-  var grandTotal = 0;
-  cats.forEach(function(cat) {
-    rowTotals[cat] = 0;
-    colKeys.forEach(function(ck) {
-      var key = ck.year + '_' + ck.week;
-      var v = (matrix[cat] || {})[key] || 0;
-      rowTotals[cat] += v;
-      colTotals[key] = (colTotals[key] || 0) + v;
-    });
-    grandTotal += rowTotals[cat];
-  });
-
-  // Render
-  var html = '<thead><tr>';
-  html += '<th class="pvt-row-hdr">CATEGORÍA</th>';
-  colKeys.forEach(function(ck) {
-    var col = YEAR_COLORS[ck.year] || '#888';
-    html += '<th style="color:' + col + '">' + String(ck.year).slice(2) + wFmt(ck.week) + '</th>';
-  });
-  html += '<th style="background:#d5e5f5;color:#16a34a">TOTAL ' + sym + '</th></tr></thead><tbody>';
-
-  cats.forEach(function(cat) {
-    var hasData = rowTotals[cat] > 0;
-    if (!hasData) return;
-    html += '<tr>';
-    html += '<td class="pvt-row-label">' + cat + '</td>';
-    colKeys.forEach(function(ck) {
-      var key = ck.year + '_' + ck.week;
-      var v = (matrix[cat] || {})[key] || 0;
-      html += pvtCell(v, colMaxVals[key] || grandMax);
-    });
-    html += pvtTotalCell(rowTotals[cat]) + '</tr>';
-  });
-
-  // Fila totales
-  html += '<tr class="pvt-total-row"><td class="pvt-row-label">TOTAL ' + sym + '</td>';
-  colKeys.forEach(function(ck) {
-    var key = ck.year + '_' + ck.week;
-    html += pvtTotalCell(colTotals[key] || 0);
-  });
-  html += '<td class="pvt-total-col" style="background:#c5d9f0!important">' + fmt(grandTotal) + '</td></tr>';
-  html += '</tbody>';
-
-  tbl.innerHTML = html;
-  document.getElementById('pvtSummary').textContent =
-    fmt(grandTotal) + ' ' + sym + ' · ' + cats.filter(function(c){return rowTotals[c]>0;}).length + ' cats · ' + colKeys.length + ' semanas';
-}
-
-// ── Modo 2: Categorías × Meses ────────────────────────────
-function renderPivotCatMes(yrs, sym, tbl) {
-  var cats = DATA.categories;
-  var MES_NAMES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-
-  // Columnas = año-mes
-  var colSet = {};
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    var m = monthFromRecord(r);
-    var key = r.year + '_' + String(m).padStart(2,'0');
-    colSet[key] = { year: r.year, month: m };
-  });
-  var colKeys = Object.keys(colSet).map(function(k) { return colSet[k]; });
-  colKeys.sort(function(a,b) { return a.year !== b.year ? a.year - b.year : a.month - b.month; });
-
-  // Matriz: cat → yrMo → valor
-  var matrix = {};
-  var colMaxVals = {};
-  cats.forEach(function(cat) { matrix[cat] = {}; });
-
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    var m = monthFromRecord(r);
-    var key = r.year + '_' + String(m).padStart(2,'0');
-    var v = state.currency === 'usd' ? r.usd_total : r.mxn_total;
-    matrix[r.categoria] = matrix[r.categoria] || {};
-    matrix[r.categoria][key] = (matrix[r.categoria][key] || 0) + v;
-    colMaxVals[key] = Math.max(colMaxVals[key] || 0, matrix[r.categoria][key] || 0);
-  });
-
-  var rowTotals = {}, colTotals = {}, grandTotal = 0;
-  cats.forEach(function(cat) {
-    rowTotals[cat] = 0;
-    colKeys.forEach(function(ck) {
-      var key = ck.year + '_' + String(ck.month).padStart(2,'0');
-      var v = (matrix[cat] || {})[key] || 0;
-      rowTotals[cat] += v;
-      colTotals[key] = (colTotals[key] || 0) + v;
-    });
-    grandTotal += rowTotals[cat];
-  });
-
-  var html = '<thead><tr><th class="pvt-row-hdr">CATEGORÍA</th>';
-  colKeys.forEach(function(ck) {
-    var col = YEAR_COLORS[ck.year] || '#888';
-    html += '<th style="color:' + col + '">' + String(ck.year).slice(2) + ' ' + MES_NAMES[ck.month-1] + '</th>';
-  });
-  html += '<th style="background:#d5e5f5;color:#16a34a">TOTAL ' + sym + '</th></tr></thead><tbody>';
-
-  cats.forEach(function(cat) {
-    if (!rowTotals[cat]) return;
-    html += '<tr><td class="pvt-row-label">' + cat + '</td>';
-    colKeys.forEach(function(ck) {
-      var key = ck.year + '_' + String(ck.month).padStart(2,'0');
-      var v = (matrix[cat] || {})[key] || 0;
-      html += pvtCell(v, colMaxVals[key] || 1);
-    });
-    html += pvtTotalCell(rowTotals[cat]) + '</tr>';
-  });
-
-  html += '<tr class="pvt-total-row"><td class="pvt-row-label">TOTAL ' + sym + '</td>';
-  colKeys.forEach(function(ck) {
-    var key = ck.year + '_' + String(ck.month).padStart(2,'0');
-    html += pvtTotalCell(colTotals[key] || 0);
-  });
-  html += '<td class="pvt-total-col" style="background:#c5d9f0!important">' + fmt(grandTotal) + '</td></tr></tbody>';
-
-  tbl.innerHTML = html;
-  document.getElementById('pvtSummary').textContent =
-    fmt(grandTotal) + ' ' + sym + ' · ' + colKeys.length + ' meses';
-}
-
-// ── Modo 3: Ranchos × Categorías ─────────────────────────
-function renderPivotRanchCat(yrs, sym, tbl) {
-  var cats = DATA.categories;
-
-  // Acumular rancho → cat → valor
-  var matrix = {};
-  var colMaxVals = {};
-  RANCH_ORDER.forEach(function(r) { matrix[r] = {}; });
-
-  DATA.weekly_detail.forEach(function(r) {
-    if (!state.activeYears[r.year]) return;
-    var src = state.currency === 'usd' ? r.usd_ranches : r.mxn_ranches;
-    Object.keys(src || {}).forEach(function(ranch) {
-      var v = src[ranch] || 0;
-      if (!v) return;
-      matrix[ranch] = matrix[ranch] || {};
-      matrix[ranch][r.categoria] = (matrix[ranch][r.categoria] || 0) + v;
-      colMaxVals[r.categoria] = Math.max(colMaxVals[r.categoria] || 0, matrix[ranch][r.categoria]);
-    });
-  });
-
-  var rowTotals = {}, colTotals = {}, grandTotal = 0;
-  RANCH_ORDER.forEach(function(ranch) {
-    rowTotals[ranch] = 0;
-    cats.forEach(function(cat) {
-      var v = (matrix[ranch] || {})[cat] || 0;
-      rowTotals[ranch] += v;
-      colTotals[cat] = (colTotals[cat] || 0) + v;
-    });
-    grandTotal += rowTotals[ranch];
-  });
-
-  var activeCats = cats.filter(function(c) { return colTotals[c] > 0; });
-
-  var html = '<thead><tr><th class="pvt-row-hdr">RANCHO</th>';
-  activeCats.forEach(function(cat) {
-    html += '<th style="font-size:9px;max-width:90px;overflow:hidden;text-overflow:ellipsis">' + cat + '</th>';
-  });
-  html += '<th style="background:#d5e5f5;color:#16a34a">TOTAL ' + sym + '</th></tr></thead><tbody>';
-
-  RANCH_ORDER.forEach(function(ranch) {
-    if (!rowTotals[ranch]) return;
-    var col = RANCH_COLORS[ranch] || '#888';
-    html += '<tr><td class="pvt-row-label pvt-ranch" style="color:' + col + '">' + ranch + '</td>';
-    activeCats.forEach(function(cat) {
-      var v = (matrix[ranch] || {})[cat] || 0;
-      html += pvtCell(v, colMaxVals[cat] || 1);
-    });
-    html += pvtTotalCell(rowTotals[ranch]) + '</tr>';
-  });
-
-  html += '<tr class="pvt-total-row"><td class="pvt-row-label">TOTAL ' + sym + '</td>';
-  activeCats.forEach(function(cat) {
-    html += pvtTotalCell(colTotals[cat] || 0);
-  });
-  html += '<td class="pvt-total-col" style="background:#c5d9f0!important">' + fmt(grandTotal) + '</td></tr></tbody>';
-
-  tbl.innerHTML = html;
-  document.getElementById('pvtSummary').textContent =
-    fmt(grandTotal) + ' ' + sym + ' · ' + RANCH_ORDER.filter(function(r){return rowTotals[r]>0;}).length + ' ranchos · ' + activeCats.length + ' cats';
-}
-
-// ═══════════════════════════════════════════════════════════
 // RESIZE HELPER
 // ═══════════════════════════════════════════════════════════
 function resizeGrid() {
-  // En modo pivot no hay AG Grid que redimensionar
-  if (state.view === 'pivot') return;
   // Medir la altura real de todos los elementos fijos alrededor del grid
   var hdr      = document.querySelector('.app-hdr');
   var toolbar  = document.querySelector('.toolbar');
@@ -2013,6 +1728,9 @@ function resizeGrid() {
   if (rangeBar && rangeBar.classList.contains('show')) used += rangeBar.offsetHeight;
   if (statusbar) used += statusbar.offsetHeight;
   if (prodPanel && prodPanel.classList.contains('show')) used += prodPanel.offsetHeight;
+  // Row group panel (siempre visible en el grid)
+  var rgp = document.querySelector('.ag-row-group-panel');
+  if (rgp && rgp.offsetHeight) used += rgp.offsetHeight;
 
   // document.documentElement.clientHeight = altura real del iframe
   var available = document.documentElement.clientHeight - used - 4;
