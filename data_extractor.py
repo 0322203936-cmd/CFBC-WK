@@ -618,191 +618,289 @@ def get_datos() -> dict:
 # --- Construir hoja WK en blanco con estructura fija ---
 def _construir_hoja_wk(ws, nombre_hoja: str):
     """
-    Escribe la estructura completa de una hoja WK#### desde cero.
-    Todos los valores de datos quedan en 0 / vacíos para ser llenados manualmente.
+    Escribe la estructura completa de una hoja WK#### con formato IDENTICO al Excel de SharePoint.
+    Colores, negritas, bordes y rellenos exactos.
     """
-    from openpyxl.styles import (Font, PatternFill, Alignment, Border, Side,
-                                  numbers)
-    from openpyxl.styles.numbers import FORMAT_NUMBER_COMMA_SEPARATED1
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-    # ── Helpers de estilo ────────────────────────────────────────────────
-    def _f(bold=False, size=10, color="000000", name="Calibri"):
+    # ── Helpers ─────────────────────────────────────────────────────────
+    NAVY  = "333399"   # color texto principal
+    GRAY  = "44546A"   # color texto datos rancho
+    WHITE = "FFFFFF"
+
+    def _f(bold=False, size=10, color=NAVY, name="Calibri"):
         return Font(bold=bold, size=size, color=color, name=name)
 
     def _fill(hex_color):
-        if not hex_color or hex_color in ("00000000", "FFFFFFFF", ""):
+        if not hex_color or hex_color in ("", "none"):
             return PatternFill(fill_type=None)
         c = hex_color.lstrip("FF") if len(hex_color) == 8 else hex_color
+        if len(c) != 6:
+            return PatternFill(fill_type=None)
         return PatternFill("solid", fgColor=c)
 
     def _al(h="general", v="center", wrap=False):
         return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
 
-    thin = Side(style="thin")
+    thin   = Side(style="thin")
     medium = Side(style="medium")
+    none_s = Side(style=None)
 
-    def _border(left=None, right=None, top=None, bottom=None):
-        return Border(left=left, right=right, top=top, bottom=bottom)
+    def _bdr(left=None, right=None, top=None, bottom=None):
+        return Border(left=left or none_s, right=right or none_s,
+                      top=top or none_s,   bottom=bottom or none_s)
 
-    # Fills frecuentes
-    fill_green   = _fill("CCE5CC")   # verde claro (USD)
-    fill_blue    = _fill("DAE3F3")   # azul claro  (encabezado semana)
-    fill_lime    = _fill("C5E0B4")   # verde lima  (código semana)
-    fill_orange  = _fill("FFCC99")   # naranja     (totales subtotales)
-    fill_yellow  = _fill("FFFFCC")   # amarillo    (producción)
-    fill_white   = PatternFill(fill_type=None)
+    # Rellenos
+    fill_green  = _fill("CCFFCC")   # verde claro USD   (FFCCFFCC en real)
+    fill_blue   = _fill("DAE3F3")   # azul claro encabezado
+    fill_lime   = _fill("C5E0B4")   # verde lima codigo semana
+    fill_orange = _fill("FFCC99")   # naranja subtotales (FFFFCC99)
+    fill_yellow = _fill("FFFFCC")   # amarillo produccion
+    fill_white  = _fill("FFFFFF")
+    fill_kpi    = _fill("008000")   # verde oscuro KPI headers
 
-    def _set(cell, value=None, bold=False, fill=None, align_h="general",
-             num_fmt=None, font_color="000000"):
-        cell.value = value
-        cell.font  = _f(bold=bold, color=font_color)
-        if fill:
-            cell.fill = fill
-        cell.alignment = _al(h=align_h)
-        if num_fmt:
-            cell.number_format = num_fmt
+    # Bordes reutilizables
+    bdr_L_med         = _bdr(left=medium)
+    bdr_L_med_R_thin  = _bdr(left=medium, right=thin)
+    bdr_R_med         = _bdr(right=medium)
+    bdr_L_R_thin      = _bdr(left=thin, right=thin)
 
     # ── Ancho de columnas ────────────────────────────────────────────────
     ws.column_dimensions["A"].width = 3
     ws.column_dimensions["B"].width = 69.4
     ws.column_dimensions["C"].width = 14
-    ws.column_dimensions["D"].width = 11
-    ws.column_dimensions["E"].width = 11
-    ws.column_dimensions["F"].width = 11
-    ws.column_dimensions["G"].width = 11
-    ws.column_dimensions["H"].width = 11
-    ws.column_dimensions["I"].width = 11
-    ws.column_dimensions["J"].width = 11
+    for col in ("D","E","F","G","H","I","J"):
+        ws.column_dimensions[col].width = 11
     ws.column_dimensions["K"].width = 3
-    for col in ("L", "M", "N", "O", "P", "Q", "R", "S"):
+    for col in ("L","M","N","O","P","Q","R","S"):
         ws.column_dimensions[col].width = 11
 
-    # ── Fila 1: Empresa ──────────────────────────────────────────────────
-    ws["B1"] = "CENTRO FLORICULTOR DE BAJA CALIFORNIA, S.A. DE C.V. "
-    ws["B1"].font = _f(bold=True)
+    # ── Fila 1 ───────────────────────────────────────────────────────────
+    ws["B1"].value = "CENTRO FLORICULTOR DE BAJA CALIFORNIA, S.A. DE C.V. "
+    ws["B1"].font  = _f(bold=True)
 
-    # ── Fila 2: Encabezado semana ────────────────────────────────────────
-    ws["B2"] = "SEMANA DE CALCULO - Mexico"
-    ws["B2"].font = _f(bold=True)
-    ws["B2"].fill = _fill("DAE3F3")
+    # ── Fila 2 ───────────────────────────────────────────────────────────
+    ws["B2"].value = "SEMANA DE CALCULO - Mexico"
+    ws["B2"].font  = _f(bold=True)
+    ws["B2"].fill  = fill_blue
     ws["B2"].alignment = _al("center")
 
-    # ── Fila 3: Código semana + tipo de cambio ───────────────────────────
-    ws["B3"] = nombre_hoja                # ej: WK2613
-    ws["B3"].font = _f(bold=True)
-    ws["B3"].fill = _fill("C5E0B4")
+    # ── Fila 3 ───────────────────────────────────────────────────────────
+    code = nombre_hoja[2:] if nombre_hoja.upper().startswith("WK") else nombre_hoja
+    ws["B3"].value = code
+    ws["B3"].font  = _f(bold=True)
+    ws["B3"].fill  = fill_lime
     ws["B3"].alignment = _al("center")
-    ws["C3"] = 19
-    ws["C3"].font = _f(bold=True)
-    ws["D3"] = " tipo de cambio"
-    ws["D3"].font = _f(bold=True)
-    ws["L3"] = 19
-    ws["L3"].font = _f(bold=True)
-    ws["M3"] = "  tipo de cambio "
-    ws["M3"].font = _f(bold=True)
+    ws["C3"].value = 19;  ws["C3"].font = _f(bold=True)
+    ws["C3"].border = _bdr(bottom=medium)
+    ws["D3"].value = " tipo de cambio"; ws["D3"].font = _f(bold=True)
+    ws["L3"].value = 19;  ws["L3"].font = _f(bold=True)
+    ws["M3"].value = "  tipo de cambio "; ws["M3"].font = _f(bold=True)
 
-    # ── Fila 4: Rango de fechas ──────────────────────────────────────────
-    ws["B4"] = "Del ___ al ___ de ________ 20__"
+    # ── Fila 4 ───────────────────────────────────────────────────────────
+    ws["B4"].value = "Del ___ al ___ de ________ 20__"
     ws["B4"].alignment = _al("center")
     ws.row_dimensions[4].height = 15
 
-    # ── Fila 5: Etiquetas MXN / USD ─────────────────────────────────────
+    # ── Fila 5 ───────────────────────────────────────────────────────────
     ws.merge_cells("C5:J5")
-    ws["C5"] = "(MXN) Pesos Mexicanos"
+    ws["C5"].value = "(MXN) Pesos Mexicanos"
     ws["C5"].alignment = _al("center")
+    ws["C5"].border = _bdr(left=medium, right=medium, top=medium, bottom=thin)
     ws.merge_cells("L5:R5")
-    ws["L5"] = "US Dollars"
-    ws["L5"].fill = fill_green
+    ws["L5"].value = "US Dollars"
+    ws["L5"].fill  = fill_green
     ws["L5"].alignment = _al("center")
+    ws["L5"].border = _bdr(left=medium, top=medium, bottom=thin)
+    ws["S5"].fill  = fill_green
+    ws["S5"].border = _bdr(right=medium, top=medium, bottom=thin)
 
-    # ── Fila 6: TOTAL FINCA ──────────────────────────────────────────────
-    ws["B6"] = "TOTAL FINCA"
+    # ── Fila 6 ───────────────────────────────────────────────────────────
+    ws["B6"].value = "TOTAL FINCA"
+    ws["B6"].fill  = fill_white
     ws["B6"].alignment = _al("center")
+    ws["B6"].border = bdr_L_med
+    ws["C6"].border = _bdr(left=medium, right=thin, top=thin)
+    for col in ("L","M","N","O","P","Q","R"):
+        ws[f"{col}6"].fill = fill_green
+        ws[f"{col}6"].alignment = _al("center")
+    ws["L6"].border = _bdr(left=medium, right=thin)
+    ws["S6"].fill  = fill_green
+    ws["S6"].border = bdr_R_med
+    ws["S6"].alignment = _al("center")
     ws.row_dimensions[6].height = 26.4
 
-    # ── Fila 7: Encabezados de ranchos ───────────────────────────────────
-    headers_mxn = ["TOTAL", "Prop-RM", "PosCo-RM", "Campo -RM",
-                   "Isabela", "Christina", "Cecilia", "Cecilia 25"]
-    headers_usd = ["TOTAL", "Prop-RM", "PosCo-RM", "Campo -RM",
-                   "ISABELA", "Christina", "CECILIA", "CECILIA 25"]
+    # ── Fila 7 ───────────────────────────────────────────────────────────
+    ws["B7"].value = "Produccion"
+    ws["B7"].fill  = fill_white
+    ws["B7"].alignment = _al("center")
+    ws["B7"].border = bdr_L_med
+    headers_mxn = ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","Isabela","Christina","Cecilia","Cecilia 25"]
+    headers_usd = ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","ISABELA","Christina","CECILIA","CECILIA 25"]
     for i, h in enumerate(headers_mxn):
-        col = chr(ord("C") + i)
-        ws[f"{col}7"] = h
+        col = chr(ord("C")+i)
+        ws[f"{col}7"].value = h
+        ws[f"{col}7"].font  = _f(bold=(i==0))
         ws[f"{col}7"].alignment = _al("center")
-    usd_cols = ["L", "M", "N", "O", "P", "Q", "R", "S"]
+    ws["C7"].border = _bdr(left=medium, right=thin)
+    ws["J7"].border = bdr_R_med
+    usd_cols = ["L","M","N","O","P","Q","R","S"]
     for i, h in enumerate(headers_usd):
-        ws[f"{usd_cols[i]}7"] = h
-        ws[f"{usd_cols[i]}7"].fill = fill_green
-        ws[f"{usd_cols[i]}7"].alignment = _al("center")
+        c = usd_cols[i]
+        ws[f"{c}7"].value = h
+        ws[f"{c}7"].fill  = fill_green
+        ws[f"{c}7"].alignment = _al("center")
+    ws["L7"].border = _bdr(left=medium, right=thin)
+    ws["S7"].border = bdr_R_med
 
-    # ── Fila 8: SEMANAL ──────────────────────────────────────────────────
-    ws["B7"] = "Produccion"
-    ws["C8"] = "SEMANAL "
+    # ── Fila 8 ───────────────────────────────────────────────────────────
+    ws["C8"].value = "SEMANAL "
     ws["C8"].alignment = _al("center")
-    ws["L8"] = '"WEEKLY"'
-    ws["L8"].fill = fill_green
+    ws["C8"].border = _bdr(left=medium, right=thin)
+    ws["L8"].value = '"WEEKLY"'
+    ws["L8"].fill  = fill_green
     ws["L8"].alignment = _al("center")
+    ws["L8"].border = _bdr(left=medium, right=thin)
+    for col in ("M","N","O","P","Q","R"):
+        ws[f"{col}8"].fill = fill_green
+    ws["S8"].fill  = fill_green
+    ws["S8"].border = bdr_R_med
 
-    # ── Fila 9: EJECUCION SEMANAL + factores ─────────────────────────────
-    ws["B9"] = "EJECUCION SEMANAL"
-    ws["B9"].font = _f(bold=True)
+    # ── Fila 9 ───────────────────────────────────────────────────────────
+    ws["B9"].value = "EJECUCION SEMANAL"
+    ws["B9"].font  = _f(bold=True)
+    ws["B9"].fill  = fill_white
     ws["B9"].alignment = _al("center")
-    for col in ["D", "E", "F", "G", "H", "I", "J"]:
-        ws[f"{col}9"] = 1
+    ws["B9"].border = _bdr(left=medium, bottom=thin)
+    ws["C9"].border = _bdr(left=medium, right=thin, bottom=thin)
+    for col in ("D","E","F","G","H","I"):
+        ws[f"{col}9"].value = 1
         ws[f"{col}9"].alignment = _al("center")
+        ws[f"{col}9"].border = _bdr(bottom=thin)
+    ws["J9"].value = 1
+    ws["J9"].alignment = _al("center")
+    ws["J9"].border = _bdr(right=medium, bottom=thin)
+    ws["L9"].fill  = fill_green
+    ws["L9"].border = _bdr(left=medium, right=thin, bottom=thin)
+    for col in ("M","N","O","P","Q","R"):
+        ws[f"{col}9"].fill  = fill_green
+        ws[f"{col}9"].border = _bdr(bottom=thin)
+    ws["S9"].fill  = fill_green
+    ws["S9"].border = _bdr(right=medium, bottom=thin)
 
-    # ── Filas 10-20: Categorías de materiales ────────────────────────────
+    # ── Helper fila de categoría ─────────────────────────────────────────
+    def _fila_cat(row, label, fill_usd=None, top_border=False):
+        if fill_usd is None:
+            fill_usd = fill_green
+        ws[f"B{row}"].value = label
+        ws[f"B{row}"].font  = _f()
+        ws[f"B{row}"].fill  = fill_white
+        ws[f"B{row}"].alignment = _al("left")
+        ws[f"B{row}"].border = bdr_L_med
+        ws[f"C{row}"].value = 0
+        ws[f"C{row}"].font  = _f(bold=True)
+        ws[f"C{row}"].border = bdr_L_med_R_thin
+        ws[f"C{row}"].number_format = '#,##0;-#,##0;"-   "'
+        for dc in ("D","E","F","G","H","I"):
+            ws[f"{dc}{row}"].value = 0
+            ws[f"{dc}{row}"].font  = _f(color=GRAY)
+            ws[f"{dc}{row}"].number_format = '#,##0;-#,##0;"-   "'
+        ws[f"J{row}"].value = 0
+        ws[f"J{row}"].font  = _f(color=GRAY)
+        ws[f"J{row}"].border = bdr_R_med
+        ws[f"J{row}"].number_format = '#,##0;-#,##0;"-   "'
+        ws[f"L{row}"].value = 0
+        ws[f"L{row}"].font  = _f(bold=True)
+        ws[f"L{row}"].fill  = fill_usd
+        if top_border:
+            ws[f"L{row}"].border = _bdr(left=medium, right=thin, top=thin)
+        else:
+            ws[f"L{row}"].border = bdr_L_med_R_thin
+        ws[f"L{row}"].number_format = '#,##0;-#,##0;"-   "'
+        for uc in ("M","N","O","P","Q","R"):
+            ws[f"{uc}{row}"].value = 0
+            ws[f"{uc}{row}"].fill  = fill_usd
+            ws[f"{uc}{row}"].alignment = _al("center")
+            ws[f"{uc}{row}"].number_format = '#,##0;-#,##0;" -   "'
+            if top_border:
+                ws[f"{uc}{row}"].border = _bdr(top=thin)
+        ws[f"S{row}"].value = 0
+        ws[f"S{row}"].fill  = fill_usd
+        ws[f"S{row}"].alignment = _al("center")
+        ws[f"S{row}"].number_format = '#,##0;-#,##0;" -   "'
+        if top_border:
+            ws[f"S{row}"].border = _bdr(right=medium, top=thin)
+        else:
+            ws[f"S{row}"].border = bdr_R_med
+
+    def _fila_blank(row, fill_usd=None):
+        if fill_usd is None:
+            fill_usd = fill_green
+        ws[f"B{row}"].fill  = fill_white
+        ws[f"B{row}"].border = bdr_L_med
+        ws[f"C{row}"].border = bdr_L_med_R_thin
+        ws[f"J{row}"].border = bdr_R_med
+        ws[f"L{row}"].fill  = fill_usd
+        ws[f"L{row}"].border = bdr_L_med_R_thin
+        for uc in ("M","N","O","P","Q","R"):
+            ws[f"{uc}{row}"].fill  = fill_usd
+        ws[f"S{row}"].fill  = fill_usd
+        ws[f"S{row}"].border = bdr_R_med
+
+    def _fila_subtotal(row, label):
+        ws[f"B{row}"].value = label
+        ws[f"B{row}"].font  = _f(bold=True)
+        ws[f"B{row}"].fill  = fill_white
+        ws[f"B{row}"].border = bdr_L_med
+        for col in ("C","D","E","F","G","H","I"):
+            ws[f"{col}{row}"].value = 0
+            ws[f"{col}{row}"].font  = _f(bold=True)
+            ws[f"{col}{row}"].fill  = fill_orange
+            ws[f"{col}{row}"].alignment = _al("center")
+            ws[f"{col}{row}"].number_format = '#,##0;-#,##0;"-   "'
+        ws[f"C{row}"].border = bdr_L_med_R_thin
+        ws[f"J{row}"].value = 0
+        ws[f"J{row}"].font  = _f(bold=True)
+        ws[f"J{row}"].fill  = fill_orange
+        ws[f"J{row}"].alignment = _al("center")
+        ws[f"J{row}"].border = bdr_R_med
+        ws[f"J{row}"].number_format = '#,##0;-#,##0;"-   "'
+        for col in ("L","M","N","O","P","Q","R"):
+            ws[f"{col}{row}"].value = 0
+            ws[f"{col}{row}"].font  = _f(bold=True)
+            ws[f"{col}{row}"].fill  = fill_orange
+            ws[f"{col}{row}"].alignment = _al("center")
+            ws[f"{col}{row}"].border = _bdr(top=thin, bottom=thin)
+            ws[f"{col}{row}"].number_format = '#,##0;-#,##0;"-   "'
+        ws[f"L{row}"].border = _bdr(left=medium, right=thin, top=thin, bottom=thin)
+        ws[f"S{row}"].value = 0
+        ws[f"S{row}"].font  = _f(bold=True)
+        ws[f"S{row}"].fill  = fill_orange
+        ws[f"S{row}"].alignment = _al("center")
+        ws[f"S{row}"].border = _bdr(right=medium, top=thin, bottom=thin)
+        ws[f"S{row}"].number_format = '#,##0;-#,##0;"-   "'
+
+    # ── Filas 10-20: Materiales ──────────────────────────────────────────
     categorias = [
         (10, "DESINFECCION Y FERTILIZACION"),
         (11, "AMPLIACION "),
         (12, "CULTIVO TIERRA, CHAROLAS"),
         (13, "MATERIAL VEGETAL"),
         (14, "PREPARACION DE SUELO"),
-        (15, "FERTILIZANTES (Manejo Integrado de Riego y Fertilización) "),
+        (15, "FERTILIZANTES (Manejo Integrado de Riego y Fertilizacion) "),
         (16, "DESINFECCION / PLAGUICIDAS (Manejo Integrado de Plagas y Enfermedades)"),
         (17, "MANTENIMIENTO"),
         (18, "EXPANSION CECILIA 25"),
         (19, "RENOVACION DE SIEMBRA"),
         (20, "MATERIAL DE EMPAQUE"),
     ]
-    for row, label in categorias:
-        ws[f"B{row}"] = label
-        ws[f"B{row}"].alignment = _al("left")
-        ws[f"C{row}"] = 0
-        ws[f"C{row}"].font = _f(bold=True)
-        ws[f"C{row}"].number_format = '#,##0;-#,##0;"-   "'
-        ws[f"L{row}"] = 0
-        ws[f"L{row}"].font = _f(bold=True)
-        ws[f"L{row}"].fill = fill_green
-        ws[f"L{row}"].number_format = '#,##0;-#,##0;"-   "'
-        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
-            ws[f"{uc}{row}"] = 0
-            ws[f"{uc}{row}"].fill = fill_green
-            ws[f"{uc}{row}"].alignment = _al("center")
-            ws[f"{uc}{row}"].number_format = '#,##0;-#,##0;" -   "'
-        for dc in ["D", "E", "F", "G", "H", "I", "J"]:
-            ws[f"{dc}{row}"] = 0
-            ws[f"{dc}{row}"].number_format = '#,##0;-#,##0;"-   "'
+    for i, (row, label) in enumerate(categorias):
+        _fila_cat(row, label, top_border=(i == 0))
+    _fila_blank(21)
+    _fila_subtotal(22, "COSTO DE MATERIALES")
+    _fila_blank(23)
 
-    # ── Fila 22: COSTO DE MATERIALES (subtotal) ──────────────────────────
-    ws["B22"] = "COSTO DE MATERIALES"
-    ws["B22"].font = _f(bold=True)
-    data_cols_mxn = ["C", "D", "E", "F", "G", "H", "I", "J"]
-    data_cols_usd = ["L", "M", "N", "O", "P", "Q", "R", "S"]
-    for col in data_cols_mxn:
-        ws[f"{col}22"] = 0
-        ws[f"{col}22"].font = _f(bold=True)
-        ws[f"{col}22"].fill = fill_orange
-        ws[f"{col}22"].alignment = _al("center")
-        ws[f"{col}22"].number_format = '#,##0;-#,##0;"-   "'
-    for col in data_cols_usd:
-        ws[f"{col}22"] = 0
-        ws[f"{col}22"].font = _f(bold=True)
-        ws[f"{col}22"].fill = fill_orange
-        ws[f"{col}22"].alignment = _al("center")
-        ws[f"{col}22"].number_format = '#,##0;-#,##0;"-   "'
-
-    # ── Filas 24-59: Nóminas y cargas sociales ───────────────────────────
+    # ── Filas 24-59: Nominas ─────────────────────────────────────────────
     nominas = [
         (24, "NOMINA ADMON Oficina, Jefes de Finca, Ingenieros"),
         (25, "HORAS EXTR. DOM. Y FESTIVOS"),
@@ -842,39 +940,12 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
         (59, "1.8% al estado (1.2% tasa efectiva)"),
     ]
     for row, label in nominas:
-        ws[f"B{row}"] = label
-        ws[f"B{row}"].alignment = _al("left")
-        ws[f"C{row}"] = 0
-        ws[f"C{row}"].font = _f(bold=True)
-        ws[f"C{row}"].number_format = '#,##0;-#,##0;"-   "'
-        ws[f"L{row}"] = 0
-        ws[f"L{row}"].font = _f(bold=True)
-        ws[f"L{row}"].fill = fill_green
-        ws[f"L{row}"].number_format = '#,##0;-#,##0;"-   "'
-        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
-            ws[f"{uc}{row}"] = 0
-            ws[f"{uc}{row}"].fill = fill_green
-            ws[f"{uc}{row}"].alignment = _al("center")
-            ws[f"{uc}{row}"].number_format = '#,##0;-#,##0;" -   "'
-        for dc in ["D", "E", "F", "G", "H", "I", "J"]:
-            ws[f"{dc}{row}"] = 0
-            ws[f"{dc}{row}"].number_format = '#,##0;-#,##0;"-   "'
+        _fila_cat(row, label)
+    _fila_blank(60)
+    _fila_subtotal(61, "COSTO DE MANO DE OBRA")
+    _fila_blank(62)
 
-    # ── Fila 61: COSTO DE MANO DE OBRA ───────────────────────────────────
-    ws["B61"] = "COSTO DE MANO DE OBRA"
-    ws["B61"].font = _f(bold=True)
-    for col in data_cols_mxn:
-        ws[f"{col}61"] = 0
-        ws[f"{col}61"].font = _f(bold=True)
-        ws[f"{col}61"].fill = fill_orange
-        ws[f"{col}61"].number_format = '#,##0;-#,##0;"-   "'
-    for col in data_cols_usd:
-        ws[f"{col}61"] = 0
-        ws[f"{col}61"].font = _f(bold=True)
-        ws[f"{col}61"].fill = fill_orange
-        ws[f"{col}61"].number_format = '#,##0;-#,##0;"-   "'
-
-    # ── Filas 63-70: Servicios ────────────────────────────────────────────
+    # ── Filas 63-70: Servicios ───────────────────────────────────────────
     servicios = [
         (63, "ELECTRICIDAD"),
         (64, "FLETES Y ACARREOS (Flete aduana)"),
@@ -886,53 +957,51 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
         (70, "RO, TEL, RTA.ALIM."),
     ]
     for row, label in servicios:
-        ws[f"B{row}"] = label
-        ws[f"B{row}"].alignment = _al("left")
-        ws[f"C{row}"] = 0
-        ws[f"C{row}"].font = _f(bold=True)
-        ws[f"C{row}"].number_format = '#,##0;-#,##0;"-   "'
-        ws[f"L{row}"] = 0
-        ws[f"L{row}"].font = _f(bold=True)
-        ws[f"L{row}"].fill = fill_green
-        ws[f"L{row}"].number_format = '#,##0;-#,##0;"-   "'
-        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
-            ws[f"{uc}{row}"] = 0
-            ws[f"{uc}{row}"].fill = fill_green
-            ws[f"{uc}{row}"].alignment = _al("center")
-            ws[f"{uc}{row}"].number_format = '#,##0;-#,##0;" -   "'
-        for dc in ["D", "E", "F", "G", "H", "I", "J"]:
-            ws[f"{dc}{row}"] = 0
-            ws[f"{dc}{row}"].number_format = '#,##0;-#,##0;"-   "'
+        _fila_cat(row, label)
+    _fila_blank(71)
+    _fila_subtotal(72, "COSTO DE SERVICIOS")
 
-    # ── Fila 72: COSTO DE SERVICIOS ───────────────────────────────────────
-    ws["B72"] = "COSTO DE SERVICIOS"
-    ws["B72"].font = _f(bold=True)
-    for col in data_cols_mxn:
-        ws[f"{col}72"] = 0
-        ws[f"{col}72"].font = _f(bold=True)
-        ws[f"{col}72"].fill = fill_orange
-        ws[f"{col}72"].number_format = '#,##0;-#,##0;"-   "'
-    for col in data_cols_usd:
-        ws[f"{col}72"] = 0
-        ws[f"{col}72"].font = _f(bold=True)
-        ws[f"{col}72"].fill = fill_orange
-        ws[f"{col}72"].number_format = '#,##0;-#,##0;"-   "'
+    # Fila 73: separadora con bordes top/bottom
+    ws["B73"].fill  = fill_white
+    ws["B73"].border = _bdr(left=medium, top=thin, bottom=thin)
+    ws["C73"].border = _bdr(left=medium, top=thin, bottom=thin)
+    ws["L73"].fill  = fill_green; ws["L73"].border = bdr_L_med
+    for col in ("M","N","O","P","Q","R"):
+        ws[f"{col}73"].fill = fill_green
+    ws["S73"].fill  = fill_green; ws["S73"].border = bdr_R_med
 
     # ── Fila 74: COSTO DE PRODUCCION Y VENTAS ────────────────────────────
-    ws["B74"] = "COSTO DE PRODUCCION Y VENTAS"
-    ws["B74"].font = _f(bold=True)
+    ws["B74"].value = "COSTO DE PRODUCCION Y VENTAS"
+    ws["B74"].font  = _f(bold=True)
+    ws["B74"].fill  = fill_white
+    ws["B74"].border = _bdr(left=medium, bottom=medium)
+    for col in ("D","E","F","G","H","I"):
+        ws[f"{col}74"].value = 0
+        ws[f"{col}74"].font  = _f(bold=True)
+        ws[f"{col}74"].border = _bdr(bottom=medium)
+        ws[f"{col}74"].number_format = '#,##0;-#,##0;"-   "'
+    ws["C74"].value = 0; ws["C74"].font = _f(bold=True)
+    ws["C74"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
+    ws["C74"].number_format = '#,##0;-#,##0;"-   "'
+    ws["J74"].value = 0; ws["J74"].font = _f(bold=True)
+    ws["J74"].border = _bdr(right=medium, bottom=medium)
+    ws["J74"].number_format = '#,##0;-#,##0;"-   "'
+    for col in ("M","N","O","P","Q","R"):
+        ws[f"{col}74"].value = 0; ws[f"{col}74"].font = _f(bold=True)
+        ws[f"{col}74"].fill  = fill_green
+        ws[f"{col}74"].border = _bdr(top=thin, bottom=medium)
+        ws[f"{col}74"].number_format = '#,##0;-#,##0;"-   "'
+    ws["L74"].value = 0; ws["L74"].font = _f(bold=True)
+    ws["L74"].fill  = fill_green
+    ws["L74"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
+    ws["L74"].number_format = '#,##0;-#,##0;"-   "'
+    ws["S74"].value = 0; ws["S74"].font = _f(bold=True)
+    ws["S74"].fill  = fill_green
+    ws["S74"].border = _bdr(right=medium, top=thin, bottom=medium)
+    ws["S74"].number_format = '#,##0;-#,##0;"-   "'
     ws.row_dimensions[74].height = 15
-    for col in data_cols_mxn:
-        ws[f"{col}74"] = 0
-        ws[f"{col}74"].font = _f(bold=True)
-        ws[f"{col}74"].number_format = '#,##0;-#,##0;"-   "'
-    for col in data_cols_usd:
-        ws[f"{col}74"] = 0
-        ws[f"{col}74"].font = _f(bold=True)
-        ws[f"{col}74"].fill = fill_green
-        ws[f"{col}74"].number_format = '#,##0;-#,##0;"-   "'
 
-    # ── Filas 76-92: Producción (tallos, charolas, hectáreas) ─────────────
+    # ── Filas 76-92: Produccion ───────────────────────────────────────────
     produccion = [
         (76, "CAJAS PROCESADAS TOTALES"),
         (77, "INVENTARIO INICIAL"),
@@ -952,100 +1021,221 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
         (91, " METROS DE SIEMBRA"),
         (92, " HECTAREAS EN SIEMBRA"),
     ]
-    for row, label in produccion:
-        ws[f"B{row}"] = label
+    for i, (row, label) in enumerate(produccion):
+        first = (i == 0)
+        last  = (i == len(produccion)-1)
+        ws[f"B{row}"].value = label
+        ws[f"B{row}"].fill  = fill_white
         ws[f"B{row}"].alignment = _al("left")
-        ws[f"C{row}"] = 0
-        ws[f"C{row}"].font = _f(bold=True)
-        ws[f"L{row}"] = 0
-        ws[f"L{row}"].font = _f(bold=True)
-        ws[f"L{row}"].fill = fill_yellow
-        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
-            ws[f"{uc}{row}"] = 0
-            ws[f"{uc}{row}"].fill = fill_yellow
+        b_bdr = _bdr(left=medium, top=medium) if first else (_bdr(left=medium, bottom=medium) if last else bdr_L_med)
+        ws[f"B{row}"].border = b_bdr
+        ws[f"C{row}"].value = 0
+        ws[f"C{row}"].font  = _f(bold=True)
+        c_bdr = _bdr(left=medium, right=thin, top=medium) if first else (_bdr(left=medium, right=thin, bottom=medium) if last else bdr_L_med_R_thin)
+        ws[f"C{row}"].border = c_bdr
+        for dc in ("D","E","F","G","H","I"):
+            ws[f"{dc}{row}"].value = 0
+            ws[f"{dc}{row}"].border = _bdr(top=medium) if first else (_bdr(bottom=medium) if last else _bdr())
+        ws[f"J{row}"].value = 0
+        ws[f"J{row}"].border = _bdr(right=medium, top=medium) if first else (_bdr(right=medium, bottom=medium) if last else bdr_R_med)
+        ws[f"L{row}"].value = 0
+        ws[f"L{row}"].font  = _f(bold=True)
+        ws[f"L{row}"].fill  = fill_yellow
+        ws[f"L{row}"].border = _bdr(left=medium, right=thin, top=medium) if first else (_bdr(left=medium, right=thin, bottom=medium) if last else bdr_L_med_R_thin)
+        for uc in ("M","N","O","P","Q","R"):
+            ws[f"{uc}{row}"].value = 0
+            ws[f"{uc}{row}"].fill  = fill_yellow
             ws[f"{uc}{row}"].alignment = _al("center")
-        for dc in ["D", "E", "F", "G", "H", "I", "J"]:
-            ws[f"{dc}{row}"] = 0
+            ws[f"{uc}{row}"].border = _bdr(top=medium) if first else (_bdr(bottom=medium) if last else _bdr())
+        ws[f"S{row}"].value = 0
+        ws[f"S{row}"].fill  = fill_yellow
+        ws[f"S{row}"].alignment = _al("center")
+        ws[f"S{row}"].border = _bdr(right=medium, top=medium) if first else (_bdr(right=medium, bottom=medium) if last else bdr_R_med)
 
     ws.row_dimensions[92].height = 15
 
-    # ── Fila 93: Indicadores ──────────────────────────────────────────────
-    ws["B93"] = "<<< INDICADORES"
-    ws["B93"].font = _f(bold=True)
+    # ── Fila 93 ───────────────────────────────────────────────────────────
+    ws["B93"].value = "<<< INDICADORES"
+    ws["B93"].font  = _f(bold=True)
     ws.row_dimensions[93].height = 15
 
-    # ── Filas 94-121: Costos unitarios e indicadores ──────────────────────
-    ws["B94"] = "COSTOS UNITARIOS"
-    ws["B94"].font = _f(bold=True)
-    ws["B95"] = "$ / Tallo Procesado"
-    ws["B95"].font = _f(bold=True)
-    ws["B96"] = "COSTOS UNITARIOS"
-    ws["B96"].font = _f(bold=True)
-    ws["B97"] = "$ / Libras Procesadas"
-    ws["B97"].font = _f(bold=True)
+    # ── Filas 94-121: Costos unitarios ────────────────────────────────────
+    ws["B94"].value = "COSTOS UNITARIOS"; ws["B94"].font = _f(bold=True)
+    ws["B94"].border = _bdr(left=medium, top=medium)
+    ws["L94"].fill  = fill_green; ws["L94"].border = _bdr(left=medium, right=thin, top=medium)
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}94"].fill = fill_green; ws[f"{col}94"].border = _bdr(top=medium)
+    ws["S94"].fill  = fill_green; ws["S94"].border = _bdr(right=medium, top=medium)
 
-    cu_rows = [
-        (98,  "Materiales"),
-        (99,  "Mano de Obra"),
-        (100, "Servicios (Fletes)"),
-        (101, "Costo de Produccion y Ventas"),
-        (103, "Material de Empaque / Tallo"),
-        (105, "Sanidad Vegetal / Tallo"),
-        (106, "Fertlizacion / Tallo"),
-        (108, "Mano de Obra Prod / Tallo"),
-    ]
-    for row, label in cu_rows:
-        ws[f"B{row}"] = label
-        bold = row == 101
-        ws[f"B{row}"].font = _f(bold=bold)
-        if bold:
-            ws[f"B{row}"].fill = fill_orange
-        ws[f"C{row}"] = 0
-        ws[f"C{row}"].font = _f(bold=bold)
-        ws[f"L{row}"] = 0
-        ws[f"L{row}"].font = _f(bold=bold)
-        ws[f"L{row}"].fill = fill_green
+    def _cu_row(row, label, bold=False, fill_b=None):
+        ws[f"B{row}"].value = label; ws[f"B{row}"].font = _f(bold=bold)
+        if fill_b: ws[f"B{row}"].fill = fill_b
+        ws[f"B{row}"].border = bdr_L_med
+        ws[f"C{row}"].value = 0; ws[f"C{row}"].font = _f(bold=True)
+        ws[f"C{row}"].border = bdr_L_med_R_thin
+        ws[f"L{row}"].value = 0; ws[f"L{row}"].font = _f(bold=True)
+        ws[f"L{row}"].fill  = fill_green; ws[f"L{row}"].border = bdr_L_med_R_thin
+        for col in ("M","N","O","P","Q","R"): ws[f"{col}{row}"].fill = fill_green
+        ws[f"S{row}"].fill = fill_green; ws[f"S{row}"].border = bdr_R_med
+        if fill_b:
+            ws[f"C{row}"].fill = fill_b
+            for col in ("L","M","N","O","P","Q","R","S"): ws[f"{col}{row}"].fill = fill_b
 
+    _cu_row(95, "$ / Tallo Procesado", bold=True)
+    _cu_row(96, "COSTOS UNITARIOS", bold=True)
+    _cu_row(97, "$ / Libras Procesadas", bold=True)
+    ws["L97"].border = _bdr(left=medium, right=thin, bottom=thin)
+
+    _cu_row(98, "Materiales")
+    ws["B98"].border = _bdr(left=medium, top=thin)
+    ws["C98"].border = _bdr(left=medium, right=thin, top=thin)
+    ws["L98"].border = _bdr(left=medium, right=thin, top=thin)
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}98"].border = _bdr(top=thin)
+    ws["S98"].border = _bdr(right=medium, top=thin)
+
+    _cu_row(99, "Mano de Obra")
+    _cu_row(100, "Servicios (Fletes)")
+    ws["B100"].border = _bdr(left=medium, bottom=thin)
+    ws["C100"].border = _bdr(left=medium, right=thin, bottom=thin)
+    ws["L100"].border = _bdr(left=medium, right=thin, bottom=thin)
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}100"].border = _bdr(bottom=thin)
+    ws["S100"].border = _bdr(right=medium, bottom=thin)
+
+    _cu_row(101, "Costo de Produccion y Ventas", bold=True, fill_b=fill_orange)
+    ws["B101"].border = _bdr(left=medium, top=thin, bottom=thin)
+    ws["C101"].border = _bdr(left=medium, right=thin, top=thin, bottom=thin)
+    ws["L101"].border = _bdr(left=medium, right=thin, bottom=thin)
+    ws["S101"].border = _bdr(right=medium, bottom=thin)
+
+    # Spacers 102, 104, 107
+    for row in (102, 104, 107):
+        ws[f"C{row}"].border = bdr_L_med_R_thin
+        ws[f"L{row}"].fill = fill_green; ws[f"L{row}"].border = bdr_L_med_R_thin
+        for col in ("M","N","O","P","Q","R"): ws[f"{col}{row}"].fill = fill_green
+        ws[f"S{row}"].fill = fill_green; ws[f"S{row}"].border = bdr_R_med
+
+    _cu_row(103, "Material de Empaque / Tallo", bold=True)
+    ws["B103"].border = _bdr(left=medium, top=thin, bottom=thin)
+    ws["C103"].border = _bdr(left=medium, right=thin, top=thin, bottom=thin)
+    ws["L103"].border = _bdr(left=medium, right=thin, top=thin, bottom=thin)
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}103"].border = _bdr(top=thin, bottom=thin)
+    ws["S103"].border = _bdr(right=medium, top=thin, bottom=thin)
+
+    _cu_row(105, "Sanidad Vegetal / Tallo", bold=True)
+    ws["B105"].border = _bdr(left=medium, top=thin)
+    ws["C105"].border = _bdr(left=medium, right=thin, top=thin)
+    ws["L105"].border = _bdr(left=medium, right=thin, top=thin)
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}105"].border = _bdr(top=thin)
+    ws["S105"].border = _bdr(right=medium, top=thin)
+
+    _cu_row(106, "Fertlizacion / Tallo", bold=True)
+    ws["B106"].border = _bdr(left=medium, bottom=thin)
+    ws["C106"].border = _bdr(left=medium, right=thin, bottom=thin)
+    ws["L106"].border = _bdr(left=medium, right=thin, bottom=thin)
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}106"].border = _bdr(bottom=thin)
+    ws["S106"].border = _bdr(right=medium, bottom=thin)
+
+    _cu_row(108, "Mano de Obra Prod / Tallo", bold=True)
+    ws["B108"].border = _bdr(left=medium, top=thin, bottom=medium)
+    ws["C108"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
+    ws["L108"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}108"].border = _bdr(top=thin, bottom=medium)
+    ws["S108"].border = _bdr(right=medium, top=thin, bottom=medium)
     ws.row_dimensions[108].height = 15
     ws.row_dimensions[109].height = 15
 
-    ws["B110"] = "$ / Hectarea"
-    ws["B110"].font = _f(bold=True)
+    # ── Fila 110-121: $ / Hectarea ────────────────────────────────────────
+    ws["B110"].value = "$ / Hectarea"; ws["B110"].font = _f(bold=True)
+    ws["B110"].border = _bdr(left=medium, top=medium)
+    ws["C110"].border = _bdr(left=medium, right=thin, top=medium, bottom=thin)
+    ws["J110"].border = _bdr(right=medium, top=medium)
+    ws["L110"].fill = fill_yellow; ws["L110"].border = _bdr(left=medium, right=thin, top=medium)
+    for col in ("M","N","O","P","Q","R"):
+        ws[f"{col}110"].fill = fill_yellow; ws[f"{col}110"].border = _bdr(top=medium)
+    ws["S110"].fill = fill_yellow; ws["S110"].border = _bdr(right=medium, top=medium)
 
-    ha_rows = [
-        (111, "Materiales"),
-        (112, "Mano de Obra"),
-        (113, "Servicios (Fletes)"),
-        (114, "Costo de Produccion y Ventas"),
-    ]
-    for row, label in ha_rows:
-        ws[f"B{row}"] = label
-        ws[f"C{row}"] = 0
-        ws[f"C{row}"].font = _f(bold=True)
-        ws[f"L{row}"] = 0
-        ws[f"L{row}"].font = _f(bold=True)
-        ws[f"L{row}"].fill = fill_yellow
+    def _ha_row(row, label, top_b=False, bottom_b=False, both_b=False):
+        ws[f"B{row}"].value = label; ws[f"B{row}"].font = _f()
+        ws[f"B{row}"].fill  = fill_white; ws[f"B{row}"].alignment = _al("left")
+        if both_b:   ws[f"B{row}"].border = _bdr(left=medium, top=thin, bottom=thin)
+        elif top_b:  ws[f"B{row}"].border = _bdr(left=medium, top=thin)
+        elif bottom_b: ws[f"B{row}"].border = _bdr(left=medium, bottom=thin)
+        else:        ws[f"B{row}"].border = bdr_L_med
+        ws[f"C{row}"].value = 0; ws[f"C{row}"].font = _f(bold=True)
+        ws[f"C{row}"].border = _bdr(left=medium, right=thin,
+                                    top=(thin if top_b or both_b else none_s),
+                                    bottom=(thin if bottom_b or both_b else none_s))
+        ws[f"J{row}"].border = bdr_R_med
+        ws[f"L{row}"].value = 0; ws[f"L{row}"].font = _f(bold=True)
+        ws[f"L{row}"].fill  = fill_yellow
+        ws[f"L{row}"].border = _bdr(left=medium, right=thin,
+                                    top=(thin if top_b or both_b else none_s),
+                                    bottom=(thin if bottom_b or both_b else none_s))
+        for col in ("M","N","O","P","Q","R"):
+            ws[f"{col}{row}"].fill = fill_yellow
+            ws[f"{col}{row}"].border = _bdr(top=(thin if top_b or both_b else none_s),
+                                            bottom=(thin if bottom_b or both_b else none_s))
+        ws[f"S{row}"].fill = fill_yellow
+        ws[f"S{row}"].border = _bdr(right=medium,
+                                    top=(thin if top_b or both_b else none_s),
+                                    bottom=(thin if bottom_b or both_b else none_s))
+
+    _ha_row(111, "Materiales", top_b=True)
+    _ha_row(112, "Mano de Obra")
+    _ha_row(113, "Servicios (Fletes)", bottom_b=True)
+    # spacer 115
+    ws[f"C115"].border = bdr_L_med_R_thin
+    ws["L115"].fill = fill_yellow; ws["L115"].border = bdr_L_med_R_thin
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}115"].fill = fill_yellow
+    ws["S115"].fill = fill_yellow; ws["S115"].border = bdr_R_med
+
+    _ha_row(114, "Costo de Produccion y Ventas", both_b=True)
+    _ha_row(116, "Material de Empaque / Caja", both_b=True)
+    ws["B116"].font = _f(bold=True)
+    # spacer 117
+    ws["C117"].border = bdr_L_med_R_thin
+    ws["L117"].fill = fill_yellow; ws["L117"].border = bdr_L_med_R_thin
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}117"].fill = fill_yellow
+    ws["S117"].fill = fill_yellow; ws["S117"].border = bdr_R_med
+
+    _ha_row(118, "Sanidad Vegetal / Ha", top_b=True)
+    ws["B118"].font = _f(bold=True)
+    _ha_row(119, "Fertlizacion / Ha", bottom_b=True)
+    ws["B119"].font = _f(bold=True)
+    # spacer 120
+    ws["C120"].border = bdr_L_med_R_thin
+    ws["L120"].fill = fill_yellow; ws["L120"].border = bdr_L_med_R_thin
+    for col in ("M","N","O","P","Q","R"): ws[f"{col}120"].fill = fill_yellow
+    ws["S120"].fill = fill_yellow; ws["S120"].border = bdr_R_med
 
     ws.row_dimensions[121].height = 15
-
-    ws["B121"] = "Mano de Obra Prod / Ha"
-    ws["B121"].font = _f(bold=True)
-    ws["C121"] = 0
-    ws["C121"].font = _f(bold=True)
-    ws["L121"] = 0
-    ws["L121"].font = _f(bold=True)
+    ws["B121"].value = "Mano de Obra Prod / Ha"; ws["B121"].font = _f(bold=True)
+    ws["B121"].fill = fill_white
+    ws["B121"].border = _bdr(left=medium, top=thin, bottom=medium)
+    ws["C121"].value = 0; ws["C121"].font = _f(bold=True)
+    ws["C121"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
+    ws["L121"].value = 0; ws["L121"].font = _f(bold=True)
     ws["L121"].fill = fill_yellow
+    ws["L121"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
+    for col in ("M","N","O","P","Q","R"):
+        ws[f"{col}121"].fill = fill_yellow
+        ws[f"{col}121"].border = _bdr(top=thin, bottom=medium)
+    ws["S121"].fill = fill_yellow
+    ws["S121"].border = _bdr(right=medium, top=thin, bottom=medium)
 
-    # ── Fila 124: KPIs ────────────────────────────────────────────────────
-    ws["B124"] = "KPI's "
-    ws["B124"].font = _f(bold=True)
+    # ── KPI's ─────────────────────────────────────────────────────────────
+    ws["B124"].value = "KPI's "; ws["B124"].font = _f(bold=True)
 
-    # ── Fila 125: Proyectos de inversión ──────────────────────────────────
-    ws["B125"] = "Proyectos de inversión"
-    ws["B125"].font = _f(bold=True, color="008000")
-    ws["L125"] = "Total Weekly"
-    ws["L125"].font = _f(bold=True, color="008000")
+    # Proyectos de inversion
+    ws["B125"].value = "Proyectos de inversion"
+    ws["B125"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
+    ws["B125"].fill  = fill_kpi
+    ws["B125"].alignment = _al("left")
+    ws["B125"].border = _bdr(left=thin, right=thin, top=thin)
+    ws["L125"].value = "Total Weekly"
+    ws["L125"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
+    ws["L125"].fill  = fill_kpi
     ws["L125"].alignment = _al("center")
+    ws["L125"].border = _bdr(left=thin, right=thin, top=thin, bottom=thin)
 
     proyectos = [
         (126, "Sistema de riego (Ramona)"),
@@ -1055,8 +1245,8 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
         (130, "Sistema de tratamiento de aguas residuales (Isabella)"),
         (131, "Arcos para invernaderos "),
         (132, "proyecto luz"),
-        (133, "Construcción de Almacén (Ramona) "),
-        (134, "Construcción de Almacén (Isabela) "),
+        (133, "Construccion de Almacen (Ramona) "),
+        (134, "Construccion de Almacen (Isabela) "),
         (135, "Carritos"),
         (136, "Maquinaria "),
         (137, "Chiller"),
@@ -1064,85 +1254,147 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
         (139, "veronicas"),
     ]
     for row, label in proyectos:
-        ws[f"B{row}"] = label
-        ws[f"C{row}"] = 0
-        ws[f"C{row}"].number_format = '"$"#,##0;-"$"#,##0;"$-   "'
-        ws[f"L{row}"] = 0
-        ws[f"L{row}"].number_format = '"$"#,##0;-"$"#,##0;" $-   "'
-        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
-            ws[f"{uc}{row}"] = 0
+        ws[f"B{row}"].value = label
+        ws[f"B{row}"].fill  = fill_white
+        ws[f"B{row}"].border = _bdr(left=thin, right=thin)
+        ws[f"C{row}"].value = 0
+        ws[f"C{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
+        ws[f"C{row}"].fill  = fill_white
+        ws[f"C{row}"].border = _bdr(left=thin, right=thin)
+        ws[f"C{row}"].number_format = '"$"#,##0;-"$"#,##0;" $-   "'
+        ws[f"J{row}"].border = _bdr(right=thin)
+        ws[f"L{row}"].value = 0
+        ws[f"L{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
+        ws[f"L{row}"].fill  = fill_white
+        ws[f"L{row}"].border = _bdr(left=thin, right=thin)
+        ws[f"L{row}"].number_format = '" $"#,##0;-" $"#,##0;" $-   "'
+        for uc in ("M","N","O","P","Q","R","S"):
+            ws[f"{uc}{row}"].value = 0
+            ws[f"{uc}{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
+            ws[f"{uc}{row}"].fill  = fill_white
+            ws[f"{uc}{row}"].border = _bdr(left=thin, right=thin)
 
-    ws["B140"] = "Total "
-    ws["B140"].font = _f(bold=True)
-    ws["C140"] = 0
+    ws["B139"].border = _bdr(left=thin, right=thin, bottom=thin)
+    ws["C139"].border = _bdr(left=thin, right=thin, bottom=thin)
+    ws["J139"].border = _bdr(right=thin, bottom=thin)
+    for uc in ("L","M","N","O","P","Q","R","S"):
+        ws[f"{uc}139"].border = _bdr(left=thin, right=thin, bottom=thin)
+
+    ws["B140"].value = "Total "
+    ws["B140"].font  = _f(bold=True)
+    ws["B140"].fill  = fill_white
+    ws["B140"].border = _bdr(left=thin, right=thin, top=thin, bottom=thin)
+    ws["C140"].value = 0
+    ws["C140"].font  = Font(color="0000FF", name="Calibri", size=10)
+    ws["C140"].border = _bdr(top=thin, bottom=thin)
     ws["C140"].number_format = '" $"#,##0;-" $"#,##0;" $-   "'
-    ws["L140"] = 0
+    ws["L140"].value = 0
+    ws["L140"].font  = Font(color="0000FF", name="Calibri", size=10)
+    ws["L140"].border = _bdr(left=thin, right=thin, bottom=thin)
     ws["L140"].number_format = '" $"#,##0;-" $"#,##0;" $-   "'
 
-    # ── Fila 143: Logística ───────────────────────────────────────────────
-    ws["B143"] = "Logística "
-    ws["B143"].font = _f(bold=True, color="008000")
-    ws["L143"] = "Total Weekly"
-    ws["L143"].font = _f(bold=True, color="008000")
+    # Logistica
+    ws["B143"].value = "Logistica "
+    ws["B143"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
+    ws["B143"].fill  = fill_kpi
+    ws["B143"].alignment = _al("left")
+    ws["B143"].border = _bdr(left=thin, top=thin)
+    ws["J143"].border = _bdr(right=thin, top=thin)
+    ws["L143"].value = "Total Weekly"
+    ws["L143"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
+    ws["L143"].fill  = fill_kpi
     ws["L143"].alignment = _al("center")
-    ws["N143"] = "PosCo-RM"
-    ws["N143"].font = _f(bold=True, color="008000")
+    ws["L143"].border = _bdr(left=thin, right=thin, top=thin, bottom=thin)
+    ws["N143"].value = "PosCo-RM"
+    ws["N143"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
+    ws["N143"].fill  = fill_kpi
     ws["N143"].alignment = _al("center")
+    ws["N143"].border = _bdr(left=thin, right=thin, top=thin, bottom=thin)
 
     logistica = [
-        (144, "Número de camiones despachados "),
-        (145, "Número de tarimas despachadas (montadas al camión)"),
-        (146, "Número de cajas despachadas"),
-        (147, "Número de Pies cúbicos de cajas despachadas "),
-        (148, "Número de Pies cubicos promedio / camión despachado "),
-        (149, "Capacidad en pies cúbicos por camión "),
-        (150, "Rendimiento promedio por camión "),
+        (144, "Numero de camiones despachados "),
+        (145, "Numero de tarimas despachadas (montadas al camion)"),
+        (146, "Numero de cajas despachadas"),
+        (147, "Numero de Pies cubicos de cajas despachadas "),
+        (148, "Numero de Pies cubicos promedio / camion despachado "),
+        (149, "Capacidad en pies cubicos por camion "),
+        (150, "Rendimiento promedio por camion "),
     ]
     for row, label in logistica:
-        ws[f"B{row}"] = label
-        ws[f"C{row}"] = 0
-        ws[f"L{row}"] = 0
-        ws[f"N{row}"] = 0
-        ws[f"N{row}"].font = _f(bold=True)
+        ws[f"B{row}"].value = label
+        ws[f"B{row}"].fill  = fill_white
+        ws[f"B{row}"].border = _bdr(left=thin)
+        ws[f"C{row}"].value = 0
+        ws[f"C{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
+        ws[f"C{row}"].fill  = fill_white
+        ws[f"C{row}"].border = _bdr(left=thin, right=thin)
+        ws[f"J{row}"].border = _bdr(right=thin)
+        ws[f"L{row}"].value = 0
+        ws[f"L{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
+        ws[f"L{row}"].fill  = fill_white
+        ws[f"L{row}"].border = _bdr(left=thin, right=thin)
+        ws[f"N{row}"].value = 0
+        ws[f"N{row}"].font  = _f(bold=True)
+        ws[f"N{row}"].fill  = fill_white
+        ws[f"N{row}"].border = _bdr(right=thin)
+        ws[f"S{row}"].border = _bdr(right=thin)
 
-    # ── Filas 152-172: KPIs de flete y material de empaque ────────────────
     kpi_groups = [
         (152, "Costo incurrido por flete, gtos expo, fitosanitarios"),
         (153, "Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-        (154, "Número de Camiones despachados "),
-        (156, "Costo incurrido promedio flete, gtos expo, fitosanitarios / pie cúbico"),
+        (154, "Numero de Camiones despachados "),
+        (156, "Costo incurrido promedio flete, gtos expo, fitosanitarios / pie cubico"),
         (157, "Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-        (158, "Número de Pies cúbicos de cajas despachadas"),
+        (158, "Numero de Pies cubicos de cajas despachadas"),
         (160, "Costo incurrido flete, gtos expo, fitosanitarios / cajas despachadas"),
         (161, "Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-        (162, "Número de cajas despachadas"),
+        (162, "Numero de cajas despachadas"),
     ]
     for row, label in kpi_groups:
-        ws[f"B{row}"] = label
-        ws[f"C{row}"] = 0
-        ws[f"L{row}"] = 0
-        ws[f"N{row}"] = 0
-        ws[f"N{row}"].font = _f(bold=True)
+        ws[f"B{row}"].value = label
+        ws[f"B{row}"].fill  = fill_white
+        ws[f"B{row}"].border = _bdr(left=thin)
+        ws[f"C{row}"].value = 0
+        ws[f"C{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
+        ws[f"C{row}"].fill  = fill_white
+        ws[f"C{row}"].border = _bdr(left=thin, right=thin)
+        ws[f"L{row}"].value = 0
+        ws[f"L{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
+        ws[f"L{row}"].fill  = fill_white
+        ws[f"L{row}"].border = _bdr(left=thin, right=thin)
+        ws[f"N{row}"].value = 0
+        ws[f"N{row}"].border = _bdr(right=thin)
 
-    ws["B165"] = "Material de empaque / Caja"
-    ws["B165"].font = _f(bold=True, color="008000")
+    ws["B165"].value = "Material de empaque / Caja"
+    ws["B165"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
+    ws["B165"].fill  = fill_kpi
+    ws["B165"].alignment = _al("left")
+    ws["B165"].border = _bdr(left=thin, top=thin)
 
     me_rows = [
-        (166, "Costo incurrido en Material de empaque / pie cúbico"),
+        (166, "Costo incurrido en Material de empaque / pie cubico"),
         (167, "Costo incurrido en Material de empaque (USD)"),
-        (168, "Número de Pies cúbicos de cajas despachadas"),
+        (168, "Numero de Pies cubicos de cajas despachadas"),
         (170, "Costo incurrido en Material de empaque / cajas despachadas"),
         (171, "Costo incurrido en Material de empaque (USD)"),
-        (172, "Número de cajas despachadas"),
+        (172, "Numero de cajas despachadas"),
     ]
     for row, label in me_rows:
-        ws[f"B{row}"] = label
-        ws[f"C{row}"] = 0
-        ws[f"L{row}"] = 0
-        ws[f"N{row}"] = 0
-        ws[f"N{row}"].font = _f(bold=True)
+        ws[f"B{row}"].value = label
+        ws[f"B{row}"].fill  = fill_white
+        ws[f"B{row}"].border = _bdr(left=thin)
+        ws[f"C{row}"].value = 0
+        ws[f"C{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
+        ws[f"C{row}"].fill  = fill_white
+        ws[f"C{row}"].border = _bdr(left=thin, right=thin)
+        ws[f"L{row}"].value = 0
+        ws[f"L{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
+        ws[f"L{row}"].fill  = fill_white
+        ws[f"L{row}"].border = _bdr(left=thin, right=thin)
+        ws[f"N{row}"].value = 0
+        ws[f"N{row}"].border = _bdr(right=thin)
 
-    # ── Merged cells ─────────────────────────────────────────────────────
+    # Merged cells
     merges = [
         "C5:J5", "L5:R5",
         "C153:C154", "L153:L154",
@@ -1156,7 +1408,6 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
             ws.merge_cells(m)
         except Exception:
             pass
-
 
 # --- Crear nueva hoja WK en SharePoint via Microsoft Graph API (con sesión) ---
 def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
