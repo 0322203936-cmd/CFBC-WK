@@ -221,11 +221,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   border: 1px solid #d5d5d5;
   border-top: none;
 }
-#myGrid {
-  width: 100%;
-  max-height: calc(100vh - 130px);
-  overflow: hidden;
-}
 
 /* ── STATUS BAR ──────────────────────────────────── */
 .statusbar {
@@ -325,15 +320,15 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .cmp-stat-sub   { font-size: 9px; color: #aaa; }
 .cmp-tbl-wrap   { overflow-x: auto; -webkit-overflow-scrolling: touch;
                   scrollbar-width: thin; scrollbar-color: #ccc transparent;
-                  max-height: calc(100vh - 200px); overflow-y: auto; }
+                  max-height: calc(100vh - 260px); overflow-y: auto; }
 .cmp-tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
 .cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 .cmp-tbl {
-  border-collapse: collapse; width: auto; min-width: 100%;
+  border-collapse: collapse; width: 100%;
   font-family: var(--mono); font-size: 11px;
 }
 .cmp-tbl th {
-  padding: 4px 7px; background: #e8e8e8; color: #444;
+  padding: 5px 8px; background: #e8e8e8; color: #444;
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.3px; white-space: nowrap;
   border-bottom: 2px solid #ccc; border-right: 1px solid #ddd;
@@ -341,7 +336,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 }
 .cmp-tbl th:first-child, .cmp-tbl th:nth-child(2) { text-align: left; }
 .cmp-tbl td {
-  padding: 3px 7px; border-bottom: 1px solid #eee;
+  padding: 4px 8px; border-bottom: 1px solid #eee;
   border-right: 1px solid #f0f0f0; white-space: nowrap;
   text-align: right;
 }
@@ -635,7 +630,8 @@ function inicializar() {
   updateHeader();
   document.getElementById('loader').style.display = 'none';
   document.getElementById('app').style.display   = 'block';
-  setTimeout(resizeGrid, 120);
+  setTimeout(resizeGrid, 80);
+  setTimeout(resizeGrid, 300); // segundo llamado por si AG Grid tarda en inicializar
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -807,14 +803,11 @@ function buildMainGrid() {
     rowData: [],
     rowHeight: 22,
     headerHeight: 25,
-    domLayout: 'autoHeight',
-    autoSizeStrategy: { type: 'fitCellContents' },
     defaultColDef: {
       sortable: true,
       filter: true,
       resizable: true,
       suppressMovable: false,
-      suppressSizeToFit: false,
     },
     suppressCellFocus: false,
     enableCellTextSelection: true,
@@ -830,11 +823,7 @@ function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
   mainGridApi.setPinnedBottomRowData([]);   // limpiar siempre primero
   mainGridApi.setColumnDefs(colDefs);
   mainGridApi.setRowData(rowData);
-  setTimeout(function() {
-    try { mainGridApi.autoSizeAllColumns(false); }
-    catch(e) { mainGridApi.sizeColumnsToFit(); }
-    reportHeight();
-  }, 60);
+  mainGridApi.sizeColumnsToFit();
   document.getElementById('stTotal').textContent = statusText || '';
 }
 
@@ -1625,13 +1614,27 @@ document.addEventListener('click', function(e) {
 // RESIZE HELPER
 // ═══════════════════════════════════════════════════════════
 function resizeGrid() {
-  // Con domLayout:'autoHeight' el grid se ajusta solo a sus filas.
-  // Solo necesitamos autoSizeAllColumns para ajustar columnas al contenido.
-  if (mainGridApi) {
-    try { mainGridApi.autoSizeAllColumns(false); }
-    catch(e) { mainGridApi.sizeColumnsToFit(); }
-  }
-  reportHeight();
+  // Medir la altura real de todos los elementos fijos alrededor del grid
+  var hdr      = document.querySelector('.app-hdr');
+  var toolbar  = document.querySelector('.toolbar');
+  var tabs     = document.querySelector('.view-tabs');
+  var rangeBar = document.querySelector('.range-bar');
+  var statusbar= document.querySelector('.statusbar');
+  var prodPanel= document.getElementById('prodPanel');
+
+  var used = 0;
+  if (hdr)       used += hdr.offsetHeight;
+  if (toolbar)   used += toolbar.offsetHeight;
+  if (tabs)      used += tabs.offsetHeight;
+  if (rangeBar && rangeBar.classList.contains('show')) used += rangeBar.offsetHeight;
+  if (statusbar) used += statusbar.offsetHeight;
+  if (prodPanel && prodPanel.classList.contains('show')) used += prodPanel.offsetHeight;
+
+  // document.documentElement.clientHeight = altura real del iframe
+  var available = document.documentElement.clientHeight - used - 4;
+  var h = Math.max(available, 300);
+  document.getElementById('myGrid').style.height = h + 'px';
+  if (mainGridApi) mainGridApi.sizeColumnsToFit();
 }
 window.addEventListener('resize', resizeGrid);
 
@@ -1640,8 +1643,8 @@ window.addEventListener('resize', resizeGrid);
 // ═══════════════════════════════════════════════════════════
 function reportHeight() {
   var appEl = document.getElementById('app');
-  var h = appEl ? appEl.scrollHeight + 20 : document.body.scrollHeight + 20;
-  window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 400) }, '*');
+  var h = appEl ? appEl.scrollHeight + 60 : document.body.scrollHeight + 60;
+  window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 700) }, '*');
 }
 var ro = new ResizeObserver(reportHeight);
 ro.observe(document.body);
@@ -1688,7 +1691,7 @@ if (typeof agGrid === 'undefined') {
 </html>"""
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
-components.html(html_final, height=900, scrolling=True)
+components.html(html_final, height=800, scrolling=False)
 
 # ─── Barra inferior: Descarga XLSX + Panel Crear Hoja WK ─────────────────────
 st.markdown("""
