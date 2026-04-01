@@ -615,15 +615,557 @@ def get_datos() -> dict:
     return resultado
 
 
+# --- Construir hoja WK en blanco con estructura fija ---
+def _construir_hoja_wk(ws, nombre_hoja: str):
+    """
+    Escribe la estructura completa de una hoja WK#### desde cero.
+    Todos los valores de datos quedan en 0 / vacíos para ser llenados manualmente.
+    """
+    from openpyxl.styles import (Font, PatternFill, Alignment, Border, Side,
+                                  numbers)
+    from openpyxl.styles.numbers import FORMAT_NUMBER_COMMA_SEPARATED1
+
+    # ── Helpers de estilo ────────────────────────────────────────────────
+    def _f(bold=False, size=10, color="000000", name="Calibri"):
+        return Font(bold=bold, size=size, color=color, name=name)
+
+    def _fill(hex_color):
+        if not hex_color or hex_color in ("00000000", "FFFFFFFF", ""):
+            return PatternFill(fill_type=None)
+        c = hex_color.lstrip("FF") if len(hex_color) == 8 else hex_color
+        return PatternFill("solid", fgColor=c)
+
+    def _al(h="general", v="center", wrap=False):
+        return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
+
+    thin = Side(style="thin")
+    medium = Side(style="medium")
+
+    def _border(left=None, right=None, top=None, bottom=None):
+        return Border(left=left, right=right, top=top, bottom=bottom)
+
+    # Fills frecuentes
+    fill_green   = _fill("CCE5CC")   # verde claro (USD)
+    fill_blue    = _fill("DAE3F3")   # azul claro  (encabezado semana)
+    fill_lime    = _fill("C5E0B4")   # verde lima  (código semana)
+    fill_orange  = _fill("FFCC99")   # naranja     (totales subtotales)
+    fill_yellow  = _fill("FFFFCC")   # amarillo    (producción)
+    fill_white   = PatternFill(fill_type=None)
+
+    def _set(cell, value=None, bold=False, fill=None, align_h="general",
+             num_fmt=None, font_color="000000"):
+        cell.value = value
+        cell.font  = _f(bold=bold, color=font_color)
+        if fill:
+            cell.fill = fill
+        cell.alignment = _al(h=align_h)
+        if num_fmt:
+            cell.number_format = num_fmt
+
+    # ── Ancho de columnas ────────────────────────────────────────────────
+    ws.column_dimensions["A"].width = 3
+    ws.column_dimensions["B"].width = 69.4
+    ws.column_dimensions["C"].width = 14
+    ws.column_dimensions["D"].width = 11
+    ws.column_dimensions["E"].width = 11
+    ws.column_dimensions["F"].width = 11
+    ws.column_dimensions["G"].width = 11
+    ws.column_dimensions["H"].width = 11
+    ws.column_dimensions["I"].width = 11
+    ws.column_dimensions["J"].width = 11
+    ws.column_dimensions["K"].width = 3
+    for col in ("L", "M", "N", "O", "P", "Q", "R", "S"):
+        ws.column_dimensions[col].width = 11
+
+    # ── Fila 1: Empresa ──────────────────────────────────────────────────
+    ws["B1"] = "CENTRO FLORICULTOR DE BAJA CALIFORNIA, S.A. DE C.V. "
+    ws["B1"].font = _f(bold=True)
+
+    # ── Fila 2: Encabezado semana ────────────────────────────────────────
+    ws["B2"] = "SEMANA DE CALCULO - Mexico"
+    ws["B2"].font = _f(bold=True)
+    ws["B2"].fill = _fill("DAE3F3")
+    ws["B2"].alignment = _al("center")
+
+    # ── Fila 3: Código semana + tipo de cambio ───────────────────────────
+    ws["B3"] = nombre_hoja                # ej: WK2613
+    ws["B3"].font = _f(bold=True)
+    ws["B3"].fill = _fill("C5E0B4")
+    ws["B3"].alignment = _al("center")
+    ws["C3"] = 19
+    ws["C3"].font = _f(bold=True)
+    ws["D3"] = " tipo de cambio"
+    ws["D3"].font = _f(bold=True)
+    ws["L3"] = 19
+    ws["L3"].font = _f(bold=True)
+    ws["M3"] = "  tipo de cambio "
+    ws["M3"].font = _f(bold=True)
+
+    # ── Fila 4: Rango de fechas ──────────────────────────────────────────
+    ws["B4"] = "Del ___ al ___ de ________ 20__"
+    ws["B4"].alignment = _al("center")
+    ws.row_dimensions[4].height = 15
+
+    # ── Fila 5: Etiquetas MXN / USD ─────────────────────────────────────
+    ws.merge_cells("C5:J5")
+    ws["C5"] = "(MXN) Pesos Mexicanos"
+    ws["C5"].alignment = _al("center")
+    ws.merge_cells("L5:R5")
+    ws["L5"] = "US Dollars"
+    ws["L5"].fill = fill_green
+    ws["L5"].alignment = _al("center")
+
+    # ── Fila 6: TOTAL FINCA ──────────────────────────────────────────────
+    ws["B6"] = "TOTAL FINCA"
+    ws["B6"].alignment = _al("center")
+    ws.row_dimensions[6].height = 26.4
+
+    # ── Fila 7: Encabezados de ranchos ───────────────────────────────────
+    headers_mxn = ["TOTAL", "Prop-RM", "PosCo-RM", "Campo -RM",
+                   "Isabela", "Christina", "Cecilia", "Cecilia 25"]
+    headers_usd = ["TOTAL", "Prop-RM", "PosCo-RM", "Campo -RM",
+                   "ISABELA", "Christina", "CECILIA", "CECILIA 25"]
+    for i, h in enumerate(headers_mxn):
+        col = chr(ord("C") + i)
+        ws[f"{col}7"] = h
+        ws[f"{col}7"].alignment = _al("center")
+    usd_cols = ["L", "M", "N", "O", "P", "Q", "R", "S"]
+    for i, h in enumerate(headers_usd):
+        ws[f"{usd_cols[i]}7"] = h
+        ws[f"{usd_cols[i]}7"].fill = fill_green
+        ws[f"{usd_cols[i]}7"].alignment = _al("center")
+
+    # ── Fila 8: SEMANAL ──────────────────────────────────────────────────
+    ws["B7"] = "Produccion"
+    ws["C8"] = "SEMANAL "
+    ws["C8"].alignment = _al("center")
+    ws["L8"] = '"WEEKLY"'
+    ws["L8"].fill = fill_green
+    ws["L8"].alignment = _al("center")
+
+    # ── Fila 9: EJECUCION SEMANAL + factores ─────────────────────────────
+    ws["B9"] = "EJECUCION SEMANAL"
+    ws["B9"].font = _f(bold=True)
+    ws["B9"].alignment = _al("center")
+    for col in ["D", "E", "F", "G", "H", "I", "J"]:
+        ws[f"{col}9"] = 1
+        ws[f"{col}9"].alignment = _al("center")
+
+    # ── Filas 10-20: Categorías de materiales ────────────────────────────
+    categorias = [
+        (10, "DESINFECCION Y FERTILIZACION"),
+        (11, "AMPLIACION "),
+        (12, "CULTIVO TIERRA, CHAROLAS"),
+        (13, "MATERIAL VEGETAL"),
+        (14, "PREPARACION DE SUELO"),
+        (15, "FERTILIZANTES (Manejo Integrado de Riego y Fertilización) "),
+        (16, "DESINFECCION / PLAGUICIDAS (Manejo Integrado de Plagas y Enfermedades)"),
+        (17, "MANTENIMIENTO"),
+        (18, "EXPANSION CECILIA 25"),
+        (19, "RENOVACION DE SIEMBRA"),
+        (20, "MATERIAL DE EMPAQUE"),
+    ]
+    for row, label in categorias:
+        ws[f"B{row}"] = label
+        ws[f"B{row}"].alignment = _al("left")
+        ws[f"C{row}"] = 0
+        ws[f"C{row}"].font = _f(bold=True)
+        ws[f"C{row}"].number_format = '#,##0;-#,##0;"-   "'
+        ws[f"L{row}"] = 0
+        ws[f"L{row}"].font = _f(bold=True)
+        ws[f"L{row}"].fill = fill_green
+        ws[f"L{row}"].number_format = '#,##0;-#,##0;"-   "'
+        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
+            ws[f"{uc}{row}"] = 0
+            ws[f"{uc}{row}"].fill = fill_green
+            ws[f"{uc}{row}"].alignment = _al("center")
+            ws[f"{uc}{row}"].number_format = '#,##0;-#,##0;" -   "'
+        for dc in ["D", "E", "F", "G", "H", "I", "J"]:
+            ws[f"{dc}{row}"] = 0
+            ws[f"{dc}{row}"].number_format = '#,##0;-#,##0;"-   "'
+
+    # ── Fila 22: COSTO DE MATERIALES (subtotal) ──────────────────────────
+    ws["B22"] = "COSTO DE MATERIALES"
+    ws["B22"].font = _f(bold=True)
+    data_cols_mxn = ["C", "D", "E", "F", "G", "H", "I", "J"]
+    data_cols_usd = ["L", "M", "N", "O", "P", "Q", "R", "S"]
+    for col in data_cols_mxn:
+        ws[f"{col}22"] = 0
+        ws[f"{col}22"].font = _f(bold=True)
+        ws[f"{col}22"].fill = fill_orange
+        ws[f"{col}22"].alignment = _al("center")
+        ws[f"{col}22"].number_format = '#,##0;-#,##0;"-   "'
+    for col in data_cols_usd:
+        ws[f"{col}22"] = 0
+        ws[f"{col}22"].font = _f(bold=True)
+        ws[f"{col}22"].fill = fill_orange
+        ws[f"{col}22"].alignment = _al("center")
+        ws[f"{col}22"].number_format = '#,##0;-#,##0;"-   "'
+
+    # ── Filas 24-59: Nóminas y cargas sociales ───────────────────────────
+    nominas = [
+        (24, "NOMINA ADMON Oficina, Jefes de Finca, Ingenieros"),
+        (25, "HORAS EXTR. DOM. Y FESTIVOS"),
+        (26, "BONOS ASISIT, PUNTAULIDAD Y DESPENSA"),
+        (27, "NOMINA PRODUCCION "),
+        (28, "HORAS EXTR. DOM. Y FEST."),
+        (29, "BONOS ASISIT, PUNT. Y DESP."),
+        (30, "NOMINA PRODUCCION CORTE"),
+        (31, "HORAS EXTR. DOM. Y FESTIVOS CORTE"),
+        (32, "BONOS ASISIT, PUNTAULIDAD Y DESP. CORTE"),
+        (33, "NOMINA PRODUCCION TRANSPLANTE"),
+        (34, "HORAS EXTR. DOM. Y FEST. TRANSPLANTE"),
+        (35, "BONOS ASISIT, PUNT. Y DESP. TRANSPLANTE"),
+        (36, "NOMINA PRODUCCION MANEJO PLANTA"),
+        (37, "HORAS EXTR. DOM. Y FEST. MANEJO PLANTA"),
+        (38, "BONOS ASISIT, PUNT. Y DESP. MANEJO PLANTA"),
+        (39, "NOMINA  HOOPS"),
+        (40, "HORAS EXTR. DOM. Y FEST. HOOPS"),
+        (41, "BONOS ASISIT, PUNT. Y DESP.HOOPS"),
+        (42, "NOMINA  (MIPE,MIRFE,)"),
+        (43, "HORAS EXTR. DOM. Y FEST. (MIPE,MIRFE)"),
+        (44, "BONOS ASISIT, PUNT. Y DESP.(MIPE,MIRFE)"),
+        (45, "NOMINA OPERATIVOS (TRACTORES, CAMEROS)"),
+        (46, "HORAS EXTR. DOM. Y FEST. (TRACTORES, CAMEROS)"),
+        (47, "BONOS ASISIT, PUNT. Y DESP. (TRACTORES, CAMEROS)"),
+        (48, "NOMINA OPERATIVOS (CHOFER)"),
+        (49, "HORAS EXTR. DOM. Y FEST. (CHOFER)"),
+        (50, "BONOS ASISIT, PUNT. Y DESP. (CHOFER)"),
+        (51, "NOMINA OPERATIVOS (VELADORES)"),
+        (52, "HORAS EXTR. DOM. Y FEST. (VELADORES)"),
+        (53, "BONOS ASISIT, PUNT. Y DESP. (VELADORES)"),
+        (54, "NOMINA OPERATIVOS (SOLDADOR)"),
+        (55, "HORAS EXTR. DOM. Y FEST. (SOLDADOR)"),
+        (56, "BONOS ASISIT, PUNT. Y DESP. (SOLDADOR)"),
+        (57, "NOMINA PRODUCCION Contratista y comisiones"),
+        (58, "IMSS , INFONAVIT RCV"),
+        (59, "1.8% al estado (1.2% tasa efectiva)"),
+    ]
+    for row, label in nominas:
+        ws[f"B{row}"] = label
+        ws[f"B{row}"].alignment = _al("left")
+        ws[f"C{row}"] = 0
+        ws[f"C{row}"].font = _f(bold=True)
+        ws[f"C{row}"].number_format = '#,##0;-#,##0;"-   "'
+        ws[f"L{row}"] = 0
+        ws[f"L{row}"].font = _f(bold=True)
+        ws[f"L{row}"].fill = fill_green
+        ws[f"L{row}"].number_format = '#,##0;-#,##0;"-   "'
+        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
+            ws[f"{uc}{row}"] = 0
+            ws[f"{uc}{row}"].fill = fill_green
+            ws[f"{uc}{row}"].alignment = _al("center")
+            ws[f"{uc}{row}"].number_format = '#,##0;-#,##0;" -   "'
+        for dc in ["D", "E", "F", "G", "H", "I", "J"]:
+            ws[f"{dc}{row}"] = 0
+            ws[f"{dc}{row}"].number_format = '#,##0;-#,##0;"-   "'
+
+    # ── Fila 61: COSTO DE MANO DE OBRA ───────────────────────────────────
+    ws["B61"] = "COSTO DE MANO DE OBRA"
+    ws["B61"].font = _f(bold=True)
+    for col in data_cols_mxn:
+        ws[f"{col}61"] = 0
+        ws[f"{col}61"].font = _f(bold=True)
+        ws[f"{col}61"].fill = fill_orange
+        ws[f"{col}61"].number_format = '#,##0;-#,##0;"-   "'
+    for col in data_cols_usd:
+        ws[f"{col}61"] = 0
+        ws[f"{col}61"].font = _f(bold=True)
+        ws[f"{col}61"].fill = fill_orange
+        ws[f"{col}61"].number_format = '#,##0;-#,##0;"-   "'
+
+    # ── Filas 63-70: Servicios ────────────────────────────────────────────
+    servicios = [
+        (63, "ELECTRICIDAD"),
+        (64, "FLETES Y ACARREOS (Flete aduana)"),
+        (65, "GASTOS DE EXPORTACION "),
+        (66, "CERTIFICADO DE FITOSANITARIOS"),
+        (67, "Transporte de personal"),
+        (68, "COMPRA DE FLOR A TERCEROS"),
+        (69, "COMIDA PARA EL PERSONAL"),
+        (70, "RO, TEL, RTA.ALIM."),
+    ]
+    for row, label in servicios:
+        ws[f"B{row}"] = label
+        ws[f"B{row}"].alignment = _al("left")
+        ws[f"C{row}"] = 0
+        ws[f"C{row}"].font = _f(bold=True)
+        ws[f"C{row}"].number_format = '#,##0;-#,##0;"-   "'
+        ws[f"L{row}"] = 0
+        ws[f"L{row}"].font = _f(bold=True)
+        ws[f"L{row}"].fill = fill_green
+        ws[f"L{row}"].number_format = '#,##0;-#,##0;"-   "'
+        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
+            ws[f"{uc}{row}"] = 0
+            ws[f"{uc}{row}"].fill = fill_green
+            ws[f"{uc}{row}"].alignment = _al("center")
+            ws[f"{uc}{row}"].number_format = '#,##0;-#,##0;" -   "'
+        for dc in ["D", "E", "F", "G", "H", "I", "J"]:
+            ws[f"{dc}{row}"] = 0
+            ws[f"{dc}{row}"].number_format = '#,##0;-#,##0;"-   "'
+
+    # ── Fila 72: COSTO DE SERVICIOS ───────────────────────────────────────
+    ws["B72"] = "COSTO DE SERVICIOS"
+    ws["B72"].font = _f(bold=True)
+    for col in data_cols_mxn:
+        ws[f"{col}72"] = 0
+        ws[f"{col}72"].font = _f(bold=True)
+        ws[f"{col}72"].fill = fill_orange
+        ws[f"{col}72"].number_format = '#,##0;-#,##0;"-   "'
+    for col in data_cols_usd:
+        ws[f"{col}72"] = 0
+        ws[f"{col}72"].font = _f(bold=True)
+        ws[f"{col}72"].fill = fill_orange
+        ws[f"{col}72"].number_format = '#,##0;-#,##0;"-   "'
+
+    # ── Fila 74: COSTO DE PRODUCCION Y VENTAS ────────────────────────────
+    ws["B74"] = "COSTO DE PRODUCCION Y VENTAS"
+    ws["B74"].font = _f(bold=True)
+    ws.row_dimensions[74].height = 15
+    for col in data_cols_mxn:
+        ws[f"{col}74"] = 0
+        ws[f"{col}74"].font = _f(bold=True)
+        ws[f"{col}74"].number_format = '#,##0;-#,##0;"-   "'
+    for col in data_cols_usd:
+        ws[f"{col}74"] = 0
+        ws[f"{col}74"].font = _f(bold=True)
+        ws[f"{col}74"].fill = fill_green
+        ws[f"{col}74"].number_format = '#,##0;-#,##0;"-   "'
+
+    # ── Filas 76-92: Producción (tallos, charolas, hectáreas) ─────────────
+    produccion = [
+        (76, "CAJAS PROCESADAS TOTALES"),
+        (77, "INVENTARIO INICIAL"),
+        (78, "TALLOS COSECHADOS"),
+        (79, "TALLOS DESECHADOS"),
+        (80, "TALLOS DESECHADOS sf"),
+        (81, "TALLOS COMPRADOS"),
+        (82, "TALLOS EN BOUQUETS O PROCESADOS"),
+        (83, "TALLOS DESPACHADOS"),
+        (84, "LIBRAS DESPACHADAS ALBAHACA"),
+        (85, "TALLOS muestra"),
+        (86, "INVENTARIO FINAL"),
+        (87, "TALLOS PROCESADOS TOTALES"),
+        (88, " CHAROLAS SEMBRADAS *288 PLUGS ="),
+        (89, " NUMERO DE CHAROLAS SEMBRADAS "),
+        (90, " NUMERO DE ESQUEJES SEMBRADOS"),
+        (91, " METROS DE SIEMBRA"),
+        (92, " HECTAREAS EN SIEMBRA"),
+    ]
+    for row, label in produccion:
+        ws[f"B{row}"] = label
+        ws[f"B{row}"].alignment = _al("left")
+        ws[f"C{row}"] = 0
+        ws[f"C{row}"].font = _f(bold=True)
+        ws[f"L{row}"] = 0
+        ws[f"L{row}"].font = _f(bold=True)
+        ws[f"L{row}"].fill = fill_yellow
+        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
+            ws[f"{uc}{row}"] = 0
+            ws[f"{uc}{row}"].fill = fill_yellow
+            ws[f"{uc}{row}"].alignment = _al("center")
+        for dc in ["D", "E", "F", "G", "H", "I", "J"]:
+            ws[f"{dc}{row}"] = 0
+
+    ws.row_dimensions[92].height = 15
+
+    # ── Fila 93: Indicadores ──────────────────────────────────────────────
+    ws["B93"] = "<<< INDICADORES"
+    ws["B93"].font = _f(bold=True)
+    ws.row_dimensions[93].height = 15
+
+    # ── Filas 94-121: Costos unitarios e indicadores ──────────────────────
+    ws["B94"] = "COSTOS UNITARIOS"
+    ws["B94"].font = _f(bold=True)
+    ws["B95"] = "$ / Tallo Procesado"
+    ws["B95"].font = _f(bold=True)
+    ws["B96"] = "COSTOS UNITARIOS"
+    ws["B96"].font = _f(bold=True)
+    ws["B97"] = "$ / Libras Procesadas"
+    ws["B97"].font = _f(bold=True)
+
+    cu_rows = [
+        (98,  "Materiales"),
+        (99,  "Mano de Obra"),
+        (100, "Servicios (Fletes)"),
+        (101, "Costo de Produccion y Ventas"),
+        (103, "Material de Empaque / Tallo"),
+        (105, "Sanidad Vegetal / Tallo"),
+        (106, "Fertlizacion / Tallo"),
+        (108, "Mano de Obra Prod / Tallo"),
+    ]
+    for row, label in cu_rows:
+        ws[f"B{row}"] = label
+        bold = row == 101
+        ws[f"B{row}"].font = _f(bold=bold)
+        if bold:
+            ws[f"B{row}"].fill = fill_orange
+        ws[f"C{row}"] = 0
+        ws[f"C{row}"].font = _f(bold=bold)
+        ws[f"L{row}"] = 0
+        ws[f"L{row}"].font = _f(bold=bold)
+        ws[f"L{row}"].fill = fill_green
+
+    ws.row_dimensions[108].height = 15
+    ws.row_dimensions[109].height = 15
+
+    ws["B110"] = "$ / Hectarea"
+    ws["B110"].font = _f(bold=True)
+
+    ha_rows = [
+        (111, "Materiales"),
+        (112, "Mano de Obra"),
+        (113, "Servicios (Fletes)"),
+        (114, "Costo de Produccion y Ventas"),
+    ]
+    for row, label in ha_rows:
+        ws[f"B{row}"] = label
+        ws[f"C{row}"] = 0
+        ws[f"C{row}"].font = _f(bold=True)
+        ws[f"L{row}"] = 0
+        ws[f"L{row}"].font = _f(bold=True)
+        ws[f"L{row}"].fill = fill_yellow
+
+    ws.row_dimensions[121].height = 15
+
+    ws["B121"] = "Mano de Obra Prod / Ha"
+    ws["B121"].font = _f(bold=True)
+    ws["C121"] = 0
+    ws["C121"].font = _f(bold=True)
+    ws["L121"] = 0
+    ws["L121"].font = _f(bold=True)
+    ws["L121"].fill = fill_yellow
+
+    # ── Fila 124: KPIs ────────────────────────────────────────────────────
+    ws["B124"] = "KPI's "
+    ws["B124"].font = _f(bold=True)
+
+    # ── Fila 125: Proyectos de inversión ──────────────────────────────────
+    ws["B125"] = "Proyectos de inversión"
+    ws["B125"].font = _f(bold=True, color="008000")
+    ws["L125"] = "Total Weekly"
+    ws["L125"].font = _f(bold=True, color="008000")
+    ws["L125"].alignment = _al("center")
+
+    proyectos = [
+        (126, "Sistema de riego (Ramona)"),
+        (127, "Sistema de riego (Isabella)"),
+        (128, "Caseta (Isabella)"),
+        (129, "Sistema de ventilacion"),
+        (130, "Sistema de tratamiento de aguas residuales (Isabella)"),
+        (131, "Arcos para invernaderos "),
+        (132, "proyecto luz"),
+        (133, "Construcción de Almacén (Ramona) "),
+        (134, "Construcción de Almacén (Isabela) "),
+        (135, "Carritos"),
+        (136, "Maquinaria "),
+        (137, "Chiller"),
+        (138, "Cuarto frio"),
+        (139, "veronicas"),
+    ]
+    for row, label in proyectos:
+        ws[f"B{row}"] = label
+        ws[f"C{row}"] = 0
+        ws[f"C{row}"].number_format = '"$"#,##0;-"$"#,##0;"$-   "'
+        ws[f"L{row}"] = 0
+        ws[f"L{row}"].number_format = '"$"#,##0;-"$"#,##0;" $-   "'
+        for uc in ["M", "N", "O", "P", "Q", "R", "S"]:
+            ws[f"{uc}{row}"] = 0
+
+    ws["B140"] = "Total "
+    ws["B140"].font = _f(bold=True)
+    ws["C140"] = 0
+    ws["C140"].number_format = '" $"#,##0;-" $"#,##0;" $-   "'
+    ws["L140"] = 0
+    ws["L140"].number_format = '" $"#,##0;-" $"#,##0;" $-   "'
+
+    # ── Fila 143: Logística ───────────────────────────────────────────────
+    ws["B143"] = "Logística "
+    ws["B143"].font = _f(bold=True, color="008000")
+    ws["L143"] = "Total Weekly"
+    ws["L143"].font = _f(bold=True, color="008000")
+    ws["L143"].alignment = _al("center")
+    ws["N143"] = "PosCo-RM"
+    ws["N143"].font = _f(bold=True, color="008000")
+    ws["N143"].alignment = _al("center")
+
+    logistica = [
+        (144, "Número de camiones despachados "),
+        (145, "Número de tarimas despachadas (montadas al camión)"),
+        (146, "Número de cajas despachadas"),
+        (147, "Número de Pies cúbicos de cajas despachadas "),
+        (148, "Número de Pies cubicos promedio / camión despachado "),
+        (149, "Capacidad en pies cúbicos por camión "),
+        (150, "Rendimiento promedio por camión "),
+    ]
+    for row, label in logistica:
+        ws[f"B{row}"] = label
+        ws[f"C{row}"] = 0
+        ws[f"L{row}"] = 0
+        ws[f"N{row}"] = 0
+        ws[f"N{row}"].font = _f(bold=True)
+
+    # ── Filas 152-172: KPIs de flete y material de empaque ────────────────
+    kpi_groups = [
+        (152, "Costo incurrido por flete, gtos expo, fitosanitarios"),
+        (153, "Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
+        (154, "Número de Camiones despachados "),
+        (156, "Costo incurrido promedio flete, gtos expo, fitosanitarios / pie cúbico"),
+        (157, "Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
+        (158, "Número de Pies cúbicos de cajas despachadas"),
+        (160, "Costo incurrido flete, gtos expo, fitosanitarios / cajas despachadas"),
+        (161, "Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
+        (162, "Número de cajas despachadas"),
+    ]
+    for row, label in kpi_groups:
+        ws[f"B{row}"] = label
+        ws[f"C{row}"] = 0
+        ws[f"L{row}"] = 0
+        ws[f"N{row}"] = 0
+        ws[f"N{row}"].font = _f(bold=True)
+
+    ws["B165"] = "Material de empaque / Caja"
+    ws["B165"].font = _f(bold=True, color="008000")
+
+    me_rows = [
+        (166, "Costo incurrido en Material de empaque / pie cúbico"),
+        (167, "Costo incurrido en Material de empaque (USD)"),
+        (168, "Número de Pies cúbicos de cajas despachadas"),
+        (170, "Costo incurrido en Material de empaque / cajas despachadas"),
+        (171, "Costo incurrido en Material de empaque (USD)"),
+        (172, "Número de cajas despachadas"),
+    ]
+    for row, label in me_rows:
+        ws[f"B{row}"] = label
+        ws[f"C{row}"] = 0
+        ws[f"L{row}"] = 0
+        ws[f"N{row}"] = 0
+        ws[f"N{row}"].font = _f(bold=True)
+
+    # ── Merged cells ─────────────────────────────────────────────────────
+    merges = [
+        "C5:J5", "L5:R5",
+        "C153:C154", "L153:L154",
+        "C157:C158", "L157:L158",
+        "C161:C162", "L161:L162",
+        "C167:C168", "L167:L168",
+        "C171:C172", "L171:L172",
+    ]
+    for m in merges:
+        try:
+            ws.merge_cells(m)
+        except Exception:
+            pass
+
+
 # --- Crear nueva hoja WK en SharePoint via Microsoft Graph API ---
 def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
     """
-    Crea una nueva hoja copiando la WK mas reciente como plantilla.
-    Descarga el archivo, copia la hoja con openpyxl (valores + formatos
-    completos: colores, bordes, merged cells, anchos) y lo re-sube.
+    Crea una nueva hoja WK#### desde cero (estructura fija, sin copiar el archivo).
+    Solo descarga el workbook, agrega la nueva hoja al inicio y lo re-sube.
+    Mucho más rápido que copiar: no procesa todas las celdas de la plantilla.
     Requiere Files.ReadWrite en la App Registration de Azure AD.
     """
-    import urllib.parse as _up
     import base64 as _b64
 
     # 1. Token OAuth2
@@ -661,43 +1203,25 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     graph_item = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}'
 
-    # 3. Listar hojas: verificar duplicados y encontrar plantilla
+    # 3. Verificar que no exista la hoja ya
     sheets_resp = requests.get(f'{graph_item}/workbook/worksheets', headers=headers, timeout=20)
     if sheets_resp.status_code != 200:
         return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
 
-    hojas   = sheets_resp.json().get('value', [])
-    nombres = [h['name'].strip() for h in hojas]
-
+    nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
     if nombre_hoja.upper() in [n.upper() for n in nombres]:
         return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe en el archivo."}
-
-    pat_wk   = re.compile(r'^WK\s*(\d{4})$', re.IGNORECASE)
-    wk_hojas = sorted(
-        [(int(m.group(1)), h['name'].strip())
-         for h in hojas for m in [pat_wk.match(h['name'].strip())] if m],
-        reverse=True,
-    )
-    if not wk_hojas:
-        return {"ok": False, "error": "No se encontro ninguna hoja WK para plantilla."}
-
-    plantilla_nombre = wk_hojas[0][1]
 
     # 4. Descargar el archivo completo
     dl_resp = requests.get(f'{graph_item}/content', headers=headers, timeout=120)
     if dl_resp.status_code != 200:
         return {"ok": False, "error": f"Error descargando el archivo: {dl_resp.text}"}
 
-    print(f'   Archivo descargado: {len(dl_resp.content)//1024} KB')
-
-    # 5. Copiar la hoja con openpyxl — copia fiel de valores + formatos
+    # 5. Agregar la nueva hoja desde cero con openpyxl
     try:
         wb = openpyxl.load_workbook(BytesIO(dl_resp.content))
-        if plantilla_nombre not in wb.sheetnames:
-            return {"ok": False, "error": f"Hoja plantilla '{plantilla_nombre}' no encontrada."}
-
-        new_ws       = wb.copy_worksheet(wb[plantilla_nombre])
-        new_ws.title = nombre_hoja
+        new_ws = wb.create_sheet(title=nombre_hoja)
+        _construir_hoja_wk(new_ws, nombre_hoja)
         # Mover al inicio
         wb.move_sheet(new_ws, offset=-(wb.index(new_ws)))
 
@@ -705,7 +1229,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         wb.save(buf)
         modified_bytes = buf.getvalue()
     except Exception as e:
-        return {"ok": False, "error": f"Error copiando la hoja: {e}"}
+        return {"ok": False, "error": f"Error creando la hoja: {e}"}
 
     # 6. Re-subir el archivo
     up_resp = requests.put(
@@ -722,10 +1246,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     return {
         "ok": True,
-        "mensaje": (
-            f"Hoja '{nombre_hoja}' creada con formato completo "
-            f"(copia de '{plantilla_nombre}') en SharePoint."
-        ),
+        "mensaje": f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint.",
     }
 
 
