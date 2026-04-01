@@ -611,9 +611,7 @@ select.tb-sel:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
     <button class="vtab active" id="vtSemana"    onclick="setView('semana')">Semana</button>
     <button class="vtab"        id="vtAnual"     onclick="setView('anual')">Anual</button>
     <button class="vtab"        id="vtComparativo" onclick="setView('comparativo')">Comparativo</button>
-    <button class="vtab"        id="vtRancho"    onclick="setView('rancho')">Por Rancho</button>
-    <button class="vtab"        id="vtDetalle"   onclick="setView('detalle')">Detalle Semanal</button>
-    <button class="vtab"        id="vtProductos" onclick="setView('productos')">Productos</button>
+
     <button class="vtab"        id="vtServicios" onclick="setView('servicios')">Costo Servicios</button>
   </div>
 
