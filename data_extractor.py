@@ -1158,17 +1158,212 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
             pass
 
 
-# --- Crear nueva hoja WK en SharePoint via Microsoft Graph API ---
+# --- Crear nueva hoja WK en SharePoint via Microsoft Graph API (con sesión) ---
 def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
     """
-    Crea una nueva hoja WK#### desde cero (estructura fija, sin copiar el archivo).
-    Solo descarga el workbook, agrega la nueva hoja al inicio y lo re-sube.
-    Mucho más rápido que copiar: no procesa todas las celdas de la plantilla.
+    Crea una nueva hoja WK#### desde cero usando una sesión de workbook de Graph API.
+    Funciona aunque el archivo esté abierto por otros usuarios (no requiere lock).
+    Escribe todas las celdas directamente via API, sin subir el archivo completo.
     Requiere Files.ReadWrite en la App Registration de Azure AD.
     """
     import base64 as _b64
+    import time
 
-    # 1. Token OAuth2
+    # ── Helper: construir lista plana de celdas { address, value } ────────
+    def _celdas_de_la_hoja(nombre):
+        """Devuelve lista de dicts con address y valor para escribir via Graph API."""
+        celdas = []
+
+        def c(addr, val):
+            celdas.append({"address": addr, "value": val})
+
+        # Encabezados
+        c("B1", "CENTRO FLORICULTOR DE BAJA CALIFORNIA, S.A. DE C.V. ")
+        c("B2", "SEMANA DE CALCULO - Mexico")
+        c("B3", nombre)
+        c("C3", 19); c("D3", " tipo de cambio")
+        c("L3", 19); c("M3", "  tipo de cambio ")
+        c("B4", "Del ___ al ___ de ________ 20__")
+        c("C5", "(MXN) Pesos Mexicanos")
+        c("L5", "US Dollars")
+        c("B6", "TOTAL FINCA")
+        # Fila 7: ranchos MXN
+        for col, h in zip(["C","D","E","F","G","H","I","J"],
+                          ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","Isabela","Christina","Cecilia","Cecilia 25"]):
+            c(f"{col}7", h)
+        # Fila 7: ranchos USD
+        for col, h in zip(["L","M","N","O","P","Q","R","S"],
+                          ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","ISABELA","Christina","CECILIA","CECILIA 25"]):
+            c(f"{col}7", h)
+        c("B7", "Produccion"); c("C8", "SEMANAL "); c("L8", '"WEEKLY"')
+        c("B9", "EJECUCION SEMANAL")
+        for col in ["D","E","F","G","H","I","J"]:
+            c(f"{col}9", 1)
+
+        # Categorías de materiales (filas 10-20)
+        categorias = [
+            (10, "DESINFECCION Y FERTILIZACION"),
+            (11, "AMPLIACION "),
+            (12, "CULTIVO TIERRA, CHAROLAS"),
+            (13, "MATERIAL VEGETAL"),
+            (14, "PREPARACION DE SUELO"),
+            (15, "FERTILIZANTES (Manejo Integrado de Riego y Fertilización) "),
+            (16, "DESINFECCION / PLAGUICIDAS (Manejo Integrado de Plagas y Enfermedades)"),
+            (17, "MANTENIMIENTO"),
+            (18, "EXPANSION CECILIA 25"),
+            (19, "RENOVACION DE SIEMBRA"),
+            (20, "MATERIAL DE EMPAQUE"),
+        ]
+        for row, label in categorias:
+            c(f"B{row}", label)
+
+        c("B22", "COSTO DE MATERIALES")
+
+        # Nóminas (filas 24-59)
+        nominas = [
+            (24, "NOMINA ADMON Oficina, Jefes de Finca, Ingenieros"),
+            (25, "HORAS EXTR. DOM. Y FESTIVOS"),
+            (26, "BONOS ASISIT, PUNTAULIDAD Y DESPENSA"),
+            (27, "NOMINA PRODUCCION "),
+            (28, "HORAS EXTR. DOM. Y FEST."),
+            (29, "BONOS ASISIT, PUNT. Y DESP."),
+            (30, "NOMINA PRODUCCION CORTE"),
+            (31, "HORAS EXTR. DOM. Y FESTIVOS CORTE"),
+            (32, "BONOS ASISIT, PUNTAULIDAD Y DESP. CORTE"),
+            (33, "NOMINA PRODUCCION TRANSPLANTE"),
+            (34, "HORAS EXTR. DOM. Y FEST. TRANSPLANTE"),
+            (35, "BONOS ASISIT, PUNT. Y DESP. TRANSPLANTE"),
+            (36, "NOMINA PRODUCCION MANEJO PLANTA"),
+            (37, "HORAS EXTR. DOM. Y FEST. MANEJO PLANTA"),
+            (38, "BONOS ASISIT, PUNT. Y DESP. MANEJO PLANTA"),
+            (39, "NOMINA  HOOPS"),
+            (40, "HORAS EXTR. DOM. Y FEST. HOOPS"),
+            (41, "BONOS ASISIT, PUNT. Y DESP.HOOPS"),
+            (42, "NOMINA  (MIPE,MIRFE,)"),
+            (43, "HORAS EXTR. DOM. Y FEST. (MIPE,MIRFE)"),
+            (44, "BONOS ASISIT, PUNT. Y DESP.(MIPE,MIRFE)"),
+            (45, "NOMINA OPERATIVOS (TRACTORES, CAMEROS)"),
+            (46, "HORAS EXTR. DOM. Y FEST. (TRACTORES, CAMEROS)"),
+            (47, "BONOS ASISIT, PUNT. Y DESP. (TRACTORES, CAMEROS)"),
+            (48, "NOMINA OPERATIVOS (CHOFER)"),
+            (49, "HORAS EXTR. DOM. Y FEST. (CHOFER)"),
+            (50, "BONOS ASISIT, PUNT. Y DESP. (CHOFER)"),
+            (51, "NOMINA OPERATIVOS (VELADORES)"),
+            (52, "HORAS EXTR. DOM. Y FEST. (VELADORES)"),
+            (53, "BONOS ASISIT, PUNT. Y DESP. (VELADORES)"),
+            (54, "NOMINA OPERATIVOS (SOLDADOR)"),
+            (55, "HORAS EXTR. DOM. Y FEST. (SOLDADOR)"),
+            (56, "BONOS ASISIT, PUNT. Y DESP. (SOLDADOR)"),
+            (57, "NOMINA PRODUCCION Contratista y comisiones"),
+            (58, "IMSS , INFONAVIT RCV"),
+            (59, "1.8% al estado (1.2% tasa efectiva)"),
+        ]
+        for row, label in nominas:
+            c(f"B{row}", label)
+
+        c("B61", "COSTO DE MANO DE OBRA")
+
+        # Servicios (filas 63-70)
+        servicios = [
+            (63, "ELECTRICIDAD"),
+            (64, "FLETES Y ACARREOS (Flete aduana)"),
+            (65, "GASTOS DE EXPORTACION "),
+            (66, "CERTIFICADO DE FITOSANITARIOS"),
+            (67, "Transporte de personal"),
+            (68, "COMPRA DE FLOR A TERCEROS"),
+            (69, "COMIDA PARA EL PERSONAL"),
+            (70, "RO, TEL, RTA.ALIM."),
+        ]
+        for row, label in servicios:
+            c(f"B{row}", label)
+
+        c("B72", "COSTO DE SERVICIOS")
+        c("B74", "COSTO DE PRODUCCION Y VENTAS")
+
+        # Producción (filas 76-92)
+        prod = [
+            (76, "CAJAS PROCESADAS TOTALES"),
+            (77, "INVENTARIO INICIAL"),
+            (78, "TALLOS COSECHADOS"),
+            (79, "TALLOS DESECHADOS"),
+            (80, "TALLOS DESECHADOS sf"),
+            (81, "TALLOS COMPRADOS"),
+            (82, "TALLOS EN BOUQUETS O PROCESADOS"),
+            (83, "TALLOS DESPACHADOS"),
+            (84, "LIBRAS DESPACHADAS ALBAHACA"),
+            (85, "TALLOS muestra"),
+            (86, "INVENTARIO FINAL"),
+            (87, "TALLOS PROCESADOS TOTALES"),
+            (88, " CHAROLAS SEMBRADAS *288 PLUGS ="),
+            (89, " NUMERO DE CHAROLAS SEMBRADAS "),
+            (90, " NUMERO DE ESQUEJES SEMBRADOS"),
+            (91, " METROS DE SIEMBRA"),
+            (92, " HECTAREAS EN SIEMBRA"),
+        ]
+        for row, label in prod:
+            c(f"B{row}", label)
+
+        c("B93", "<<< INDICADORES")
+        c("B94", "COSTOS UNITARIOS"); c("B95", "$ / Tallo Procesado")
+        c("B96", "COSTOS UNITARIOS"); c("B97", "$ / Libras Procesadas")
+        for row, label in [(98,"Materiales"),(99,"Mano de Obra"),(100,"Servicios (Fletes)"),
+                           (101,"Costo de Produccion y Ventas"),(103,"Material de Empaque / Tallo"),
+                           (105,"Sanidad Vegetal / Tallo"),(106,"Fertlizacion / Tallo"),
+                           (108,"Mano de Obra Prod / Tallo")]:
+            c(f"B{row}", label)
+        c("B110", "$ / Hectarea")
+        for row, label in [(111,"Materiales"),(112,"Mano de Obra"),(113,"Servicios (Fletes)"),
+                           (114,"Costo de Produccion y Ventas"),(121,"Mano de Obra Prod / Ha")]:
+            c(f"B{row}", label)
+
+        c("B124", "KPI's ")
+        c("B125", "Proyectos de inversión"); c("L125", "Total Weekly")
+        proyectos = [
+            (126,"Sistema de riego (Ramona)"),(127,"Sistema de riego (Isabella)"),
+            (128,"Caseta (Isabella)"),(129,"Sistema de ventilacion)"),
+            (130,"Sistema de tratamiento de aguas residuales (Isabella)"),
+            (131,"Arcos para invernaderos "),(132,"proyecto luz"),
+            (133,"Construcción de Almacén (Ramona) "),(134,"Construcción de Almacén (Isabela) "),
+            (135,"Carritos"),(136,"Maquinaria "),(137,"Chiller"),
+            (138,"Cuarto frio"),(139,"veronicas"),
+        ]
+        for row, label in proyectos:
+            c(f"B{row}", label)
+        c("B140", "Total ")
+        c("B143", "Logística "); c("L143", "Total Weekly"); c("N143", "PosCo-RM")
+        for row, label in [
+            (144,"Número de camiones despachados "),(145,"Número de tarimas despachadas (montadas al camión)"),
+            (146,"Número de cajas despachadas"),(147,"Número de Pies cúbicos de cajas despachadas "),
+            (148,"Número de Pies cubicos promedio / camión despachado "),
+            (149,"Capacidad en pies cúbicos por camión "),(150,"Rendimiento promedio por camión "),
+        ]:
+            c(f"B{row}", label)
+        for row, label in [
+            (152,"Costo incurrido por flete, gtos expo, fitosanitarios"),
+            (153,"Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
+            (154,"Número de Camiones despachados "),
+            (156,"Costo incurrido promedio flete, gtos expo, fitosanitarios / pie cúbico"),
+            (157,"Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
+            (158,"Número de Pies cúbicos de cajas despachadas"),
+            (160,"Costo incurrido flete, gtos expo, fitosanitarios / cajas despachadas"),
+            (161,"Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
+            (162,"Número de cajas despachadas"),
+        ]:
+            c(f"B{row}", label)
+        c("B165", "Material de empaque / Caja")
+        for row, label in [
+            (166,"Costo incurrido en Material de empaque / pie cúbico"),
+            (167,"Costo incurrido en Material de empaque (USD)"),
+            (168,"Número de Pies cúbicos de cajas despachadas"),
+            (170,"Costo incurrido en Material de empaque / cajas despachadas"),
+            (171,"Costo incurrido en Material de empaque (USD)"),
+            (172,"Número de cajas despachadas"),
+        ]:
+            c(f"B{row}", label)
+
+        return celdas
+
+    # ── 1. Token OAuth2 ───────────────────────────────────────────────────
     token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
     token_resp = requests.post(token_url, data={
         "grant_type":    "client_credentials",
@@ -1180,17 +1375,14 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         return {"ok": False, "error": f"Error obteniendo token: {token_resp.text}"}
 
     token = token_resp.json().get('access_token')
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type":  "application/json",
-    }
+    hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-    # 2. Resolver driveId + itemId desde el link compartido
+    # ── 2. Resolver driveId + itemId ──────────────────────────────────────
     encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip('=')
     encoded = 'u!' + encoded.replace('/', '_').replace('+', '-')
     res = requests.get(
         f'https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem',
-        headers=headers, timeout=20,
+        headers=hdrs_json, timeout=20,
     )
     if res.status_code != 200:
         return {"ok": False, "error": f"No se pudo resolver el archivo: {res.text}"}
@@ -1201,48 +1393,90 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
     if not drive_id or not item_id:
         return {"ok": False, "error": "No se pudo obtener driveId o itemId."}
 
-    graph_item = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}'
+    wb_url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook'
 
-    # 3. Verificar que no exista la hoja ya
-    sheets_resp = requests.get(f'{graph_item}/workbook/worksheets', headers=headers, timeout=20)
-    if sheets_resp.status_code != 200:
-        return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
-
-    nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
-    if nombre_hoja.upper() in [n.upper() for n in nombres]:
-        return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe en el archivo."}
-
-    # 4. Descargar el archivo completo
-    dl_resp = requests.get(f'{graph_item}/content', headers=headers, timeout=120)
-    if dl_resp.status_code != 200:
-        return {"ok": False, "error": f"Error descargando el archivo: {dl_resp.text}"}
-
-    # 5. Agregar la nueva hoja desde cero con openpyxl
-    try:
-        wb = openpyxl.load_workbook(BytesIO(dl_resp.content))
-        new_ws = wb.create_sheet(title=nombre_hoja)
-        _construir_hoja_wk(new_ws, nombre_hoja)
-        # Mover al inicio
-        wb.move_sheet(new_ws, offset=-(wb.index(new_ws)))
-
-        buf = BytesIO()
-        wb.save(buf)
-        modified_bytes = buf.getvalue()
-    except Exception as e:
-        return {"ok": False, "error": f"Error creando la hoja: {e}"}
-
-    # 6. Re-subir el archivo
-    up_resp = requests.put(
-        f'{graph_item}/content',
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type":  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        },
-        data=modified_bytes,
-        timeout=180,
+    # ── 3. Abrir sesión de workbook (permite trabajar con archivo abierto) ─
+    sess_resp = requests.post(
+        f'{wb_url}/createSession',
+        headers=hdrs_json,
+        json={"persistChanges": True},
+        timeout=30,
     )
-    if up_resp.status_code not in (200, 201):
-        return {"ok": False, "error": f"Error subiendo el archivo: {up_resp.text}"}
+    if sess_resp.status_code not in (200, 201):
+        return {"ok": False, "error": f"Error abriendo sesión: {sess_resp.text}"}
+
+    session_id = sess_resp.json().get('id')
+    hdrs = {**hdrs_json, "workbook-session-id": session_id}
+
+    try:
+        # ── 4. Verificar que la hoja no exista ────────────────────────────
+        sheets_resp = requests.get(f'{wb_url}/worksheets', headers=hdrs, timeout=20)
+        if sheets_resp.status_code != 200:
+            return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
+        nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
+        if nombre_hoja.upper() in [n.upper() for n in nombres]:
+            return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
+
+        # ── 5. Crear la hoja nueva ────────────────────────────────────────
+        add_resp = requests.post(
+            f'{wb_url}/worksheets/add',
+            headers=hdrs,
+            json={"name": nombre_hoja},
+            timeout=20,
+        )
+        if add_resp.status_code not in (200, 201):
+            return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
+
+        # ── 6. Mover la hoja al inicio (posición 0) ───────────────────────
+        ws_id = add_resp.json().get('id', nombre_hoja)
+        # Graph API usa el nombre como id en la URL
+        move_resp = requests.patch(
+            f'{wb_url}/worksheets/{nombre_hoja}',
+            headers=hdrs,
+            json={"position": 0},
+            timeout=20,
+        )
+        # No es fatal si falla el reordenamiento
+
+        # ── 7. Escribir celdas en lotes (batchUpdate vía range) ───────────
+        #   Graph API permite escribir un rango completo de una vez con:
+        #   PATCH /workbook/worksheets/{id}/range(address='A1:Z200')
+        #   Body: { "values": [[row0col0, row0col1, ...], [row1col0, ...]] }
+        #
+        #   Construimos una matriz 175 x 19 (filas 1-175, cols A-S)
+        NROWS, NCOLS = 175, 19  # cols A(0)..S(18)
+        col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRS")}
+        matrix = [[""] * NCOLS for _ in range(NROWS)]
+
+        for cell in _celdas_de_la_hoja(nombre_hoja):
+            addr = cell["address"]          # ej "B3"
+            val  = cell["value"]
+            # Parsear dirección
+            col_str = ''.join(ch for ch in addr if ch.isalpha())
+            row_str = ''.join(ch for ch in addr if ch.isdigit())
+            if col_str in col_idx and row_str:
+                r = int(row_str) - 1
+                col_c = col_idx[col_str]
+                if 0 <= r < NROWS and 0 <= col_c < NCOLS:
+                    matrix[r][col_c] = val if val is not None else ""
+
+        range_addr = f"A1:S{NROWS}"
+        patch_resp = requests.patch(
+            f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{range_addr}\')',
+            headers=hdrs,
+            json={"values": matrix},
+            timeout=60,
+        )
+        if patch_resp.status_code not in (200, 201):
+            return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
+
+    finally:
+        # ── 8. Cerrar la sesión siempre ───────────────────────────────────
+        requests.post(
+            f'{wb_url}/closeSession',
+            headers=hdrs,
+            timeout=20,
+        )
 
     return {
         "ok": True,
