@@ -1494,75 +1494,165 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
                 headers=hdrs, json=body, timeout=30,
             )
 
-        # Ancho de columna B (muy ancha para etiquetas)
-        requests.patch(
-            f'{wb_url}/worksheets/{nombre_hoja}/columns/range(address=\'B:B\')/format',
-            headers=hdrs, json={"columnWidth": 500}, timeout=30,
-        )
+        # ── Colores de fondo exactos del Excel ────────────────────────────
+        fill("B2",       "DAE3F3")   # Azul claro — encabezado semana
+        fill("B3",       "C5E0B4")   # Verde lima — código semana
 
-        # ── Colores de fondo por sección ──────────────────────────────────
-        # Azul claro — encabezado semana
-        fill("B2",        "DAE3F3")
-        # Verde lima — código semana
-        fill("B3",        "C5E0B4")
-        # Verde claro USD — columnas L:S en secciones de datos
+        # Verde claro (CCFFCC) — sección USD completa filas 5-74
         for rng in [
-            "L5:R5",
-            "L7:S7", "L8:S8",
-            "L10:S20",
-            "L22:S22",
-            "L24:S59",
-            "L61:S61",
-            "L63:S70",
-            "L72:S72",
-            "L74:S74",
+            "L5:S5", "L6:S6", "L7:S7", "L8:S8", "L9:S9",
+            "L10:S21",                             # materiales
+            "L23:S23",                             # espacio entre secciones
+            "L24:S60",                             # nominas
+            "L62:S62", "L63:S71",                  # servicios
+            "L73:S73",
+            "L74:S74",                             # costo produccion USD
+            "L94:S97",                             # costos unitarios encabezado
+            "L95:S96",
+            "L98:S107",                            # costos unitarios detalle
+            "L102:S102", "L104:S104", "L107:S107",
         ]:
             fill(rng, "CCFFCC")
-        # Amarillo — sección producción USD
-        for rng in ["L76:S92", "L88:S92"]:
+
+        # Naranja (FFCC99) — subtotales materiales, nomina, servicios
+        fill("C22:J22",  "FFCC99")
+        fill("L22:S22",  "FFCC99")
+        fill("C61:J61",  "FFCC99")
+        fill("L61:S61",  "FFCC99")
+        fill("C72:J72",  "FFCC99")
+        fill("L72:S72",  "FFCC99")
+        # Naranja — costos unitarios totales
+        fill("B101:J101", "FFCC99")
+        fill("L101:S101", "FFCC99")
+
+        # Amarillo claro (FFFFCC) — sección producción USD (filas 76-92, 110-121)
+        for rng in [
+            "L76:S92",
+            "L110:S121",
+        ]:
             fill(rng, "FFFFCC")
-        # Naranja — filas de subtotales
-        for rng in ["C22:J22", "L22:S22",
-                    "C61:J61", "L61:S61",
-                    "C72:J72", "L72:S72"]:
-            fill(rng, "FFCC99")
+        # Amarillo vivo (FFFF00) — cols D:J filas 89-91 (charolas/esquejes MXN)
+        fill("D89:J91",  "FFFF00")
+
+        # Verde oscuro (008000) fondo — encabezados KPI
+        fill("B125",     "008000")
+        fill("L125",     "008000")
+        fill("B143",     "008000")
+        fill("L143",     "008000")
+        fill("N143",     "008000")
+        fill("B165",     "008000")
+
+        # Verde claro en C87 (tallos procesados totales MXN)
+        fill("C87",      "CCFFCC")
 
         # ── Negritas ──────────────────────────────────────────────────────
-        # Fila 1, 2, 3 col B
-        font("B1:B3", bold=True)
-        font("B9",    bold=True)
-        font("B22",   bold=True)
-        font("B61",   bold=True)
-        font("B72",   bold=True)
-        font("B74",   bold=True)
-        font("B93",   bold=True)
-        font("B94",   bold=True)
-        font("B95",   bold=True)
-        font("B96",   bold=True)
-        font("B97",   bold=True)
-        font("B101",  bold=True)
-        font("B110",  bold=True)
-        font("B124",  bold=True)
-        font("B140",  bold=True)
-        # Totales de columna C en cada sección
-        for rng in ["C22:J22", "L22:S22",
-                    "C61:J61", "L61:S61",
-                    "C72:J72", "L72:S72",
-                    "C74:J74", "L74:S74"]:
+        font("B1:B3",    bold=True)
+        font("B9",       bold=True)
+        font("B22",      bold=True)
+        font("B61",      bold=True)
+        font("B72",      bold=True)
+        font("B74",      bold=True)
+        font("B93:B97",  bold=True)
+        font("B101",     bold=True)
+        font("B103",     bold=True)
+        font("B105",     bold=True)
+        font("B106",     bold=True)
+        font("B108",     bold=True)
+        font("B110",     bold=True)
+        font("B116",     bold=True)
+        font("B118",     bold=True)
+        font("B119",     bold=True)
+        font("B121",     bold=True)
+        font("B124",     bold=True)
+        font("B140",     bold=True)
+        # Columna C totales (negrita en subtotales)
+        for rng in ["C22:J22", "C61:J61", "C72:J72", "C74:J74",
+                    "L22:S22", "L61:S61", "L72:S72", "L74:S74",
+                    "L76:L92", "L95:L121",
+                    "L101:S101", "L103:S103", "L105:S106", "L108:S108",
+                    "L111:N114", "L116:N119", "L121:S121"]:
             font(rng, bold=True)
-        # Encabezados KPI verdes
-        font("B125", bold=True, color="008000")
-        font("L125", bold=True, color="008000")
-        font("B143", bold=True, color="008000")
-        font("L143", bold=True, color="008000")
-        font("N143", bold=True, color="008000")
-        font("B165", bold=True, color="008000")
+        # KPI headers — texto blanco negrita
+        for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
+            font(rng, bold=True, color="FFFFFF")
 
-        # ── Alineación centrada en encabezados ────────────────────────────
+        # ── Bordes ────────────────────────────────────────────────────────
+        def border(rng, left=None, right=None, top=None, bottom=None):
+            body = {}
+            style_map = {"thin": "Continuous", "medium": "Medium"}
+            if left:   body["leftBorderStyle"]   = style_map.get(left, left)
+            if right:  body["rightBorderStyle"]  = style_map.get(right, right)
+            if top:    body["topBorderStyle"]    = style_map.get(top, top)
+            if bottom: body["bottomBorderStyle"] = style_map.get(bottom, bottom)
+            if body:
+                requests.patch(
+                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format',
+                    headers=hdrs, json=body, timeout=30,
+                )
+
+        # Borde izquierdo medio en col L (separador MXN/USD)
+        border("L5:S5",   left="medium", right="medium", top="medium", bottom="thin")
+        border("L6:S8",   left="medium", right="medium")
+        border("L9:S9",   left="medium", right="medium", bottom="thin")
+        # Materiales (10-21) — left medium en L, right medium en S, top thin en 10
+        border("L10:S10", left="medium", right="medium", top="thin")
+        border("L11:S21", left="medium", right="medium")
+        # Subtotales materiales
+        border("C22:J22", left="medium", right="medium")
+        border("L22:S22", left="medium", right="medium", top="thin", bottom="thin")
+        # Nominas (23-60)
+        border("L23:S60", left="medium", right="medium")
+        # Subtotales nomina
+        border("C61:J61", left="medium", right="medium")
+        border("L61:S61", left="medium", right="medium", top="thin", bottom="thin")
+        # Servicios (62-71)
+        border("L62:S71", left="medium", right="medium")
+        # Subtotales servicios
+        border("C72:J72", left="medium", right="medium")
+        border("L72:S72", left="medium", right="medium", top="thin", bottom="thin")
+        # Costo produccion
+        border("L73:S73", left="medium", right="medium")
+        border("L74:S74", left="medium", right="medium", top="thin", bottom="medium")
+        # Produccion (76-92)
+        border("L76:S76", left="medium", right="medium", top="medium")
+        border("L77:S91", left="medium", right="medium")
+        border("L92:S92", left="medium", right="medium", bottom="medium")
+        # Costos unitarios USD (94-108)
+        border("L94:S94", left="medium", right="medium", top="medium")
+        border("L95:S97", left="medium", right="medium")
+        border("L97:S97", bottom="thin")
+        border("L98:S98", left="medium", right="medium", top="thin")
+        border("L99:S99", left="medium", right="medium")
+        border("L100:S100", left="medium", right="medium", bottom="thin")
+        border("L101:S101", left="medium", right="medium", bottom="thin")
+        border("L102:S107", left="medium", right="medium")
+        border("L103:S103", left="medium", right="medium", top="thin", bottom="thin")
+        border("L105:S105", left="medium", right="medium", top="thin")
+        border("L106:S106", left="medium", right="medium", bottom="thin")
+        border("L108:S108", left="medium", right="medium", top="thin", bottom="medium")
+        # Por hectarea (110-121)
+        border("L110:S110", left="medium", right="medium", top="medium")
+        border("L111:S112", left="medium", right="medium")
+        border("L113:S113", left="medium", right="medium", bottom="thin")
+        border("L114:S114", left="medium", right="medium", top="thin", bottom="thin")
+        border("L115:S120", left="medium", right="medium")
+        border("L116:S116", left="medium", right="medium", top="thin", bottom="thin")
+        border("L118:S118", left="medium", right="medium", top="thin")
+        border("L119:S119", left="medium", right="medium", bottom="thin")
+        border("L121:S121", left="medium", right="medium", top="thin", bottom="medium")
+        # KPI headers borders
+        border("B125",  left="thin", right="thin", top="thin")
+        border("L125",  left="thin", right="thin", top="thin", bottom="thin")
+        border("B143",  left="thin", right="thin", top="thin")
+        border("L143",  left="thin", right="thin", top="thin", bottom="thin")
+        border("N143",  left="thin", right="thin", top="thin", bottom="thin")
+        border("B165",  left="thin", right="thin", top="thin")
+
+        # ── Alineación centrada ────────────────────────────────────────────
         fmt("B2",    {"horizontalAlignment": "Center"})
         fmt("B3",    {"horizontalAlignment": "Center"})
         fmt("C5:J5", {"horizontalAlignment": "Center"})
-        fmt("L5:R5", {"horizontalAlignment": "Center"})
+        fmt("L5:S5", {"horizontalAlignment": "Center"})
         fmt("B6",    {"horizontalAlignment": "Center"})
         fmt("C7:J7", {"horizontalAlignment": "Center"})
         fmt("L7:S7", {"horizontalAlignment": "Center"})
