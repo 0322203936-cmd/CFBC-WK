@@ -1470,6 +1470,124 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         if patch_resp.status_code not in (200, 201):
             return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
 
+        # ── 8. Aplicar formatos via Graph API ─────────────────────────────
+        def fmt(rng, body):
+            """PATCH de formato sobre un rango."""
+            requests.patch(
+                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format',
+                headers=hdrs, json=body, timeout=30,
+            )
+
+        def fill(rng, color):
+            """Color de fondo (hex sin #)."""
+            requests.patch(
+                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/fill',
+                headers=hdrs, json={"color": f"#{color}"}, timeout=30,
+            )
+
+        def font(rng, bold=False, color=None):
+            body = {"bold": bold}
+            if color:
+                body["color"] = f"#{color}"
+            requests.patch(
+                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/font',
+                headers=hdrs, json=body, timeout=30,
+            )
+
+        # Ancho de columna B (muy ancha para etiquetas)
+        requests.patch(
+            f'{wb_url}/worksheets/{nombre_hoja}/columns/range(address=\'B:B\')/format',
+            headers=hdrs, json={"columnWidth": 500}, timeout=30,
+        )
+
+        # ── Colores de fondo por sección ──────────────────────────────────
+        # Azul claro — encabezado semana
+        fill("B2",        "DAE3F3")
+        # Verde lima — código semana
+        fill("B3",        "C5E0B4")
+        # Verde claro USD — columnas L:S en secciones de datos
+        for rng in [
+            "L5:R5",
+            "L7:S7", "L8:S8",
+            "L10:S20",
+            "L22:S22",
+            "L24:S59",
+            "L61:S61",
+            "L63:S70",
+            "L72:S72",
+            "L74:S74",
+        ]:
+            fill(rng, "CCFFCC")
+        # Amarillo — sección producción USD
+        for rng in ["L76:S92", "L88:S92"]:
+            fill(rng, "FFFFCC")
+        # Naranja — filas de subtotales
+        for rng in ["C22:J22", "L22:S22",
+                    "C61:J61", "L61:S61",
+                    "C72:J72", "L72:S72"]:
+            fill(rng, "FFCC99")
+
+        # ── Negritas ──────────────────────────────────────────────────────
+        # Fila 1, 2, 3 col B
+        font("B1:B3", bold=True)
+        font("B9",    bold=True)
+        font("B22",   bold=True)
+        font("B61",   bold=True)
+        font("B72",   bold=True)
+        font("B74",   bold=True)
+        font("B93",   bold=True)
+        font("B94",   bold=True)
+        font("B95",   bold=True)
+        font("B96",   bold=True)
+        font("B97",   bold=True)
+        font("B101",  bold=True)
+        font("B110",  bold=True)
+        font("B124",  bold=True)
+        font("B140",  bold=True)
+        # Totales de columna C en cada sección
+        for rng in ["C22:J22", "L22:S22",
+                    "C61:J61", "L61:S61",
+                    "C72:J72", "L72:S72",
+                    "C74:J74", "L74:S74"]:
+            font(rng, bold=True)
+        # Encabezados KPI verdes
+        font("B125", bold=True, color="008000")
+        font("L125", bold=True, color="008000")
+        font("B143", bold=True, color="008000")
+        font("L143", bold=True, color="008000")
+        font("N143", bold=True, color="008000")
+        font("B165", bold=True, color="008000")
+
+        # ── Alineación centrada en encabezados ────────────────────────────
+        fmt("B2",    {"horizontalAlignment": "Center"})
+        fmt("B3",    {"horizontalAlignment": "Center"})
+        fmt("C5:J5", {"horizontalAlignment": "Center"})
+        fmt("L5:R5", {"horizontalAlignment": "Center"})
+        fmt("B6",    {"horizontalAlignment": "Center"})
+        fmt("C7:J7", {"horizontalAlignment": "Center"})
+        fmt("L7:S7", {"horizontalAlignment": "Center"})
+        fmt("C8",    {"horizontalAlignment": "Center"})
+        fmt("L8",    {"horizontalAlignment": "Center"})
+        fmt("B9",    {"horizontalAlignment": "Center"})
+        fmt("L125",  {"horizontalAlignment": "Center"})
+        fmt("L143",  {"horizontalAlignment": "Center"})
+        fmt("N143",  {"horizontalAlignment": "Center"})
+
+        # ── Merge de celdas ───────────────────────────────────────────────
+        merges = [
+            "C5:J5", "L5:R5",
+            "C153:C154", "L153:L154",
+            "C157:C158", "L157:L158",
+            "C161:C162", "L161:L162",
+            "C167:C168", "L167:L168",
+            "C171:C172", "L171:L172",
+        ]
+        for m in merges:
+            requests.post(
+                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{m}\')/merge',
+                headers=hdrs, json={"across": False}, timeout=20,
+            )
+
     finally:
         # ── 8. Cerrar la sesión siempre ───────────────────────────────────
         requests.post(
