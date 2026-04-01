@@ -251,60 +251,54 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 }
 .prod-close:hover { border-color: #fff; color: #fff; }
 
-/* ── NATIVE TABLE STYLES ─────────────────────────── */
-.tbl-wrap {
+/* ── NATIVE TABLE ────────────────────────────── */
+.tbl-scroll {
   overflow-x: auto; overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin; scrollbar-color: #ccc transparent;
+  scrollbar-width: thin; scrollbar-color: #bbb transparent;
 }
-.tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
-.tbl-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-.data-tbl {
+.tbl-scroll::-webkit-scrollbar { height:5px; width:5px; }
+.tbl-scroll::-webkit-scrollbar-thumb { background:#ccc; border-radius:3px; }
+.dt {
   border-collapse: collapse; width: 100%;
   font-family: var(--mono); font-size: 11px;
-  table-layout: fixed;
 }
-.data-tbl th {
-  padding: 4px 8px; background: #e0e4ea; color: #333;
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.4px; white-space: nowrap;
-  border-bottom: 2px solid #bbb; border-right: 1px solid #ccc;
-  position: sticky; top: 0; z-index: 10;
-  text-align: right; user-select: none; cursor: pointer;
+.dt th {
+  position: sticky; top: 0; z-index: 5;
+  padding: 4px 8px;
+  background: #dde2ea; color: #333;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.4px;
+  border-bottom: 2px solid #b0b8c8;
+  border-right: 1px solid #c8cdd8;
+  white-space: nowrap; text-align: right;
+  cursor: pointer; user-select: none;
 }
-.data-tbl th:first-child { text-align: left; border-left: none; }
-.data-tbl th.th-left { text-align: left; }
-.data-tbl th.sorted-asc::after { content: ' ▲'; font-size: 9px; color: var(--green); }
-.data-tbl th.sorted-desc::after { content: ' ▼'; font-size: 9px; color: var(--green); }
-.data-tbl td {
-  padding: 3px 8px; border-bottom: 1px solid #ececec;
-  border-right: 1px solid #f0f0f0; white-space: nowrap;
-  text-align: right; height: 22px; line-height: 22px;
+.dt th:first-child, .dt th.th-l { text-align: left; }
+.dt th.s-asc::after  { content: ' ▲'; color: var(--green); font-size:9px; }
+.dt th.s-desc::after { content: ' ▼'; color: var(--green); font-size:9px; }
+.dt td {
+  padding: 3px 8px; height: 22px;
+  border-bottom: 1px solid #ececec;
+  border-right: 1px solid #f0f0f0;
+  white-space: nowrap; text-align: right;
 }
-.data-tbl td:first-child { text-align: left; }
-.data-tbl td.td-left { text-align: left; }
-.data-tbl tr:nth-child(odd) td { background: #fafafa; }
-.data-tbl tr:nth-child(even) td { background: #ffffff; }
-.data-tbl tr:hover td { background: #e8f5e9 !important; }
-.data-tbl tr.row-group td { background: #dde4f0 !important; font-weight: 700; color: #1e3a5f; border-top: 1px solid #b8c5d9; }
-.data-tbl tr.row-group:hover td { background: #cdd8ee !important; }
-.data-tbl tr.row-group td:first-child { padding-left: 6px; }
-.data-tbl tr.row-child td:first-child { padding-left: 22px; }
-.data-tbl tr.row-total td { background: #eaf3ea !important; font-weight: 700; color: #16a34a; border-top: 2px solid rgba(22,163,74,.3); }
-.expand-btn { cursor: pointer; margin-right: 4px; font-size: 10px; color: #555; user-select: none; display: inline-block; width: 12px; transition: transform 0.1s; }
-.expand-btn.open { transform: rotate(90deg); }
-/* mini bar */
-.mini-bar { display: inline-flex; align-items: center; gap: 4px; }
-.mini-bar-fill { height: 6px; border-radius: 1px; flex-shrink: 0; min-width: 1px; }
-/* pct bar */
-.pct-bar { display: inline-flex; align-items: center; gap: 4px; }
-.pct-bar-fill { height: 5px; background: var(--green); border-radius: 1px; flex-shrink: 0; }
-
-/* Inline cell styles injected via cellStyle */
-.cell-pos { color: #16a34a !important; font-weight: 600; }
-.cell-neg { color: #dc2626 !important; font-weight: 600; }
-.cell-muted { color: #999 !important; }
-.cell-total { font-weight: 700 !important; color: #1e3a5f !important; }
+.dt td:first-child, .dt td.td-l { text-align: left; }
+.dt tbody tr:nth-child(odd)  td { background: #f9f9fb; }
+.dt tbody tr:nth-child(even) td { background: #ffffff; }
+.dt tbody tr:hover td { background: #e6f4ec !important; cursor:pointer; }
+.dt tr.tr-grp td {
+  background: #dde5f2 !important;
+  font-weight: 700; color: #1e3a5f;
+  border-top: 1px solid #b8c5d9;
+  border-bottom: 1px solid #b8c5d9;
+}
+.dt tr.tr-grp:hover td { background: #cdd8ee !important; }
+.dt tr.tr-sub td:first-child { padding-left: 20px; }
+.dt tr.tr-total td {
+  background: #e8f5ec !important;
+  font-weight: 700; color: #16a34a;
+  border-top: 2px solid rgba(22,163,74,.3);
+}
 .prod-link {
   cursor: pointer;
   text-decoration: underline dotted;
@@ -441,13 +435,10 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <button class="tb-btn" onclick="resetRange()">↺ Reset</button>
   </div>
 
-  <!-- MAIN TABLE AREA -->
+  <!-- TABLE AREA -->
   <div id="gridWrap">
-    <div id="tblWrapMain" class="tbl-wrap" style="height:500px">
-      <table class="data-tbl" id="mainTable">
-        <thead id="mainTHead"></thead>
-        <tbody id="mainTBody"></tbody>
-      </table>
+    <div id="tblMain" class="tbl-scroll" style="height:500px">
+      <table class="dt"><thead id="tblHead"></thead><tbody id="tblBody"></tbody></table>
     </div>
   </div>
 
@@ -469,11 +460,8 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
       <div class="prod-hdr-meta" id="prodMeta"></div>
       <button class="prod-close" onclick="closeProdPanel()">✕ CERRAR</button>
     </div>
-    <div id="tblWrapProd" class="tbl-wrap" style="max-height:260px">
-      <table class="data-tbl" id="prodTable">
-        <thead id="prodTHead"></thead>
-        <tbody id="prodTBody"></tbody>
-      </table>
+    <div id="prodWrap" class="tbl-scroll" style="max-height:260px">
+      <table class="dt"><thead id="prodHead"></thead><tbody id="prodBody"></tbody></table>
     </div>
   </div>
 
@@ -484,28 +472,20 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 </div><!-- /app -->
 
 <script>
-// ═══════════════════════════════════════════════════════════
-// ERROR HANDLER — primero que todo
-// ═══════════════════════════════════════════════════════════
-function showError(msg, line) {
-  var loader = document.getElementById('loader');
-  if (loader) loader.innerHTML =
-    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border-radius:8px;border:2px solid #fecaca;max-width:700px;word-break:break-all">' +
-    '<b>❌ ERROR JS:</b> ' + String(msg) + (line ? '<br><small>línea ' + line + '</small>' : '') + '</div>';
+// Error handler — primero
+function _showErr(msg) {
+  var el = document.getElementById('loader');
+  if (el) el.innerHTML = '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border:2px solid #fecaca;border-radius:6px;max-width:800px;word-break:break-all"><b>❌ ERROR:</b> ' + String(msg) + '</div>';
 }
-window.onerror = function(msg, src, line) { showError(msg, line); return true; };
+window.onerror = function(m,s,l,c,e){ _showErr((e?e.stack:m) + ' [L'+l+']'); return true; };
 
 // ═══════════════════════════════════════════════════════════
 // DATOS
 // ═══════════════════════════════════════════════════════════
 var DATA;
 try {
-  var _raw = atob('__DATA_JSON__');
-  DATA = JSON.parse(_raw);
-} catch(e) {
-  showError('Error decodificando datos: ' + e.message);
-  throw e;
-}
+  DATA = JSON.parse(atob('__DATA_JSON__'));
+} catch(e) { _showErr('Fallo decodificando datos: ' + e.message); throw e; }
 
 // ═══════════════════════════════════════════════════════════
 // CONSTANTES
@@ -529,7 +509,7 @@ var state = {
   weekIdx: 0, fromWeek: 1, toWeek: 52
 };
 var allWeeks = [];
-var _sortState = { col: null, asc: true };
+// Native table — no grid API needed
 
 function isCombined(cat) { return false; } // Cada categoría se muestra por separado
 
@@ -793,18 +773,17 @@ function setView(v) {
   renderView();
 }
 function exportCSV() {
-  // Export native table to CSV
-  var rows = document.querySelectorAll('#mainTable tr');
-  var csv = [];
-  rows.forEach(function(row) {
-    var cells = row.querySelectorAll('th,td');
-    var line = [];
-    cells.forEach(function(cell) { line.push('"' + cell.innerText.replace(/"/g,'""') + '"'); });
-    csv.push(line.join(','));
+  var rows = document.querySelectorAll('#tblMain table tr');
+  var lines = [];
+  rows.forEach(function(r){
+    var cells = r.querySelectorAll('th,td');
+    var cols = []; cells.forEach(function(c){ cols.push('"'+c.innerText.replace(/"/g,'""')+'"'); });
+    lines.push(cols.join(','));
   });
-  var blob = new Blob([csv.join('\n')], {type:'text/csv;charset=utf-8;'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a'); a.href = url; a.download = 'CFBC_' + state.view + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  var blob = new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'CFBC_'+state.view+'_'+new Date().toISOString().slice(0,10)+'.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 function updateRangeSliders() {
@@ -846,90 +825,98 @@ function resetRange() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// NATIVE TABLE RENDERER
+// NATIVE TABLE ENGINE
 // ═══════════════════════════════════════════════════════════
-function buildMainGrid() { /* no-op: tabla nativa, no necesita inicialización */ }
+var _cols = [], _rows = [];
+var _sort = { i: null, asc: true };
+// Row data cache for click handler
+var _rowCache = [];
 
-function renderNativeTable(tblId, tHeadId, tBodyId, colDefs, rowData, statusText) {
-  var thead = document.getElementById(tHeadId);
-  var tbody = document.getElementById(tBodyId);
+function buildMainGrid() { /* no-op */ }
+
+function _renderTable(headId, bodyId, cols, rows, isMain) {
+  var thead = document.getElementById(headId);
+  var tbody = document.getElementById(bodyId);
   if (!thead || !tbody) return;
 
-  // Cache rows for click events (only for main table)
-  if (tblId === 'mainTable') _mainRowCache = rowData.slice();
+  if (isMain) _rowCache = rows.slice();
+
+  // Sort
+  var displayRows = rows.slice();
+  if (isMain && _sort.i !== null && cols[_sort.i]) {
+    var sf = cols[_sort.i].field;
+    displayRows.sort(function(a,b){
+      var av=a[sf], bv=b[sf];
+      if(av==null||av===undefined) av=_sort.asc?Infinity:-Infinity;
+      if(bv==null||bv===undefined) bv=_sort.asc?Infinity:-Infinity;
+      if(typeof av==='number'&&typeof bv==='number') return _sort.asc?av-bv:bv-av;
+      return _sort.asc?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));
+    });
+  }
 
   // Header
-  var widthSum = colDefs.reduce(function(s,c){ return s + (c.width||100); }, 0);
-  var hr = '<tr>';
-  colDefs.forEach(function(c, ci) {
-    var pct = ((c.width||100) / widthSum * 100).toFixed(1);
-    var cls = (c.type === 'numericColumn') ? '' : ' th-left';
-    var sortCls = (_sortState.col === ci) ? (' sorted-' + (_sortState.asc ? 'asc' : 'desc')) : '';
-    var sortCall = (tblId === 'mainTable') ? ' onclick="sortBy(' + ci + ')"' : '';
-    hr += '<th class="' + cls + sortCls + '" style="width:' + pct + '%"' + sortCall + '>' + c.headerName + '</th>';
+  var totalW = cols.reduce(function(s,c){ return s+(c.width||100); },0);
+  var hh = '<tr>';
+  cols.forEach(function(c,i){
+    var isNum = c.type==='numericColumn';
+    var cls = isNum ? '' : ' th-l';
+    var sc = (isMain && _sort.i===i) ? (' '+ (_sort.asc?'s-asc':'s-desc')) : '';
+    var pct = ((c.width||100)/totalW*100).toFixed(1);
+    var onclick = isMain ? ' onclick="_sortCol('+i+')"' : '';
+    hh += '<th class="'+cls+sc+'" style="width:'+pct+'%"'+onclick+'>'+c.headerName+'</th>';
   });
-  hr += '</tr>';
-  thead.innerHTML = hr;
+  hh += '</tr>';
+  thead.innerHTML = hh;
 
   // Body
-  var rows = rowData.slice();
-  if (tblId === 'mainTable' && _sortState.col !== null) {
-    var sc = colDefs[_sortState.col];
-    var sf = sc ? sc.field : null;
-    if (sf) {
-      rows.sort(function(a,b) {
-        var av = a[sf], bv = b[sf];
-        if (av == null) av = _sortState.asc ? Infinity : -Infinity;
-        if (bv == null) bv = _sortState.asc ? Infinity : -Infinity;
-        if (typeof av === 'number' && typeof bv === 'number') return _sortState.asc ? av-bv : bv-av;
-        return _sortState.asc ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
-      });
-    }
-  }
-
-  var html = '';
-  rows.forEach(function(row, ri) {
-    var isGroup = row._isGroup;
-    var isTotal = row._isTotal;
-    var trCls = isGroup ? 'row-group' : isTotal ? 'row-total' : 'row-data';
-    var rowAttr = (tblId === 'mainTable') ? ' data-row-idx="' + ri + '"' : '';
-    html += '<tr class="' + trCls + '"' + rowAttr + (row._rowAttrs || '') + '>';
-    colDefs.forEach(function(c, ci) {
+  var bh = '';
+  displayRows.forEach(function(row, ri){
+    var trCls = row._grp ? 'tr-grp' : row._total ? 'tr-total' : row._sub ? 'tr-sub' : '';
+    var ridx = isMain ? ' data-ri="'+ri+'"' : '';
+    bh += '<tr class="'+trCls+'"'+ridx+'>';
+    cols.forEach(function(c,ci){
       var v = row[c.field];
-      var tdCls = (c.type === 'numericColumn') ? '' : ' td-left';
-      var cellHtml = c.cellRenderer ? c.cellRenderer({value: v, data: row, colDef: c}) : (v !== null && v !== undefined ? v : '');
-      var colAttr = (tblId === 'mainTable') ? ' data-col-idx="' + ci + '"' : '';
-      html += '<td class="' + tdCls + '"' + colAttr + '>' + cellHtml + '</td>';
+      var isNum = c.type==='numericColumn';
+      var cls = isNum ? '' : ' td-l';
+      var cidx = isMain ? ' data-ci="'+ci+'"' : '';
+      var cell = c.cellRenderer ? c.cellRenderer({value:v,data:row,colDef:c}) : (v!=null?String(v):'');
+      bh += '<td class="'+cls+'"'+cidx+'>'+cell+'</td>';
     });
-    html += '</tr>';
+    bh += '</tr>';
   });
-  tbody.innerHTML = html;
-
-  if (statusText !== undefined) {
-    var st = document.getElementById('stTotal');
-    if (st) st.textContent = statusText || '';
-  }
+  tbody.innerHTML = bh;
 }
-
-
-var _lastColDefs = [];
-var _lastRowData = [];
 
 function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
-  _lastColDefs = colDefs; _lastRowData = rowData;
-  _sortState = { col: null, asc: true };
-  renderNativeTable('mainTable', 'mainTHead', 'mainTBody', colDefs, rowData, statusText);
+  _cols = colDefs; _rows = rowData;
+  _sort = { i: null, asc: true };
+  _renderTable('tblHead','tblBody', colDefs, rowData, true);
+  var st = document.getElementById('stTotal');
+  if (st) st.textContent = statusText || '';
 }
 
-function sortBy(ci) {
-  if (_sortState.col === ci) _sortState.asc = !_sortState.asc;
-  else { _sortState.col = ci; _sortState.asc = true; }
-  renderNativeTable('mainTable', 'mainTHead', 'mainTBody', _lastColDefs, _lastRowData);
+function _sortCol(i) {
+  if (_sort.i===i) _sort.asc=!_sort.asc; else { _sort.i=i; _sort.asc=true; }
+  _renderTable('tblHead','tblBody', _cols, _rows, true);
 }
 
+// Click handler for main table rows
+document.addEventListener('click', function(e){
+  var td = e.target.closest('#tblBody td');
+  if (!td) return;
+  var tr = td.closest('tr'); if (!tr) return;
+  var ri = parseInt(tr.dataset.ri); if (isNaN(ri)) return;
+  var ci = parseInt(td.dataset.ci);
+  var row = _rowCache[ri]; if (!row) return;
+  var colDef = _cols[ci] || {};
+  var clickedRanch = fieldToRanch(colDef.field||'');
+  if (state.view==='semana'||state.view==='rancho'||state.view==='anual') {
+    showProdPanel(row, {ranch: clickedRanch||null});
+  }
+});
 
 // ═══════════════════════════════════════════════════════════
-// CELL RENDERERS (retornan HTML string)
+// CELL RENDERERS
 // ═══════════════════════════════════════════════════════════
 function moneyRenderer(params) {
   var v = params.value;
@@ -957,7 +944,9 @@ function barRenderer(maxVal) {
     if (!v || isNaN(v)) return '<span style="color:#bbb">—</span>';
     var pct = Math.min(v / (maxVal || 1) * 54, 54);
     var color = RANCH_COLORS[params.colDef.field] || '#16a34a';
-    return '<div class="mini-bar"><div class="mini-bar-fill" style="width:' + pct.toFixed(0) + 'px;background:' + color + '"></div><span style="color:#333">' + fmt(v) + '</span></div>';
+    return '<span style="display:inline-flex;align-items:center;gap:4px">' +
+      '<span style="display:inline-block;width:' + pct.toFixed(0) + 'px;height:6px;background:' + color + ';border-radius:1px;flex-shrink:0"></span>' +
+      '<span style="color:#333">' + fmt(v) + '</span></span>';
   };
 }
 function catRenderer(params) {
@@ -988,7 +977,6 @@ function renderView() {
   else if (state.view === 'productos') renderProductosFull();
   else if (state.view === 'servicios') renderServicios();
   setTimeout(resizeGrid, 30);
-  } catch(e) { showError('renderView [' + state.view + ']: ' + e.message, null); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1508,9 +1496,9 @@ function renderServicios() {
       cellRenderer: function(p) {
         var v = p.value; if (!v) return '—';
         var w = Math.min(v / 100 * 55, 55);
-        return '<div style="display:flex;align-items:center;gap:4px">' +
-          '<div style="width:' + w.toFixed(0) + 'px;height:6px;background:#16a34a;border-radius:1px"></div>' +
-          '<span>' + v.toFixed(1) + '%</span></div>';
+        return '<span style="display:inline-flex;align-items:center;gap:4px">' +
+          '<span style="display:inline-block;width:' + w.toFixed(0) + 'px;height:5px;background:#16a34a;border-radius:1px"></span>' +
+          '<span>' + v.toFixed(1) + '%</span></span>';
       }
     },
   ];
@@ -1548,36 +1536,7 @@ function renderServicios() {
 // ═══════════════════════════════════════════════════════════
 // PRODUCTOS SUBPANEL (click on cell)
 // ═══════════════════════════════════════════════════════════
-// PRODUCTOS SUBPANEL click from main table
-// ═══════════════════════════════════════════════════════════
-// Store row data index for click events
-var _mainRowCache = [];
-
-function onMainCellClick(evt) { /* replaced by native handler below */ }
-
-// Native delegated click on main table
-document.addEventListener('click', function(e) {
-  var td = e.target.closest('#mainTBody td');
-  if (!td) return;
-  var tr = td.closest('tr');
-  if (!tr) return;
-  var rowIdx = parseInt(tr.dataset.rowIdx);
-  if (isNaN(rowIdx)) return;
-  var rowData = _mainRowCache[rowIdx];
-  if (!rowData) return;
-  var colIdx = parseInt(td.dataset.colIdx);
-  var colDef = _lastColDefs[colIdx] || {};
-  var clickedField = colDef.field || '';
-  var clickedRanch = fieldToRanch(clickedField);
-
-  if (state.view === 'semana') {
-    showProdPanel(rowData, { ranch: clickedRanch || null });
-  } else if (state.view === 'rancho') {
-    if (clickedField === 'rancho' || clickedRanch) {
-      showProdPanel(rowData, { ranch: rowData.rancho || null });
-    }
-  }
-});
+// click handler moved to delegated listener in native table engine
 function showProdPanel(rowData, opts) {
   opts = opts || {};
   var cat   = rowData._cat;
@@ -1640,25 +1599,21 @@ function showProdPanel(rowData, opts) {
 
   var rangeText = wkStart === wkEnd ? (wFmt(wkStart) + ' · ' + yr) : (wFmt(wkStart) + '→' + wFmt(wkEnd) + ' · ' + yr);
 
-  // Mostrar panel siempre al abrir detalle (aunque no haya filas)
   document.getElementById('prodPanel').className = 'show';
 
   if (rows.length === 0) {
     document.getElementById('prodTitle').textContent = cat + ' — Sin datos de productos';
     document.getElementById('prodMeta').textContent = rangeText + (ranchFilter ? (' · ' + ranchFilter) : '');
-    document.getElementById('prodTHead').innerHTML = '';
-    document.getElementById('prodTBody').innerHTML = '<tr><td colspan="6" style="color:#aaa;text-align:center;padding:16px">Sin registros</td></tr>';
+    document.getElementById('prodHead').innerHTML = '';
+    document.getElementById('prodBody').innerHTML = '<tr><td colspan="6" style="color:#aaa;text-align:center;padding:12px">Sin registros para este período</td></tr>';
     return;
   }
 
   document.getElementById('prodTitle').textContent = cat + ' ▸ ' + rangeText + (ranchFilter ? (' · ' + ranchFilter) : '');
-
   rows.sort(function(a,b) { return b.gasto - a.gasto; });
-
   var total = rows.reduce(function(s,r) { return s + r.gasto; }, 0);
   document.getElementById('prodMeta').textContent = rows.length + ' registros · ' + fmt(total);
-
-  renderNativeTable('prodTable', 'prodTHead', 'prodTBody', getProdCols(), rows);
+  _renderTable('prodHead', 'prodBody', getProdCols(), rows, false);
 }
 function getProdCols() {
   return [
@@ -1696,6 +1651,7 @@ document.addEventListener('click', function(e) {
 // RESIZE HELPER
 // ═══════════════════════════════════════════════════════════
 function resizeGrid() {
+  // Medir la altura real de todos los elementos fijos alrededor del grid
   var hdr      = document.querySelector('.app-hdr');
   var toolbar  = document.querySelector('.toolbar');
   var tabs     = document.querySelector('.view-tabs');
@@ -1711,9 +1667,10 @@ function resizeGrid() {
   if (statusbar) used += statusbar.offsetHeight;
   if (prodPanel && prodPanel.classList.contains('show')) used += prodPanel.offsetHeight;
 
+  // document.documentElement.clientHeight = altura real del iframe
   var available = document.documentElement.clientHeight - used - 4;
   var h = Math.max(available, 300);
-  document.getElementById('tblWrapMain').style.height = h + 'px';
+  document.getElementById('tblMain').style.height = h + 'px';
 }
 window.addEventListener('resize', resizeGrid);
 
@@ -1731,6 +1688,9 @@ reportHeight();
 setInterval(reportHeight, 500);
 
 // ═══════════════════════════════════════════════════════════
+// ERROR HANDLER
+// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // ARRANCAR
 // ═══════════════════════════════════════════════════════════
 // Reconstruir weekly_series desde weekly_detail si no existe
@@ -1745,12 +1705,7 @@ if (!DATA.weekly_series) {
     }
   });
 }
-// Inicializar directamente (sin esperar AG Grid)
-try {
-  inicializar();
-} catch(e) {
-  showError('Error en inicializar(): ' + e.message + ' | ' + e.stack);
-}
+try { inicializar(); } catch(e) { _showErr('inicializar: '+e.message+'\n'+(e.stack||'')); }
 </script>
 
 
