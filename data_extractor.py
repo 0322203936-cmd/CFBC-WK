@@ -319,7 +319,8 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .cmp-stat-val   { font-size: 14px; font-weight: 700; margin: 2px 0 1px; }
 .cmp-stat-sub   { font-size: 9px; color: #aaa; }
 .cmp-tbl-wrap   { overflow-x: auto; -webkit-overflow-scrolling: touch;
-                  scrollbar-width: thin; scrollbar-color: #ccc transparent; }
+                  scrollbar-width: thin; scrollbar-color: #ccc transparent;
+                  max-height: calc(100vh - 260px); overflow-y: auto; }
 .cmp-tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
 .cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 .cmp-tbl {
@@ -428,7 +429,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
   <!-- GRID AREA -->
   <div id="gridWrap">
-    <div id="myGrid" class="ag-theme-alpine" style="width:100%"></div>
+    <div id="myGrid" class="ag-theme-alpine" style="width:100%;height:500px"></div>
   </div>
 
   <!-- COMPARATIVO TABLE (reemplaza gridWrap en vista comparativo) -->
@@ -449,7 +450,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
       <div class="prod-hdr-meta" id="prodMeta"></div>
       <button class="prod-close" onclick="closeProdPanel()">✕ CERRAR</button>
     </div>
-    <div id="prodGrid" class="ag-theme-alpine" style="width:100%"></div>
+    <div id="prodGrid" class="ag-theme-alpine" style="width:100%;height:300px"></div>
   </div>
 
   <!-- STATUS BAR -->
@@ -629,7 +630,8 @@ function inicializar() {
   updateHeader();
   document.getElementById('loader').style.display = 'none';
   document.getElementById('app').style.display   = 'block';
-  setTimeout(function(){ if (mainGridApi) mainGridApi.sizeColumnsToFit(); }, 100);
+  setTimeout(resizeGrid, 80);
+  setTimeout(resizeGrid, 300); // segundo llamado por si AG Grid tarda en inicializar
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -811,7 +813,6 @@ function buildMainGrid() {
     enableCellTextSelection: true,
     animateRows: false,
     suppressColumnVirtualisation: false,
-    domLayout: 'autoHeight',
     onGridReady: function(params) { mainGridApi = params.api; },
     onCellClicked: function(e) { onMainCellClick(e); },
   };
@@ -819,12 +820,11 @@ function buildMainGrid() {
 }
 function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
   if (!mainGridApi) return;
-  mainGridApi.setPinnedBottomRowData([]);
+  mainGridApi.setPinnedBottomRowData([]);   // limpiar siempre primero
   mainGridApi.setColumnDefs(colDefs);
   mainGridApi.setRowData(rowData);
   mainGridApi.sizeColumnsToFit();
   document.getElementById('stTotal').textContent = statusText || '';
-  setTimeout(reportHeight, 80);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -893,7 +893,7 @@ function renderView() {
   else if (state.view === 'detalle')   renderDetalle();
   else if (state.view === 'productos') renderProductosFull();
   else if (state.view === 'servicios') renderServicios();
-  setTimeout(function(){ if (mainGridApi) mainGridApi.sizeColumnsToFit(); }, 50);
+  setTimeout(resizeGrid, 30);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1548,7 +1548,6 @@ function showProdPanel(rowData, opts) {
     var initOpts = {
       columnDefs: getProdCols(), rowData: [],
       rowHeight: 20, headerHeight: 23,
-      domLayout: 'autoHeight',
       defaultColDef: { sortable: true, filter: true, resizable: true },
       onGridReady: function(p) { prodGridApi = p.api; prodGridApi.sizeColumnsToFit(); }
     };
@@ -1577,7 +1576,6 @@ function showProdPanel(rowData, opts) {
     prodGridApi.setColumnDefs(getProdCols());
     prodGridApi.setRowData(rows);
     prodGridApi.sizeColumnsToFit();
-    setTimeout(reportHeight, 80);
   }
 }
 function getProdCols() {
@@ -1616,6 +1614,26 @@ document.addEventListener('click', function(e) {
 // RESIZE HELPER
 // ═══════════════════════════════════════════════════════════
 function resizeGrid() {
+  // Medir la altura real de todos los elementos fijos alrededor del grid
+  var hdr      = document.querySelector('.app-hdr');
+  var toolbar  = document.querySelector('.toolbar');
+  var tabs     = document.querySelector('.view-tabs');
+  var rangeBar = document.querySelector('.range-bar');
+  var statusbar= document.querySelector('.statusbar');
+  var prodPanel= document.getElementById('prodPanel');
+
+  var used = 0;
+  if (hdr)       used += hdr.offsetHeight;
+  if (toolbar)   used += toolbar.offsetHeight;
+  if (tabs)      used += tabs.offsetHeight;
+  if (rangeBar && rangeBar.classList.contains('show')) used += rangeBar.offsetHeight;
+  if (statusbar) used += statusbar.offsetHeight;
+  if (prodPanel && prodPanel.classList.contains('show')) used += prodPanel.offsetHeight;
+
+  // document.documentElement.clientHeight = altura real del iframe
+  var available = document.documentElement.clientHeight - used - 4;
+  var h = Math.max(available, 300);
+  document.getElementById('myGrid').style.height = h + 'px';
   if (mainGridApi) mainGridApi.sizeColumnsToFit();
 }
 window.addEventListener('resize', resizeGrid);
@@ -1625,8 +1643,8 @@ window.addEventListener('resize', resizeGrid);
 // ═══════════════════════════════════════════════════════════
 function reportHeight() {
   var appEl = document.getElementById('app');
-  var h = appEl ? appEl.scrollHeight + 20 : document.body.scrollHeight + 20;
-  window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 400) }, '*');
+  var h = appEl ? appEl.scrollHeight + 60 : document.body.scrollHeight + 60;
+  window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: Math.max(h, 700) }, '*');
 }
 var ro = new ResizeObserver(reportHeight);
 ro.observe(document.body);
@@ -1673,7 +1691,7 @@ if (typeof agGrid === 'undefined') {
 </html>"""
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
-components.html(html_final, height=900, scrolling=True)
+components.html(html_final, height=800, scrolling=False)
 
 # ─── Barra inferior: Descarga XLSX + Panel Crear Hoja WK ─────────────────────
 st.markdown("""
