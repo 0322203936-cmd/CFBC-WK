@@ -1792,47 +1792,47 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         fill("B126:J172", "FFFFFF")
         fill("L126:S172", "FFFFFF")
 
-        # ── Color de texto navy (#333399) en todo el cuerpo ───────────────
-        font("B1:J175",  bold=False, color="333399")
-        font("L1:S175",  bold=False, color="333399")
+        # ── Color de texto navy (#333399) en todo el cuerpo + tamaño 10 ──
+        font("B1:J175",  bold=False, color="333399", size=10)
+        font("L1:S175",  bold=False, color="333399", size=10)
 
         # ── Negritas ──────────────────────────────────────────────────────
-        font("B1:B3",    bold=True,  color="333399")
-        font("B9",       bold=True,  color="333399")
-        font("B22",      bold=True,  color="333399")
-        font("B61",      bold=True,  color="333399")
-        font("B72",      bold=True,  color="333399")
-        font("B74",      bold=True,  color="333399")
-        font("B93:B97",  bold=True,  color="333399")
-        font("B101",     bold=True,  color="333399")
-        font("B103",     bold=True,  color="333399")
-        font("B105",     bold=True,  color="333399")
-        font("B106",     bold=True,  color="333399")
-        font("B108",     bold=True,  color="333399")
-        font("B110",     bold=True,  color="333399")
-        font("B116",     bold=True,  color="333399")
-        font("B118",     bold=True,  color="333399")
-        font("B119",     bold=True,  color="333399")
-        font("B121",     bold=True,  color="333399")
-        font("B124",     bold=True,  color="333399")
-        font("B140",     bold=True,  color="333399")
+        font("B1:B3",    bold=True,  color="333399", size=10)
+        font("B9",       bold=True,  color="333399", size=10)
+        font("B22",      bold=True,  color="333399", size=10)
+        font("B61",      bold=True,  color="333399", size=10)
+        font("B72",      bold=True,  color="333399", size=10)
+        font("B74",      bold=True,  color="333399", size=10)
+        font("B93:B97",  bold=True,  color="333399", size=10)
+        font("B101",     bold=True,  color="333399", size=10)
+        font("B103",     bold=True,  color="333399", size=10)
+        font("B105",     bold=True,  color="333399", size=10)
+        font("B106",     bold=True,  color="333399", size=10)
+        font("B108",     bold=True,  color="333399", size=10)
+        font("B110",     bold=True,  color="333399", size=10)
+        font("B116",     bold=True,  color="333399", size=10)
+        font("B118",     bold=True,  color="333399", size=10)
+        font("B119",     bold=True,  color="333399", size=10)
+        font("B121",     bold=True,  color="333399", size=10)
+        font("B124",     bold=True,  color="333399", size=10)
+        font("B140",     bold=True,  color="333399", size=10)
         # Columna C subtotales / columna L subtotales USD
         for rng in ["C22:J22", "C61:J61", "C72:J72", "C74:J74",
                     "L22:S22", "L61:S61", "L72:S72", "L74:S74",
                     "L76:L92", "L95:L121",
                     "L101:S101", "L103:S103", "L105:S106", "L108:S108",
                     "L111:N114", "L116:N119", "L121:S121"]:
-            font(rng, bold=True)
+            font(rng, bold=True, size=10)
         # Columna C negrita en todas las filas de datos
         for rng in ["C10:C21", "C24:C60", "C63:C70",
                     "C76:C92", "C95:C121"]:
-            font(rng, bold=True, color="333399")
+            font(rng, bold=True, color="333399", size=10)
         # KPI headers — texto blanco negrita
         for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
-            font(rng, bold=True, color="FFFFFF")
+            font(rng, bold=True, color="FFFFFF", size=10)
         # Texto azul en valores KPI proyectos/logística
         for rng in ["C126:C172", "L126:L172"]:
-            font(rng, bold=False, color="0000FF")
+            font(rng, bold=False, color="0000FF", size=10)
 
         # ── Bordes — estrategia simplificada (pocas llamadas) ─────────────
         # ESTRUCTURA PRINCIPAL: 3 columnas clave con rangos grandes
@@ -1919,17 +1919,62 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         # ── Alineación ────────────────────────────────────────────────────
         fmt("B2",    {"horizontalAlignment": "Center"})
         fmt("B3",    {"horizontalAlignment": "Center"})
+        fmt("B4",    {"horizontalAlignment": "Center"})
         fmt("C5:J5", {"horizontalAlignment": "Center"})
-        fmt("L5:S5", {"horizontalAlignment": "Center"})
-        fmt("B6",    {"horizontalAlignment": "Center"})
-        fmt("C7:J7", {"horizontalAlignment": "Center"})
-        fmt("L7:S7", {"horizontalAlignment": "Center"})
+        fmt("L5:S5", {"horizontalAlignment": "Center", "verticalAlignment": "Center"})
+        fmt("B6",    {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
+        fmt("B7",    {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
+        fmt("C7:J7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
+        fmt("L7:S7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
         fmt("C8",    {"horizontalAlignment": "Center"})
         fmt("L8",    {"horizontalAlignment": "Center"})
         fmt("B9",    {"horizontalAlignment": "Center"})
         fmt("L125",  {"horizontalAlignment": "Center"})
         fmt("L143",  {"horizontalAlignment": "Center"})
         fmt("N143",  {"horizontalAlignment": "Center"})
+
+        # ── Anchos de columnas ────────────────────────────────────────────
+        # Configurar anchos de columna para que coincidan con el formato esperado
+        # Graph API requiere usar el endpoint de columnas específico
+        column_widths = {
+            "A": 3,
+            "B": 69.4,
+            "C": 14,
+            "D": 11, "E": 11, "F": 11, "G": 11, "H": 11, "I": 11, "J": 11,
+            "K": 3,
+            "L": 11, "M": 11, "N": 11, "O": 11, "P": 11, "Q": 11, "R": 11, "S": 11,
+        }
+        for col_letter, width in column_widths.items():
+            try:
+                # Usamos el endpoint de formato de rango para establecer el ancho
+                requests.patch(
+                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{col_letter}:{col_letter}\')/format',
+                    headers=hdrs,
+                    json={"columnWidth": width * 7.5},
+                    timeout=20,
+                )
+            except Exception as e:
+                # No es crítico si falla el ajuste de ancho
+                print(f"⚠️  Error configurando ancho columna {col_letter}: {e}")
+
+        # ── Alto de filas ─────────────────────────────────────────────────
+        # Configurar alto de filas específicas
+        row_heights = {
+            3: 15.0,
+            4: 15.0,
+            6: 26.4,
+        }
+        for row_num, height in row_heights.items():
+            try:
+                requests.patch(
+                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{row_num}:{row_num}\')/format',
+                    headers=hdrs,
+                    json={"rowHeight": height},
+                    timeout=20,
+                )
+            except Exception as e:
+                # No es crítico si falla el ajuste de alto
+                print(f"⚠️  Error configurando alto fila {row_num}: {e}")
 
         # ── Merge de celdas ───────────────────────────────────────────────
         merges = [
