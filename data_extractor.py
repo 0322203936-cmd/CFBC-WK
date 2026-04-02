@@ -1744,17 +1744,16 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             )
 
         def border(rng, left=None, right=None, top=None, bottom=None):
-            body = {}
             style_map = {"thin": "Continuous", "medium": "Medium"}
-            if left:   body["leftBorderStyle"]   = style_map.get(left, left)
-            if right:  body["rightBorderStyle"]  = style_map.get(right, right)
-            if top:    body["topBorderStyle"]    = style_map.get(top, top)
-            if bottom: body["bottomBorderStyle"] = style_map.get(bottom, bottom)
-            if body:
-                requests.patch(
-                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format',
-                    headers=hdrs, json=body, timeout=30,
-                )
+            base = f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/borders'
+            for side_name, style in [("EdgeLeft",left),("EdgeRight",right),("EdgeTop",top),("EdgeBottom",bottom)]:
+                if style:
+                    requests.patch(
+                        f'{base}/{side_name}',
+                        headers=hdrs,
+                        json={"style": style_map.get(style, style), "color": "#000000"},
+                        timeout=30,
+                    )
 
         # ── Colores de fondo ──────────────────────────────────────────────
         fill("B2",        "DAE3F3")   # azul claro encabezado semana
