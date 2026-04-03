@@ -460,14 +460,10 @@ try {
 }
 
 // =======================================================
-// CONSTANTES
+// CONSTANTES Y CONFIGURACIÓN DINÁMICA
 // =======================================================
-var RANCH_ORDER  = ['Prop-RM','PosCo-RM','Campo-RM','Isabela','HOOPS','Cecilia','Cecilia 25','Christina','Albahaca-RM','Campo-VI'];
-var RANCH_COLORS = {
-  'Prop-RM':'#047857','PosCo-RM':'#1d4ed8','Campo-RM':'#b45309',
-  'Isabela':'#7c3aed','HOOPS':'#c2410c','Cecilia':'#be185d',
-  'Cecilia 25':'#047857','Christina':'#0369a1','Albahaca-RM':'#6d28d9','Campo-VI':'#64748b'
-};
+var RANCH_ORDER  = (DATA && DATA.config) ? DATA.config.ranch_order : [];
+var RANCH_COLORS = (DATA && DATA.config) ? DATA.config.ranch_colors : {};
 var YEAR_COLORS = {2021:'#0ea5e9',2022:'#d97706',2023:'#16a34a',2024:'#9333ea',2025:'#f97316',2026:'#dc2626'};
 var CAT_MIRFE = 'FERTILIZANTES';
 var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
