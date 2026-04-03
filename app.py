@@ -302,7 +302,11 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .chg-0   { color: #aaa; }
 
 /* ── PRODUCTOS PANEL ─────────────────────────── */
-#prodPanel { display: none; background: #fff; border-top: 2px solid var(--green); }
+#prodPanel { 
+  display: none; background: #fff; border: 1px solid var(--green); 
+  border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+  margin: 15px auto; max-width: 600px; overflow: hidden;
+}
 #prodPanel.show { display: block; }
 .prod-hdr {
   background: var(--navy); padding: 5px 10px;
@@ -316,9 +320,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   cursor: pointer; font-size: 10px; padding: 1px 8px; font-family: inherit;
 }
 .prod-close:hover { border-color: #fff; color: #fff; }
-#prodTableWrap { overflow: auto; max-height: 280px; scrollbar-width: thin; scrollbar-color: #b0c4d8 transparent; }
-#prodTableWrap::-webkit-scrollbar { height: 5px; width: 5px; }
-#prodTableWrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
+#prodTableWrap { overflow: visible; }
 
 /* ── STATUS BAR ──────────────────────────────── */
 .statusbar {
