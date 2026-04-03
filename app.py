@@ -67,22 +67,22 @@ HTML = """<!DOCTYPE html>
   --blue:   #2563eb;
   --border: #d0d0d0;
 
-  /* Pivot-table palette */
-  --pt-hdr-bg:      #DEEAF1;   /* header de columnas  */
-  --pt-hdr-border:  #A8C4D8;
-  --pt-grp-bg:      #a8c8e8;   /* fila de grupo/año   */
-  --pt-grp-fg:      #1e3a5f;
-  --pt-sub-bg:      #daeaf6;   /* fila subtotal       */
-  --pt-sub-fg:      #1e3a5f;
+  /* Pivot-table palette — Excel style */
+  --pt-hdr-bg:      #D9E1F2;   /* header de columnas  */
+  --pt-hdr-border:  #8EA9C1;
+  --pt-grp-bg:      #4472C4;   /* fila de grupo/año   */
+  --pt-grp-fg:      #ffffff;
+  --pt-sub-bg:      #BDD7EE;   /* fila subtotal       */
+  --pt-sub-fg:      #000000;
   --pt-tot-bg:      #9DC3E6;   /* fila total general  */
-  --pt-tot-fg:      #1e3a5f;
+  --pt-tot-fg:      #000000;
   --pt-row-hover:   #EBF3FB;
-  --pt-cell-border: #D0DCE8;
+  --pt-cell-border: #BFBFBF;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: Calibri, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   background: #f0f0f0;
   overflow-x: hidden;
 }
@@ -103,25 +103,25 @@ body {
 
 /* ── HEADER ─────────────────────────────────── */
 .app-hdr {
-  background: #a8c8e8;
+  background: #4472C4;
   border-bottom: 3px solid var(--green);
   padding: 5px 10px;
   display: flex; align-items: center; gap: 0;
   height: 36px; overflow: hidden;
 }
 .hdr-brand {
-  color: #1e3a5f; font-size: 12px; font-weight: 700;
+  color: #ffffff; font-size: 12px; font-weight: 700;
   letter-spacing: 1px; white-space: nowrap;
-  padding-right: 12px; border-right: 1px solid rgba(30,58,95,0.25);
+  padding-right: 12px; border-right: 1px solid rgba(255,255,255,0.3);
   flex-shrink: 0;
 }
 .hdr-btn {
   margin-left: auto; flex-shrink: 0;
   font-size: 10px; font-weight: 700;
   background: rgba(255,255,255,0.35);
-  border: 1px solid rgba(30,58,95,0.25);
+  border: 1px solid rgba(255,255,255,0.35);
   border-radius: 3px; padding: 3px 10px; cursor: pointer;
-  color: #1e3a5f; height: 24px;
+  color: #ffffff; height: 24px;
   transition: background 0.1s; white-space: nowrap;
 }
 .hdr-btn:hover { background: rgba(255,255,255,0.55); }
@@ -234,7 +234,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   padding: 3px 8px;
   border: 1px solid var(--pt-cell-border);
   white-space: nowrap;
-  color: #333;
+  color: #000000;
   height: 24px;
   line-height: 18px;
 }
