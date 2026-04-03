@@ -69,9 +69,9 @@ HTML = """<!DOCTYPE html>
   /* Pivot-table palette */
   --pt-hdr-bg:      #DEEAF1;   /* header de columnas  */
   --pt-hdr-border:  #A8C4D8;
-  --pt-grp-bg:      #2E74B5;   /* fila de grupo/año   */
-  --pt-grp-fg:      #ffffff;
-  --pt-sub-bg:      #BDD7EE;   /* fila subtotal       */
+  --pt-grp-bg:      #a8c8e8;   /* fila de grupo/año   */
+  --pt-grp-fg:      #1e3a5f;
+  --pt-sub-bg:      #daeaf6;   /* fila subtotal       */
   --pt-sub-fg:      #1e3a5f;
   --pt-tot-bg:      #9DC3E6;   /* fila total general  */
   --pt-tot-fg:      #1e3a5f;
