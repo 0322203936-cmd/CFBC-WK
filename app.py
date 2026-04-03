@@ -390,12 +390,7 @@ APP_HTML_BODY = """
     <span class="range-val" id="toWeekLabel">W52</span>
     <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
     <span class="range-badge" id="rangeBadge">W01 → W52</span>
-    <div class="tb-sep"></div>
-    <div class="tb-grp" style="margin-left:4px">
-      <button class="tb-btn active" id="rtgYear" onclick="setRangeTableGroup('year')">Año→Sem</button>
-      <button class="tb-btn"        id="rtgWeek" onclick="setRangeTableGroup('week')">Sem→Año</button>
-    </div>
-    <button class="tb-btn" onclick="resetRange()" style="margin-left:4px">&#8634; Reset</button>
+
   </div>
 
   <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
@@ -901,13 +896,7 @@ function renderAnual() {
 // =======================================================
 // VIEW 3: COMPARATIVO
 // =======================================================
-var rangeTableGroup='year';
-function setRangeTableGroup(g) {
-  rangeTableGroup=g;
-  document.getElementById('rtgYear').className='tb-btn'+(g==='year'?' active':'');
-  document.getElementById('rtgWeek').className='tb-btn'+(g==='week'?' active':'');
-  renderComparativo();
-}
+// (Botones de grupo removidos)
 function fmtMes(dr) {
   if (!dr) return '&#8212;';
   var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -967,75 +956,32 @@ function renderComparativo() {
     });
   });
 
-  var head,body;
-  if (rangeTableGroup==='year') {
-    head='<tr><th>Semana</th><th>Fecha</th><th>Total '+sym+'</th><th>Δ$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
-    body=yrs.map(function(yr,yi){
-      var col=YEAR_COLORS[yr]||'#888';
-      var prevWkVal=null;
-      var wkRows=rangeWeeks.map(function(w){
-        var d=weekData[yr][w];
-        var val=d?(state.currency==='usd'?d.usd:d.mxn):0;
-        var dCell=deltaCellHtml(val,prevWkVal);
-        if (val>0) prevWkVal=val;
-        var ranchCells=ranchCols.map(function(r){
-          if (!d) return '<td class="cell-muted">&#8212;</td>';
-          var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
-          var v=src[r]||0;
-          var style='color:'+(v>0?(RANCH_COLORS[r]||'#888'):'#ddd')+(v>0?';cursor:pointer':'');
-          var attrs=v>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch="'+r+'"':'';
-          return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'&#8212;')+'</td>';
-        }).join('');
-        var totalStyle='color:'+(val>0?col:'#bbb')+';font-weight:'+(val>0?'600':'400')+(val>0?';cursor:pointer':'');
-        var totalAttrs=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
-        return '<tr class="cmp-row">'+
-          '<td style="color:'+col+';font-weight:600">'+String(yr).slice(2)+String(w).padStart(2,'0')+'</td>'+
-          '<td style="color:#777;font-size:11px">'+fmtMes(d&&d.date_range)+'</td>'+
-          '<td style="'+totalStyle+'"'+totalAttrs+'>'+fmt(val)+'</td>'+
-          dCell+ranchCells+'</tr>';
+  var head='<tr><th>Semana</th><th>Fecha</th><th>Total '+sym+'</th><th>Δ$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
+  var body=yrs.map(function(yr,yi){
+    var col=YEAR_COLORS[yr]||'#888';
+    var prevWkVal=null;
+    return rangeWeeks.map(function(w){
+      var d=weekData[yr][w];
+      var val=d?(state.currency==='usd'?d.usd:d.mxn):0;
+      var dCell=deltaCellHtml(val,prevWkVal);
+      if (val>0) prevWkVal=val;
+      var ranchCells=ranchCols.map(function(r){
+        if (!d) return '<td class="cell-muted">&#8212;</td>';
+        var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
+        var v=src[r]||0;
+        var style='color:'+(v>0?(RANCH_COLORS[r]||'#888'):'#ddd')+(v>0?';cursor:pointer':'');
+        var attrs=v>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch="'+r+'"':'';
+        return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'&#8212;')+'</td>';
       }).join('');
-      // Fila de cabecera de año
-      var grpHdr='<tr class="cmp-grp-hdr"><td colspan="2" style="color:#fff">&#9660; '+yr+'</td>'+
-        '<td style="color:#fff;font-weight:700">'+fmt(byYear[yr]?(state.currency==='usd'?byYear[yr].usd:byYear[yr].mxn):0)+'</td>'+
-        '<td></td>'+ranchCols.map(function(r){
-          var d=byYear[yr]; if(!d) return '<td>&#8212;</td>';
-          var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
-          var v=src[r]||0;
-          return '<td style="color:'+(v>0?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.4)')+';font-size:11px">'+(v>0?fmt(v):'&#8212;')+'</td>';
-        }).join('')+'</tr>';
-      return grpHdr+wkRows;
+      var totalStyle='color:'+(val>0?col:'#bbb')+';font-weight:'+(val>0?'600':'400')+(val>0?';cursor:pointer':'');
+      var totalAttrs=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
+      return '<tr class="cmp-row">'+
+        '<td style="color:'+col+';font-weight:600">'+String(yr).slice(2)+String(w).padStart(2,'0')+'</td>'+
+        '<td style="color:#777;font-size:11px">'+fmtMes(d&&d.date_range)+'</td>'+
+        '<td style="'+totalStyle+'"'+totalAttrs+'>'+fmt(val)+'</td>'+
+        dCell+ranchCells+'</tr>';
     }).join('');
-  } else {
-    head='<tr><th>Año</th><th>Total '+sym+'</th><th>Δ$ vs año ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
-    body=rangeWeeks.map(function(w){
-      var dateEx='';
-      yrs.forEach(function(yr){if(weekData[yr][w]&&weekData[yr][w].date_range)dateEx=weekData[yr][w].date_range;});
-      var hdr='<tr class="cmp-grp-hdr"><td colspan="2" style="color:#fff">&#128198; '+wFmt(w)+(dateEx?' <span style="font-size:10px;opacity:0.7">'+fmtMes(dateEx)+'</span>':'')+'</td><td colspan="'+(1+ranchCols.length)+'"></td></tr>';
-      var prevYrVal=null;
-      var yrRows=yrs.map(function(yr){
-        var col=YEAR_COLORS[yr]||'#888';
-        var d=weekData[yr][w], val=d?(state.currency==='usd'?d.usd:d.mxn):0;
-        var dCell=deltaCellHtml(val,prevYrVal);
-        if (val>0) prevYrVal=val;
-        var ranchCells=ranchCols.map(function(r){
-          if (!d) return '<td class="cell-muted">&#8212;</td>';
-          var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
-          var v=src[r]||0;
-          var style='color:'+(v>0?(RANCH_COLORS[r]||'#888'):'#ddd')+(v>0?';cursor:pointer':'');
-          var attrs=v>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch="'+r+'"':'';
-          return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'&#8212;')+'</td>';
-        }).join('');
-        var ts='color:'+(val>0?col:'#bbb')+';font-weight:'+(val>0?'600':'400')+(val>0?';cursor:pointer':'');
-        var ta=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
-        return '<tr class="cmp-row">'+
-          '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+col+';margin-right:5px"></span><strong style="color:'+col+'">'+yr+'</strong></td>'+
-          '<td style="'+ts+'"'+ta+'>'+fmt(val)+'</td>'+dCell+ranchCells+'</tr>';
-      }).join('');
-      var wkTotal=yrs.reduce(function(acc,yr){var d=weekData[yr][w];return acc+(d?(state.currency==='usd'?d.usd:d.mxn):0);},0);
-      var totRow='<tr class="cmp-total-row"><td><strong>TOTAL</strong></td><td><strong>'+fmt(wkTotal)+'</strong></td><td colspan="'+(1+ranchCols.length)+'"></td></tr>';
-      return hdr+yrRows+totRow;
-    }).join('');
-  }
+  }).join('');
 
   document.getElementById('cmpHead').innerHTML=head;
   document.getElementById('cmpBody').innerHTML=body;
