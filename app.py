@@ -56,7 +56,7 @@ HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CFBC — Control Operativo</title>
+<title>CFBC &#8212; Control Operativo</title>
 <style>
 :root {
   --navy:   #1e3a5f;
@@ -341,7 +341,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 <!-- LOADER -->
 <div id="loader">
   <div class="spin"></div>
-  <div class="load-txt">CFBC — Cargando datos...</div>
+  <div class="load-txt">CFBC &#8212; Cargando datos...</div>
 </div>
 
 <!-- APP -->
@@ -349,9 +349,9 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
   <!-- HEADER -->
   <div class="app-hdr">
-    <div class="hdr-brand">CFBC ▸ CONTROL SEMANAL</div>
-    <button class="hdr-btn" onclick="exportCSV()" style="margin-left:auto">⬇ CSV</button>
-    <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">⟳</button>
+    <div class="hdr-brand">CFBC &#9656; CONTROL SEMANAL</div>
+    <button class="hdr-btn" onclick="exportCSV()" style="margin-left:auto">&#11015; CSV</button>
+    <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">&#8635;</button>
   </div>
 
   <!-- TOOLBAR -->
@@ -366,9 +366,9 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <div class="tb-sep"></div>
     <span class="tb-label">Semana</span>
     <div class="week-ctr">
-      <button class="tb-btn" onclick="prevWeek()">◀</button>
-      <span id="weekLabel">—</span>
-      <button class="tb-btn" onclick="nextWeek()">▶</button>
+      <button class="tb-btn" onclick="prevWeek()">&#9664;</button>
+      <span id="weekLabel">&#8212;</span>
+      <button class="tb-btn" onclick="nextWeek()">&#9654;</button>
     </div>
     <input type="range" class="tb-slider" id="weekSlider" min="1" max="52" value="1" oninput="onWeekSlider(this.value)">
     <div class="tb-sep"></div>
@@ -402,7 +402,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
       <button class="tb-btn active" id="rtgYear" onclick="setRangeTableGroup('year')">Año→Sem</button>
       <button class="tb-btn"        id="rtgWeek" onclick="setRangeTableGroup('week')">Sem→Año</button>
     </div>
-    <button class="tb-btn" onclick="resetRange()" style="margin-left:4px">↺ Reset</button>
+    <button class="tb-btn" onclick="resetRange()" style="margin-left:4px">&#8634; Reset</button>
   </div>
 
   <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
@@ -426,27 +426,48 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <div class="prod-hdr">
       <div class="prod-hdr-title" id="prodTitle">PRODUCTOS</div>
       <div class="prod-hdr-meta"  id="prodMeta"></div>
-      <button class="prod-close" onclick="closeProdPanel()">✕ CERRAR</button>
+      <button class="prod-close" onclick="closeProdPanel()">&#10005; CERRAR</button>
     </div>
     <div id="prodTableWrap"></div>
   </div>
 
   <!-- STATUS BAR -->
   <div class="statusbar" id="statusbar">
-    <span>Total: <b id="stTotal">—</b></span>
+    <span>Total: <b id="stTotal">&#8212;</b></span>
   </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-// DATOS
-// ═══════════════════════════════════════════════════════
-var _raw  = atob('__DATA_JSON__');
-var DATA  = JSON.parse(_raw);
+// =======================================================
+// ERROR HANDLER &#8212; primero de todo
+// =======================================================
+window.onerror = function(msg, src, line, col, err) {
+  var loader = document.getElementById('loader');
+  if (loader) loader.innerHTML =
+    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;' +
+    'border-radius:8px;border:1px solid #fecaca;max-width:600px;margin:20px auto">' +
+    '<b>ERROR (línea ' + line + '):</b><br>' + msg +
+    (err && err.stack ? '<br><pre style="font-size:10px;color:#999;margin-top:8px;overflow:auto">' + err.stack + '</pre>' : '') +
+    '</div>';
+  return true;
+};
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
+// DATOS
+// =======================================================
+var DATA;
+try {
+  var _raw = atob('__DATA_JSON__');
+  DATA = JSON.parse(_raw);
+} catch(e) {
+  document.getElementById('loader').innerHTML =
+    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border-radius:8px;border:1px solid #fecaca;max-width:500px;margin:20px auto">' +
+    '<b>Error parseando datos:</b> ' + e.message + '</div>';
+}
+
+// =======================================================
 // CONSTANTES
-// ═══════════════════════════════════════════════════════
+// =======================================================
 var RANCH_ORDER  = ['Prop-RM','PosCo-RM','Campo-RM','Isabela','HOOPS','Cecilia','Cecilia 25','Christina','Albahaca-RM','Campo-VI'];
 var RANCH_COLORS = {
   'Prop-RM':'#047857','PosCo-RM':'#1d4ed8','Campo-RM':'#b45309',
@@ -457,42 +478,42 @@ var YEAR_COLORS = {2021:'#0ea5e9',2022:'#d97706',2023:'#16a34a',2024:'#9333ea',2
 var CAT_MIRFE = 'FERTILIZANTES';
 var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // ESTADO
-// ═══════════════════════════════════════════════════════
+// =======================================================
 var state = { cat:'', currency:'usd', activeYears:{}, view:'semana', weekIdx:0, fromWeek:1, toWeek:52 };
 var allWeeks = [];
 
-// ═══════════════════════════════════════════════════════
-// TABLA PIVOT — estado global
-// ═══════════════════════════════════════════════════════
+// =======================================================
+// TABLA PIVOT &#8212; estado global
+// =======================================================
 var _tableRows    = [];
 var _tableColDefs = [];
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // FORMATEO
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function fmt(n) {
-  if (n === null || n === undefined || n === 0 || isNaN(n)) return '—';
+  if (n === null || n === undefined || n === 0 || isNaN(n)) return '&#8212;';
   var neg = n < 0, s = Math.abs(n);
   return (neg ? '-$' : '$') + s.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
 function fmtFull(n) {
-  if (!n || isNaN(n)) return '—';
+  if (!n || isNaN(n)) return '&#8212;';
   var neg = n < 0, s = Math.abs(n);
   return (neg ? '-$' : '$') + s.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 function fmtPct(n) {
-  if (n === null || n === undefined || isNaN(n)) return '—';
+  if (n === null || n === undefined || isNaN(n)) return '&#8212;';
   var sign = n > 0 ? '+' : '';
   return sign + n.toFixed(1) + '%';
 }
 function wFmt(n) { return 'W' + String(n).padStart(2,'0'); }
 function recargar() { window.location.reload(); }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // DATA HELPERS
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function getActiveYears() { return DATA.years.filter(function(y){ return state.activeYears[y]; }); }
 function getWeekDetail(cat, wn, yr) {
   return DATA.weekly_detail.filter(function(r){ return r.categoria===cat && r.week===wn && r.year===yr; });
@@ -522,25 +543,25 @@ function sumDetail(recs, currency) {
   return out;
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // CELL RENDERERS (devuelven HTML string)
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function moneyRenderer(p) {
   var v = p.value;
-  if (v===null||v===undefined||v===0||isNaN(v)) return '<span class="cell-muted">—</span>';
+  if (v===null||v===undefined||v===0||isNaN(v)) return '<span class="cell-muted">&#8212;</span>';
   return '<span class="cell-navy">' + fmt(v) + '</span>';
 }
 function deltaRenderer(p) {
   var v = p.value;
-  if (v===null||v===undefined||isNaN(v)) return '<span class="cell-muted">—</span>';
+  if (v===null||v===undefined||isNaN(v)) return '<span class="cell-muted">&#8212;</span>';
   if (Math.abs(v)<0.5) return '<span style="color:#999">~0%</span>';
   var cl = v>0 ? 'cell-pos' : 'cell-neg';
-  var ar = v>0 ? '▲' : '▼';
+  var ar = v>0 ? '&#9650;' : '&#9660;';
   return '<span class="'+cl+'">'+ar+' '+Math.abs(v).toFixed(1)+'%</span>';
 }
 function deltaAmtRenderer(p) {
   var v = p.value;
-  if (!v||isNaN(v)) return '<span class="cell-muted">—</span>';
+  if (!v||isNaN(v)) return '<span class="cell-muted">&#8212;</span>';
   var cl = v>0?'cell-pos':'cell-neg';
   var sign = v>0?'+':'';
   return '<span class="'+cl+'">'+sign+fmt(v)+'</span>';
@@ -553,14 +574,14 @@ function ranchRenderer(ranch) {
   var col = RANCH_COLORS[ranch]||'#888';
   return function(p) {
     var v = p.value;
-    if (!v||isNaN(v)||v===0) return '<span class="cell-muted">—</span>';
+    if (!v||isNaN(v)||v===0) return '<span class="cell-muted">&#8212;</span>';
     return '<span style="color:'+col+';font-weight:600">'+fmt(v)+'</span>';
   };
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // RENDER PIVOT TABLE
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function renderPivotTable(colDefs, rows, statusText) {
   _tableColDefs = colDefs;
   _tableRows    = rows;
@@ -637,9 +658,9 @@ document.addEventListener('click', function(e) {
   onMainCellClick({data:row, colDef:col});
 });
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // INICIALIZAR
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function inicializar() {
   // prod-link handler
   if (!window._prodLinkBound) {
@@ -697,9 +718,9 @@ function inicializar() {
   setTimeout(resizeTable, 300);
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // UI BUILDERS
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function buildCatSelect() {
   var el = document.getElementById('catSel');
   el.innerHTML = DATA.categories.map(function(c){
@@ -723,9 +744,9 @@ function updateWeekControls() {
   document.getElementById('weekLabel').textContent = String(yr).slice(2)+String(wn).padStart(2,'0');
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // EVENTS
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function onCatChange(val) { state.cat=val; renderView(); }
 function setCurrency(cur) {
   state.currency=cur;
@@ -809,9 +830,9 @@ function resetRange() {
   if (state.view==='comparativo') renderComparativo();
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // VIEW ROUTER
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function renderView() {
   document.getElementById('prodPanel').className='';
   if      (state.view==='semana')      renderSemana();
@@ -823,9 +844,9 @@ function renderView() {
   else if (state.view==='servicios')   renderServicios();
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // VIEW 1: SEMANA
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function renderSemana() {
   var yrs=getActiveYears(), wn=allWeeks[state.weekIdx]||1, sym=state.currency.toUpperCase();
   var cols = [
@@ -854,9 +875,9 @@ function renderSemana() {
   renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym+' · AÑO '+yrs[yrs.length-1]);
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // VIEW 2: ANUAL
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function renderAnual() {
   var yrs=getActiveYears(), sym=state.currency.toUpperCase();
   var cols=[
@@ -887,9 +908,9 @@ function renderAnual() {
   renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym+' · AÑO '+yrs[yrs.length-1]);
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // VIEW 3: COMPARATIVO
-// ═══════════════════════════════════════════════════════
+// =======================================================
 var rangeTableGroup='year';
 function setRangeTableGroup(g) {
   rangeTableGroup=g;
@@ -898,7 +919,7 @@ function setRangeTableGroup(g) {
   renderComparativo();
 }
 function fmtMes(dr) {
-  if (!dr) return '—';
+  if (!dr) return '&#8212;';
   var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   var lower=dr.toLowerCase();
   for (var i=0;i<MESES.length;i++){
@@ -934,7 +955,7 @@ function getRangeByYear(cat,fromW,toW) {
   return res;
 }
 function deltaCellHtml(val,prev) {
-  if (prev===null||prev===undefined||prev===0) return '<td class="delta-cell chg-0">—</td>';
+  if (prev===null||prev===undefined||prev===0) return '<td class="delta-cell chg-0">&#8212;</td>';
   var diff=val-prev, p=((diff/prev)*100).toFixed(1);
   var cls=diff>0?'chg-pos':diff<0?'chg-neg':'chg-0';
   var sign=diff>0?'+':'';
@@ -968,12 +989,12 @@ function renderComparativo() {
         var dCell=deltaCellHtml(val,prevWkVal);
         if (val>0) prevWkVal=val;
         var ranchCells=ranchCols.map(function(r){
-          if (!d) return '<td class="cell-muted">—</td>';
+          if (!d) return '<td class="cell-muted">&#8212;</td>';
           var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
           var v=src[r]||0;
           var style='color:'+(v>0?(RANCH_COLORS[r]||'#888'):'#ddd')+(v>0?';cursor:pointer':'');
           var attrs=v>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch="'+r+'"':'';
-          return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'—')+'</td>';
+          return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'&#8212;')+'</td>';
         }).join('');
         var totalStyle='color:'+(val>0?col:'#bbb')+';font-weight:'+(val>0?'600':'400')+(val>0?';cursor:pointer':'');
         var totalAttrs=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
@@ -984,13 +1005,13 @@ function renderComparativo() {
           dCell+ranchCells+'</tr>';
       }).join('');
       // Fila de cabecera de año
-      var grpHdr='<tr class="cmp-grp-hdr"><td colspan="2" style="color:#fff">▼ '+yr+'</td>'+
+      var grpHdr='<tr class="cmp-grp-hdr"><td colspan="2" style="color:#fff">&#9660; '+yr+'</td>'+
         '<td style="color:#fff;font-weight:700">'+fmt(byYear[yr]?(state.currency==='usd'?byYear[yr].usd:byYear[yr].mxn):0)+'</td>'+
         '<td></td>'+ranchCols.map(function(r){
-          var d=byYear[yr]; if(!d) return '<td>—</td>';
+          var d=byYear[yr]; if(!d) return '<td>&#8212;</td>';
           var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
           var v=src[r]||0;
-          return '<td style="color:'+(v>0?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.4)')+';font-size:11px">'+(v>0?fmt(v):'—')+'</td>';
+          return '<td style="color:'+(v>0?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.4)')+';font-size:11px">'+(v>0?fmt(v):'&#8212;')+'</td>';
         }).join('')+'</tr>';
       return grpHdr+wkRows;
     }).join('');
@@ -999,7 +1020,7 @@ function renderComparativo() {
     body=rangeWeeks.map(function(w){
       var dateEx='';
       yrs.forEach(function(yr){if(weekData[yr][w]&&weekData[yr][w].date_range)dateEx=weekData[yr][w].date_range;});
-      var hdr='<tr class="cmp-grp-hdr"><td colspan="2" style="color:#fff">📆 '+wFmt(w)+(dateEx?' <span style="font-size:10px;opacity:0.7">'+fmtMes(dateEx)+'</span>':'')+'</td><td colspan="'+(1+ranchCols.length)+'"></td></tr>';
+      var hdr='<tr class="cmp-grp-hdr"><td colspan="2" style="color:#fff">&#128198; '+wFmt(w)+(dateEx?' <span style="font-size:10px;opacity:0.7">'+fmtMes(dateEx)+'</span>':'')+'</td><td colspan="'+(1+ranchCols.length)+'"></td></tr>';
       var prevYrVal=null;
       var yrRows=yrs.map(function(yr){
         var col=YEAR_COLORS[yr]||'#888';
@@ -1007,12 +1028,12 @@ function renderComparativo() {
         var dCell=deltaCellHtml(val,prevYrVal);
         if (val>0) prevYrVal=val;
         var ranchCells=ranchCols.map(function(r){
-          if (!d) return '<td class="cell-muted">—</td>';
+          if (!d) return '<td class="cell-muted">&#8212;</td>';
           var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
           var v=src[r]||0;
           var style='color:'+(v>0?(RANCH_COLORS[r]||'#888'):'#ddd')+(v>0?';cursor:pointer':'');
           var attrs=v>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch="'+r+'"':'';
-          return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'—')+'</td>';
+          return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'&#8212;')+'</td>';
         }).join('');
         var ts='color:'+(val>0?col:'#bbb')+';font-weight:'+(val>0?'600':'400')+(val>0?';cursor:pointer':'');
         var ta=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
@@ -1039,9 +1060,9 @@ document.addEventListener('click', function(e){
   showProdFromCmp(parseInt(td.dataset.yr), parseInt(td.dataset.wk), td.dataset.ranch||null);
 });
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // VIEW 4: POR RANCHO
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function renderRancho() {
   var yrs=getActiveYears(), wn=allWeeks[state.weekIdx]||1;
   var cur=yrs[yrs.length-1], prev=yrs.length>1?yrs[yrs.length-2]:null, sym=state.currency.toUpperCase();
@@ -1050,7 +1071,7 @@ function renderRancho() {
       cellRenderer:function(p){ var c=RANCH_COLORS[p.value]||'#888'; return '<span style="color:'+c+';font-weight:700">'+(p.value||'')+'</span>'; }}
   ];
   if (prev) cols.push({field:'v'+prev, headerName:String(prev)+' '+sym, width:120, type:'numericColumn', cellRenderer:moneyRenderer});
-  cols.push({field:'v'+cur, headerName:String(cur)+' '+sym+' ★', width:120, type:'numericColumn', cellRenderer:moneyRenderer});
+  cols.push({field:'v'+cur, headerName:String(cur)+' '+sym+' &#9733;', width:120, type:'numericColumn', cellRenderer:moneyRenderer});
   if (prev) {
     cols.push({field:'deltaAmt',headerName:'Δ $',width:100,type:'numericColumn',cellRenderer:deltaAmtRenderer});
     cols.push({field:'deltaPct',headerName:'Δ %',width:90, type:'numericColumn',cellRenderer:deltaRenderer});
@@ -1069,9 +1090,9 @@ function renderRancho() {
   renderPivotTable(cols, rows, fmt(grandCur)+' '+sym+' · '+state.cat);
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // VIEW 5: DETALLE SEMANAL
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function renderDetalle() {
   var sym=state.currency.toUpperCase();
   var cols=[
@@ -1085,8 +1106,8 @@ function renderDetalle() {
   ];
   RANCH_ORDER.forEach(function(r){
     var c=RANCH_COLORS[r]||'#888';
-    cols.push({field:'rn_'+r.replace(/[^a-zA-Z0-9]/g,'_'),headerName:r,width:100,type:'numericColumn',
-      cellRenderer:function(p){var v=p.value;if(!v||v<0.01)return '<span class="cell-muted">—</span>';return '<span style="color:'+c+'">'+fmt(v)+'</span>';}});
+    cols.push((function(color){return {field:'rn_'+r.replace(/[^a-zA-Z0-9]/g,'_'),headerName:r,width:100,type:'numericColumn',
+      cellRenderer:function(p){var v=p.value;if(!v||v<0.01)return '<span class="cell-muted">&#8212;</span>';return '<span style="color:'+color+'">'+fmt(v)+'</span>';}};})(c));
   });
   var rows=[],grandTotal=0;
   DATA.weekly_detail.forEach(function(r){
@@ -1101,9 +1122,9 @@ function renderDetalle() {
   renderPivotTable(cols,rows,fmt(grandTotal)+' '+sym+' ('+rows.length+' registros) · '+state.cat);
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // VIEW 6: PRODUCTOS
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function renderProductosFull() {
   var cols=[
     { field:'tipo',      headerName:'TIPO',     width:60,  pinned:'left' },
@@ -1115,7 +1136,7 @@ function renderProductosFull() {
     { field:'producto',  headerName:'PRODUCTO',  width:260,
       cellRenderer:function(p){return '<span style="color:#1e3a5f">'+(p.value||'')+'</span>';}},
     { field:'unidades',  headerName:'UNID.',     width:80,
-      cellRenderer:function(p){return '<span style="color:#555">'+(p.value||'—')+'</span>';}},
+      cellRenderer:function(p){return '<span style="color:#555">'+(p.value||'&#8212;')+'</span>';}},
     { field:'gasto',     headerName:'GASTO',     width:100, type:'numericColumn', cellRenderer:moneyRenderer },
   ];
   var rows=[];
@@ -1128,7 +1149,7 @@ function renderProductosFull() {
         Object.keys(byTipo).forEach(function(tipo){
           var items=byTipo[tipo];
           if (!Array.isArray(items)) return;
-          items.forEach(function(item){rows.push({cat:label,tipo:tipo,week_code:parseInt(wkCode)||wkCode,rancho:ranch,producto:item[0]||'',unidades:item[1]||'—',gasto:parseFloat(item[2])||0});});
+          items.forEach(function(item){rows.push({cat:label,tipo:tipo,week_code:parseInt(wkCode)||wkCode,rancho:ranch,producto:item[0]||'',unidades:item[1]||'&#8212;',gasto:parseFloat(item[2])||0});});
         });
       });
     });
@@ -1139,9 +1160,9 @@ function renderProductosFull() {
   renderPivotTable(cols,rows,fmt(total)+' · '+rows.length+' registros');
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // VIEW 7: COSTO SERVICIOS
-// ═══════════════════════════════════════════════════════
+// =======================================================
 var SV_SUBCATS=['Electricidad','Fletes y Acarreos','Gastos de Exportación','Certificado Fitosanitario','Transporte de Personal','Compra de Flor a Terceros','Comida para el Personal','RO, TEL, RTA.Alim'];
 function renderServicios() {
   var sym=state.currency.toUpperCase();
@@ -1172,15 +1193,15 @@ function renderServicios() {
     { field:'total', headerName:'TOTAL '+sym, width:110, type:'numericColumn', cellRenderer:moneyRenderer },
     { field:'pct',   headerName:'% DEL TOTAL', width:90,  type:'numericColumn',
       cellRenderer:function(p){
-        var v=p.value; if(!v) return '—';
+        var v=p.value; if(!v) return '&#8212;';
         var w=Math.min(v/100*50,50);
         return '<div style="display:flex;align-items:center;gap:5px"><div style="width:'+w.toFixed(0)+'px;height:6px;background:#2E74B5;border-radius:2px;flex-shrink:0"></div><span>'+v.toFixed(1)+'%</span></div>';
       }},
   ];
   RANCH_ORDER.forEach(function(r){
     var c=RANCH_COLORS[r]||'#888';
-    cols.push({field:'r_'+r.replace(/[^a-zA-Z0-9]/g,'_'),headerName:r,width:100,type:'numericColumn',
-      cellRenderer:function(p){var v=p.value;if(!v||v<0.01)return '<span class="cell-muted">—</span>';return '<span style="color:'+c+'">'+fmt(v)+'</span>';}});
+    cols.push((function(color){return {field:'r_'+r.replace(/[^a-zA-Z0-9]/g,'_'),headerName:r,width:100,type:'numericColumn',
+      cellRenderer:function(p){var v=p.value;if(!v||v<0.01)return '<span class="cell-muted">&#8212;</span>';return '<span style="color:'+color+'">'+fmt(v)+'</span>';}};})(c));
   });
   var grandTotal=Object.values(svRows).reduce(function(s,r){return s+(r._total||0);},0);
   var orderedSubcats=SV_SUBCATS.filter(function(sc){return svRows[sc];});
@@ -1195,9 +1216,9 @@ function renderServicios() {
   renderPivotTable(cols,rows,fmt(grandTotal)+' '+sym);
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // CELL CLICK HANDLER
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function onMainCellClick(evt) {
   if (!evt||!evt.data||!evt.colDef) return;
   var data=evt.data, clickedField=evt.colDef.field||'';
@@ -1206,9 +1227,9 @@ function onMainCellClick(evt) {
   if (state.view==='rancho') { if (clickedField==='rancho'||clickedRanch) showProdPanel(data,{ranch:data.rancho||null}); }
 }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // PRODUCTOS SUBPANEL
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function showProdPanel(rowData, opts) {
   opts=opts||{};
   var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
@@ -1247,7 +1268,7 @@ function showProdPanel(rowData, opts) {
 
   var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
   document.getElementById('prodPanel').className='show';
-  document.getElementById('prodTitle').textContent=cat+' ▸ '+rangeText+(ranchFilter?' · '+ranchFilter:'');
+  document.getElementById('prodTitle').textContent=cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
 
   if (rows.length===0){
     document.getElementById('prodMeta').textContent='Sin datos de productos · '+rangeText;
@@ -1286,9 +1307,9 @@ function showProdPanel(rowData, opts) {
 function closeProdPanel() { document.getElementById('prodPanel').className=''; setTimeout(resizeTable,60); }
 function showProdFromCmp(yr,wk,ranch) { showProdPanel({_cat:state.cat,_year:yr,_week:wk,_fromWeek:wk,_toWeek:wk},{ranch:ranch||null}); }
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // RESIZE
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function resizeTable() {
   var used=0;
   ['app-hdr','toolbar','view-tabs','statusbar'].forEach(function(cls){
@@ -1310,9 +1331,9 @@ function resizeTable() {
 }
 window.addEventListener('resize', resizeTable);
 
-// ═══════════════════════════════════════════════════════
+// =======================================================
 // HEIGHT REPORTING
-// ═══════════════════════════════════════════════════════
+// =======================================================
 function reportHeight() {
   var appEl=document.getElementById('app');
   var h=appEl?appEl.scrollHeight+60:document.body.scrollHeight+60;
@@ -1323,30 +1344,37 @@ ro.observe(document.body);
 reportHeight();
 setInterval(reportHeight,500);
 
-// ═══════════════════════════════════════════════════════
-// ERROR HANDLER
-// ═══════════════════════════════════════════════════════
-window.onerror=function(msg,src,line){
-  document.getElementById('loader').innerHTML=
-    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border-radius:8px;border:1px solid #fecaca;max-width:600px"><b>ERROR JS:</b> '+msg+'<br><small>línea '+line+'</small></div>';
-  return true;
-};
-
-// ═══════════════════════════════════════════════════════
-// ARRANCAR
-// ═══════════════════════════════════════════════════════
-if (!DATA.weekly_series) {
-  DATA.weekly_series={};
-  DATA.categories.forEach(function(cat){DATA.weekly_series[cat]={};});
-  DATA.weekly_detail.forEach(function(r){
-    if (r.usd_total>0){
-      if (!DATA.weekly_series[r.categoria]) DATA.weekly_series[r.categoria]={};
-      var key=r.year+'-W'+String(r.week).padStart(2,'0');
-      DATA.weekly_series[r.categoria][key]=(DATA.weekly_series[r.categoria][key]||0)+r.usd_total;
-    }
-  });
+// =======================================================
+// ARRANCAR &#8212; diferido con protección
+// =======================================================
+if (!DATA || !DATA.weekly_series) {
+  if (DATA) {
+    DATA.weekly_series={};
+    DATA.categories.forEach(function(cat){DATA.weekly_series[cat]={};});
+    DATA.weekly_detail.forEach(function(r){
+      if (r.usd_total>0){
+        if (!DATA.weekly_series[r.categoria]) DATA.weekly_series[r.categoria]={};
+        var key=r.year+'-W'+String(r.week).padStart(2,'0');
+        DATA.weekly_series[r.categoria][key]=(DATA.weekly_series[r.categoria][key]||0)+r.usd_total;
+      }
+    });
+  }
 }
-inicializar();
+
+setTimeout(function() {
+  if (!DATA) return;
+  try {
+    inicializar();
+  } catch(e) {
+    var loader = document.getElementById('loader');
+    if (loader) loader.innerHTML =
+      '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;' +
+      'border-radius:8px;border:1px solid #fecaca;max-width:600px;margin:20px auto">' +
+      '<b>Error en inicializar:</b> ' + e.message +
+      (e.stack ? '<br><pre style="font-size:10px;color:#999;margin-top:8px;overflow:auto">' + e.stack + '</pre>' : '') +
+      '</div>';
+  }
+}, 100);
 </script>
 </body>
 </html>"""
