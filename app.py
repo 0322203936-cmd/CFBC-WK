@@ -479,17 +479,17 @@ var _tableColDefs = [];
 // FORMATEO
 // =======================================================
 function fmt(n) {
-  if (n === null || n === undefined || n === 0 || isNaN(n)) return '&#8212;';
+  if (n === null || n === undefined || n === 0 || isNaN(n)) return '';
   var neg = n < 0, s = Math.abs(n);
   return (neg ? '-$' : '$') + s.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
 function fmtFull(n) {
-  if (!n || isNaN(n)) return '&#8212;';
+  if (!n || isNaN(n)) return '';
   var neg = n < 0, s = Math.abs(n);
   return (neg ? '-$' : '$') + s.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 function fmtPct(n) {
-  if (n === null || n === undefined || isNaN(n)) return '&#8212;';
+  if (n === null || n === undefined || isNaN(n)) return '';
   var sign = n > 0 ? '+' : '';
   return sign + n.toFixed(1) + '%';
 }
@@ -533,12 +533,12 @@ function sumDetail(recs, currency) {
 // =======================================================
 function moneyRenderer(p) {
   var v = p.value;
-  if (v===null||v===undefined||v===0||isNaN(v)) return '<span class="cell-muted">&#8212;</span>';
+  if (v===null||v===undefined||v===0||isNaN(v)) return '';
   return '<span class="cell-navy">' + fmt(v) + '</span>';
 }
 function deltaRenderer(p) {
   var v = p.value;
-  if (v===null||v===undefined||isNaN(v)) return '<span class="cell-muted">&#8212;</span>';
+  if (v===null||v===undefined||isNaN(v)) return '';
   if (Math.abs(v)<0.5) return '<span style="color:#999">~0%</span>';
   var cl = v>0 ? 'cell-pos' : 'cell-neg';
   var ar = v>0 ? '&#9650;' : '&#9660;';
@@ -546,7 +546,7 @@ function deltaRenderer(p) {
 }
 function deltaAmtRenderer(p) {
   var v = p.value;
-  if (!v||isNaN(v)) return '<span class="cell-muted">&#8212;</span>';
+  if (!v||isNaN(v)) return '';
   var cl = v>0?'cell-pos':'cell-neg';
   var sign = v>0?'+':'';
   return '<span class="'+cl+'">'+sign+fmt(v)+'</span>';
@@ -559,7 +559,7 @@ function ranchRenderer(ranch) {
   var col = RANCH_COLORS[ranch]||'#888';
   return function(p) {
     var v = p.value;
-    if (!v||isNaN(v)||v===0) return '<span class="cell-muted">&#8212;</span>';
+    if (!v||isNaN(v)||v===0) return '';
     return '<span style="color:'+col+';font-weight:600">'+fmt(v)+'</span>';
   };
 }
@@ -898,7 +898,7 @@ function renderAnual() {
 // =======================================================
 // (Botones de grupo removidos)
 function fmtMes(dr) {
-  if (!dr) return '&#8212;';
+  if (!dr) return '';
   var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   var lower=dr.toLowerCase();
   for (var i=0;i<MESES.length;i++){
@@ -966,12 +966,12 @@ function renderComparativo() {
       var dCell=deltaCellHtml(val,prevWkVal);
       if (val>0) prevWkVal=val;
       var ranchCells=ranchCols.map(function(r){
-        if (!d) return '<td class="cell-muted">&#8212;</td>';
+        if (!d) return '<td></td>';
         var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
         var v=src[r]||0;
         var style='color:'+(v>0?(RANCH_COLORS[r]||'#888'):'#ddd')+(v>0?';cursor:pointer':'');
         var attrs=v>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch="'+r+'"':'';
-        return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'&#8212;')+'</td>';
+        return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'')+'</td>';
       }).join('');
       var totalStyle='color:'+(val>0?col:'#bbb')+';font-weight:'+(val>0?'600':'400')+(val>0?';cursor:pointer':'');
       var totalAttrs=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
@@ -1072,7 +1072,7 @@ function renderProductosFull() {
     { field:'producto',  headerName:'PRODUCTO',  width:260,
       cellRenderer:function(p){return '<span style="color:#1e3a5f">'+(p.value||'')+'</span>';}},
     { field:'unidades',  headerName:'UNID.',     width:80,
-      cellRenderer:function(p){return '<span style="color:#555">'+(p.value||'&#8212;')+'</span>';}},
+      cellRenderer:function(p){return '<span style="color:#555">'+(p.value||'')+'</span>';}},
     { field:'gasto',     headerName:'GASTO',     width:100, type:'numericColumn', cellRenderer:moneyRenderer },
   ];
   var rows=[];
@@ -1085,7 +1085,7 @@ function renderProductosFull() {
         Object.keys(byTipo).forEach(function(tipo){
           var items=byTipo[tipo];
           if (!Array.isArray(items)) return;
-          items.forEach(function(item){rows.push({cat:label,tipo:tipo,week_code:parseInt(wkCode)||wkCode,rancho:ranch,producto:item[0]||'',unidades:item[1]||'&#8212;',gasto:parseFloat(item[2])||0});});
+          items.forEach(function(item){rows.push({cat:label,tipo:tipo,week_code:parseInt(wkCode)||wkCode,rancho:ranch,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0});});
         });
       });
     });
@@ -1129,7 +1129,7 @@ function renderServicios() {
     { field:'total', headerName:'TOTAL '+sym, width:110, type:'numericColumn', cellRenderer:moneyRenderer },
     { field:'pct',   headerName:'% DEL TOTAL', width:90,  type:'numericColumn',
       cellRenderer:function(p){
-        var v=p.value; if(!v) return '&#8212;';
+        var v=p.value; if(!v) return '';
         var w=Math.min(v/100*50,50);
         return '<div style="display:flex;align-items:center;gap:5px"><div style="width:'+w.toFixed(0)+'px;height:6px;background:#2E74B5;border-radius:2px;flex-shrink:0"></div><span>'+v.toFixed(1)+'%</span></div>';
       }},
@@ -1137,7 +1137,7 @@ function renderServicios() {
   RANCH_ORDER.forEach(function(r){
     var c=RANCH_COLORS[r]||'#888';
     cols.push((function(color){return {field:'r_'+r.replace(/[^a-zA-Z0-9]/g,'_'),headerName:r,width:100,type:'numericColumn',
-      cellRenderer:function(p){var v=p.value;if(!v||v<0.01)return '<span class="cell-muted">&#8212;</span>';return '<span style="color:'+color+'">'+fmt(v)+'</span>';}};})(c));
+      cellRenderer:function(p){var v=p.value;if(!v||v<0.01)return '';return '<span style="color:'+color+'">'+fmt(v)+'</span>';}};})(c));
   });
   var grandTotal=Object.values(svRows).reduce(function(s,r){return s+(r._total||0);},0);
   var orderedSubcats=SV_SUBCATS.filter(function(sc){return svRows[sc];});
