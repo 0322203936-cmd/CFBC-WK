@@ -23,7 +23,8 @@ st.markdown("""
 <style>
   #MainMenu, header, footer { display: none !important; }
   .stApp { background: #f0f0f0; }
-  .block-container { padding: 0 !important; max-width: 100% !important; }
+  .block-container { padding: 0 !important; max-width: 100% !important; margin-top: -3rem !important; }
+  .stMainBlockContainer { padding-top: 0 !important; }
   section[data-testid="stSidebar"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -102,34 +103,34 @@ body {
 
 /* ── HEADER ─────────────────────────────────── */
 .app-hdr {
-  background: var(--navy);
+  background: #a8c8e8;
   border-bottom: 3px solid var(--green);
   padding: 5px 10px;
   display: flex; align-items: center; gap: 0;
   height: 36px; overflow: hidden;
 }
 .hdr-brand {
-  color: #fff; font-size: 12px; font-weight: 700;
+  color: #1e3a5f; font-size: 12px; font-weight: 700;
   letter-spacing: 1px; white-space: nowrap;
-  padding-right: 12px; border-right: 1px solid rgba(255,255,255,0.2);
+  padding-right: 12px; border-right: 1px solid rgba(30,58,95,0.25);
   flex-shrink: 0;
 }
 .hdr-btn {
   margin-left: auto; flex-shrink: 0;
   font-size: 10px; font-weight: 700;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.35);
+  border: 1px solid rgba(30,58,95,0.25);
   border-radius: 3px; padding: 3px 10px; cursor: pointer;
-  color: rgba(255,255,255,0.85); height: 24px;
+  color: #1e3a5f; height: 24px;
   transition: background 0.1s; white-space: nowrap;
 }
-.hdr-btn:hover { background: rgba(255,255,255,0.2); }
+.hdr-btn:hover { background: rgba(255,255,255,0.55); }
 
 /* ── TOOLBAR ─────────────────────────────────── */
 .toolbar {
   background: #ebebeb; border-bottom: 1px solid var(--border);
-  padding: 4px 8px; display: flex; align-items: center; gap: 6px;
-  flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; height: 32px;
+  padding: 2px 8px; display: flex; align-items: center; gap: 6px;
+  flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; height: 28px;
 }
 .toolbar::-webkit-scrollbar { display: none; }
 .tb-label { font-size: 9px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
@@ -165,7 +166,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 /* ── RANGE BAR ───────────────────────────────── */
 .range-bar {
   display: none; background: #f4f4f4; border-bottom: 1px solid var(--border);
-  padding: 4px 10px; align-items: center; gap: 8px; height: 30px; overflow: hidden;
+  padding: 3px 10px; align-items: center; gap: 8px; height: 26px; overflow: hidden;
 }
 .range-bar.show { display: flex; }
 .range-val   { font-size: 11px; font-weight: 700; color: var(--navy); min-width: 36px; text-align: center; }
