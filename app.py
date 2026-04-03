@@ -371,12 +371,9 @@ APP_HTML_BODY = """
 
   <!-- VIEW TABS -->
   <div class="view-tabs">
-    <button class="vtab active" id="vtSemana"      onclick="setView('semana')">Semana</button>
-    <button class="vtab"        id="vtAnual"        onclick="setView('anual')">Anual</button>
+    <button class="vtab active" id="vtAnual"        onclick="setView('anual')">Anual</button>
     <button class="vtab"        id="vtComparativo"  onclick="setView('comparativo')">Comparativo</button>
     <button class="vtab"        id="vtRancho"       onclick="setView('rancho')">Por Rancho</button>
-    <button class="vtab"        id="vtDetalle"      onclick="setView('detalle')">Detalle Semanal</button>
-    <button class="vtab"        id="vtProductos"    onclick="setView('productos')">Productos</button>
     <button class="vtab"        id="vtServicios"    onclick="setView('servicios')">Costo Servicios</button>
   </div>
 
@@ -466,7 +463,7 @@ var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 // =======================================================
 // ESTADO
 // =======================================================
-var state = { cat:'', currency:'usd', activeYears:{}, view:'semana', weekIdx:0, fromWeek:1, toWeek:52 };
+var state = { cat:'', currency:'usd', activeYears:{}, view:'anual', weekIdx:0, fromWeek:1, toWeek:52 };
 var allWeeks = [];
 
 // =======================================================
@@ -755,7 +752,7 @@ function onWeekSlider(val) {
 }
 function setView(v) {
   state.view=v;
-  ['semana','anual','comparativo','rancho','detalle','productos','servicios'].forEach(function(name){
+  ['anual','comparativo','rancho','servicios'].forEach(function(name){
     var el=document.getElementById('vt'+name.charAt(0).toUpperCase()+name.slice(1));
     if(el) el.className='vtab'+(v===name?' active':'');
   });
@@ -820,12 +817,9 @@ function resetRange() {
 // =======================================================
 function renderView() {
   document.getElementById('prodPanel').className='';
-  if      (state.view==='semana')      renderSemana();
-  else if (state.view==='anual')       renderAnual();
+  if      (state.view==='anual')       renderAnual();
   else if (state.view==='comparativo') renderComparativo();
   else if (state.view==='rancho')      renderRancho();
-  else if (state.view==='detalle')     renderDetalle();
-  else if (state.view==='productos')   renderProductosFull();
   else if (state.view==='servicios')   renderServicios();
 }
 
