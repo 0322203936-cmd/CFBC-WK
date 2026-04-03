@@ -52,13 +52,7 @@ data_json = base64.b64encode(
     json.dumps(DATA, ensure_ascii=True, default=str).encode('utf-8')
 ).decode('ascii')
 
-HTML = """<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CFBC &#8212; Control Operativo</title>
-<style>
+APP_CSS = """<style>
 :root {
   --navy:   #1e3a5f;
   --green:  #16a34a;
@@ -334,10 +328,9 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   height: 22px; overflow: hidden;
 }
 .statusbar b { color: #333; }
-</style>
-</head>
-<body>
+</style>"""
 
+APP_HTML_BODY = """
 <!-- LOADER -->
 <div id="loader">
   <div class="spin"></div>
@@ -436,8 +429,9 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <span>Total: <b id="stTotal">&#8212;</b></span>
   </div>
 </div>
+"""
 
-<script>
+APP_JS = """<script>
 // =======================================================
 // ERROR HANDLER &#8212; primero de todo
 // =======================================================
@@ -1375,9 +1369,21 @@ setTimeout(function() {
       '</div>';
   }
 }, 100);
-</script>
+</script>"""
+
+HTML = f'''<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CFBC &#8212; Control Operativo</title>
+{APP_CSS}
+</head>
+<body>
+{APP_HTML_BODY}
+{APP_JS}
 </body>
-</html>"""
+</html>'''
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
 components.html(html_final, height=800, scrolling=False)
