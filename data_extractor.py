@@ -1735,7 +1735,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             )
 
         def font(rng, bold=False, color=None, size=None):
-            body = {"bold": bold}
+            body = {"bold": bold, "name": "Arial"}
             if color: body["color"] = f"#{color}"
             if size:  body["size"]  = size
             requests.patch(
@@ -1922,8 +1922,8 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         fmt("B4",    {"horizontalAlignment": "Center"})
         fmt("C5:J5", {"horizontalAlignment": "Center"})
         fmt("L5:S5", {"horizontalAlignment": "Center", "verticalAlignment": "Center"})
-        fmt("B6",    {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
-        fmt("B7",    {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
+        fmt("B6",    {"horizontalAlignment": "Center", "verticalAlignment": "Top", "wrapText": True})
+        fmt("B7",    {"horizontalAlignment": "Center", "verticalAlignment": "Top", "wrapText": True})
         fmt("C7:J7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
         fmt("L7:S7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
         fmt("C8",    {"horizontalAlignment": "Center"})
@@ -1976,9 +1976,51 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
                 # No es crítico si falla el ajuste de alto
                 print(f"⚠️  Error configurando alto fila {row_num}: {e}")
 
+        # ── Formato de número (#,##0) para celdas de valores ─────────────
+        # Aplicar formato de número con separador de miles a las celdas con valores
+        number_ranges = [
+            # Subtotales MXN
+            "C22:J22", "C61:J61", "C72:J72", "C74:J74",
+            # Subtotales USD
+            "L22:S22", "L61:S61", "L72:S72", "L74:S74",
+            # Valores de datos MXN
+            "C10:J21", "C24:J60", "C63:J70",
+            # Valores de datos USD
+            "L10:S21", "L24:S60", "L63:S70",
+            # Sección de producción y costos
+            "C76:J92", "L76:S92",
+            "C95:J121", "L95:S121",
+        ]
+        for rng in number_ranges:
+            try:
+                requests.patch(
+                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format',
+                    headers=hdrs,
+                    json={"numberFormat": "#,##0"},
+                    timeout=20,
+                )
+            except Exception as e:
+                print(f"⚠️  Error configurando formato número en {rng}: {e}")
+
         # ── Merge de celdas ───────────────────────────────────────────────
         merges = [
+            # Headers principales
             "C5:J5", "L5:R5",
+            # Headers columnas K-L
+            "K1:L1", "K2:L2", "K4:L4",
+            # Separadores K-L
+            "K75:L75", "K93:L93", "K109:L109",
+            # KPI headers K-L
+            "K122:L122", "K123:L123", "K124:L124",
+            "K141:L141", "K142:L142",
+            "K164:L164",
+            "K174:L174", "K175:L175",
+            # KPI sections A-B
+            "A123:B123",
+            "A141:B141", "A142:B142",
+            "A164:B164",
+            "A174:B174", "A175:B175",
+            # Valores combinados verticalmente (logística)
             "C153:C154", "L153:L154",
             "C157:C158", "L157:L158",
             "C161:C162", "L161:L162",
@@ -1986,10 +2028,13 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             "C171:C172", "L171:L172",
         ]
         for m in merges:
-            requests.post(
-                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{m}\')/merge',
-                headers=hdrs, json={"across": False}, timeout=20,
-            )
+            try:
+                requests.post(
+                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{m}\')/merge',
+                    headers=hdrs, json={"across": False}, timeout=20,
+                )
+            except Exception as e:
+                print(f"⚠️  Error merge {m}: {e}")
 
     finally:
         # ── 8. Cerrar la sesión siempre ───────────────────────────────────
