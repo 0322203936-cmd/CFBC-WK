@@ -353,8 +353,8 @@ APP_HTML_BODY = """
     <select class="tb-sel" id="catSel" onchange="onCatChange(this.value)" style="max-width:200px"></select>
     <div class="tb-sep"></div>
     <div class="tb-grp">
-      <button class="tb-btn active" id="btnUSD" onclick="setCurrency('usd')">USD</button>
-      <button class="tb-btn"        id="btnMXN" onclick="setCurrency('mxn')">MXN</button>
+      <button class="tb-btn"        id="btnUSD" onclick="setCurrency('usd')">USD</button>
+      <button class="tb-btn active" id="btnMXN" onclick="setCurrency('mxn')">MXN</button>
     </div>
     <div class="tb-sep"></div>
     <span class="tb-label">Semana</span>
@@ -371,8 +371,8 @@ APP_HTML_BODY = """
 
   <!-- VIEW TABS -->
   <div class="view-tabs">
-    <button class="vtab active" id="vtAnual"        onclick="setView('anual')">Anual</button>
-    <button class="vtab"        id="vtComparativo"  onclick="setView('comparativo')">Comparativo</button>
+    <button class="vtab"        id="vtAnual"        onclick="setView('anual')">Anual</button>
+    <button class="vtab active" id="vtComparativo"  onclick="setView('comparativo')">Comparativo</button>
     <button class="vtab"        id="vtRancho"       onclick="setView('rancho')">Por Rancho</button>
     <button class="vtab"        id="vtServicios"    onclick="setView('servicios')">Costo Servicios</button>
   </div>
@@ -463,7 +463,7 @@ var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 // =======================================================
 // ESTADO
 // =======================================================
-var state = { cat:'', currency:'usd', activeYears:{}, view:'anual', weekIdx:0, fromWeek:1, toWeek:52 };
+var state = { cat:'', currency:'mxn', activeYears:{}, view:'comparativo', weekIdx:0, fromWeek:1, toWeek:52 };
 var allWeeks = [];
 
 // =======================================================
