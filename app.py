@@ -794,7 +794,7 @@ function exportCSV() {
       return '"'+String(v).replace(/"/g,'""')+'"';
     }).join(','));
   });
-  var blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  var blob = new Blob([lines.join('\\n')], {type:'text/csv;charset=utf-8;'});
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href=url; a.download='CFBC_'+state.view+'_'+new Date().toISOString().slice(0,10)+'.csv';
@@ -925,7 +925,7 @@ function fmtMes(dr) {
   for (var i=0;i<MESES.length;i++){
     if (lower.indexOf(MESES[i])>-1){
       var m=MESES[i].charAt(0).toUpperCase()+MESES[i].slice(1);
-      var yrMatch=dr.match(/\b(20\d{2})\b/);
+      var yrMatch=dr.match(/\\b(20\\d{2})\\b/);
       return m+(yrMatch?' '+yrMatch[1]:'');
     }
   }
