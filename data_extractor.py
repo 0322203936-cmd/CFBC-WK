@@ -28,7 +28,27 @@ SHAREPOINT_URL_PR = (
 )
 
 # ─── Constantes ───────────────────────────────────────────────────────────────
-RANCH_KEYS = ["PROP", "POSCO", "CAMPO", "ISABEL", "HOOPS", "CECILIA", "CHRISTINA", "ALBAHACA"]
+RANCH_CONFIG = {
+    "Prop-RM":     {"color": "#047857", "codes": ["VIV"], "keywords": ["PROP"]},
+    "PosCo-RM":    {"color": "#1d4ed8", "codes": ["POS", "LIM"], "keywords": ["POSCO"]},
+    "Campo-RM":    {"color": "#b45309", "codes": ["CAM", "RAM"], "keywords": ["CAMPO"]},
+    "Isabela":     {"color": "#7c3aed", "codes": ["ISA"], "keywords": ["ISABEL"]},
+    "HOOPS":       {"color": "#c2410c", "codes": ["HOO"], "keywords": ["HOOPS"]},
+    "Cecilia":     {"color": "#be185d", "codes": ["CEC"], "keywords": ["CECILIA"]},
+    "Cecilia 25":  {"color": "#047857", "codes": ["C25"], "keywords": ["CECILIA 25"]},
+    "Christina":   {"color": "#0369a1", "codes": ["CHR"], "keywords": ["CHRISTINA"]},
+    "Albahaca-RM": {"color": "#6d28d9", "codes": ["ALB"], "keywords": ["ALBAHACA"]},
+    "Campo-VI":    {"color": "#64748b", "codes": [], "keywords": ["CAMPO-VI", "CAMPO-IV"]}
+}
+
+RANCH_KEYS = []
+for data in RANCH_CONFIG.values():
+    RANCH_KEYS.extend(data["keywords"])
+
+RANCH_CODE_MAP = {}
+for ranch, data in RANCH_CONFIG.items():
+    for code in data["codes"]:
+        RANCH_CODE_MAP[code] = ranch
 
 CATEGORIAS_ORDEN = [
     "DESINFECCION Y FERTILIZACION",
@@ -92,16 +112,17 @@ def _leer_hoja(xls: pd.ExcelFile, titulo: str, rango_filas: int = 60,
 # ─── Helpers de normalización ─────────────────────────────────────────────────
 def norm_ranch(s: str):
     s = str(s).upper().strip()
-    if "PROP" in s:                                      return "Prop-RM"
-    if "POSCO" in s:                                     return "PosCo-RM"
     if "CAMPO-VI" in s or "CAMPO-IV" in s:               return "Campo-VI"
-    if "ALBAHACA" in s:                                  return "Albahaca-RM"
-    if "HOOPS" in s:                                     return "HOOPS"
-    if "CHRISTINA" in s:                                 return "Christina"
     if "CECILIA 25" in s:                                return "Cecilia 25"
-    if "CECILIA" in s:                                   return "Cecilia"
-    if "ISABEL" in s:                                    return "Isabela"
+    if "CECILIA" in s and "25" not in s:                 return "Cecilia"
     if "CAMPO" in s and "VI" not in s and "IV" not in s: return "Campo-RM"
+    
+    for ranch, data in RANCH_CONFIG.items():
+        if ranch in ["Campo-VI", "Cecilia 25", "Cecilia", "Campo-RM"]: 
+            continue
+        for kw in data["keywords"]:
+            if kw in s:
+                return ranch
     return None
 
 
@@ -141,56 +162,8 @@ def sv(v) -> float:
         return 0.0
 
 
-# ─── Parser de hojas PR#### ───────────────────────────────────────────────────
-def _parse_pr(rows: list) -> dict:
-    RANCH_MAP = {
-        'VIV': 'Prop-RM',
-        'RAM': 'Campo-RM',
-        'ISA': 'Isabela',
-        'CHR': 'Christina',
-        'CEC': 'Cecilia',
-        'C25': 'Cecilia 25',
-        'POS': 'PosCo-RM',
-        'CAM': 'Campo-RM',
-        'ALB': 'Albahaca-RM',
-        'HOO': 'HOOPS',
-    }
-    return _parse_generic(rows, RANCH_MAP)
-
-
-# ─── Parser de hojas MP#### (MANTENIMIENTO) ───────────────────────────────────
-def _parse_mp(rows: list) -> dict:
-    RANCH_MAP = {
-        'VIV': 'Prop-RM',
-        'POS': 'PosCo-RM',
-        'RAM': 'Campo-RM',
-        'ISA': 'Isabela',
-        'CEC': 'Cecilia',
-        'C25': 'Cecilia 25',
-        'CHR': 'Christina',
-    }
-    return _parse_generic(rows, RANCH_MAP)
-
-
-# ─── Parser de hojas ME#### (MATERIAL DE EMPAQUE) ────────────────────────────
-def _parse_me(rows: list) -> dict:
-    RANCH_MAP = {
-        'VIV': 'Prop-RM',
-        'POS': 'PosCo-RM',
-        'LIM': 'PosCo-RM',
-        'RAM': 'Campo-RM',
-        'ISA': 'Isabela',
-        'CEC': 'Cecilia',
-        'C25': 'Cecilia 25',
-        'CHR': 'Christina',
-        'ALB': 'Albahaca-RM',
-        'HOO': 'HOOPS',
-    }
-    return _parse_generic(rows, RANCH_MAP)
-
-
 # ─── Parser genérico compartido (PR / MP / ME tienen el mismo formato) ────────
-def _parse_generic(rows: list, ranch_map: dict) -> dict:
+def _parse_generic(rows: list) -> dict:
     """
     Formato común a PR####, MP####, ME####:
       Col 2: UBICACION  (ej: RAMMIPRNN, CECMIPSNF)
@@ -220,7 +193,7 @@ def _parse_generic(rows: list, ranch_map: dict) -> dict:
             continue
 
         ranch_code = ubicacion[:3]
-        rancho = ranch_map.get(ranch_code)
+        rancho = RANCH_CODE_MAP.get(ranch_code)
 
         if not rancho and ubicacion.startswith('VIV'):
             rancho = 'Prop-RM'
@@ -397,7 +370,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
     productos_debug = {"hojas_pr_encontradas": [t for t, _ in pr_hojas]}
     for titulo, pr_code in pr_hojas:
         vals   = _leer_hoja(xls, titulo, rango_filas=500, rango_cols=11)
-        parsed = _parse_pr(vals)
+        parsed = _parse_generic(vals)
         productos[pr_code] = parsed
         productos_debug[f"PR{pr_code}_ranchos"] = list(parsed.keys()) if parsed else []
 
@@ -591,7 +564,7 @@ def get_datos() -> dict:
         print("\n" + "=" * 60)
         print("🔍 LEYENDO HOJAS PR DESDE SHAREPOINT")
         print("=" * 60)
-        productos, productos_debug = _fetch_desde_sharepoint("PR", _parse_pr, "PR")
+        productos, productos_debug = _fetch_desde_sharepoint("PR", _parse_generic, "PR")
         # Merge con cualquier PR que ya estuviera en el Excel WK
         resultado["productos"].update(productos)
         resultado["productos_debug"].update(productos_debug)
@@ -600,7 +573,7 @@ def get_datos() -> dict:
         print("\n" + "=" * 60)
         print("🔍 LEYENDO HOJAS MP DESDE SHAREPOINT (MANTENIMIENTO)")
         print("=" * 60)
-        productos_mp, productos_mp_debug = _fetch_desde_sharepoint("MP", _parse_mp, "MP")
+        productos_mp, productos_mp_debug = _fetch_desde_sharepoint("MP", _parse_generic, "MP")
         resultado["productos_mp"]       = productos_mp
         resultado["productos_mp_debug"] = productos_mp_debug
 
@@ -608,9 +581,14 @@ def get_datos() -> dict:
         print("\n" + "=" * 60)
         print("🔍 LEYENDO HOJAS ME DESDE SHAREPOINT (MATERIAL DE EMPAQUE)")
         print("=" * 60)
-        productos_me, productos_me_debug = _fetch_desde_sharepoint("ME", _parse_me, "ME")
+        productos_me, productos_me_debug = _fetch_desde_sharepoint("ME", _parse_generic, "ME")
         resultado["productos_me"]       = productos_me
         resultado["productos_me_debug"] = productos_me_debug
+
+        resultado["config"] = {
+            "ranch_order": list(RANCH_CONFIG.keys()),
+            "ranch_colors": {k: v["color"] for k, v in RANCH_CONFIG.items()}
+        }
 
     return resultado
 
