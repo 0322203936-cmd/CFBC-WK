@@ -2,6 +2,7 @@
 app.py
 Centro Floricultor de Baja California
 Streamlit — AG Grid data-dense, Excel-style, full-screen
+Fondo blanco y todas las tablas dinámicas (AG Grid)
 """
 
 import json
@@ -19,12 +20,41 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# CSS fondo blanco y limpieza
 st.markdown("""
 <style>
   #MainMenu, header, footer { display: none !important; }
-  .stApp { background: #f0f0f0; }
+  .stApp { background: #ffffff !important; }
   .block-container { padding: 0 !important; max-width: 100% !important; }
   section[data-testid="stSidebar"] { display: none !important; }
+  body, html, .stApp, .main, .st-emotion-cache-1v0mbdj, .st-emotion-cache-1y4p8pa {
+    background: #ffffff !important;
+  }
+  .ag-theme-alpine {
+    --ag-background-color: #ffffff;
+    --ag-header-background-color: #f5f5f5;
+    --ag-border-color: #e0e0e0;
+  }
+  /* Botones y selectores */
+  div[data-testid="stSelectbox"] > div { min-width:120px !important; }
+  div[data-testid="stButton"] button[kind="secondary"].menu-btn {
+    font-family: monospace; font-size: 14px;
+    background: #1e3a5f; color: #fff;
+    border: none; border-radius: 4px;
+    padding: 2px 10px; height: 38px;
+  }
+  .crear-panel {
+    background: #1e3a5f;
+    border-top: 3px solid #16a34a;
+    padding: 14px 18px 12px;
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .crear-panel-title {
+    color: rgba(255,255,255,0.55); font-size: 10px;
+    font-family: monospace; text-transform: uppercase;
+    letter-spacing: 0.6px; white-space: nowrap;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,7 +101,7 @@ HTML = """<!DOCTYPE html>
   --mono: 'Consolas','Courier New',monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--mono); font-size: 12px; background: #f0f0f0; overflow-x: hidden; }
+body { font-family: var(--mono); font-size: 12px; background: #ffffff; overflow-x: hidden; }
 
 /* ── LOADER ─────────────────────────────────────── */
 #loader {
@@ -129,7 +159,7 @@ body { font-family: var(--mono); font-size: 12px; background: #f0f0f0; overflow-
 
 /* ── TOOLBAR — controls row ──────────────────────── */
 .toolbar {
-  background: #ebebeb;
+  background: #f9f9f9;
   border-bottom: 1px solid var(--border);
   padding: 4px 8px;
   display: flex; align-items: center; gap: 6px;
@@ -224,7 +254,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 /* ── STATUS BAR ──────────────────────────────────── */
 .statusbar {
-  background: #ebebeb; border-top: 1px solid #ccc;
+  background: #f9f9f9; border-top: 1px solid #ccc;
   padding: 2px 10px; font-size: 10px; color: #666;
   display: flex; gap: 14px; align-items: center;
   height: 22px; overflow: hidden;
@@ -264,7 +294,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   --ag-borders: solid 1px;
   --ag-border-color: #d8d8d8;
   --ag-secondary-border-color: #e5e5e5;
-  --ag-header-background-color: #e8e8e8;
+  --ag-header-background-color: #f5f5f5;
   --ag-header-foreground-color: #333;
   --ag-odd-row-background-color: #fafafa;
   --ag-even-row-background-color: #ffffff;
@@ -286,7 +316,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 }
 .ag-theme-alpine .ag-group-row { background: #eff3fa !important; font-weight: 700; }
 
-/* Inline cell styles injected via cellStyle */
 .cell-pos { color: #16a34a !important; font-weight: 600; }
 .cell-neg { color: #dc2626 !important; font-weight: 600; }
 .cell-muted { color: #999 !important; }
@@ -296,69 +325,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   text-decoration: underline dotted;
   text-underline-offset: 2px;
 }
-
-/* ── COMPARATIVO TABLE ───────────────────────── */
-#comparativoWrap {
-  display: none;
-  background: #fff;
-  border: 1px solid #d5d5d5;
-  border-top: none;
-  overflow: hidden;
-}
-#comparativoWrap.show { display: block; }
-.cmp-stat-strip {
-  display: flex; gap: 8px; flex-wrap: wrap;
-  padding: 8px 10px; background: #f4f4f4;
-  border-bottom: 1px solid #d5d5d5;
-}
-.cmp-stat-box {
-  background: #fff; border: 1px solid #ddd; border-radius: 4px;
-  padding: 6px 12px; min-width: 130px;
-}
-.cmp-stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; }
-.cmp-stat-val   { font-size: 14px; font-weight: 700; margin: 2px 0 1px; }
-.cmp-stat-sub   { font-size: 9px; color: #aaa; }
-.cmp-tbl-wrap   { overflow-x: auto; -webkit-overflow-scrolling: touch;
-                  scrollbar-width: thin; scrollbar-color: #ccc transparent;
-                  max-height: calc(100vh - 260px); overflow-y: auto; }
-.cmp-tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
-.cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-.cmp-tbl {
-  border-collapse: collapse; width: 100%;
-  font-family: var(--mono); font-size: 11px;
-}
-.cmp-tbl th {
-  padding: 5px 8px; background: #e8e8e8; color: #444;
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.3px; white-space: nowrap;
-  border-bottom: 2px solid #ccc; border-right: 1px solid #ddd;
-  position: sticky; top: 0; z-index: 2; text-align: right;
-}
-.cmp-tbl th:first-child, .cmp-tbl th:nth-child(2) { text-align: left; }
-.cmp-tbl td {
-  padding: 4px 8px; border-bottom: 1px solid #eee;
-  border-right: 1px solid #f0f0f0; white-space: nowrap;
-  text-align: right;
-}
-.cmp-tbl td:first-child, .cmp-tbl td:nth-child(2) { text-align: left; }
-.cmp-grp-hdr td {
-  background: #eff3fa; font-weight: 700;
-  border-top: 2px solid #ccc; font-size: 11px;
-  padding: 5px 8px;
-}
-.cmp-grp-hdr td:first-child { border-left: 3px solid #16a34a; }
-.cmp-row:hover td { background: #f0faf4; }
-.cmp-total-row td {
-  background: rgba(22,163,74,.06); font-weight: 700;
-  border-top: 1px solid rgba(22,163,74,.2); color: #16a34a;
-}
-.cmp-total-row td:first-child { border-left: 3px solid rgba(22,163,74,.4); }
-.delta-cell { font-size: 10px; white-space: nowrap; }
-.delta-amt  { display: block; }
-.delta-pct  { display: block; font-size: 9px; opacity: 0.8; }
-.chg-pos { color: #16a34a; font-weight: 600; }
-.chg-neg { color: #dc2626; font-weight: 600; }
-.chg-0   { color: #aaa; }
 </style>
 </head>
 <body>
@@ -424,23 +390,16 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
     <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
     <span class="range-badge" id="rangeBadge">W01 → W52</span>
     <div class="tb-sep"></div>
+    <div class="tb-grp">
+      <button class="tb-btn active" id="rtgYear" onclick="setRangeTableGroup('year')">Año → Semana</button>
+      <button class="tb-btn" id="rtgWeek" onclick="setRangeTableGroup('week')">Semana → Año</button>
+    </div>
     <button class="tb-btn" onclick="resetRange()">↺ Reset</button>
   </div>
 
-  <!-- GRID AREA -->
+  <!-- GRID AREA (para todas las vistas excepto comparativo que usará el mismo grid) -->
   <div id="gridWrap">
     <div id="myGrid" class="ag-theme-alpine" style="width:100%;height:500px"></div>
-  </div>
-
-  <!-- COMPARATIVO TABLE (reemplaza gridWrap en vista comparativo) -->
-  <div id="comparativoWrap">
-    <div class="cmp-stat-strip" id="cmpStats"></div>
-    <div class="cmp-tbl-wrap">
-      <table class="cmp-tbl">
-        <thead id="cmpHead"></thead>
-        <tbody id="cmpBody"></tbody>
-      </table>
-    </div>
   </div>
 
   <!-- PRODUCTOS SUB-PANEL -->
@@ -478,7 +437,6 @@ var RANCH_COLORS = {
 var YEAR_COLORS = {2021:'#0ea5e9',2022:'#f59e0b',2023:'#22c55e',2024:'#a855f7',2025:'#f97316',2026:'#ef4444'};
 var CAT_MIRFE = 'FERTILIZANTES';
 var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
-// CAT_MIRFE y CAT_MIPE son categorías independientes — nunca se combinan
 
 // ═══════════════════════════════════════════════════════════
 // ESTADO
@@ -491,7 +449,15 @@ var allWeeks = [];
 var mainGridApi = null;
 var prodGridApi = null;
 
-function isCombined(cat) { return false; } // Cada categoría se muestra por separado
+// Para la vista comparativo usamos el mismo mainGridApi
+var rangeTableGroup = 'year';
+
+function setRangeTableGroup(g) {
+  rangeTableGroup = g;
+  document.getElementById('rtgYear').className = 'tb-btn' + (g === 'year' ? ' active' : '');
+  document.getElementById('rtgWeek').className = 'tb-btn' + (g === 'week' ? ' active' : '');
+  if (state.view === 'comparativo') renderComparativo();
+}
 
 // ═══════════════════════════════════════════════════════════
 // FORMATEO
@@ -567,6 +533,47 @@ function sumDetail(recs, currency) {
   });
   return out;
 }
+function aggregateRecs(recs) {
+  var out = { usd: 0, mxn: 0, ranches: {}, ranches_mxn: {}, date_range: '' };
+  recs.forEach(function(r) {
+    out.usd += r.usd_total; out.mxn += r.mxn_total;
+    if (r.date_range) out.date_range = r.date_range;
+    Object.keys(r.usd_ranches || {}).forEach(function(rn) { out.ranches[rn] = (out.ranches[rn] || 0) + r.usd_ranches[rn]; });
+    Object.keys(r.mxn_ranches || {}).forEach(function(rn) { out.ranches_mxn[rn] = (out.ranches_mxn[rn] || 0) + r.mxn_ranches[rn]; });
+  });
+  out.usd = Math.round(out.usd * 100) / 100;
+  out.mxn = Math.round(out.mxn * 100) / 100;
+  return out;
+}
+function getRangeByYear(cat, fromW, toW) {
+  var res = {};
+  getActiveYears().forEach(function(yr) {
+    var recs = DATA.weekly_detail.filter(function(r) {
+      return r.categoria === cat && r.year === yr && r.week >= fromW && r.week <= toW;
+    });
+    if (!recs.length) return;
+    var ag = aggregateRecs(recs);
+    ag.weekly = {};
+    recs.forEach(function(r) {
+      ag.weekly[r.week] = (ag.weekly[r.week] || 0) + (state.currency === 'usd' ? r.usd_total : r.mxn_total);
+    });
+    res[yr] = ag;
+  });
+  return res;
+}
+function fmtMes(dr) {
+  if (!dr) return '—';
+  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var lower = dr.toLowerCase();
+  for (var i = 0; i < MESES.length; i++) {
+    if (lower.indexOf(MESES[i]) > -1) {
+      var m = MESES[i].charAt(0).toUpperCase() + MESES[i].slice(1);
+      var yrMatch = dr.match(/\\b(20\\d{2})\\b/);
+      return m + (yrMatch ? ' ' + yrMatch[1] : '');
+    }
+  }
+  return dr;
+}
 
 // ═══════════════════════════════════════════════════════════
 // INICIALIZAR
@@ -591,23 +598,19 @@ function inicializar() {
     window._prodLinkBound = true;
   }
 
-  // Estado inicial
   var prefCat = 'MATERIAL DE EMPAQUE';
   state.cat = DATA.categories.indexOf(prefCat) > -1 ? prefCat : DATA.categories[0];
 
-  // Año más reciente activo
   state.activeYears = {};
   var latestYr = DATA.years[DATA.years.length - 1];
   var prevYr = DATA.years[DATA.years.length - 2];
   if (latestYr) state.activeYears[latestYr] = true;
   if (prevYr)   state.activeYears[prevYr]   = true;
 
-  // Semanas disponibles
   var wSet = {};
   DATA.weekly_detail.forEach(function(r) { wSet[r.week] = 1; });
   allWeeks = Object.keys(wSet).map(Number).sort(function(a,b) { return a-b; });
 
-  // Ir a la semana más reciente del año más reciente
   var wksLatest = DATA.weekly_detail
     .filter(function(r) { return r.year === latestYr; })
     .map(function(r) { return r.week; })
@@ -617,7 +620,6 @@ function inicializar() {
   var idx = allWeeks.indexOf(curWeek);
   state.weekIdx = idx >= 0 ? idx : allWeeks.length - 1;
 
-  // Rango inicial: últimas 2 semanas del año más reciente
   state.toWeek   = wksLatest[wksLatest.length - 1] || allWeeks[allWeeks.length - 1] || 52;
   state.fromWeek = wksLatest[wksLatest.length - 2] || wksLatest[0] || state.toWeek;
 
@@ -631,7 +633,7 @@ function inicializar() {
   document.getElementById('loader').style.display = 'none';
   document.getElementById('app').style.display   = 'block';
   setTimeout(resizeGrid, 80);
-  setTimeout(resizeGrid, 300); // segundo llamado por si AG Grid tarda en inicializar
+  setTimeout(resizeGrid, 300);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -666,28 +668,7 @@ function updateWeekControls() {
   document.getElementById('weekLabel').textContent = String(yr).slice(2) + String(wn).padStart(2, '0');
 }
 function updateHeader() {
-  var yrs = getActiveYears();
-  var wn  = allWeeks[state.weekIdx] || 1;
-  var curYr  = yrs[yrs.length - 1];
-  var prevYr = yrs[yrs.length - 2];
-
-  var grandTotal = 0;
-  getWeekDetail(state.cat, wn, curYr).forEach(function(r) {
-    grandTotal += state.currency === 'usd' ? r.usd_total : r.mxn_total;
-  });
-
-  var prevTotal = 0;
-  if (prevYr) {
-    getWeekDetail(state.cat, wn, prevYr).forEach(function(r) {
-      prevTotal += state.currency === 'usd' ? r.usd_total : r.mxn_total;
-    });
-  }
-  var delta = prevTotal > 0 ? (grandTotal - prevTotal) / prevTotal * 100 : null;
-
-  var annualTotal = 0;
-  var d = (DATA.summary[state.cat] || {})[curYr];
-  if (d) annualTotal = state.currency === 'usd' ? d.usd : d.mxn;
-
+  // simplificado
   document.getElementById('hdrKpis').innerHTML = '';
 }
 
@@ -736,19 +717,8 @@ function setView(v) {
     var el = document.getElementById('vt' + name.charAt(0).toUpperCase() + name.slice(1));
     if (el) el.className = 'vtab' + (v === name ? ' active' : '');
   });
-  // Mostrar/ocultar barra de rango solo en comparativo
   var rb = document.getElementById('rangeBar');
   if (rb) rb.className = 'range-bar' + (v === 'comparativo' ? ' show' : '');
-  // Alternar entre AG Grid y tabla comparativo
-  var gw  = document.getElementById('gridWrap');
-  var cmp = document.getElementById('comparativoWrap');
-  if (v === 'comparativo') {
-    if (gw)  gw.style.display  = 'none';
-    if (cmp) cmp.className = 'show';
-  } else {
-    if (gw)  gw.style.display  = '';
-    if (cmp) cmp.className = '';
-  }
   closeProdPanel();
   renderView();
 }
@@ -786,7 +756,7 @@ function resetRange() {
     .filter(function(r){ return r.year === latestYr; })
     .map(function(r){ return r.week; })
     .filter(function(v,i,a){ return a.indexOf(v) === i; })
-    .sort(function(a,b){ return a - b; });
+    .sort(function(a,b){ return a-b; });
   state.toWeek   = wks[wks.length - 1] || allWeeks[allWeeks.length - 1] || 52;
   state.fromWeek = wks[wks.length - 2] || wks[0] || state.toWeek;
   updateRangeSliders();
@@ -820,7 +790,7 @@ function buildMainGrid() {
 }
 function setMainGrid(colDefs, rowData, pinnedBottom, statusText) {
   if (!mainGridApi) return;
-  mainGridApi.setPinnedBottomRowData([]);   // limpiar siempre primero
+  mainGridApi.setPinnedBottomRowData([]);
   mainGridApi.setColumnDefs(colDefs);
   mainGridApi.setRowData(rowData);
   mainGridApi.sizeColumnsToFit();
@@ -850,34 +820,22 @@ function deltaAmtRenderer(params) {
   var sign = v > 0 ? '+' : '';
   return '<span style="color:' + col + '">' + sign + fmt(v) + '</span>';
 }
-function barRenderer(maxVal) {
-  return function(params) {
-    var v = params.value;
-    if (!v || isNaN(v)) return '<span style="color:#bbb">—</span>';
-    var pct = Math.min(v / (maxVal || 1) * 54, 54);
-    var color = RANCH_COLORS[params.colDef.field] || '#16a34a';
-    return '<div style="display:flex;align-items:center;gap:4px">' +
-      '<div style="width:' + pct.toFixed(0) + 'px;height:7px;background:' + color + ';border-radius:1px;flex-shrink:0"></div>' +
-      '<span style="color:#333">' + fmt(v) + '</span></div>';
-  };
-}
-function catRenderer(params) {
-  var v = params.value;
-  if (!v) return '';
-  return '<span style="font-weight:700;color:#1e3a5f;font-size:10px">' + v + '</span>';
-}
 function ranchRenderer(ranch) {
   var col = RANCH_COLORS[ranch] || '#888';
   return function(params) {
     var v = params.value;
     if (!v || isNaN(v) || v === 0) return '<span style="color:#ddd">—</span>';
-    // mini bar proportional
     var maxV = params.colDef._maxVal || 1;
     var w = Math.min(v / maxV * 40, 40);
     return '<div style="display:flex;align-items:center;gap:3px">' +
       '<div style="width:' + w.toFixed(0) + 'px;height:6px;background:' + col + ';border-radius:1px;flex-shrink:0;min-width:2px"></div>' +
       '<span style="color:' + col + ';font-weight:600">' + fmt(v) + '</span></div>';
   };
+}
+function catRenderer(params) {
+  var v = params.value;
+  if (!v) return '';
+  return '<span style="font-weight:700;color:#1e3a5f;font-size:10px">' + v + '</span>';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -897,35 +855,30 @@ function renderView() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// VIEW 1: SEMANA
-// Rows = years (or years x MIRFE/MIPE), Cols = [Year, Week, Cat, Total, Delta, ranches]
+// VIEW 1: SEMANA (AG Grid)
 // ═══════════════════════════════════════════════════════════
 function renderSemana() {
   var yrs = getActiveYears();
   var wn  = allWeeks[state.weekIdx] || 1;
   var sym = state.currency.toUpperCase();
-
   var cols = [
-    { field: 'year', headerName: 'AÑO', pinned: 'left', width: 70, type: 'numericColumn', filter: 'agNumberColumnFilter',
+    { field: 'year', headerName: 'AÑO', pinned: 'left', width: 70, filter: 'agNumberColumnFilter',
       cellRenderer: function(p) { return '<span style="color:'+(YEAR_COLORS[p.value]||'#888')+';font-weight:700">'+p.value+'</span>'; } },
-    { field: 'week', headerName: 'SEM', width: 60, type: 'numericColumn', filter: 'agNumberColumnFilter',
+    { field: 'week', headerName: 'SEM', width: 60, filter: 'agNumberColumnFilter',
       cellRenderer: function(p){ return wFmt(p.value); } },
     { field: 'cat_label', headerName: 'CATEGORÍA', width: 170, filter: 'agTextColumnFilter', cellRenderer: catRenderer },
-    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
-    { field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
-    { field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
+    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+    { field: 'deltaAmt', headerName: 'Δ $', width: 90, filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
+    { field: 'deltaPct', headerName: 'Δ %', width: 72, filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
   ];
   RANCH_ORDER.forEach(function(r) {
     cols.push({
       field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 100, type: 'numericColumn', filter: 'agNumberColumnFilter',
+      headerName: r, width: 100, filter: 'agNumberColumnFilter',
       cellRenderer: ranchRenderer(r)
     });
   });
-
-  var rows = [];
-  var grandTotal = 0;
-
+  var rows = [], grandTotal = 0;
   yrs.forEach(function(yr, i) {
     var prevYr = i > 0 ? yrs[i-1] : null;
     var recs = getWeekDetail(state.cat, wn, yr);
@@ -942,45 +895,33 @@ function renderSemana() {
     rows.push(row);
     if (yr === yrs[yrs.length-1]) grandTotal += agg.total;
   });
-
   setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' · AÑO ' + yrs[yrs.length-1]);
 }
 
-// ═══════════════════════════════════════════════════════════
-// VIEW 2: ANUAL
-// Rows = years, Cols = [Year, Cat, Total, Delta, ranches...]
-// ═══════════════════════════════════════════════════════════
+// VIEW 2: ANUAL (AG Grid)
 function renderAnual() {
   var yrs = getActiveYears();
   var sym = state.currency.toUpperCase();
-
   var cols = [
-    { field: 'year', headerName: 'AÑO', pinned: 'left', width: 70, type: 'numericColumn', filter: 'agNumberColumnFilter',
+    { field: 'year', headerName: 'AÑO', pinned: 'left', width: 70, filter: 'agNumberColumnFilter',
       cellRenderer: function(p) { return '<span style="color:'+(YEAR_COLORS[p.value]||'#888')+';font-weight:700">'+p.value+'</span>'; } },
     { field: 'cat_label', headerName: 'CATEGORÍA', width: 170, filter: 'agTextColumnFilter', cellRenderer: catRenderer },
-    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
-    { field: 'deltaAmt', headerName: 'Δ $', width: 90, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
-    { field: 'deltaPct', headerName: 'Δ %', width: 72, type: 'numericColumn', filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
+    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+    { field: 'deltaAmt', headerName: 'Δ $', width: 90, filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
+    { field: 'deltaPct', headerName: 'Δ %', width: 72, filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer },
   ];
   RANCH_ORDER.forEach(function(r) {
     cols.push({
       field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 100, type: 'numericColumn', filter: 'agNumberColumnFilter',
+      headerName: r, width: 100, filter: 'agNumberColumnFilter',
       cellRenderer: ranchRenderer(r)
     });
   });
-
-  var rows = [];
-  var grandTotal = 0;
-
+  var rows = [], grandTotal = 0;
   var getYrAgg = function(cat, yr) {
     var d = (DATA.summary[cat] || {})[yr] || {usd:0, mxn:0, ranches:{}, ranches_mxn:{}};
-    return {
-      total: state.currency === 'usd' ? d.usd : d.mxn,
-      ranches: state.currency === 'usd' ? d.ranches : d.ranches_mxn
-    };
+    return { total: state.currency === 'usd' ? d.usd : d.mxn, ranches: state.currency === 'usd' ? d.ranches : d.ranches_mxn };
   };
-
   yrs.forEach(function(yr, i) {
     var prevYr = i > 0 ? yrs[i-1] : null;
     var agg = getYrAgg(state.cat, yr);
@@ -995,93 +936,21 @@ function renderAnual() {
     rows.push(row);
     if (yr === yrs[yrs.length-1]) grandTotal += agg.total;
   });
-
   setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' · AÑO ' + yrs[yrs.length-1]);
 }
 
 // ═══════════════════════════════════════════════════════════
-// VIEW 3: COMPARATIVO (tabla agrupada, equivale al Tendencia original)
+// VIEW 3: COMPARATIVO (AHORA CON AG GRID)
 // ═══════════════════════════════════════════════════════════
-var rangeTableGroup = 'year'; // 'year' = Año→Semana | 'week' = Semana→Año
-
-function setRangeTableGroup(g) {
-  rangeTableGroup = g;
-  document.getElementById('rtgYear').className = 'tb-btn' + (g === 'year' ? ' active' : '');
-  document.getElementById('rtgWeek').className = 'tb-btn' + (g === 'week' ? ' active' : '');
-  renderComparativo();
-}
-
-// Extrae solo "Mes Año" de strings como "Del 02 al 08 de Marzo 2026"
-function fmtMes(dr) {
-  if (!dr) return '—';
-  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  var lower = dr.toLowerCase();
-  for (var i = 0; i < MESES.length; i++) {
-    if (lower.indexOf(MESES[i]) > -1) {
-      var m = MESES[i].charAt(0).toUpperCase() + MESES[i].slice(1);
-      var yrMatch = dr.match(/\b(20\d{2})\b/);
-      return m + (yrMatch ? ' ' + yrMatch[1] : '');
-    }
-  }
-  return dr;
-}
-
-// Agrega todos los registros de una lista en un objeto {usd,mxn,ranches,ranches_mxn,date_range}
-function aggregateRecs(recs) {
-  var out = { usd: 0, mxn: 0, ranches: {}, ranches_mxn: {}, date_range: '' };
-  recs.forEach(function(r) {
-    out.usd += r.usd_total; out.mxn += r.mxn_total;
-    if (r.date_range) out.date_range = r.date_range;
-    Object.keys(r.usd_ranches || {}).forEach(function(rn) { out.ranches[rn] = (out.ranches[rn] || 0) + r.usd_ranches[rn]; });
-    Object.keys(r.mxn_ranches || {}).forEach(function(rn) { out.ranches_mxn[rn] = (out.ranches_mxn[rn] || 0) + r.mxn_ranches[rn]; });
-  });
-  out.usd = Math.round(out.usd * 100) / 100;
-  out.mxn = Math.round(out.mxn * 100) / 100;
-  return out;
-}
-
-// Retorna {yr: {usd,mxn,ranches,ranches_mxn,weekly:{wk:val}}} para el rango
-function getRangeByYear(cat, fromW, toW) {
-  var res = {};
-  getActiveYears().forEach(function(yr) {
-    var recs = DATA.weekly_detail.filter(function(r) {
-      return r.categoria === cat && r.year === yr && r.week >= fromW && r.week <= toW;
-    });
-    if (!recs.length) return;
-    var ag = aggregateRecs(recs);
-    ag.weekly = {};
-    recs.forEach(function(r) {
-      ag.weekly[r.week] = (ag.weekly[r.week] || 0) + (state.currency === 'usd' ? r.usd_total : r.mxn_total);
-    });
-    res[yr] = ag;
-  });
-  return res;
-}
-
-// Celda de delta: valor actual vs anterior
-function deltaCellHtml(val, prev) {
-  if (prev === null || prev === undefined || prev === 0) return '<td class="delta-cell chg-0">—</td>';
-  var diff = val - prev;
-  var p = ((diff / prev) * 100).toFixed(1);
-  var cls = diff > 0 ? 'chg-pos' : diff < 0 ? 'chg-neg' : 'chg-0';
-  var sign = diff > 0 ? '+' : '';
-  return '<td class="delta-cell ' + cls + '"><span class="delta-amt">' + sign + fmt(diff) + '</span>' +
-         '<span class="delta-pct">' + sign + p + '%</span></td>';
-}
-
 function renderComparativo() {
-  var f    = state.fromWeek, t = state.toWeek;
-  var yrs  = getActiveYears();
-  var sym  = state.currency.toUpperCase();
+  var f = state.fromWeek, t = state.toWeek;
+  var yrs = getActiveYears();
+  var sym = state.currency.toUpperCase();
   var byYear = getRangeByYear(state.cat, f, t);
-
   var rangeWeeks = allWeeks.filter(function(w) { return w >= f && w <= t; });
-  var ranchCols  = RANCH_ORDER;
+  var ranchCols = RANCH_ORDER;
 
-  // ── Stat strip eliminado ────────────────────────────────
-  document.getElementById('cmpStats').innerHTML = '';
-
-  // ── Precargar weekData ──────────────────────────────────
+  // Preparar weekData
   var weekData = {};
   yrs.forEach(function(yr) {
     weekData[yr] = {};
@@ -1093,125 +962,157 @@ function renderComparativo() {
     });
   });
 
-  var head, body;
+  var colDefs = [];
+  var rowData = [];
 
   if (rangeTableGroup === 'year') {
-    // ── MODO: Año → Semana ─────────────────────────────────
-    // Cabecera
-    head = '<tr><th>Semana</th><th>Fecha</th><th>Total ' + sym + '</th><th>Δ$ vs sem ant.</th>' +
-      ranchCols.map(function(r) { return '<th>' + r + '</th>'; }).join('') + '</tr>';
+    // Modo Año → Semana
+    // Columnas fijas: Semana, Fecha, Total, Delta vs sem anterior, y luego cada rancho
+    colDefs = [
+      { field: 'weekCode', headerName: 'Semana', pinned: 'left', width: 80, filter: 'agTextColumnFilter' },
+      { field: 'date', headerName: 'Fecha', width: 120, filter: 'agTextColumnFilter' },
+      { field: 'total', headerName: 'Total ' + sym, width: 120, filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+      { field: 'deltaAmt', headerName: 'Δ $ vs sem ant.', width: 130, filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
+      { field: 'deltaPct', headerName: 'Δ % vs sem ant.', width: 120, filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer }
+    ];
+    ranchCols.forEach(function(r) {
+      colDefs.push({
+        field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
+        headerName: r, width: 100, filter: 'agNumberColumnFilter',
+        cellRenderer: ranchRenderer(r)
+      });
+    });
 
-    body = yrs.map(function(yr, yi) {
-      var col = YEAR_COLORS[yr] || '#888';
+    // Construir filas: por cada año, una fila de agrupación (opcional) y luego filas de semanas
+    for (var yi = 0; yi < yrs.length; yi++) {
+      var yr = yrs[yi];
       var yearTotal = byYear[yr] ? (state.currency === 'usd' ? byYear[yr].usd : byYear[yr].mxn) : 0;
-      var prevYrD = yi > 0 ? byYear[yrs[yi - 1]] : null;
-      var prevYrVal = prevYrD ? (state.currency === 'usd' ? prevYrD.usd : prevYrD.mxn) : null;
-      var yDiff = prevYrVal !== null ? yearTotal - prevYrVal : null;
-      var yPct  = (prevYrVal !== null && prevYrVal !== 0) ? ((yearTotal - prevYrVal) / prevYrVal * 100).toFixed(1) : null;
-      var yCls  = yDiff === null ? 'chg-0' : yDiff > 0 ? 'chg-pos' : 'chg-neg';
-      var ySign = yDiff !== null && yDiff > 0 ? '+' : '';
-
-      // Fila de cabecera del año con totales y deltas por rancho
-      var ranchHdrCells = ranchCols.map(function(r) {
-        var d = byYear[yr]; if (!d) return '<td>—</td>';
-        var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
-        var v = src[r] || 0;
-        return '<td style="color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#bbb') + ';font-size:10px">' + (v > 0 ? fmt(v) : '—') + '</td>';
-      }).join('');
-
-      var hdr = '';
-
-      // Filas de semanas dentro del año
+      // Fila de agrupación (año) con total y deltas
+      var prevYrTotal = yi > 0 ? (byYear[yrs[yi-1]] ? (state.currency === 'usd' ? byYear[yrs[yi-1]].usd : byYear[yrs[yi-1]].mxn) : 0) : null;
+      var yDiff = prevYrTotal !== null ? yearTotal - prevYrTotal : null;
+      var yPct = (prevYrTotal !== null && prevYrTotal !== 0) ? ((yearTotal - prevYrTotal) / prevYrTotal * 100) : null;
+      // Fila de cabecera de año (no es una semana real)
+      rowData.push({
+        weekCode: '🏷️ ' + yr,
+        date: '',
+        total: yearTotal,
+        deltaAmt: yDiff,
+        deltaPct: yPct,
+        _type: 'group',
+        _year: yr
+      });
+      // Añadir filas de semanas dentro del año
       var prevWkVal = null;
-      var wkRows = rangeWeeks.map(function(w) {
-        var d   = weekData[yr][w];
-        var val = d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0;
-        var dCell = deltaCellHtml(val, prevWkVal);
-        if (val > 0) prevWkVal = val;
-        var ranchCells = ranchCols.map(function(r) {
-          if (!d) return '<td style="color:#ddd">—</td>';
-          var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
-          var v = src[r] || 0;
-          var style = 'color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + (v > 0 ? ';cursor:pointer' : '');
-          var attrs = v > 0 ? ' class="cmp-clickable" data-yr="' + yr + '" data-wk="' + w + '" data-ranch="' + r + '"' : '';
-          return '<td style="' + style + '"' + attrs + '>' + (v > 0 ? fmt(v) : '—') + '</td>';
-        }).join('');
-        var totalStyle = 'color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + (val > 0 ? ';cursor:pointer' : '');
-        var totalAttrs = val > 0 ? ' class="cmp-clickable" data-yr="' + yr + '" data-wk="' + w + '" data-ranch=""' : '';
-        return '<tr class="cmp-row">' +
-          '<td style="color:' + col + ';font-weight:600">' + String(yr).slice(2) + String(w).padStart(2,'0') + '</td>' +
-          '<td style="color:#999;font-size:10px">' + fmtMes(d && d.date_range) + '</td>' +
-          '<td style="' + totalStyle + '"' + totalAttrs + '>' + fmt(val) + '</td>' +
-          dCell + ranchCells + '</tr>';
-      }).join('');
-
-      return hdr + wkRows;
-    }).join('');
-
-  } else {
-    // ── MODO: Semana → Año ─────────────────────────────────
-    head = '<tr><th>Año</th><th>Total ' + sym + '</th><th>Δ$ vs año ant.</th>' +
-      ranchCols.map(function(r) { return '<th>' + r + '</th>'; }).join('') + '</tr>';
-
-    body = rangeWeeks.map(function(w) {
-      // Buscar fecha de referencia para esta semana
-      var dateEx = '';
-      yrs.forEach(function(yr) { if (weekData[yr][w] && weekData[yr][w].date_range) dateEx = weekData[yr][w].date_range; });
-
-      var hdr = '<tr class="cmp-grp-hdr"><td colspan="2" style="color:var(--green)">📆 ' + wFmt(w) +
-        (dateEx ? ' <span style="font-size:9px;color:#999;font-weight:400">' + fmtMes(dateEx) + '</span>' : '') +
-        '</td><td colspan="' + (1 + ranchCols.length) + '"></td></tr>';
-
-      var prevYrVal = null;
-      var yrRows = yrs.map(function(yr) {
-        var col = YEAR_COLORS[yr] || '#888';
-        var d   = weekData[yr][w];
-        var val = d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0;
-        var dCell = deltaCellHtml(val, prevYrVal);
-        if (val > 0) prevYrVal = val;
-        var ranchCells = ranchCols.map(function(r) {
-          if (!d) return '<td style="color:#ddd">—</td>';
-          var src = state.currency === 'usd' ? d.ranches : d.ranches_mxn;
-          var v = src[r] || 0;
-          var style = 'color:' + (v > 0 ? (RANCH_COLORS[r] || '#888') : '#ddd') + (v > 0 ? ';cursor:pointer' : '');
-          var attrs = v > 0 ? ' class="cmp-clickable" data-yr="' + yr + '" data-wk="' + w + '" data-ranch="' + r + '"' : '';
-          return '<td style="' + style + '"' + attrs + '>' + (v > 0 ? fmt(v) : '—') + '</td>';
-        }).join('');
-        var totalStyle2 = 'color:' + (val > 0 ? col : '#bbb') + ';font-weight:' + (val > 0 ? '600' : '400') + (val > 0 ? ';cursor:pointer' : '');
-        var totalAttrs2 = val > 0 ? ' class="cmp-clickable" data-yr="' + yr + '" data-wk="' + w + '" data-ranch=""' : '';
-        return '<tr class="cmp-row">' +
-          '<td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + col + ';margin-right:5px"></span>' +
-          '<strong style="color:' + col + '">' + yr + '</strong></td>' +
-          '<td style="' + totalStyle2 + '"' + totalAttrs2 + '>' + fmt(val) + '</td>' +
-          dCell + ranchCells + '</tr>';
-      }).join('');
-
-      // Fila de total de la semana (suma de todos los años)
-      var wkTotal = yrs.reduce(function(acc, yr) {
+      for (var wi = 0; wi < rangeWeeks.length; wi++) {
+        var w = rangeWeeks[wi];
         var d = weekData[yr][w];
-        return acc + (d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0);
-      }, 0);
-      var totalRow = '<tr class="cmp-total-row"><td>TOTAL</td><td>' + fmt(wkTotal) +
-        '</td><td colspan="' + (1 + ranchCols.length) + '"></td></tr>';
+        var val = d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0;
+        var deltaAmt = (prevWkVal !== null) ? val - prevWkVal : null;
+        var deltaPct = (prevWkVal !== null && prevWkVal !== 0) ? (val - prevWkVal) / prevWkVal * 100 : null;
+        if (val > 0) prevWkVal = val;
+        var row = {
+          weekCode: String(yr).slice(2) + String(w).padStart(2,'0'),
+          date: fmtMes(d && d.date_range),
+          total: val,
+          deltaAmt: deltaAmt,
+          deltaPct: deltaPct,
+          _type: 'week',
+          _year: yr,
+          _week: w
+        };
+        ranchCols.forEach(function(r) {
+          var src = d ? (state.currency === 'usd' ? d.ranches : d.ranches_mxn) : {};
+          var v = src[r] || 0;
+          row['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = v;
+        });
+        rowData.push(row);
+      }
+    }
+  } else {
+    // Modo Semana → Año
+    colDefs = [
+      { field: 'weekCode', headerName: 'Semana', pinned: 'left', width: 80, filter: 'agTextColumnFilter' },
+      { field: 'year', headerName: 'Año', width: 70, filter: 'agNumberColumnFilter',
+        cellRenderer: function(p) { return '<span style="color:'+(YEAR_COLORS[p.value]||'#888')+';font-weight:700">'+p.value+'</span>'; } },
+      { field: 'total', headerName: 'Total ' + sym, width: 120, filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+      { field: 'deltaAmt', headerName: 'Δ $ vs año ant.', width: 130, filter: 'agNumberColumnFilter', cellRenderer: deltaAmtRenderer },
+      { field: 'deltaPct', headerName: 'Δ % vs año ant.', width: 120, filter: 'agNumberColumnFilter', cellRenderer: deltaRenderer }
+    ];
+    ranchCols.forEach(function(r) {
+      colDefs.push({
+        field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
+        headerName: r, width: 100, filter: 'agNumberColumnFilter',
+        cellRenderer: ranchRenderer(r)
+      });
+    });
 
-      return hdr + yrRows + totalRow;
-    }).join('');
+    for (var wi2 = 0; wi2 < rangeWeeks.length; wi2++) {
+      var w2 = rangeWeeks[wi2];
+      var dateEx = '';
+      yrs.forEach(function(yr) { if (weekData[yr][w2] && weekData[yr][w2].date_range) dateEx = weekData[yr][w2].date_range; });
+      // Fila de cabecera de semana
+      rowData.push({
+        weekCode: '📆 ' + wFmt(w2) + (dateEx ? ' ' + fmtMes(dateEx) : ''),
+        year: null,
+        total: null,
+        deltaAmt: null,
+        deltaPct: null,
+        _type: 'group',
+        _week: w2
+      });
+      var prevYrVal = null;
+      for (var yi2 = 0; yi2 < yrs.length; yi2++) {
+        var yr2 = yrs[yi2];
+        var d2 = weekData[yr2][w2];
+        var val2 = d2 ? (state.currency === 'usd' ? d2.usd : d2.mxn) : 0;
+        var deltaAmt2 = (prevYrVal !== null) ? val2 - prevYrVal : null;
+        var deltaPct2 = (prevYrVal !== null && prevYrVal !== 0) ? (val2 - prevYrVal) / prevYrVal * 100 : null;
+        if (val2 > 0) prevYrVal = val2;
+        var row2 = {
+          weekCode: '',
+          year: yr2,
+          total: val2,
+          deltaAmt: deltaAmt2,
+          deltaPct: deltaPct2,
+          _type: 'year',
+          _year: yr2,
+          _week: w2
+        };
+        ranchCols.forEach(function(r) {
+          var src = d2 ? (state.currency === 'usd' ? d2.ranches : d2.ranches_mxn) : {};
+          var v = src[r] || 0;
+          row2['r_' + r.replace(/[^a-zA-Z0-9]/g,'_')] = v;
+        });
+        rowData.push(row2);
+      }
+      // Fila de total de semana
+      var wkTotal = yrs.reduce(function(s, yr) {
+        var d = weekData[yr][w2];
+        return s + (d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0);
+      }, 0);
+      rowData.push({
+        weekCode: 'TOTAL',
+        year: null,
+        total: wkTotal,
+        deltaAmt: null,
+        deltaPct: null,
+        _type: 'total',
+        _week: w2
+      });
+    }
   }
 
-  document.getElementById('cmpHead').innerHTML = head;
-  document.getElementById('cmpBody').innerHTML = body;
-
-  // Status bar
+  // Calcular gran total
   var grandTotal = yrs.reduce(function(s, yr) {
     var d = byYear[yr]; return s + (d ? (state.currency === 'usd' ? d.usd : d.mxn) : 0);
   }, 0);
-  document.getElementById('stTotal').textContent = fmt(grandTotal) + ' ' + sym;
+  var statusText = fmt(grandTotal) + ' ' + sym;
+
+  setMainGrid(colDefs, rowData, [], statusText);
 }
 
 // ═══════════════════════════════════════════════════════════
 // VIEW 4: POR RANCHO
-// Rows = ranches, Cols = [rancho, prevYr, curYr, Δ$, Δ%] 
-// (For the selected category)
 // ═══════════════════════════════════════════════════════════
 function renderRancho() {
   var yrs  = getActiveYears();
@@ -1227,76 +1128,65 @@ function renderRancho() {
         return '<span style="color:' + c + ';font-weight:700">' + (p.value || '') + '</span>';
       }, filter: 'agTextColumnFilter' }
   ];
-  if (prev) cols.push({ field: 'v' + prev, headerName: String(prev) + ' ' + sym, width: 120, type: 'numericColumn', cellRenderer: moneyRenderer });
-  cols.push({ field: 'v' + cur, headerName: String(cur) + ' ' + sym + ' ★', width: 120, type: 'numericColumn', cellRenderer: moneyRenderer });
+  if (prev) cols.push({ field: 'v' + prev, headerName: String(prev) + ' ' + sym, width: 120, cellRenderer: moneyRenderer });
+  cols.push({ field: 'v' + cur, headerName: String(cur) + ' ' + sym + ' ★', width: 120, cellRenderer: moneyRenderer });
   if (prev) {
-    cols.push({ field: 'deltaAmt', headerName: 'Δ $', width: 100, type: 'numericColumn', cellRenderer: deltaAmtRenderer });
-    cols.push({ field: 'deltaPct', headerName: 'Δ %', width: 90, type: 'numericColumn', cellRenderer: deltaRenderer });
+    cols.push({ field: 'deltaAmt', headerName: 'Δ $', width: 100, cellRenderer: deltaAmtRenderer });
+    cols.push({ field: 'deltaPct', headerName: 'Δ %', width: 90, cellRenderer: deltaRenderer });
   }
 
   var grandCur = 0, grandPrev = 0;
-
-  var rows = RANCH_ORDER.map(function(ranch) {
+  var rows = [];
+  RANCH_ORDER.forEach(function(ranch) {
     var row = { rancho: ranch, _cat: state.cat, _week: wn, _year: cur, _fromWeek: wn, _toWeek: wn };
     var totalCur = 0, totalPrev = 0;
-
     var aC = sumDetail(getWeekDetail(state.cat, wn, cur), state.currency);
     totalCur = aC.ranches[ranch] || 0;
     if (prev) {
       var aP = sumDetail(getWeekDetail(state.cat, wn, prev), state.currency);
       totalPrev = aP.ranches[ranch] || 0;
     }
-
     row['v' + cur] = totalCur; grandCur += totalCur;
     if (prev) {
       row['v' + prev] = totalPrev; grandPrev += totalPrev;
       row.deltaAmt = totalCur - totalPrev;
       row.deltaPct = totalPrev > 0 ? (totalCur - totalPrev) / totalPrev * 100 : null;
     }
-    return row;
-  }).filter(function(r) { return (r['v' + cur] || 0) > 0 || (r['v' + (prev||cur)] || 0) > 0; });
-
+    if (totalCur > 0 || totalPrev > 0) rows.push(row);
+  });
   setMainGrid(cols, rows, [], fmt(grandCur) + ' ' + sym + ' · ' + state.cat);
 }
 
-// ═══════════════════════════════════════════════════════════
-// VIEW 4: DETALLE SEMANAL
-// Flat table of all weekly_detail rows
-// ═══════════════════════════════════════════════════════════
+// VIEW 5: DETALLE SEMANAL
 function renderDetalle() {
   var yrs  = getActiveYears();
   var sym  = state.currency.toUpperCase();
-
   var cols = [
-    { field: 'year',      headerName: 'AÑO',     width: 60,  filter: 'agNumberColumnFilter', type: 'numericColumn', pinned: 'left' },
-    { field: 'week',      headerName: 'SEM',      width: 55,  filter: 'agNumberColumnFilter', type: 'numericColumn', pinned: 'left',
+    { field: 'year',      headerName: 'AÑO',     width: 60,  filter: 'agNumberColumnFilter', pinned: 'left' },
+    { field: 'week',      headerName: 'SEM',      width: 55,  filter: 'agNumberColumnFilter', pinned: 'left',
       cellRenderer: function(p) { return wFmt(p.value); } },
     { field: 'categoria', headerName: 'CATEGORÍA', width: 220, filter: 'agTextColumnFilter', pinned: 'left', cellRenderer: catRenderer },
-    { field: 'usd_total', headerName: 'USD',      width: 100, filter: 'agNumberColumnFilter', type: 'numericColumn', cellRenderer: moneyRenderer },
-    { field: 'mxn_total', headerName: 'MXN',      width: 110, filter: 'agNumberColumnFilter', type: 'numericColumn', cellRenderer: moneyRenderer },
+    { field: 'usd_total', headerName: 'USD',      width: 100, filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
+    { field: 'mxn_total', headerName: 'MXN',      width: 110, filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
     { field: 'date_range',headerName: 'PERÍODO',  width: 150, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#888;font-size:10px">' + (p.value||'') + '</span>'; } },
   ];
-  // Ranch columns
   RANCH_ORDER.forEach(function(r) {
     var col2 = RANCH_COLORS[r] || '#888';
     cols.push({
       field: 'rn_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
       headerName: r, width: 100,
-      filter: 'agNumberColumnFilter', type: 'numericColumn',
+      filter: 'agNumberColumnFilter',
       cellRenderer: function(p) {
         var v = p.value; if (!v || v < 0.01) return '<span style="color:#ddd">—</span>';
         return '<span style="color:' + col2 + '">' + fmt(v) + '</span>';
       }
     });
   });
-
-  var rows = [];
-  var grandTotal = 0;
+  var rows = [], grandTotal = 0;
   DATA.weekly_detail.forEach(function(r) {
     if (!state.activeYears[r.year]) return;
     if (r.categoria !== state.cat) return;
-
     var row = {
       year: r.year, week: r.week, categoria: r.categoria,
       usd_total: r.usd_total, mxn_total: r.mxn_total,
@@ -1313,9 +1203,7 @@ function renderDetalle() {
   setMainGrid(cols, rows, [], fmt(grandTotal) + ' ' + sym + ' (' + rows.length + ' registros) · ' + state.cat);
 }
 
-// ═══════════════════════════════════════════════════════════
-// VIEW 5: PRODUCTOS (PR + MP + ME)
-// ═══════════════════════════════════════════════════════════
+// VIEW 6: PRODUCTOS
 function renderProductosFull() {
   var cols = [
     { field: 'tipo',     headerName: 'TIPO',     width: 60,  filter: 'agTextColumnFilter', pinned: 'left' },
@@ -1328,9 +1216,8 @@ function renderProductosFull() {
       cellRenderer: function(p) { return '<span style="color:#1e3a5f">' + (p.value||'') + '</span>'; } },
     { field: 'unidades', headerName: 'UNID.',    width: 80,  filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#555">' + (p.value||'—') + '</span>'; } },
-    { field: 'gasto',    headerName: 'GASTO',    width: 100, filter: 'agNumberColumnFilter', type: 'numericColumn', cellRenderer: moneyRenderer },
+    { field: 'gasto',    headerName: 'GASTO',    width: 100, filter: 'agNumberColumnFilter', cellRenderer: moneyRenderer },
   ];
-
   var rows = [];
   function flattenProd(dataSet, label) {
     if (!dataSet) return;
@@ -1363,17 +1250,12 @@ function renderProductosFull() {
   setMainGrid(cols, rows, [], fmt(total) + ' · ' + rows.length + ' registros');
 }
 
-// ═══════════════════════════════════════════════════════════
-// VIEW 6: COSTO SERVICIOS
-// ═══════════════════════════════════════════════════════════
+// VIEW 7: COSTO SERVICIOS
 var SV_SUBCATS = ['Electricidad','Fletes y Acarreos','Gastos de Exportación','Certificado Fitosanitario',
   'Transporte de Personal','Compra de Flor a Terceros','Comida para el Personal','RO, TEL, RTA.Alim'];
 function renderServicios() {
   var yrs  = getActiveYears();
   var sym  = state.currency.toUpperCase();
-
-  // Build rows from servicios_data (estructura nueva del extractor)
-  // Fallback: weekly_detail con categorias SV: para compatibilidad.
   var svRows = {};
   if (Array.isArray(DATA.servicios_data) && DATA.servicios_data.length) {
     DATA.servicios_data.forEach(function(r) {
@@ -1381,13 +1263,11 @@ function renderServicios() {
       var subcat = (r.subcat || '').trim();
       if (!subcat) return;
       if (!svRows[subcat]) svRows[subcat] = {};
-
       var src = state.currency === 'usd' ? (r.usd_ranches || {}) : (r.mxn_ranches || {});
       RANCH_ORDER.forEach(function(rn) {
         var v = src[rn] || 0;
         if (v > 0) svRows[subcat][rn] = (svRows[subcat][rn] || 0) + v;
       });
-
       var total = state.currency === 'usd' ? r.usd_total : r.mxn_total;
       svRows[subcat]._total = (svRows[subcat]._total || 0) + (total || 0);
     });
@@ -1405,12 +1285,11 @@ function renderServicios() {
       svRows[subcat]._total = (svRows[subcat]._total || 0) + (state.currency === 'usd' ? r.usd_total : r.mxn_total);
     });
   }
-
   var cols = [
     { field: 'subcat', headerName: 'SUBCATEGORÍA', pinned: 'left', width: 210, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="font-weight:700;color:#1e3a5f">'+(p.value||'')+'</span>'; } },
-    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, type: 'numericColumn', cellRenderer: moneyRenderer },
-    { field: 'pct',   headerName: '% DEL TOTAL', width: 85,  type: 'numericColumn',
+    { field: 'total', headerName: 'TOTAL ' + sym, width: 110, cellRenderer: moneyRenderer },
+    { field: 'pct',   headerName: '% DEL TOTAL', width: 85,
       cellRenderer: function(p) {
         var v = p.value; if (!v) return '—';
         var w = Math.min(v / 100 * 55, 55);
@@ -1424,20 +1303,18 @@ function renderServicios() {
     var col3 = RANCH_COLORS[r] || '#888';
     cols.push({
       field: 'r_' + r.replace(/[^a-zA-Z0-9]/g,'_'),
-      headerName: r, width: 100, type: 'numericColumn', filter: 'agNumberColumnFilter',
+      headerName: r, width: 100,
       cellRenderer: function(p) {
         var v = p.value; if (!v || v < 0.01) return '<span style="color:#e0e0e0">—</span>';
         return '<span style="color:' + col3 + '">' + fmt(v) + '</span>';
       }
     });
   });
-
   var grandTotal = Object.values(svRows).reduce(function(s,r) { return s + (r._total||0); }, 0);
   var orderedSubcats = SV_SUBCATS.filter(function(sc) { return svRows[sc]; });
   Object.keys(svRows).forEach(function(sc) {
     if (orderedSubcats.indexOf(sc) === -1) orderedSubcats.push(sc);
   });
-
   var rows = orderedSubcats.map(function(sc) {
     var data = svRows[sc] || {};
     var row = { subcat: sc, total: data._total || 0 };
@@ -1456,25 +1333,11 @@ function renderServicios() {
 // ═══════════════════════════════════════════════════════════
 function onMainCellClick(evt) {
   if (!evt || !evt.data || !evt.colDef) return;
-
   var data = evt.data;
   var clickedField = evt.colDef.field || '';
   var clickedRanch = fieldToRanch(clickedField);
-
-  if (state.view === 'semana') {
+  if (state.view === 'semana' || state.view === 'anual' || state.view === 'comparativo' || state.view === 'rancho') {
     showProdPanel(data, { ranch: clickedRanch || null });
-    return;
-  }
-  if (state.view === 'comparativo') {
-    if (clickedRanch || clickedField === 'total' || clickedField === 'week_lbl' || clickedField === 'week') {
-      showProdPanel(data, { ranch: clickedRanch || null });
-    }
-    return;
-  }
-  if (state.view === 'rancho') {
-    if (clickedField === 'rancho' || clickedRanch || clickedField.indexOf('cat_') === 0) {
-      showProdPanel(data, { ranch: data.rancho || null });
-    }
   }
 }
 function showProdPanel(rowData, opts) {
@@ -1492,8 +1355,6 @@ function showProdPanel(rowData, opts) {
   var isMirfe  = cat === CAT_MIRFE;
   var isMipe   = cat === CAT_MIPE;
 
-  // Regla: abrir siempre desde comparativo/semana/rancho.
-  // Fuente preferente por categoría; fallback general a PR.
   var src = isMant ? 'mp' : (isMatEmp ? 'me' : 'pr');
   var tipoFilter = null;
   if (src === 'pr') {
@@ -1507,9 +1368,7 @@ function showProdPanel(rowData, opts) {
   var wkStart = parseInt(fromW || wn || 0);
   var wkEnd   = parseInt(toW || wn || 0);
   if (!wkStart || !wkEnd) return;
-  if (wkStart > wkEnd) {
-    var t = wkStart; wkStart = wkEnd; wkEnd = t;
-  }
+  if (wkStart > wkEnd) { var t = wkStart; wkStart = wkEnd; wkEnd = t; }
 
   var rows = [];
   for (var wk = wkStart; wk <= wkEnd; wk++) {
@@ -1538,11 +1397,8 @@ function showProdPanel(rowData, opts) {
   }
 
   var rangeText = wkStart === wkEnd ? (wFmt(wkStart) + ' · ' + yr) : (wFmt(wkStart) + '→' + wFmt(wkEnd) + ' · ' + yr);
-
-  // Mostrar panel siempre al abrir detalle (aunque no haya filas)
   document.getElementById('prodPanel').className = 'show';
 
-  // Inicializar grid de productos en primer uso
   if (!prodGridApi) {
     var prodElInit = document.getElementById('prodGrid');
     var initOpts = {
@@ -1566,9 +1422,7 @@ function showProdPanel(rowData, opts) {
   }
 
   document.getElementById('prodTitle').textContent = cat + ' ▸ ' + rangeText + (ranchFilter ? (' · ' + ranchFilter) : '');
-
   rows.sort(function(a,b) { return b.gasto - a.gasto; });
-
   var total = rows.reduce(function(s,r) { return s + r.gasto; }, 0);
   document.getElementById('prodMeta').textContent = rows.length + ' registros · ' + fmt(total);
 
@@ -1587,41 +1441,23 @@ function getProdCols() {
     { field: 'producto', headerName: 'PRODUCTO', width: 280, filter: 'agTextColumnFilter',
       cellRenderer: function(p) { return '<span style="color:#1e3a5f">'+(p.value||'')+'</span>'; } },
     { field: 'unidades', headerName: 'UNID.', width: 90 },
-    { field: 'gasto', headerName: 'GASTO USD', width: 100, type: 'numericColumn', cellRenderer: moneyRenderer },
+    { field: 'gasto', headerName: 'GASTO USD', width: 100, cellRenderer: moneyRenderer },
   ];
 }
 function closeProdPanel() {
   document.getElementById('prodPanel').className = '';
 }
 
-// ── HELPER: abrir productos desde tabla comparativo ──
-function showProdFromCmp(yr, wk, ranch) {
-  var rowData = { _cat: state.cat, _year: yr, _week: wk, _fromWeek: wk, _toWeek: wk };
-  showProdPanel(rowData, { ranch: ranch || null });
-}
-
-// Delegated click para celdas clickeables de comparativo
-document.addEventListener('click', function(e) {
-  var td = e.target.closest('td.cmp-clickable');
-  if (!td) return;
-  var yr    = parseInt(td.dataset.yr);
-  var wk    = parseInt(td.dataset.wk);
-  var ranch = td.dataset.ranch || null;
-  showProdFromCmp(yr, wk, ranch || null);
-});
-
 // ═══════════════════════════════════════════════════════════
 // RESIZE HELPER
 // ═══════════════════════════════════════════════════════════
 function resizeGrid() {
-  // Medir la altura real de todos los elementos fijos alrededor del grid
   var hdr      = document.querySelector('.app-hdr');
   var toolbar  = document.querySelector('.toolbar');
   var tabs     = document.querySelector('.view-tabs');
   var rangeBar = document.querySelector('.range-bar');
   var statusbar= document.querySelector('.statusbar');
   var prodPanel= document.getElementById('prodPanel');
-
   var used = 0;
   if (hdr)       used += hdr.offsetHeight;
   if (toolbar)   used += toolbar.offsetHeight;
@@ -1629,8 +1465,6 @@ function resizeGrid() {
   if (rangeBar && rangeBar.classList.contains('show')) used += rangeBar.offsetHeight;
   if (statusbar) used += statusbar.offsetHeight;
   if (prodPanel && prodPanel.classList.contains('show')) used += prodPanel.offsetHeight;
-
-  // document.documentElement.clientHeight = altura real del iframe
   var available = document.documentElement.clientHeight - used - 4;
   var h = Math.max(available, 300);
   document.getElementById('myGrid').style.height = h + 'px';
@@ -1638,9 +1472,7 @@ function resizeGrid() {
 }
 window.addEventListener('resize', resizeGrid);
 
-// ═══════════════════════════════════════════════════════════
-// HEIGHT REPORTING TO STREAMLIT
-// ═══════════════════════════════════════════════════════════
+// HEIGHT REPORTING
 function reportHeight() {
   var appEl = document.getElementById('app');
   var h = appEl ? appEl.scrollHeight + 60 : document.body.scrollHeight + 60;
@@ -1651,9 +1483,7 @@ ro.observe(document.body);
 reportHeight();
 setInterval(reportHeight, 500);
 
-// ═══════════════════════════════════════════════════════════
 // ERROR HANDLER
-// ═══════════════════════════════════════════════════════════
 window.onerror = function(msg, src, line) {
   document.getElementById('loader').innerHTML =
     '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border-radius:8px;border:1px solid #fecaca;max-width:600px">' +
@@ -1661,10 +1491,7 @@ window.onerror = function(msg, src, line) {
   return true;
 };
 
-// ═══════════════════════════════════════════════════════════
 // ARRANCAR
-// ═══════════════════════════════════════════════════════════
-// Reconstruir weekly_series desde weekly_detail si no existe
 if (!DATA.weekly_series) {
   DATA.weekly_series = {};
   DATA.categories.forEach(function(cat) { DATA.weekly_series[cat] = {}; });
@@ -1676,7 +1503,6 @@ if (!DATA.weekly_series) {
     }
   });
 }
-// Wait for AG Grid to load
 if (typeof agGrid === 'undefined') {
   var checkAG = setInterval(function() {
     if (typeof agGrid !== 'undefined') { clearInterval(checkAG); inicializar(); }
@@ -1685,8 +1511,6 @@ if (typeof agGrid === 'undefined') {
   inicializar();
 }
 </script>
-
-
 </body>
 </html>"""
 
@@ -1694,34 +1518,6 @@ html_final = HTML.replace('__DATA_JSON__', data_json)
 components.html(html_final, height=800, scrolling=False)
 
 # ─── Barra inferior: Descarga XLSX + Panel Crear Hoja WK ─────────────────────
-st.markdown("""
-<style>
-  div[data-testid="stSelectbox"] > div { min-width:120px !important; }
-
-  /* Botón ☰ estilo toolbar */
-  div[data-testid="stButton"] button[kind="secondary"].menu-btn {
-    font-family: monospace; font-size: 14px;
-    background: #1e3a5f; color: #fff;
-    border: none; border-radius: 4px;
-    padding: 2px 10px; height: 38px;
-  }
-
-  /* Panel crear hoja */
-  .crear-panel {
-    background: #1e3a5f;
-    border-top: 3px solid #16a34a;
-    padding: 14px 18px 12px;
-    display: flex; align-items: center; gap: 12px;
-    flex-wrap: wrap;
-  }
-  .crear-panel-title {
-    color: rgba(255,255,255,0.55); font-size: 10px;
-    font-family: monospace; text-transform: uppercase;
-    letter-spacing: 0.6px; white-space: nowrap;
-  }
-</style>
-""", unsafe_allow_html=True)
-
 # Estado del panel
 if "show_crear_panel" not in st.session_state:
     st.session_state.show_crear_panel = False
@@ -1743,7 +1539,6 @@ if available_weeks:
     except ImportError:
         _crear_disponible = False
 
-    # ── Fila de controles ─────────────────────────────────────────────────────
     col1, col2, col3, col_menu = st.columns([1.2, 1, 5, 0.18])
 
     with col1:
@@ -1776,7 +1571,6 @@ if available_weeks:
             if st.button("☰", key="toggle_crear", help="Crear nueva hoja WK en SharePoint"):
                 st.session_state.show_crear_panel = not st.session_state.show_crear_panel
 
-    # ── Panel: Crear nueva hoja WK ────────────────────────────────────────────
     if _crear_disponible and st.session_state.show_crear_panel:
         st.markdown(
             '<div class="crear-panel">'
@@ -1811,7 +1605,6 @@ if available_weeks:
             elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
                 st.warning("⚠️ El nombre debe tener formato WK#### (ej: WK2518).")
             else:
-                # Leer credenciales desde st.secrets  (sección [sharepoint])
                 try:
                     tenant_id     = st.secrets["sharepoint"]["tenant_id"]
                     client_id     = st.secrets["sharepoint"]["client_id"]
@@ -1830,6 +1623,6 @@ if available_weeks:
 
                 if resultado.get("ok"):
                     st.success(resultado["mensaje"])
-                    st.cache_data.clear()   # Refrescar datos al recargar
+                    st.cache_data.clear()
                 else:
                     st.error(f"❌ {resultado['error']}")
