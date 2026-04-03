@@ -23,7 +23,7 @@ st.markdown("""
 <style>
   #MainMenu, header, footer { display: none !important; }
   .stApp { background: #f0f0f0; }
-  .block-container { padding: 0 !important; max-width: 100% !important; margin-top: -3rem !important; }
+  .block-container { padding: 0 !important; max-width: 100% !important; margin-top: -1rem !important; }
   .stMainBlockContainer { padding-top: 0 !important; }
   section[data-testid="stSidebar"] { display: none !important; }
 </style>
