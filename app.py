@@ -303,23 +303,23 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 /* ── PRODUCTOS PANEL ─────────────────────────── */
 #prodPanel { 
-  display: none; background: #fff; border: 1px solid var(--green); 
-  border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-  margin: 15px auto; max-width: 95%; overflow: hidden;
+  display: none; background: #fdfdfd; border: 1px solid #cbd5e1; 
+  border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  margin: 20px auto; max-width: 95%; overflow: hidden;
 }
 #prodPanel.show { display: block; }
 .prod-hdr {
-  background: var(--navy); padding: 5px 10px;
-  display: flex; align-items: center; gap: 10px; height: 28px;
+  background: #fff; padding: 10px 15px; border-bottom: 1px solid #cbd5e1;
+  display: flex; align-items: center; gap: 10px; height: 38px;
 }
-.prod-hdr-title { color: #fff; font-size: 11px; font-weight: 700; flex: 1; }
-.prod-hdr-meta  { color: rgba(255,255,255,0.6); font-size: 10px; }
+.prod-hdr-title { color: #0f172a; font-size: 13px; font-weight: 700; flex: 1; text-transform: uppercase; letter-spacing: 0.5px; }
+.prod-hdr-meta  { display: none; }
 .prod-close {
-  background: transparent; border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 3px; color: rgba(255,255,255,0.8);
-  cursor: pointer; font-size: 10px; padding: 1px 8px; font-family: inherit;
+  background: transparent; border: 1px solid #cbd5e1;
+  border-radius: 4px; color: #475569; font-weight: 600;
+  cursor: pointer; font-size: 11px; padding: 4px 10px; font-family: inherit; transition: all 0.2s;
 }
-.prod-close:hover { border-color: #fff; color: #fff; }
+.prod-close:hover { border-color: #0f172a; color: #0f172a; background: #f8fafc; }
 #prodTableWrap { overflow: visible; }
 
 /* ── STATUS BAR ──────────────────────────────── */
@@ -1204,32 +1204,34 @@ function showProdPanel(rowData, opts) {
   
   var panelHtml = '';
   if (rows.length===0){
-    panelHtml = '<div style="flex:1; min-width:400px; border:1px solid var(--green); border-radius:4px; max-height:400px; overflow-y:auto; background:#fff;"><div style="background:var(--navy); color:#fff; padding:5px 8px; font-weight:bold; font-size:11px; border-bottom:1px solid #ddd;">' + panelTitle + '</div><p style="padding:12px 10px;color:#888;font-size:11px">No hay registros de productos para este período.</p></div>';
+    panelHtml = '<div style="flex:1; min-width:400px; border:1px solid #cbd5e1; border-radius:6px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); max-height:400px; overflow-y:auto; background:#fff;"><div style="background:#fff; color:#0f172a; padding:12px 16px; font-weight:bold; font-size:12px; border-bottom:2px solid #0f172a; text-transform:uppercase;">' + panelTitle + '</div><p style="padding:16px;color:#64748b;font-size:12px;">No hay registros de productos para este período.</p></div>';
   } else {
     rows.sort(function(a,b){return b.gasto-a.gasto;});
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
-    var panelMeta = rows.length+' registros · '+fmt(total);
+    var panelMeta = 'Registros: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
 
-    var html='<div style="flex:1; min-width:350px; border:1px solid var(--green); border-radius:4px; max-height:400px; display:flex; flex-direction:column; background:#fff;">' +
-      '<div style="background:var(--navy); color:#fff; padding:5px 8px; font-weight:bold; font-size:11px; border-bottom:1px solid #ddd; flex-shrink:0;">' + panelTitle + 
-      '<div style="color:rgba(255,255,255,0.6); font-size:10px; font-weight:normal;">' + panelMeta + '</div></div>' +
-      '<div style="overflow-y:auto;"><table class="pt-table" style="font-size:11px; width:100%;"><thead><tr>'+
-      '<th style="text-align:left">WK</th>'+
-      '<th style="text-align:left">RANCHO</th>'+
-      '<th style="text-align:left">TIPO</th>'+
-      '<th style="text-align:left">PRODUCTO</th>'+
-      '<th style="text-align:left">UNID.</th>'+
-      '<th style="text-align:right">GASTO</th>'+
+    var html='<div style="flex:1; min-width:380px; border:1px solid #cbd5e1; border-radius:6px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); max-height:420px; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
+      '<div style="background:#f8fafc; color:#0f172a; padding:12px 14px; border-bottom:2px solid #0f172a; flex-shrink:0;">' + 
+      '<div style="font-weight:bold; font-size:12px; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">' + panelTitle + '</div>' + 
+      '<div style="color:#475569; font-size:11px;">' + panelMeta + '</div></div>' +
+      '<div style="overflow-y:auto;"><table class="pt-table" style="font-size:11px; width:100%; border-collapse:collapse;"><thead><tr>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">WK</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">RANCHO</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">TIPO</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">PRODUCTO</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">UNID.</th>'+
+      '<th style="text-align:right; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">GASTO</th>'+
       '</tr></thead><tbody>';
     rows.forEach(function(r,i){
-      var rc=RANCH_COLORS[r.rancho]||'#666';
-      html+='<tr class="pt-row">'+
-        '<td>'+r.week_code+'</td>'+
-        '<td><span style="color:'+rc+';font-weight:600">'+r.rancho+'</span></td>'+
-        '<td>'+r.tipo+'</td>'+
-        '<td style="color:#1e3a5f">'+r.producto+'</td>'+
-        '<td style="color:#555">'+r.unidades+'</td>'+
-        '<td style="text-align:right"><span class="cell-navy">'+fmt(r.gasto)+'</span></td>'+
+      var rc=RANCH_COLORS[r.rancho]||'#64748b';
+      var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
+      html+='<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">'+
+        '<td style="padding:6px 8px; color:#64748b;">'+r.week_code+'</td>'+
+        '<td style="padding:6px 8px;"><span style="color:'+rc+';font-weight:600">'+r.rancho+'</span></td>'+
+        '<td style="padding:6px 8px; color:#64748b;">'+r.tipo+'</td>'+
+        '<td style="padding:6px 8px; color:#0f172a; font-weight:500;">'+r.producto+'</td>'+
+        '<td style="padding:6px 8px; color:#94a3b8;">'+r.unidades+'</td>'+
+        '<td style="padding:6px 8px; text-align:right;"><span style="font-weight:600; color:#0f172a;">'+fmt(r.gasto)+'</span></td>'+
         '</tr>';
     });
     html+='</tbody></table></div></div>';
