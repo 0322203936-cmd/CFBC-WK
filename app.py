@@ -1236,9 +1236,11 @@ function showProdPanel(rowData, opts) {
     panelHtml = html;
   }
   
-  _prodViews.push(panelHtml);
-  if (_prodViews.length > 2) {
-    _prodViews.shift(); // keep max 2 side-by-side
+  if (_prodViews.indexOf(panelHtml) === -1) {
+    _prodViews.push(panelHtml);
+    if (_prodViews.length > 2) {
+      _prodViews.shift(); // keep max 2 side-by-side
+    }
   }
   
   document.getElementById('prodPanel').className='show';
