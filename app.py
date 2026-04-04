@@ -1326,10 +1326,8 @@ HTML = f'''<!DOCTYPE html>
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
 
-# Renderizamos el iframe PRIMERO para que ocupe correctamente su espacio
-components.html(html_final, height=800, scrolling=False)
-
-# ─── POPUP EXCEL / SHAREPOINT (FLOTANTE) ─────────────────────────────────────
+# ─── POPUP EXCEL / SHAREPOINT ────────────────────────────────────────────────
+# Lo renderizamos ANTES del iframe usando float para que coexista en el scroll
 available_weeks = sorted(
     {str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2) for r in DATA.get("weekly_detail", [])},
     reverse=True
@@ -1343,18 +1341,19 @@ if available_weeks:
     except ImportError:
         _crear_disponible = False
 
-    # Usamos CSS para SOBREPONER el popover justo al lado del botón CSV del Dashboard HTML
     st.markdown("""
     <style>
-    /* El contenedor principal del popover que flota sobre la app */
+    /* El contenedor flota a la derecha dentro del flujo normal, por lo que ESCROLLEA con la app */
     div[data-testid="stPopover"] {
-        position: absolute !important;
-        top: 6px !important;
-        right: 125px !important; /* Ajustado justo a la izquierda del CSV */
+        float: right !important;
+        margin-right: 125px !important; /* Ajustado a un lado de CSV */
+        margin-top: 6px !important;
+        margin-bottom: -30px !important; /* Jala el iframe hacia arriba para sobreponerlo */
+        position: relative !important;
         z-index: 999999 !important;
-        width: 75px !important; /* Idéntico ancho aproximado al botón CSV */
+        width: 75px !important;
         height: 24px !important; max-height: 24px !important;
-        margin: 0 !important; padding: 0 !important;
+        padding: 0 !important;
     }
     /* Estilizar SOLO el botón principal que abre el panel para que luzca idéntico al .hdr-btn */
     div[data-testid="stPopover"] button {
@@ -1365,7 +1364,7 @@ if available_weeks:
         display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;
         margin: 0 !important;
     }
-    /* Forzar que el texto de adentro del Popover (p, div) no arrastre márgenes y quede diminuto */
+    /* Forzar que el texto de adentro del Popover no arrastre márgenes */
     div[data-testid="stPopover"] button * {
         font-size: 10px !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; color: #ffffff !important;
         min-height: 0 !important; max-height: 24px !important;
@@ -1435,3 +1434,6 @@ if available_weeks:
                             st.error(f"❌ {resultado['error']}")
                     except KeyError as e:
                         st.error(f"❌ Falta credencial {e}.")
+
+# Renderizamos el iframe DESPUÉS
+components.html(html_final, height=800, scrolling=False)
