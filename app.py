@@ -1204,17 +1204,17 @@ function showProdPanel(rowData, opts) {
   
   var panelHtml = '';
   if (rows.length===0){
-    panelHtml = '<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; max-height:400px; overflow-y:auto; background:#fff;"><p style="padding:8px;color:#64748b;font-size:11px;margin:0;">No hay registros para este período.</p></div>';
+    panelHtml = '<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; background:#fff;"><p style="padding:8px;color:#64748b;font-size:11px;margin:0;">No hay registros para este período.</p></div>';
   } else {
     rows.sort(function(a,b){return b.gasto-a.gasto;});
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = 'Reg: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
 
-    var html='<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; max-height:380px; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
+    var html='<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
       '<div style="background:#f1f5f9; color:#0f172a; padding:4px 6px; border-bottom:1px solid #cbd5e1; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">' + 
       '<div style="font-weight:bold; font-size:11px; text-transform:uppercase; letter-spacing:0px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">' + panelTitle + '</div>' + 
       '<div style="color:#475569; font-size:10px; margin-left:8px; white-space:nowrap;">' + panelMeta + '</div></div>' +
-      '<div style="overflow-y:auto; scrollbar-width:thin;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
+      '<div style="overflow-x:auto; scrollbar-width:thin;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
       '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">WK</th>'+
       '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">RANCHO</th>'+
       '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">TIPO</th>'+
