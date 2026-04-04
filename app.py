@@ -1343,17 +1343,13 @@ if available_weeks:
 
     st.markdown("""
     <style>
-    /* TRUCO VITAL: Transformamos el canvas en "relativo" para que el absolute haga scroll orgánicamente */
-    .block-container {
-        position: relative !important;
-    }
-    /* Posicionamos físicamente el botón en la esquina superior */
+    /* El contenedor principal del popover que flota sobre la app */
     div[data-testid="stPopover"] {
-        position: absolute !important;
+        position: fixed !important;
         top: 6px !important;
-        right: 125px !important; /* Ajustado justo a la izquierda del CSV original */
+        right: 125px !important; /* Ajustado justo a la izquierda del CSV */
         z-index: 999999 !important;
-        width: 75px !important;
+        width: 75px !important; /* Idéntico ancho aproximado al botón CSV */
         height: 24px !important; max-height: 24px !important;
         margin: 0 !important; padding: 0 !important;
     }
