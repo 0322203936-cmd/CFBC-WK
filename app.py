@@ -1325,23 +1325,8 @@ HTML = f'''<!DOCTYPE html>
 </html>'''
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
-components.html(html_final, height=800, scrolling=False)
 
-# ─── Barra inferior: Descarga XLSX + Panel Crear Hoja WK ──────────────────────
-st.markdown("""
-<style>
-  div[data-testid="stSelectbox"] > div { min-width:120px !important; }
-  .crear-panel {
-    background: #1e3a5f; border-top: 3px solid #16a34a;
-    padding: 14px 18px 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  }
-  .crear-panel-title { color: rgba(255,255,255,0.55); font-size: 10px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap; }
-</style>
-""", unsafe_allow_html=True)
-
-if "show_crear_panel" not in st.session_state:
-    st.session_state.show_crear_panel = False
-
+# ─── POPUP EXCEL / SHAREPOINT ────────────────────────────────────────────────
 available_weeks = sorted(
     {str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2) for r in DATA.get("weekly_detail", [])},
     reverse=True
@@ -1355,80 +1340,62 @@ if available_weeks:
     except ImportError:
         _crear_disponible = False
 
-    col1, col2, col3, col_menu = st.columns([1.2, 1, 5, 0.18])
-
-    with col1:
-        selected_wk = st.selectbox(
-            "⬇ Descargar hoja WK",
-            options=available_weeks,
-            format_func=lambda c: f"WK{c}",
-            label_visibility="visible",
-        )
-
-    with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Descargar XLSX", key="dl_xlsx"):
-            with st.spinner(f"Preparando WK{selected_wk}..."):
-                xlsx_bytes = get_sheet_xlsx(selected_wk)
-            if xlsx_bytes:
-                st.download_button(
-                    label=f"💾 WK{selected_wk}.xlsx",
-                    data=xlsx_bytes,
-                    file_name=f"WK{selected_wk}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="dl_xlsx_btn",
-                )
-            else:
-                st.error(f"No se encontró la hoja WK{selected_wk} en el archivo.")
-
-    with col_menu:
-        st.markdown("<br>", unsafe_allow_html=True)
-        if _crear_disponible:
-            if st.button("☰", key="toggle_crear", help="Crear nueva hoja WK en SharePoint"):
-                st.session_state.show_crear_panel = not st.session_state.show_crear_panel
-
-    if _crear_disponible and st.session_state.show_crear_panel:
-        st.markdown(
-            '<div class="crear-panel"><span class="crear-panel-title">➕ Nueva hoja WK en SharePoint</span></div>',
-            unsafe_allow_html=True,
-        )
-        pc1, pc2, pc3, pc4 = st.columns([1.2, 0.8, 0.8, 4])
-
-        with pc1:
-            nuevo_nombre = st.text_input(
-                "Nombre de la hoja", placeholder="Ej: WK2518",
-                key="nuevo_wk_nombre", label_visibility="visible",
-            ).strip().upper()
-
-        with pc2:
-            st.markdown("<br>", unsafe_allow_html=True)
-            crear_clicked = st.button("✚ Crear hoja", key="btn_crear_hoja", type="primary")
-
-        with pc3:
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("✕ Cerrar", key="btn_cerrar_panel"):
-                st.session_state.show_crear_panel = False
-                st.rerun()
-
-        if crear_clicked:
-            if not nuevo_nombre:
-                st.warning("⚠️ Escribe el nombre de la hoja antes de crear.")
-            elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
-                st.warning("⚠️ El nombre debe tener formato WK#### (ej: WK2518).")
-            else:
-                try:
-                    tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                    client_id     = st.secrets["sharepoint"]["client_id"]
-                    client_secret = st.secrets["sharepoint"]["client_secret"]
-                except KeyError as e:
-                    st.error(f"❌ Falta la credencial **{e}** en los secrets de Streamlit.")
-                    st.stop()
-
-                with st.spinner(f"Creando hoja {nuevo_nombre} en SharePoint…"):
-                    resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
-
-                if resultado.get("ok"):
-                    st.success(resultado["mensaje"])
-                    st.cache_data.clear()
+    # El menú flota a la derecha para emparejarse visualmente con los botones del iframe
+    st.markdown("<style>.stPopover { display:inline-block; } button[data-testid='baseButton-secondary'] { padding:0.25rem 0.5rem; font-size:12px; font-weight:bold; color:#1e3a5f; border-radius:4px; max-height:28px; border:1px solid #1e3a5f; margin-top:2px; margin-right:4px; }</style>", unsafe_allow_html=True)
+    c_space, c_btn = st.columns([8.5, 1.5])
+    with c_btn:
+        with st.popover("⚙️ GESTOR EXCEL", use_container_width=True):
+            st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>⬇ Descargar Archivo WK</p>", unsafe_allow_html=True)
+            selected_wk = st.selectbox(
+                "Semana a descargar",
+                options=available_weeks,
+                format_func=lambda c: f"WK{c}",
+                label_visibility="collapsed"
+            )
+            if st.button("Preparar XLSX", key="dl_xlsx", use_container_width=True):
+                with st.spinner(f"Preparando WK{selected_wk}..."):
+                    xlsx_bytes = get_sheet_xlsx(selected_wk)
+                if xlsx_bytes:
+                    st.download_button(
+                        label=f"💾 Confirmar WK{selected_wk}",
+                        data=xlsx_bytes,
+                        file_name=f"WK{selected_wk}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="dl_xlsx_btn",
+                        use_container_width=True
+                    )
                 else:
-                    st.error(f"❌ {resultado['error']}")
+                    st.error(f"No se encontró WK{selected_wk}.")
+            
+            if _crear_disponible:
+                st.divider()
+                st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>✚ Nueva hoja SharePoint</p>", unsafe_allow_html=True)
+                nuevo_nombre = st.text_input(
+                    "Nombre (Ej: WK2518)",
+                    key="nuevo_wk_nombre",
+                    placeholder="Ej: WK2518",
+                    label_visibility="collapsed"
+                ).strip().upper()
+                
+                if st.button("Crear Hoja", key="btn_crear_hoja", type="primary", use_container_width=True):
+                    if not nuevo_nombre:
+                        st.warning("⚠️ Escribe el nombre de la hoja.")
+                    elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
+                        st.warning("⚠️ El formato debe ser WK####.")
+                    else:
+                        try:
+                            tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                            client_id     = st.secrets["sharepoint"]["client_id"]
+                            client_secret = st.secrets["sharepoint"]["client_secret"]
+                            with st.spinner(f"Creando {nuevo_nombre}…"):
+                                resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
+                            if resultado.get("ok"):
+                                st.success(resultado["mensaje"])
+                                st.cache_data.clear()
+                            else:
+                                st.error(f"❌ {resultado['error']}")
+                        except KeyError as e:
+                            st.error(f"❌ Falta credencial {e}.")
+
+# Renderizamos el iframe (dashboard HTML)
+components.html(html_final, height=800, scrolling=False)
