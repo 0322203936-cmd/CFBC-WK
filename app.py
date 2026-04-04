@@ -1256,23 +1256,11 @@ function showProdFromCmp(yr,wk,ranch) { showProdPanel({_cat:state.cat,_year:yr,_
 // RESIZE
 // =======================================================
 function resizeTable() {
-  var used=0;
-  ['app-hdr','toolbar','view-tabs','statusbar'].forEach(function(cls){
-    var el=document.querySelector('.'+cls);
-    if (el) used+=el.offsetHeight;
-  });
-  var rb=document.querySelector('.range-bar.show');
-  if (rb) used+=rb.offsetHeight;
-  var pp=document.getElementById('prodPanel');
-  if (pp&&pp.classList.contains('show')) used+=pp.offsetHeight;
-
-  var available=document.documentElement.clientHeight-used-4;
-  var h=Math.max(available,300);
-
+  // Las tablas ya no tienen altura forzada para usar el scroll nativo.
   var tw=document.getElementById('tableWrap');
-  if (tw) tw.style.height=h+'px';
+  if (tw) tw.style.height='auto';
   var cmpWrap=document.querySelector('.cmp-tbl-wrap');
-  if (cmpWrap) cmpWrap.style.maxHeight=h+'px';
+  if (cmpWrap) cmpWrap.style.maxHeight='none';
 }
 window.addEventListener('resize', resizeTable);
 
