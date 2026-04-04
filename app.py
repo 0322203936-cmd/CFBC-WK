@@ -1346,20 +1346,24 @@ if available_weeks:
     # Usamos CSS para SOBREPONER el popover justo al lado del botón CSV del Dashboard HTML
     st.markdown("""
     <style>
+    /* El contenedor principal del popover que flota sobre la app */
     div[data-testid="stPopover"] {
         position: fixed !important;
-        top: 21px !important;
-        right: 170px !important;
+        top: 15px !important;
+        right: 80px !important; /* Lo acerca más al botón CSV que está a la derecha */
         z-index: 999999 !important;
+        width: 130px !important; /* Botón pequeño como el de CSV */
     }
-    button[data-testid="baseButton-secondary"] {
-        padding: 3px 10px; font-size: 10px; font-weight: 700; color: #ffffff;
-        background: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.35);
-        border-radius: 3px; height: 24px; min-height: 24px; line-height: 1; transition: background 0.1s; letter-spacing: 0.5px;
+    /* Estilizar SOLO el botón principal que abre el panel, y no los botones internos */
+    div[data-testid="stPopover"] > button {
+        width: 100% !important;
+        padding: 3px 8px !important; font-size: 10px !important; font-weight: 700 !important; color: #ffffff !important;
+        background: rgba(255,255,255,0.3) !important; border: 1px solid rgba(255,255,255,0.3) !important;
+        border-radius: 3px !important; height: 24px !important; min-height: 24px !important; line-height: 1 !important; letter-spacing: 0.2px !important;
     }
-    button[data-testid="baseButton-secondary"]:hover {
-        background: rgba(255,255,255,0.55);
-        color: #ffffff; border-color: rgba(255,255,255,0.55);
+    div[data-testid="stPopover"] > button:hover {
+        background: rgba(255,255,255,0.55) !important;
+        color: #ffffff !important; border-color: rgba(255,255,255,0.55) !important;
     }
     div[data-testid="stPopoverBody"] {
         width: 250px !important;
@@ -1368,7 +1372,7 @@ if available_weeks:
     </style>
     """, unsafe_allow_html=True)
 
-    with st.popover("⚙️ GESTIÓN EXCEL", use_container_width=False):
+    with st.popover("⚙️ GESTOR EXCEL", use_container_width=True):
         st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>⬇ Descargar Archivo WK</p>", unsafe_allow_html=True)
         selected_wk = st.selectbox(
             "Semana a descargar",
