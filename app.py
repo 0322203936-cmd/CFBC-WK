@@ -303,23 +303,23 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 /* ── PRODUCTOS PANEL ─────────────────────────── */
 #prodPanel { 
-  display: none; background: #fdfdfd; border: 1px solid #cbd5e1; 
-  border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  margin: 20px auto; max-width: 95%; overflow: hidden;
+  display: none; background: #fdfdfd; border: 1px solid #cbd5e1; border-top: 2px solid #0f172a;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  margin: 5px 0 0 0; width: 100%; overflow: hidden;
 }
 #prodPanel.show { display: block; }
 .prod-hdr {
-  background: #fff; padding: 10px 15px; border-bottom: 1px solid #cbd5e1;
-  display: flex; align-items: center; gap: 10px; height: 38px;
+  background: #f8fafc; padding: 4px 8px; border-bottom: 1px solid #cbd5e1;
+  display: flex; align-items: center; gap: 10px; height: 26px;
 }
-.prod-hdr-title { color: #0f172a; font-size: 13px; font-weight: 700; flex: 1; text-transform: uppercase; letter-spacing: 0.5px; }
+.prod-hdr-title { color: #0f172a; font-size: 11px; font-weight: 700; flex: 1; text-transform: uppercase; }
 .prod-hdr-meta  { display: none; }
 .prod-close {
   background: transparent; border: 1px solid #cbd5e1;
-  border-radius: 4px; color: #475569; font-weight: 600;
-  cursor: pointer; font-size: 11px; padding: 4px 10px; font-family: inherit; transition: all 0.2s;
+  border-radius: 2px; color: #475569; font-weight: 600;
+  cursor: pointer; font-size: 9px; padding: 2px 8px; height: 18px; font-family: inherit; line-height: 1; transition: all 0.2s;
 }
-.prod-close:hover { border-color: #0f172a; color: #0f172a; background: #f8fafc; }
+.prod-close:hover { border-color: #0f172a; color: #0f172a; background: #fff; }
 #prodTableWrap { overflow: visible; }
 
 /* ── STATUS BAR ──────────────────────────────── */
@@ -414,7 +414,7 @@ APP_HTML_BODY = """
       <div class="prod-hdr-title" id="prodTitle">COMPARADOR DE PRODUCTOS</div>
       <button class="prod-close" onclick="closeProdPanel()">&#10005; CERRAR</button>
     </div>
-    <div id="prodTableWrap" style="display:flex; gap:15px; padding:10px; overflow-x:auto;"></div>
+    <div id="prodTableWrap" style="display:flex; gap:6px; padding:6px; overflow-x:auto;"></div>
   </div>
 
   <!-- STATUS BAR -->
@@ -1204,34 +1204,34 @@ function showProdPanel(rowData, opts) {
   
   var panelHtml = '';
   if (rows.length===0){
-    panelHtml = '<div style="flex:1; min-width:400px; border:1px solid #cbd5e1; border-radius:6px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); max-height:400px; overflow-y:auto; background:#fff;"><div style="background:#fff; color:#0f172a; padding:12px 16px; font-weight:bold; font-size:12px; border-bottom:2px solid #0f172a; text-transform:uppercase;">' + panelTitle + '</div><p style="padding:16px;color:#64748b;font-size:12px;">No hay registros de productos para este período.</p></div>';
+    panelHtml = '<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; max-height:400px; overflow-y:auto; background:#fff;"><p style="padding:8px;color:#64748b;font-size:11px;margin:0;">No hay registros para este período.</p></div>';
   } else {
     rows.sort(function(a,b){return b.gasto-a.gasto;});
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
-    var panelMeta = 'Registros: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
+    var panelMeta = 'Reg: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
 
-    var html='<div style="flex:1; min-width:380px; border:1px solid #cbd5e1; border-radius:6px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); max-height:420px; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
-      '<div style="background:#f8fafc; color:#0f172a; padding:12px 14px; border-bottom:2px solid #0f172a; flex-shrink:0;">' + 
-      '<div style="font-weight:bold; font-size:12px; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">' + panelTitle + '</div>' + 
-      '<div style="color:#475569; font-size:11px;">' + panelMeta + '</div></div>' +
-      '<div style="overflow-y:auto;"><table class="pt-table" style="font-size:11px; width:100%; border-collapse:collapse;"><thead><tr>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">WK</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">RANCHO</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">TIPO</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">PRODUCTO</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">UNID.</th>'+
-      '<th style="text-align:right; background:#fff; border-bottom:1px solid #cbd5e1; padding:7px 8px; color:#475569;">GASTO</th>'+
+    var html='<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; max-height:380px; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
+      '<div style="background:#f1f5f9; color:#0f172a; padding:4px 6px; border-bottom:1px solid #cbd5e1; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">' + 
+      '<div style="font-weight:bold; font-size:11px; text-transform:uppercase; letter-spacing:0px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">' + panelTitle + '</div>' + 
+      '<div style="color:#475569; font-size:10px; margin-left:8px; white-space:nowrap;">' + panelMeta + '</div></div>' +
+      '<div style="overflow-y:auto; scrollbar-width:thin;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">WK</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">RANCHO</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">TIPO</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">PRODUCTO</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UNID.</th>'+
+      '<th style="text-align:right; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">GASTO</th>'+
       '</tr></thead><tbody>';
     rows.forEach(function(r,i){
       var rc=RANCH_COLORS[r.rancho]||'#64748b';
       var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
       html+='<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">'+
-        '<td style="padding:6px 8px; color:#64748b;">'+r.week_code+'</td>'+
-        '<td style="padding:6px 8px;"><span style="color:'+rc+';font-weight:600">'+r.rancho+'</span></td>'+
-        '<td style="padding:6px 8px; color:#64748b;">'+r.tipo+'</td>'+
-        '<td style="padding:6px 8px; color:#0f172a; font-weight:500;">'+r.producto+'</td>'+
-        '<td style="padding:6px 8px; color:#94a3b8;">'+r.unidades+'</td>'+
-        '<td style="padding:6px 8px; text-align:right;"><span style="font-weight:600; color:#0f172a;">'+fmt(r.gasto)+'</span></td>'+
+        '<td style="padding:2px 5px; color:#64748b;">'+r.week_code+'</td>'+
+        '<td style="padding:2px 5px; white-space:nowrap;"><span style="color:'+rc+';font-weight:600">'+r.rancho+'</span></td>'+
+        '<td style="padding:2px 5px; color:#64748b;">'+r.tipo+'</td>'+
+        '<td style="padding:2px 5px; color:#0f172a; font-weight:500;">'+r.producto+'</td>'+
+        '<td style="padding:2px 5px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>'+
+        '<td style="padding:2px 5px; text-align:right;"><span style="font-weight:600; color:#0f172a;">'+fmt(r.gasto)+'</span></td>'+
         '</tr>';
     });
     html+='</tbody></table></div></div>';
