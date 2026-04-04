@@ -303,11 +303,11 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 /* ── PRODUCTOS PANEL ─────────────────────────── */
 #prodPanel { 
-  display: none; background: #fff; border: 1px solid var(--green); 
-  border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-  margin: 15px auto; max-width: 600px; overflow: hidden;
+  display: none; background: #fff; border-left: 2px solid var(--green); 
+  box-shadow: -5px 0 15px rgba(0,0,0,0.05);
+  width: 500px; flex-shrink: 0; flex-direction: column; overflow: hidden;
 }
-#prodPanel.show { display: block; }
+#prodPanel.show { display: flex; }
 .prod-hdr {
   background: var(--navy); padding: 5px 10px;
   display: flex; align-items: center; gap: 10px; height: 28px;
@@ -392,30 +392,34 @@ APP_HTML_BODY = """
 
   </div>
 
-  <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
-  <div id="gridWrap">
-    <div class="pt-table-wrap" id="tableWrap" style="overflow:auto"></div>
-  </div>
+  <div style="display:flex; align-items:flex-start; width:100%;">
+    <div style="flex:1; min-width:0; overflow:hidden;">
+      <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
+      <div id="gridWrap">
+        <div class="pt-table-wrap" id="tableWrap" style="overflow:auto"></div>
+      </div>
 
-  <!-- COMPARATIVO TABLE -->
-  <div id="comparativoWrap">
-    <div class="cmp-stat-strip" id="cmpStats"></div>
-    <div class="cmp-tbl-wrap">
-      <table class="cmp-tbl">
-        <thead id="cmpHead"></thead>
-        <tbody id="cmpBody"></tbody>
-      </table>
+      <!-- COMPARATIVO TABLE -->
+      <div id="comparativoWrap">
+        <div class="cmp-stat-strip" id="cmpStats"></div>
+        <div class="cmp-tbl-wrap">
+          <table class="cmp-tbl">
+            <thead id="cmpHead"></thead>
+            <tbody id="cmpBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <!-- PRODUCTOS SUB-PANEL -->
-  <div id="prodPanel">
-    <div class="prod-hdr">
-      <div class="prod-hdr-title" id="prodTitle">PRODUCTOS</div>
-      <div class="prod-hdr-meta"  id="prodMeta"></div>
-      <button class="prod-close" onclick="closeProdPanel()">&#10005; CERRAR</button>
+    <!-- PRODUCTOS SUB-PANEL -->
+    <div id="prodPanel">
+      <div class="prod-hdr">
+        <div class="prod-hdr-title" id="prodTitle">PRODUCTOS</div>
+        <div class="prod-hdr-meta"  id="prodMeta"></div>
+        <button class="prod-close" onclick="closeProdPanel()">&#10005; CERRAR</button>
+      </div>
+      <div id="prodTableWrap"></div>
     </div>
-    <div id="prodTableWrap"></div>
   </div>
 
   <!-- STATUS BAR -->
@@ -1250,8 +1254,6 @@ function resizeTable() {
   });
   var rb=document.querySelector('.range-bar.show');
   if (rb) used+=rb.offsetHeight;
-  var pp=document.getElementById('prodPanel');
-  if (pp&&pp.classList.contains('show')) used+=pp.offsetHeight;
 
   var available=document.documentElement.clientHeight-used-4;
   var h=Math.max(available,300);
@@ -1260,6 +1262,16 @@ function resizeTable() {
   if (tw) tw.style.height=h+'px';
   var cmpWrap=document.querySelector('.cmp-tbl-wrap');
   if (cmpWrap) cmpWrap.style.maxHeight=h+'px';
+
+  var pp=document.getElementById('prodPanel');
+  if (pp && pp.classList.contains('show')) {
+    pp.style.height = h + 'px';
+    var pWrap = document.getElementById('prodTableWrap');
+    if (pWrap) {
+      pWrap.style.maxHeight = (h - 28) + 'px';
+      pWrap.style.overflow = 'auto';
+    }
+  }
 }
 window.addEventListener('resize', resizeTable);
 
