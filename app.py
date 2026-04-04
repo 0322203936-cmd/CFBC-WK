@@ -1348,7 +1348,7 @@ if available_weeks:
     <style>
     /* El contenedor principal del popover que flota sobre la app */
     div[data-testid="stPopover"] {
-        position: fixed !important;
+        position: absolute !important;
         top: 6px !important;
         right: 125px !important; /* Ajustado justo a la izquierda del CSV */
         z-index: 999999 !important;
