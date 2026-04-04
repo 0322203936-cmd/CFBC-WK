@@ -1343,17 +1343,19 @@ if available_weeks:
 
     st.markdown("""
     <style>
-    /* El contenedor flota a la derecha dentro del flujo normal, por lo que ESCROLLEA con la app */
-    div[data-testid="stPopover"] {
-        float: right !important;
-        margin-right: 125px !important; /* Ajustado a un lado de CSV */
-        margin-top: 6px !important;
-        margin-bottom: -30px !important; /* Jala el iframe hacia arriba para sobreponerlo */
+    /* TRUCO VITAL: Transformamos el canvas en "relativo" para que el absolute haga scroll orgánicamente */
+    .block-container {
         position: relative !important;
+    }
+    /* Posicionamos físicamente el botón en la esquina superior */
+    div[data-testid="stPopover"] {
+        position: absolute !important;
+        top: 6px !important;
+        right: 125px !important; /* Ajustado justo a la izquierda del CSV original */
         z-index: 999999 !important;
         width: 75px !important;
         height: 24px !important; max-height: 24px !important;
-        padding: 0 !important;
+        margin: 0 !important; padding: 0 !important;
     }
     /* Estilizar SOLO el botón principal que abre el panel para que luzca idéntico al .hdr-btn */
     div[data-testid="stPopover"] button {
