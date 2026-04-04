@@ -1350,23 +1350,30 @@ if available_weeks:
     div[data-testid="stPopover"] {
         position: fixed !important;
         top: 6px !important;
-        right: 130px !important; /* Ajustado justo a la izquierda del CSV */
+        right: 125px !important; /* Ajustado justo a la izquierda del CSV */
         z-index: 999999 !important;
-        width: 80px !important; /* Idéntico ancho aproximado al botón CSV */
+        width: 75px !important; /* Idéntico ancho aproximado al botón CSV */
+        height: 24px !important; max-height: 24px !important;
+        margin: 0 !important; padding: 0 !important;
     }
     /* Estilizar SOLO el botón principal que abre el panel para que luzca idéntico al .hdr-btn */
-    div[data-testid="stPopover"] > button {
+    div[data-testid="stPopover"] button {
         width: 100% !important;
-        padding: 0px !important; font-size: 10px !important; font-weight: 700 !important; color: #ffffff !important;
+        padding: 0px 4px !important; font-size: 10px !important; font-weight: 700 !important; color: #ffffff !important;
         background: rgba(255,255,255,0.35) !important; border: 1px solid rgba(255,255,255,0.35) !important;
-        border-radius: 3px !important; height: 24px !important; min-height: 24px !important; 
+        border-radius: 3px !important; height: 24px !important; min-height: 24px !important; max-height: 24px !important;
         display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;
+        margin: 0 !important;
     }
     /* Forzar que el texto de adentro del Popover (p, div) no arrastre márgenes y quede diminuto */
-    div[data-testid="stPopover"] > button * {
+    div[data-testid="stPopover"] button * {
+        font-size: 10px !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; color: #ffffff !important;
+        min-height: 0 !important; max-height: 24px !important;
+    }
+    div[data-testid="stPopover"] button p {
         font-size: 10px !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; color: #ffffff !important;
     }
-    div[data-testid="stPopover"] > button:hover {
+    div[data-testid="stPopover"] button:hover {
         background: rgba(255,255,255,0.55) !important; border-color: rgba(255,255,255,0.55) !important;
     }
     div[data-testid="stPopoverBody"] {
@@ -1376,7 +1383,7 @@ if available_weeks:
     </style>
     """, unsafe_allow_html=True)
 
-    with st.popover("⛭ EXCEL", use_container_width=True):
+    with st.popover("⚙ EXCEL", use_container_width=True):
         st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>⬇ Descargar Archivo WK</p>", unsafe_allow_html=True)
         selected_wk = st.selectbox(
             "Semana a descargar",
