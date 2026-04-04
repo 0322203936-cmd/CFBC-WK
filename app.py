@@ -303,11 +303,11 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 /* ── PRODUCTOS PANEL ─────────────────────────── */
 #prodPanel { 
-  display: none; background: #fff; border-left: 2px solid var(--green); 
-  box-shadow: -5px 0 15px rgba(0,0,0,0.05);
-  width: 500px; flex-shrink: 0; flex-direction: column; overflow: hidden;
+  display: none; background: #fff; border: 1px solid var(--green); 
+  border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+  margin: 15px auto; max-width: 95%; overflow: hidden;
 }
-#prodPanel.show { display: flex; }
+#prodPanel.show { display: block; }
 .prod-hdr {
   background: var(--navy); padding: 5px 10px;
   display: flex; align-items: center; gap: 10px; height: 28px;
@@ -392,34 +392,29 @@ APP_HTML_BODY = """
 
   </div>
 
-  <div style="display:flex; align-items:flex-start; width:100%;">
-    <div style="flex:1; min-width:0; overflow:hidden;">
-      <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
-      <div id="gridWrap">
-        <div class="pt-table-wrap" id="tableWrap" style="overflow:auto"></div>
-      </div>
+  <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
+  <div id="gridWrap">
+    <div class="pt-table-wrap" id="tableWrap" style="overflow:auto"></div>
+  </div>
 
-      <!-- COMPARATIVO TABLE -->
-      <div id="comparativoWrap">
-        <div class="cmp-stat-strip" id="cmpStats"></div>
-        <div class="cmp-tbl-wrap">
-          <table class="cmp-tbl">
-            <thead id="cmpHead"></thead>
-            <tbody id="cmpBody"></tbody>
-          </table>
-        </div>
-      </div>
+  <!-- COMPARATIVO TABLE -->
+  <div id="comparativoWrap">
+    <div class="cmp-stat-strip" id="cmpStats"></div>
+    <div class="cmp-tbl-wrap">
+      <table class="cmp-tbl">
+        <thead id="cmpHead"></thead>
+        <tbody id="cmpBody"></tbody>
+      </table>
     </div>
+  </div>
 
-    <!-- PRODUCTOS SUB-PANEL -->
-    <div id="prodPanel">
-      <div class="prod-hdr">
-        <div class="prod-hdr-title" id="prodTitle">PRODUCTOS</div>
-        <div class="prod-hdr-meta"  id="prodMeta"></div>
-        <button class="prod-close" onclick="closeProdPanel()">&#10005; CERRAR</button>
-      </div>
-      <div id="prodTableWrap"></div>
+  <!-- PRODUCTOS SUB-PANEL -->
+  <div id="prodPanel">
+    <div class="prod-hdr">
+      <div class="prod-hdr-title" id="prodTitle">COMPARADOR DE PRODUCTOS</div>
+      <button class="prod-close" onclick="closeProdPanel()">&#10005; CERRAR</button>
     </div>
+    <div id="prodTableWrap" style="display:flex; gap:15px; padding:10px; overflow-x:auto;"></div>
   </div>
 
   <!-- STATUS BAR -->
@@ -1166,6 +1161,8 @@ function onMainCellClick(evt) {
 // =======================================================
 // PRODUCTOS SUBPANEL
 // =======================================================
+var _prodViews = [];
+
 function showProdPanel(rowData, opts) {
   opts=opts||{};
   var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
@@ -1203,44 +1200,52 @@ function showProdPanel(rowData, opts) {
   }
 
   var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
-  document.getElementById('prodPanel').className='show';
-  document.getElementById('prodTitle').textContent=cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
-
+  var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
+  
+  var panelHtml = '';
   if (rows.length===0){
-    document.getElementById('prodMeta').textContent='Sin datos de productos · '+rangeText;
-    document.getElementById('prodTableWrap').innerHTML='<p style="padding:12px 10px;color:#888;font-size:11px">No hay registros de productos para este período.</p>';
-    setTimeout(resizeTable,80);
-    return;
-  }
-  rows.sort(function(a,b){return b.gasto-a.gasto;});
-  var total=rows.reduce(function(s,r){return s+r.gasto;},0);
-  document.getElementById('prodMeta').textContent=rows.length+' registros · '+fmt(total);
+    panelHtml = '<div style="flex:1; min-width:400px; border:1px solid var(--green); border-radius:4px; max-height:400px; overflow-y:auto; background:#fff;"><div style="background:var(--navy); color:#fff; padding:5px 8px; font-weight:bold; font-size:11px; border-bottom:1px solid #ddd;">' + panelTitle + '</div><p style="padding:12px 10px;color:#888;font-size:11px">No hay registros de productos para este período.</p></div>';
+  } else {
+    rows.sort(function(a,b){return b.gasto-a.gasto;});
+    var total=rows.reduce(function(s,r){return s+r.gasto;},0);
+    var panelMeta = rows.length+' registros · '+fmt(total);
 
-  // Render tabla de productos
-  var html='<table class="pt-table" style="font-size:11px"><thead><tr>'+
-    '<th style="text-align:left">WK</th>'+
-    '<th style="text-align:left">RANCHO</th>'+
-    '<th style="text-align:left">TIPO</th>'+
-    '<th style="text-align:left">PRODUCTO</th>'+
-    '<th style="text-align:left">UNID.</th>'+
-    '<th style="text-align:right">GASTO</th>'+
-    '</tr></thead><tbody>';
-  rows.forEach(function(r,i){
-    var rc=RANCH_COLORS[r.rancho]||'#666';
-    html+='<tr class="pt-row">'+
-      '<td>'+r.week_code+'</td>'+
-      '<td><span style="color:'+rc+';font-weight:600">'+r.rancho+'</span></td>'+
-      '<td>'+r.tipo+'</td>'+
-      '<td style="color:#1e3a5f">'+r.producto+'</td>'+
-      '<td style="color:#555">'+r.unidades+'</td>'+
-      '<td style="text-align:right"><span class="cell-navy">'+fmt(r.gasto)+'</span></td>'+
-      '</tr>';
-  });
-  html+='</tbody></table>';
-  document.getElementById('prodTableWrap').innerHTML=html;
+    var html='<div style="flex:1; min-width:350px; border:1px solid var(--green); border-radius:4px; max-height:400px; display:flex; flex-direction:column; background:#fff;">' +
+      '<div style="background:var(--navy); color:#fff; padding:5px 8px; font-weight:bold; font-size:11px; border-bottom:1px solid #ddd; flex-shrink:0;">' + panelTitle + 
+      '<div style="color:rgba(255,255,255,0.6); font-size:10px; font-weight:normal;">' + panelMeta + '</div></div>' +
+      '<div style="overflow-y:auto;"><table class="pt-table" style="font-size:11px; width:100%;"><thead><tr>'+
+      '<th style="text-align:left">WK</th>'+
+      '<th style="text-align:left">RANCHO</th>'+
+      '<th style="text-align:left">TIPO</th>'+
+      '<th style="text-align:left">PRODUCTO</th>'+
+      '<th style="text-align:left">UNID.</th>'+
+      '<th style="text-align:right">GASTO</th>'+
+      '</tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      var rc=RANCH_COLORS[r.rancho]||'#666';
+      html+='<tr class="pt-row">'+
+        '<td>'+r.week_code+'</td>'+
+        '<td><span style="color:'+rc+';font-weight:600">'+r.rancho+'</span></td>'+
+        '<td>'+r.tipo+'</td>'+
+        '<td style="color:#1e3a5f">'+r.producto+'</td>'+
+        '<td style="color:#555">'+r.unidades+'</td>'+
+        '<td style="text-align:right"><span class="cell-navy">'+fmt(r.gasto)+'</span></td>'+
+        '</tr>';
+    });
+    html+='</tbody></table></div></div>';
+    panelHtml = html;
+  }
+  
+  _prodViews.push(panelHtml);
+  if (_prodViews.length > 2) {
+    _prodViews.shift(); // keep max 2 side-by-side
+  }
+  
+  document.getElementById('prodPanel').className='show';
+  document.getElementById('prodTableWrap').innerHTML = _prodViews.join('');
   setTimeout(resizeTable,80);
 }
-function closeProdPanel() { document.getElementById('prodPanel').className=''; setTimeout(resizeTable,60); }
+function closeProdPanel() { _prodViews = []; document.getElementById('prodPanel').className=''; setTimeout(resizeTable,60); }
 function showProdFromCmp(yr,wk,ranch) { showProdPanel({_cat:state.cat,_year:yr,_week:wk,_fromWeek:wk,_toWeek:wk},{ranch:ranch||null}); }
 
 // =======================================================
@@ -1254,6 +1259,8 @@ function resizeTable() {
   });
   var rb=document.querySelector('.range-bar.show');
   if (rb) used+=rb.offsetHeight;
+  var pp=document.getElementById('prodPanel');
+  if (pp&&pp.classList.contains('show')) used+=pp.offsetHeight;
 
   var available=document.documentElement.clientHeight-used-4;
   var h=Math.max(available,300);
@@ -1262,16 +1269,6 @@ function resizeTable() {
   if (tw) tw.style.height=h+'px';
   var cmpWrap=document.querySelector('.cmp-tbl-wrap');
   if (cmpWrap) cmpWrap.style.maxHeight=h+'px';
-
-  var pp=document.getElementById('prodPanel');
-  if (pp && pp.classList.contains('show')) {
-    pp.style.height = h + 'px';
-    var pWrap = document.getElementById('prodTableWrap');
-    if (pWrap) {
-      pWrap.style.maxHeight = (h - 28) + 'px';
-      pWrap.style.overflow = 'auto';
-    }
-  }
 }
 window.addEventListener('resize', resizeTable);
 
