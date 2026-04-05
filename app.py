@@ -1347,7 +1347,7 @@ if available_weeks:
     div[data-testid="stPopover"] {
         position: fixed !important;
         top: 6px !important;
-        right: 125px !important; /* Ajustado justo a la izquierda del CSV */
+        right: 100px !important; /* Pegado a la izquierda del botón CSV */
         z-index: 999999 !important;
         width: 75px !important; /* Idéntico ancho aproximado al botón CSV */
         height: 24px !important; max-height: 24px !important;
