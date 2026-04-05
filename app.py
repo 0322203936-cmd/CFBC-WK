@@ -10,7 +10,7 @@ import os
 import streamlit as st
 import streamlit.components.v1 as components
 
-from data_extractor import get_datos
+from data_extractor import get_datos, SHAREPOINT_URL_WK
 
 st.set_page_config(
     page_title="CFBC WK",
@@ -343,10 +343,23 @@ APP_HTML_BODY = """
 <div id="app" style="display:none">
 
   <!-- HEADER -->
-  <div class="app-hdr">
+  <div class="app-hdr" style="position:relative;">
     <div class="hdr-brand">CFBC &#9656; CONTROL SEMANAL</div>
     <button class="hdr-btn" onclick="exportCSV()" style="margin-left:auto">&#11015; CSV</button>
+    <button class="hdr-btn" id="btnExcel" onclick="toggleExcelPanel(event)" style="margin-left:4px">&#11015; EXCEL</button>
     <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">&#8635;</button>
+
+    <!-- PANEL EXCEL FLOTANTE -->
+    <div id="excelPanel" style="
+      display:none; position:absolute; top:36px; right:30px; z-index:9999;
+      background:#fff; border:1px solid #c0c0c0; border-radius:4px;
+      box-shadow:0 4px 16px rgba(0,0,0,0.18); min-width:210px; padding:12px 14px;
+      font-family:Calibri,'Segoe UI',Arial,sans-serif;">
+      <p style="font-size:11px;font-weight:bold;color:#1e3a5f;margin:0 0 8px 0;">&#11015; Descargar Archivo WK</p>
+      <select id="excelWkSel" style="width:100%;font-size:11px;padding:3px 6px;border:1px solid #bbb;border-radius:3px;margin-bottom:8px;font-family:inherit;"></select>
+      <button onclick="doDownloadExcel()" style="width:100%;font-size:10px;font-weight:700;background:#4472C4;color:#fff;border:none;border-radius:3px;padding:5px 8px;cursor:pointer;font-family:inherit;">Preparar y Descargar XLSX</button>
+      <div id="excelStatus" style="font-size:10px;color:#555;margin-top:6px;min-height:14px;"></div>
+    </div>
   </div>
 
   <!-- TOOLBAR -->
@@ -1275,6 +1288,58 @@ function reportHeight() {
 var ro=new ResizeObserver(reportHeight);
 ro.observe(document.body);
 reportHeight();
+// =======================================================
+// EXCEL DOWNLOAD
+// =======================================================
+(function initExcelWeeks() {
+  var weeks = [];
+  (DATA.weekly_detail || []).forEach(function(r) {
+    var code = String(r.year % 100).padStart(2,'0') + String(r.week).padStart(2,'0');
+    if (weeks.indexOf(code) === -1) weeks.push(code);
+  });
+  weeks.sort(function(a,b){ return b.localeCompare(a); });
+  var sel = document.getElementById('excelWkSel');
+  if (sel) weeks.forEach(function(w){
+    var o = document.createElement('option'); o.value=w; o.text='WK'+w; sel.appendChild(o);
+  });
+})();
+
+function toggleExcelPanel(e) {
+  if (e) e.stopPropagation();
+  var p = document.getElementById('excelPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', function(e) {
+  var p = document.getElementById('excelPanel');
+  var btn = document.getElementById('btnExcel');
+  if (p && !p.contains(e.target) && e.target !== btn) p.style.display = 'none';
+});
+
+async function doDownloadExcel() {
+  var wk = document.getElementById('excelWkSel').value;
+  var status = document.getElementById('excelStatus');
+  if (!wk) { status.textContent = '⚠ Selecciona una semana.'; return; }
+  status.textContent = '⏳ Descargando desde SharePoint…';
+  var spUrl = '__SP_URL__'.replace('?e=','?download=1&e=');
+  try {
+    var resp = await fetch(spUrl);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var buf = await resp.arrayBuffer();
+    status.textContent = '⚙ Extrayendo hoja WK' + wk + '…';
+    var wb = XLSX.read(buf, {type:'array', cellStyles:true, cellFormulas:true});
+    var target = wb.SheetNames.find(function(n){
+      return n.replace(/\s+/g,'').toUpperCase() === ('WK'+wk).toUpperCase();
+    });
+    if (!target) { status.textContent = '❌ No se encontró WK'+wk+'.'; return; }
+    var newWb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(newWb, wb.Sheets[target], target);
+    XLSX.writeFile(newWb, 'WK'+wk+'.xlsx');
+    status.textContent = '✅ Descargado WK'+wk+'.xlsx';
+  } catch(err) {
+    status.textContent = '❌ Error: ' + err.message;
+  }
+}
+
 setInterval(reportHeight,500);
 
 // =======================================================
@@ -1316,6 +1381,7 @@ HTML = f'''<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CFBC &#8212; Control Operativo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 {APP_CSS}
 </head>
 <body>
@@ -1324,114 +1390,43 @@ HTML = f'''<!DOCTYPE html>
 </body>
 </html>'''
 
-html_final = HTML.replace('__DATA_JSON__', data_json)
+html_final = HTML.replace('__DATA_JSON__', data_json).replace('__SP_URL__', SHAREPOINT_URL_WK)
 
-# ─── POPUP EXCEL / SHAREPOINT ────────────────────────────────────────────────
-# Lo renderizamos ANTES del iframe usando float para que coexista en el scroll
-available_weeks = sorted(
-    {str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2) for r in DATA.get("weekly_detail", [])},
-    reverse=True
-)
+# ─── CREAR HOJA SHAREPOINT (opcional) ────────────────────────────────────────
+# El botón EXCEL de descarga ahora está dentro del iframe HTML.
+# Aquí solo se expone "Crear Hoja" si la función está disponible.
+try:
+    from data_extractor import crear_hoja_wk
+    _crear_disponible = True
+except ImportError:
+    _crear_disponible = False
 
-if available_weeks:
-    from data_extractor import get_sheet_xlsx
-    try:
-        from data_extractor import crear_hoja_wk
-        _crear_disponible = True
-    except ImportError:
-        _crear_disponible = False
-
-    st.markdown("""
-    <style>
-    /* El contenedor principal del popover que flota sobre la app */
-    div[data-testid="stPopover"] {
-        position: fixed !important;
-        top: 6px !important;
-        right: 100px !important; /* Pegado a la izquierda del botón CSV */
-        z-index: 999999 !important;
-        width: 75px !important; /* Idéntico ancho aproximado al botón CSV */
-        height: 24px !important; max-height: 24px !important;
-        margin: 0 !important; padding: 0 !important;
-    }
-    /* Estilizar SOLO el botón principal que abre el panel para que luzca idéntico al .hdr-btn */
-    div[data-testid="stPopover"] button {
-        width: 100% !important;
-        padding: 0px 4px !important; font-size: 10px !important; font-weight: 700 !important; color: #ffffff !important;
-        background: rgba(255,255,255,0.35) !important; border: 1px solid rgba(255,255,255,0.35) !important;
-        border-radius: 3px !important; height: 24px !important; min-height: 24px !important; max-height: 24px !important;
-        display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;
-        margin: 0 !important;
-    }
-    /* Forzar que el texto de adentro del Popover no arrastre márgenes */
-    div[data-testid="stPopover"] button * {
-        font-size: 10px !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; color: #ffffff !important;
-        min-height: 0 !important; max-height: 24px !important;
-    }
-    div[data-testid="stPopover"] button p {
-        font-size: 10px !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; color: #ffffff !important;
-    }
-    div[data-testid="stPopover"] button:hover {
-        background: rgba(255,255,255,0.55) !important; border-color: rgba(255,255,255,0.55) !important;
-    }
-    div[data-testid="stPopoverBody"] {
-        width: 250px !important;
-        padding: 10px 15px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    with st.popover("⚙ EXCEL", use_container_width=True):
-        st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>⬇ Descargar Archivo WK</p>", unsafe_allow_html=True)
-        selected_wk = st.selectbox(
-            "Semana a descargar",
-            options=available_weeks,
-            format_func=lambda c: f"WK{c}",
-            label_visibility="collapsed"
-        )
-        if st.button("Preparar XLSX", key="dl_xlsx", use_container_width=True):
-            with st.spinner(f"Preparando WK{selected_wk}..."):
-                xlsx_bytes = get_sheet_xlsx(selected_wk)
-            if xlsx_bytes:
-                st.download_button(
-                    label=f"💾 Confirmar WK{selected_wk}",
-                    data=xlsx_bytes,
-                    file_name=f"WK{selected_wk}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="dl_xlsx_btn",
-                    use_container_width=True
-                )
+if _crear_disponible:
+    with st.expander("✚ Crear Hoja SharePoint"):
+        nuevo_nombre = st.text_input(
+            "Nombre de hoja (Ej: WK2518)",
+            key="nuevo_wk_nombre",
+            placeholder="Ej: WK2518",
+        ).strip().upper()
+        if st.button("Crear Hoja", key="btn_crear_hoja", type="primary"):
+            if not nuevo_nombre:
+                st.warning("⚠️ Escribe el nombre de la hoja.")
+            elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
+                st.warning("⚠️ El formato debe ser WK####.")
             else:
-                st.error(f"No se encontró WK{selected_wk}.")
-        
-        if _crear_disponible:
-            st.divider()
-            st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>✚ Nueva hoja SharePoint</p>", unsafe_allow_html=True)
-            nuevo_nombre = st.text_input(
-                "Nombre (Ej: WK2518)",
-                key="nuevo_wk_nombre",
-                placeholder="Ej: WK2518",
-                label_visibility="collapsed"
-            ).strip().upper()
-            
-            if st.button("Crear Hoja", key="btn_crear_hoja", type="primary", use_container_width=True):
-                if not nuevo_nombre:
-                    st.warning("⚠️ Escribe el nombre de la hoja.")
-                elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
-                    st.warning("⚠️ El formato debe ser WK####.")
-                else:
-                    try:
-                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                        client_id     = st.secrets["sharepoint"]["client_id"]
-                        client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Creando {nuevo_nombre}…"):
-                            resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
-                        if resultado.get("ok"):
-                            st.success(resultado["mensaje"])
-                            st.cache_data.clear()
-                        else:
-                            st.error(f"❌ {resultado['error']}")
-                    except KeyError as e:
-                        st.error(f"❌ Falta credencial {e}.")
+                try:
+                    tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                    client_id     = st.secrets["sharepoint"]["client_id"]
+                    client_secret = st.secrets["sharepoint"]["client_secret"]
+                    with st.spinner(f"Creando {nuevo_nombre}…"):
+                        resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
+                    if resultado.get("ok"):
+                        st.success(resultado["mensaje"])
+                        st.cache_data.clear()
+                    else:
+                        st.error(f"❌ {resultado['error']}")
+                except KeyError as e:
+                    st.error(f"❌ Falta credencial {e}.")
 
-# Renderizamos el iframe DESPUÉS
+# Renderizamos el iframe
 components.html(html_final, height=800, scrolling=False)
