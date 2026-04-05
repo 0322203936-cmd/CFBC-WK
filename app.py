@@ -12,6 +12,29 @@ import streamlit.components.v1 as components
 
 from data_extractor import get_datos, SHAREPOINT_URL_WK
 
+# ── Acción "Crear Hoja" via query param (comunicación iframe → Streamlit) ──────
+_qp = st.query_params
+if _qp.get("_action") == "crear_hoja":
+    _nombre = _qp.get("_nombre", "").strip().upper()
+    st.query_params.clear()           # limpiar antes de procesar
+    if _nombre.startswith("WK") and len(_nombre) == 6:
+        try:
+            from data_extractor import crear_hoja_wk
+            _tid = st.secrets["sharepoint"]["tenant_id"]
+            _cid = st.secrets["sharepoint"]["client_id"]
+            _cs  = st.secrets["sharepoint"]["client_secret"]
+            with st.spinner(f"Creando {_nombre} en SharePoint…"):
+                _r = crear_hoja_wk(_nombre, _tid, _cid, _cs)
+            if _r.get("ok"):
+                st.success(_r["mensaje"])
+                st.cache_data.clear()
+            else:
+                st.error(f"❌ {_r['error']}")
+        except KeyError as _e:
+            st.error(f"❌ Falta credencial: {_e}")
+        except ImportError:
+            st.error("❌ crear_hoja_wk no disponible.")
+
 st.set_page_config(
     page_title="CFBC WK",
     page_icon="📊",
@@ -351,14 +374,27 @@ APP_HTML_BODY = """
 
     <!-- PANEL EXCEL FLOTANTE -->
     <div id="excelPanel" style="
-      display:none; position:absolute; top:36px; right:30px; z-index:9999;
-      background:#fff; border:1px solid #c0c0c0; border-radius:4px;
-      box-shadow:0 4px 16px rgba(0,0,0,0.18); min-width:210px; padding:12px 14px;
-      font-family:Calibri,'Segoe UI',Arial,sans-serif;">
-      <p style="font-size:11px;font-weight:bold;color:#1e3a5f;margin:0 0 8px 0;">&#11015; Descargar Archivo WK</p>
-      <select id="excelWkSel" style="width:100%;font-size:11px;padding:3px 6px;border:1px solid #bbb;border-radius:3px;margin-bottom:8px;font-family:inherit;"></select>
-      <button onclick="doDownloadExcel()" style="width:100%;font-size:10px;font-weight:700;background:#4472C4;color:#fff;border:none;border-radius:3px;padding:5px 8px;cursor:pointer;font-family:inherit;">Preparar y Descargar XLSX</button>
-      <div id="excelStatus" style="font-size:10px;color:#555;margin-top:6px;min-height:14px;"></div>
+        display:none; position:absolute; top:36px; right:30px; z-index:9999;
+        background:#fff; border:1px solid #c0c0c0; border-radius:4px;
+        box-shadow:0 4px 16px rgba(0,0,0,0.18); min-width:215px; padding:12px 14px;
+        font-family:Calibri,'Segoe UI',Arial,sans-serif;">
+
+      <!-- Sección Descargar -->
+      <p style="font-size:11px;font-weight:bold;color:#1e3a5f;margin:0 0 6px 0;">&#11015; Descargar Archivo WK</p>
+      <select id="excelWkSel" style="width:100%;font-size:11px;padding:3px 6px;border:1px solid #bbb;border-radius:3px;margin-bottom:7px;font-family:inherit;"></select>
+      <button onclick="doDownloadExcel()" style="width:100%;font-size:10px;font-weight:700;background:#4472C4;color:#fff;border:none;border-radius:3px;padding:5px;cursor:pointer;font-family:inherit;">Preparar y Descargar XLSX</button>
+      <div id="excelStatus" style="font-size:10px;color:#555;margin-top:5px;min-height:13px;"></div>
+
+      <!-- Divisor -->
+      <div style="border-top:1px solid #e0e0e0;margin:10px 0;"></div>
+
+      <!-- Sección Crear Hoja -->
+      <p style="font-size:11px;font-weight:bold;color:#1e3a5f;margin:0 0 6px 0;">&#10010; Nueva Hoja SharePoint</p>
+      <input id="excelNuevoNombre" type="text" placeholder="Ej: WK2518"
+        style="width:100%;font-size:11px;padding:3px 6px;border:1px solid #bbb;border-radius:3px;margin-bottom:7px;font-family:inherit;text-transform:uppercase;"
+        oninput="this.value=this.value.toUpperCase()">
+      <button onclick="doCrearHoja()" style="width:100%;font-size:10px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:3px;padding:5px;cursor:pointer;font-family:inherit;">Crear Hoja</button>
+      <div id="crearStatus" style="font-size:10px;color:#555;margin-top:5px;min-height:13px;"></div>
     </div>
   </div>
 
@@ -1289,7 +1325,7 @@ var ro=new ResizeObserver(reportHeight);
 ro.observe(document.body);
 reportHeight();
 // =======================================================
-// EXCEL DOWNLOAD
+// EXCEL PANEL
 // =======================================================
 (function initExcelWeeks() {
   var weeks = [];
@@ -1300,47 +1336,58 @@ reportHeight();
   weeks.sort(function(a,b){ return b.localeCompare(a); });
   var sel = document.getElementById('excelWkSel');
   if (sel) weeks.forEach(function(w){
-    var o = document.createElement('option'); o.value=w; o.text='WK'+w; sel.appendChild(o);
+    var o = document.createElement('option'); o.value = w; o.text = 'WK' + w; sel.appendChild(o);
   });
 })();
 
 function toggleExcelPanel(e) {
   if (e) e.stopPropagation();
   var p = document.getElementById('excelPanel');
-  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  p.style.display = (p.style.display === 'none') ? 'block' : 'none';
 }
 document.addEventListener('click', function(e) {
-  var p = document.getElementById('excelPanel');
+  var p   = document.getElementById('excelPanel');
   var btn = document.getElementById('btnExcel');
   if (p && !p.contains(e.target) && e.target !== btn) p.style.display = 'none';
 });
 
 async function doDownloadExcel() {
-  var wk = document.getElementById('excelWkSel').value;
-  var status = document.getElementById('excelStatus');
-  if (!wk) { status.textContent = '⚠ Selecciona una semana.'; return; }
-  status.textContent = '⏳ Descargando desde SharePoint…';
-  var spUrl = '__SP_URL__'.replace('?e=','?download=1&e=');
+  var wk  = document.getElementById('excelWkSel').value;
+  var st2 = document.getElementById('excelStatus');
+  if (!wk) { st2.textContent = '⚠ Selecciona una semana.'; return; }
+  st2.textContent = '⏳ Descargando desde SharePoint…';
+  var spUrl = '__SP_URL__'.replace('?e=', '?download=1&e=');
   try {
     var resp = await fetch(spUrl);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var buf = await resp.arrayBuffer();
-    status.textContent = '⚙ Extrayendo hoja WK' + wk + '…';
-    var wb = XLSX.read(buf, {type:'array', cellStyles:true, cellFormulas:true});
+    st2.textContent = '⚙ Extrayendo hoja WK' + wk + '…';
+    var wb = XLSX.read(buf, {type: 'array', cellStyles: true, cellFormulas: true});
     var target = wb.SheetNames.find(function(n){
-      return n.replace(/\s+/g,'').toUpperCase() === ('WK'+wk).toUpperCase();
+      return n.replace(/\s+/g,'').toUpperCase() === ('WK' + wk).toUpperCase();
     });
-    if (!target) { status.textContent = '❌ No se encontró WK'+wk+'.'; return; }
+    if (!target) { st2.textContent = '❌ No se encontró WK' + wk + '.'; return; }
     var newWb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(newWb, wb.Sheets[target], target);
-    XLSX.writeFile(newWb, 'WK'+wk+'.xlsx');
-    status.textContent = '✅ Descargado WK'+wk+'.xlsx';
+    XLSX.writeFile(newWb, 'WK' + wk + '.xlsx');
+    st2.textContent = '✅ Descargado WK' + wk + '.xlsx';
   } catch(err) {
-    status.textContent = '❌ Error: ' + err.message;
+    st2.textContent = '❌ Error: ' + err.message;
   }
 }
 
-setInterval(reportHeight,500);
+function doCrearHoja() {
+  var nombre = (document.getElementById('excelNuevoNombre').value || '').trim().toUpperCase();
+  var st3    = document.getElementById('crearStatus');
+  if (!nombre) { st3.textContent = '⚠ Escribe el nombre.'; return; }
+  if (!/^WK\d{4}$/.test(nombre)) { st3.textContent = '⚠ Formato: WK####'; return; }
+  st3.textContent = '⏳ Procesando…';
+  // Comunicar con Streamlit via query param y recargar
+  window.parent.location.href = window.parent.location.pathname +
+    '?_action=crear_hoja&_nombre=' + encodeURIComponent(nombre);
+}
+
+setInterval(reportHeight, 500);
 
 // =======================================================
 // ARRANCAR &#8212; diferido con protección
@@ -1392,41 +1439,5 @@ HTML = f'''<!DOCTYPE html>
 
 html_final = HTML.replace('__DATA_JSON__', data_json).replace('__SP_URL__', SHAREPOINT_URL_WK)
 
-# ─── CREAR HOJA SHAREPOINT (opcional) ────────────────────────────────────────
-# El botón EXCEL de descarga ahora está dentro del iframe HTML.
-# Aquí solo se expone "Crear Hoja" si la función está disponible.
-try:
-    from data_extractor import crear_hoja_wk
-    _crear_disponible = True
-except ImportError:
-    _crear_disponible = False
-
-if _crear_disponible:
-    with st.expander("✚ Crear Hoja SharePoint"):
-        nuevo_nombre = st.text_input(
-            "Nombre de hoja (Ej: WK2518)",
-            key="nuevo_wk_nombre",
-            placeholder="Ej: WK2518",
-        ).strip().upper()
-        if st.button("Crear Hoja", key="btn_crear_hoja", type="primary"):
-            if not nuevo_nombre:
-                st.warning("⚠️ Escribe el nombre de la hoja.")
-            elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
-                st.warning("⚠️ El formato debe ser WK####.")
-            else:
-                try:
-                    tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                    client_id     = st.secrets["sharepoint"]["client_id"]
-                    client_secret = st.secrets["sharepoint"]["client_secret"]
-                    with st.spinner(f"Creando {nuevo_nombre}…"):
-                        resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
-                    if resultado.get("ok"):
-                        st.success(resultado["mensaje"])
-                        st.cache_data.clear()
-                    else:
-                        st.error(f"❌ {resultado['error']}")
-                except KeyError as e:
-                    st.error(f"❌ Falta credencial {e}.")
-
-# Renderizamos el iframe
+# ─── RENDERIZAR IFRAME ────────────────────────────────────────────────────────
 components.html(html_final, height=800, scrolling=False)
