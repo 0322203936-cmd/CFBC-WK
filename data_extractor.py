@@ -27,6 +27,12 @@ SHAREPOINT_URL_PR = (
     "jesus_sandoval_cfbc_co/IQCecMwUnigFQa1m-0AYEw-rAenSSKPasiHLi1p2cqtPHkc?e=wpBfv7"
 )
 
+# Conteo de personal (Mano de Obra)
+SHAREPOINT_URL_CONTEO = (
+    "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
+    "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE?e=7P5ex4"
+)
+
 # ─── Constantes ───────────────────────────────────────────────────────────────
 RANCH_CONFIG = {
     "Prop-RM":     {"color": "#047857", "codes": ["VIV"], "keywords": ["PROP"]},
@@ -637,6 +643,76 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
 
 
 # ─── Punto de entrada público ─────────────────────────────────────────────────
+def _extraer_mano_obra_conteo() -> list:
+    """
+    Lee el Excel de conteo de personal desde SharePoint.
+    Estructura: Año | Semana | Área | Concepto | Rancho | Conteo | Costo MN | Tipo Cambio | Costo DLLS
+    Retorna lista de registros compatibles con mano_obra_data.
+    """
+    archivo = _descargar_excel(SHAREPOINT_URL_CONTEO, "Conteo Personal")
+    if archivo is None:
+        print("⚠️  No se pudo descargar conteo.xlsx — mano_obra_data vacío")
+        return []
+
+    try:
+        df = pd.read_excel(archivo, sheet_name=0, header=2)  # headers en fila 3
+    except Exception as e:
+        print(f"⚠️  Error leyendo conteo.xlsx: {e}")
+        return []
+
+    df.columns = [str(c).strip() for c in df.columns]
+    needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS"}
+    missing = needed - set(df.columns)
+    if missing:
+        print(f"⚠️  Conteo.xlsx — columnas faltantes: {missing}")
+        return []
+
+    df = df.dropna(subset=["Año", "Semana", "Área"])
+    df["Año"]    = pd.to_numeric(df["Año"],    errors="coerce")
+    df["Semana"] = pd.to_numeric(df["Semana"], errors="coerce")
+    df = df.dropna(subset=["Año", "Semana"])
+    df["Año"]    = df["Año"].astype(int)
+    df["Semana"] = df["Semana"].astype(int)
+
+    def _sv(v):
+        try:
+            s = str(v).strip().replace(",", "").replace(" ", "")
+            if not s or s in ("-", "-   ", " -   "):
+                return 0.0
+            return round(float(s), 2)
+        except:
+            return 0.0
+
+    result = []
+    for (anio, semana, area), grp in df.groupby(["Año", "Semana", "Área"]):
+        code = (int(anio) - 2000) * 100 + int(semana)
+        mxn_ranches, usd_ranches = {}, {}
+        mxn_total = usd_total = 0.0
+        for _, row in grp.iterrows():
+            rancho     = str(row.get("Rancho", "")).strip()
+            costo_mn   = _sv(row.get("Costo MN",   0))
+            costo_dlls = _sv(row.get("Costo DLLS", 0))
+            mxn_total += costo_mn
+            usd_total += costo_dlls
+            if rancho:
+                mxn_ranches[rancho] = round(mxn_ranches.get(rancho, 0.0) + costo_mn,   2)
+                usd_ranches[rancho] = round(usd_ranches.get(rancho, 0.0) + costo_dlls, 2)
+        result.append({
+            "semana":      code,
+            "year":        int(anio),
+            "week":        int(semana),
+            "date_range":  "",
+            "subcat":      str(area).strip(),
+            "mxn_total":   round(mxn_total, 2),
+            "usd_total":   round(usd_total, 2),
+            "mxn_ranches": mxn_ranches,
+            "usd_ranches": usd_ranches,
+        })
+
+    print(f"✅ conteo mano_obra_data: {len(result)} registros desde conteo.xlsx")
+    return result
+
+
 def get_datos() -> dict:
     """
     - Hojas WK  → Excel principal en SharePoint
@@ -687,6 +763,12 @@ def get_datos() -> dict:
             "ranch_order": [k for k in RANCH_CONFIG.keys() if k not in HIDDEN_RANCHES],
             "ranch_colors": {k: v["color"] for k, v in RANCH_CONFIG.items() if k not in HIDDEN_RANCHES}
         }
+
+        # 5. Reemplazar mano_obra_data con datos del conteo de personal
+        print("\n" + "=" * 60)
+        print("🔍 LEYENDO CONTEO DE PERSONAL (MANO DE OBRA)")
+        print("=" * 60)
+        resultado["mano_obra_data"] = _extraer_mano_obra_conteo()
 
     return resultado
 
