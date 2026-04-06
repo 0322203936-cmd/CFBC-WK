@@ -348,6 +348,20 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
     all_data       = []
     servicios_data = []
     mano_obra_data = []
+    siembra_data   = {}   # { wk_code: { ranch: { charolas, esquejes, metros, hectareas } } }
+
+    SIEMBRA_LABELS = {
+        "NUMERO DE CHAROLAS SEMBRADAS": "charolas",
+        "NUMERO DE ESQUEJES SEMBRADOS":  "esquejes",
+        "METROS DE SIEMBRA":             "metros",
+        "HECTAREAS EN SIEMBRA":          "hectareas",
+    }
+    def _match_siembra(label: str):
+        u = label.upper().strip()
+        for k, v in SIEMBRA_LABELS.items():
+            if k in u:
+                return v
+        return None
 
     hojas_validas = []
     pr_hojas      = []
@@ -492,6 +506,19 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             if not label:
                 continue
 
+            # ── Indicadores de siembra ────────────────────────────────────────
+            siem_key = _match_siembra(label)
+            if siem_key:
+                entry = siembra_data.setdefault(code, {})
+                for col_idx, rn in mxn_ranch_cols.items():
+                    val = sv(row[col_idx]) if col_idx < len(row) else 0.0
+                    if val:
+                        entry.setdefault(rn, {})[siem_key] = round(val, 2)
+                # también total general (columna mxn_total_col)
+                tot = sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0.0
+                entry.setdefault("_total", {})[siem_key] = round(tot, 2)
+                continue
+
             cat = norm_cat(label)
             if not cat:
                 continue
@@ -595,6 +622,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         "productos_debug":  productos_debug,
         "servicios_data":   servicios_data,
         "mano_obra_data":   mano_obra_data,
+        "siembra_data":     siembra_data,
     }
 
 
