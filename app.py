@@ -696,12 +696,7 @@ function buildYearChips() {
   }).join('');
 }
 function updateWeekControls() {
-  var wn = allWeeks[state.weekIdx]||1;
-  var sl = document.getElementById('weekSlider');
-  sl.min=allWeeks[0]||1; sl.max=allWeeks[allWeeks.length-1]||52; sl.value=wn;
-  var activeYrs = getActiveYears();
-  var yr = activeYrs[activeYrs.length-1]||DATA.years[DATA.years.length-1];
-  document.getElementById('weekLabel').textContent = String(yr).slice(2)+String(wn).padStart(2,'0');
+  // weekSlider y weekLabel eliminados del toolbar — no-op
 }
 
 // =======================================================
