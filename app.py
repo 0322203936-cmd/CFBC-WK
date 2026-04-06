@@ -1452,41 +1452,80 @@ function showProdPanel(rowData, opts) {
     }
   }
 
-  if (rows.length===0){
-    panelHtml = '<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; background:#fff; display:flex; flex-direction:column; overflow:hidden;">' +
-      siembraBar +
-      '<p style="padding:8px;color:#64748b;font-size:11px;margin:0;">No hay registros para este período.</p></div>';
+  // ── Zona 1: KPIs de siembra (tarjetas prominentes) ───────────────
+  var kpiSection = '';
+  var sMetas = [
+    {k:'charolas', lbl:'CHAROLAS SEMBRADAS', icon:'🌱'},
+    {k:'esquejes', lbl:'ESQUEJES SEMBRADOS',  icon:'🌿'},
+    {k:'metros',   lbl:'METROS DE SIEMBRA',   icon:'📐'},
+    {k:'hectareas',lbl:'HECT\u00c1REAS EN SIEMBRA', icon:'🗺'},
+  ];
+  if (siembraBar !== '') {
+    // siembraBar tiene wkSrc/sRow ya calculados — recalcular para diseño nuevo
+    var wkCodeShort2 = ((yr%100)*100) + wkStart;
+    var wkSrc2 = (DATA.siembra_data||{})[wkCodeShort2] || (DATA.siembra_data||{})[String(wkCodeShort2)] || null;
+    var sRow2 = wkSrc2 ? (ranchFilter ? (wkSrc2[ranchFilter] || wkSrc2['TOTAL'] || {}) : (wkSrc2['TOTAL'] || {})) : {};
+    kpiSection =
+      '<div style="flex-shrink:0; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:8px 10px;">' +
+        '<div style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">INDICADORES DE SIEMBRA</div>' +
+        '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">';
+    sMetas.forEach(function(m){
+      var raw = sRow2[m.k];
+      var v = (raw !== undefined && raw !== '' && raw !== 0) ? Number(raw).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
+      var hasData = (raw !== undefined && raw !== '' && raw !== 0);
+      kpiSection +=
+        '<div style="background:#fff; border:1px solid '+(hasData?'#bfdbfe':'#e2e8f0')+'; border-top:3px solid '+(hasData?'#2563eb':'#cbd5e1')+'; border-radius:4px; padding:6px 8px; text-align:center;">' +
+          '<div style="font-size:16px; line-height:1; margin-bottom:3px;">'+m.icon+'</div>' +
+          '<div style="font-size:16px; font-weight:800; color:'+(hasData?'#0f172a':'#cbd5e1')+'; line-height:1.1;">'+v+'</div>' +
+          '<div style="font-size:8px; color:#64748b; text-transform:uppercase; letter-spacing:0.4px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+m.lbl+'</div>' +
+        '</div>';
+    });
+    kpiSection += '</div></div>';
+  }
+
+  // ── Zona 2: Tabla de productos ────────────────────────────────────
+  var productSection = '';
+  if (rows.length === 0) {
+    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
   } else {
     rows.sort(function(a,b){return b.gasto-a.gasto;});
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
-    var panelMeta = 'Reg: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
-
-    var html='<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
-      '<div style="background:#f1f5f9; color:#0f172a; padding:4px 6px; border-bottom:1px solid #cbd5e1; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">' + 
-      '<div style="font-weight:bold; font-size:11px; text-transform:uppercase; letter-spacing:0px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">' + panelTitle + '</div>' + 
-      '<div style="color:#475569; font-size:10px; margin-left:8px; white-space:nowrap;">' + panelMeta + '</div></div>' +
-      siembraBar +
-      '<div style="overflow-x:auto; scrollbar-width:thin;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">WK</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UBICACIÓN</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">PRODUCTO</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UNID.</th>'+
-      '<th style="text-align:right; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">GASTO</th>'+
-      '</tr></thead><tbody>';
+    var panelMeta = 'Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>';
+    productSection =
+      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">' +
+        '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
+        '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
+      '</div>' +
+      '<div style="overflow-x:auto; overflow-y:auto; flex:1; scrollbar-width:thin;">' +
+        '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
+          '<thead><tr style="position:sticky;top:0;z-index:1;">' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">WK</th>' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
+            '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO</th>' +
+          '</tr></thead><tbody>';
     rows.forEach(function(r,i){
-      var rc=RANCH_COLORS[r.rancho]||'#64748b';
-      var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
-      html+='<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">'+
-        '<td style="padding:2px 5px; color:#64748b;">'+r.week_code+'</td>'+
-        '<td style="padding:2px 5px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>'+
-        '<td style="padding:2px 5px; color:#0f172a; font-weight:500;">'+r.producto+'</td>'+
-        '<td style="padding:2px 5px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>'+
-        '<td style="padding:2px 5px; text-align:right;"><span style="font-weight:600; color:#0f172a;">'+fmt(r.gasto)+'</span></td>'+
+      var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
+      productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
+        '<td style="padding:3px 6px; color:#94a3b8; white-space:nowrap;">'+r.week_code+'</td>' +
+        '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
+        '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
+        '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
+        '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+fmt(r.gasto)+'</td>' +
         '</tr>';
     });
-    html+='</tbody></table></div></div>';
-    panelHtml = html;
+    productSection += '</tbody></table></div>';
   }
+
+  panelHtml =
+    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #2563eb; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
+      '<div style="background:#1e3a5f; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
+        '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
+      '</div>' +
+      kpiSection +
+      productSection +
+    '</div>';
   
   if (_prodViews.indexOf(panelHtml) === -1) {
     _prodViews.push(panelHtml);
