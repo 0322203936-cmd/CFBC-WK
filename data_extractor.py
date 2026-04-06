@@ -510,7 +510,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             siem_key = _match_siembra(label)
             if siem_key:
                 entry = siembra_data.setdefault(code, {})
-                for rn, col_idx in mxn_ranch_cols.items():
+                for col_idx, rn in mxn_ranch_cols.items():
                     val = sv(row[col_idx]) if col_idx < len(row) else 0.0
                     if val:
                         entry.setdefault(rn, {})[siem_key] = round(val, 2)
