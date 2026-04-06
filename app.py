@@ -188,13 +188,11 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   background: #fff;
   border: 1px solid #d5d5d5;
   border-top: none;
-  overflow: hidden;
+  overflow: visible;
 }
 .pt-table-wrap {
-  overflow: auto;
+  overflow: visible;
   width: 100%;
-  /* 36px header + 28px toolbar + 26px range-bar + 28px view-tabs = 118px aprox */
-  max-height: calc(100vh - 118px);
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
@@ -307,6 +305,18 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   margin: 5px 0 0 0; width: 100%; overflow: hidden;
 }
 #prodPanel.show { display: block; }
+.prod-hdr {
+  background: #f8fafc; padding: 4px 8px; border-bottom: 1px solid #cbd5e1;
+  display: flex; align-items: center; gap: 10px; height: 26px;
+}
+.prod-hdr-title { color: #0f172a; font-size: 11px; font-weight: 700; flex: 1; text-transform: uppercase; }
+.prod-hdr-meta  { display: none; }
+.prod-close {
+  background: transparent; border: 1px solid #cbd5e1;
+  border-radius: 2px; color: #475569; font-weight: 600;
+  cursor: pointer; font-size: 9px; padding: 2px 8px; height: 18px; font-family: inherit; line-height: 1; transition: all 0.2s;
+}
+.prod-close:hover { border-color: #0f172a; color: #0f172a; background: #fff; }
 #prodTableWrap { overflow: visible; }
 
 /* ── STATUS BAR ──────────────────────────────── */
@@ -397,6 +407,10 @@ APP_HTML_BODY = """
 
   <!-- PRODUCTOS SUB-PANEL -->
   <div id="prodPanel">
+    <div class="prod-hdr">
+      <div class="prod-hdr-title" id="prodTitle">COMPARADOR DE PRODUCTOS</div>
+      <button class="prod-close" onclick="closeProdPanel()">&#10005; CERRAR</button>
+    </div>
     <div id="prodTableWrap" style="display:flex; gap:6px; padding:6px; overflow-x:auto;"></div>
   </div>
 
@@ -1383,6 +1397,14 @@ function onMainCellClick(evt) {
 
 // =======================================================
 // PRODUCTOS SUBPANEL
+// helper: tarjeta de indicador siembra
+function _siem(label, val, bg, fg) {
+  return '<div style="flex:1; padding:4px 8px; background:'+bg+'; text-align:center; border-right:1px solid #e2e8f0;">' +
+    '<div style="font-size:9px; color:'+fg+'; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">'+label+'</div>' +
+    '<div style="font-size:13px; font-weight:800; color:'+fg+'; margin-top:1px;">'+val+'</div>' +
+  '</div>';
+}
+
 // =======================================================
 var _prodViews = [];
 
@@ -1433,19 +1455,36 @@ function showProdPanel(rowData, opts) {
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = 'Reg: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
 
-    var html='<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
-      '<div style="background:#f1f5f9; color:#0f172a; padding:4px 6px; border-bottom:1px solid #cbd5e1; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">' + 
-      '<div style="font-weight:bold; font-size:11px; text-transform:uppercase; letter-spacing:0px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">' + panelTitle + '</div>' + 
+    // ── Indicadores de siembra para este WK/rancho ────────────────────────
+    var siembraHtml = '';
+    var siemDs = (DATA.siembra_data||{})[wkStart] || (DATA.siembra_data||{})[String(wkStart)] || {};
+    // si hay filtro de rancho usamos ese, si no usamos _total
+    var siemKey = ranchFilter || '_total';
+    var siemRec = siemDs[siemKey] || siemDs['_total'] || null;
+    if (siemRec) {
+      function sfmt(v){ return v!=null&&v!==0 ? (parseFloat(v)||0).toLocaleString('es-MX',{maximumFractionDigits:1}) : '—'; }
+      siembraHtml =
+        '<div style="display:flex;gap:0;border-bottom:1px solid #cbd5e1;flex-shrink:0;">' +
+          _siem('🌿 Charolas', sfmt(siemRec.charolas), '#e0f2fe', '#0369a1') +
+          _siem('🌱 Esquejes',  sfmt(siemRec.esquejes),  '#f0fdf4', '#15803d') +
+          _siem('📏 Metros',    sfmt(siemRec.metros),    '#fff7ed', '#c2410c') +
+          _siem('🏞 Hectáreas', sfmt(siemRec.hectareas), '#faf5ff', '#7e22ce') +
+        '</div>';
+    }
+
+    var html='<div style="flex:1; min-width:400px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
+      '<div style="background:#f1f5f9; color:#0f172a; padding:4px 6px; border-bottom:1px solid #cbd5e1; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">' +
+      '<div style="font-weight:bold; font-size:11px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">' + panelTitle + '</div>' +
       '<div style="color:#475569; font-size:10px; margin-left:8px; white-space:nowrap;">' + panelMeta + '</div></div>' +
-      '<div style="overflow-x:auto; scrollbar-width:thin;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">WK</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UBICACIÓN</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">PRODUCTO</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UNID.</th>'+
-      '<th style="text-align:right; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">GASTO</th>'+
+      siembraHtml +
+      '<div style="overflow:auto; scrollbar-width:thin; flex:1;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">WK</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">UBICACIÓN</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">PRODUCTO</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">UNID.</th>'+
+      '<th style="text-align:right; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">GASTO</th>'+
       '</tr></thead><tbody>';
     rows.forEach(function(r,i){
-      var rc=RANCH_COLORS[r.rancho]||'#64748b';
       var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
       html+='<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">'+
         '<td style="padding:2px 5px; color:#64748b;">'+r.week_code+'</td>'+
@@ -1485,7 +1524,8 @@ window.addEventListener('resize', resizeTable);
 // HEIGHT REPORTING
 // =======================================================
 function reportHeight() {
-  var h = window.innerHeight || document.documentElement.clientHeight || 700;
+  var appEl=document.getElementById('app');
+  var h=appEl?appEl.scrollHeight+40:document.body.scrollHeight+40;
   window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h,700)},'*');
 }
 var ro=new ResizeObserver(reportHeight);
@@ -1654,4 +1694,4 @@ if available_weeks:
                         st.error(f"❌ Falta credencial {e}.")
 
 # Renderizamos el iframe DESPUÉS
-components.html(html_final, height=900, scrolling=False)
+components.html(html_final, height=800, scrolling=False)
