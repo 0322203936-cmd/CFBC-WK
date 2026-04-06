@@ -64,7 +64,7 @@ APP_CSS = """<style>
   /* Pivot-table palette — Excel style */
   --pt-hdr-bg:      #D9E1F2;   /* header de columnas  */
   --pt-hdr-border:  #8EA9C1;
-  --pt-grp-bg:      #698DC8;   /* fila de grupo/año - azul suavizado */
+  --pt-grp-bg:      #82A1C9;   /* fila de grupo/año - azul más suavizado */
   --pt-grp-fg:      #ffffff;
   --pt-sub-bg:      #BDD7EE;   /* fila subtotal       */
   --pt-sub-fg:      #000000;
