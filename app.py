@@ -305,18 +305,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   margin: 5px 0 0 0; width: 100%; overflow: hidden;
 }
 #prodPanel.show { display: block; }
-.prod-hdr {
-  background: #f8fafc; padding: 4px 8px; border-bottom: 1px solid #cbd5e1;
-  display: flex; align-items: center; gap: 10px; height: 26px;
-}
-.prod-hdr-title { color: #0f172a; font-size: 11px; font-weight: 700; flex: 1; text-transform: uppercase; }
-.prod-hdr-meta  { display: none; }
-.prod-close {
-  background: transparent; border: 1px solid #cbd5e1;
-  border-radius: 2px; color: #475569; font-weight: 600;
-  cursor: pointer; font-size: 9px; padding: 2px 8px; height: 18px; font-family: inherit; line-height: 1; transition: all 0.2s;
-}
-.prod-close:hover { border-color: #0f172a; color: #0f172a; background: #fff; }
 #prodTableWrap { overflow: visible; }
 
 /* ── STATUS BAR ──────────────────────────────── */
@@ -407,10 +395,6 @@ APP_HTML_BODY = """
 
   <!-- PRODUCTOS SUB-PANEL -->
   <div id="prodPanel">
-    <div class="prod-hdr">
-      <div class="prod-hdr-title" id="prodTitle">COMPARADOR DE PRODUCTOS</div>
-      <button class="prod-close" onclick="closeProdPanel()">&#10005; CERRAR</button>
-    </div>
     <div id="prodTableWrap" style="display:flex; gap:6px; padding:6px; overflow-x:auto;"></div>
   </div>
 
