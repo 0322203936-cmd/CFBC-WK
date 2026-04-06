@@ -30,7 +30,7 @@ SHAREPOINT_URL_PR = (
 # Conteo de personal (Mano de Obra)
 SHAREPOINT_URL_CONTEO = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE"
+    "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE?e=7P5ex4"
 )
 
 # ─── Constantes ───────────────────────────────────────────────────────────────
@@ -667,7 +667,7 @@ def _extraer_mano_obra_conteo() -> list:
     print(f"✅ Descarga OK, tamaño={len(archivo.getvalue())} bytes")
 
     try:
-        df = pd.read_excel(archivo, sheet_name=0, header=2)
+        df = pd.read_excel(archivo, sheet_name="BD", header=2)
         print(f"✅ Excel leído: {df.shape[0]} filas, columnas={list(df.columns)}")
     except Exception as e:
         print(f"⚠️  Error leyendo conteo.xlsx: {e}")
