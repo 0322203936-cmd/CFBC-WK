@@ -346,13 +346,14 @@ APP_HTML_BODY = """
       <button class="tb-btn active" id="btnMXN" onclick="setCurrency('mxn')">MXN</button>
     </div>
     <div class="tb-sep"></div>
-    <span class="tb-label">Semana</span>
-    <div class="week-ctr">
-      <button class="tb-btn" onclick="prevWeek()">&#9664;</button>
-      <span id="weekLabel">&#8212;</span>
-      <button class="tb-btn" onclick="nextWeek()">&#9654;</button>
-    </div>
-    <input type="range" class="tb-slider" id="weekSlider" min="1" max="52" value="1" oninput="onWeekSlider(this.value)">
+    <span class="tb-label">Desde</span>
+    <span class="range-val" id="fromWeekLabel">W01</span>
+    <input type="range" class="tb-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
+    <span style="color:#aaa;font-size:11px;flex-shrink:0;">→</span>
+    <span class="tb-label">Hasta</span>
+    <span class="range-val" id="toWeekLabel">W52</span>
+    <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
+    <span class="range-badge" id="rangeBadge">W01 → W52</span>
     <div class="tb-sep"></div>
     <span class="tb-label">Años</span>
     <div id="yearChips" style="display:flex;gap:3px"></div>
@@ -366,18 +367,7 @@ APP_HTML_BODY = """
     <button class="vtab"        id="vtServicios"    onclick="setView('servicios')">Costo Servicios</button>
   </div>
 
-  <!-- RANGE BAR (solo comparativo) -->
-  <div class="range-bar" id="rangeBar">
-    <span class="tb-label">Desde</span>
-    <span class="range-val" id="fromWeekLabel">W01</span>
-    <input type="range" class="tb-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
-    <span style="color:#aaa;font-size:11px">→</span>
-    <span class="tb-label">Hasta</span>
-    <span class="range-val" id="toWeekLabel">W52</span>
-    <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
-    <span class="range-badge" id="rangeBadge">W01 → W52</span>
-
-  </div>
+  <!-- RANGE BAR eliminada — controles movidos al toolbar -->
 
   <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
   <div id="gridWrap">
@@ -761,7 +751,7 @@ function setView(v) {
     if(el) el.className='vtab'+(v===name?' active':'');
   });
   var rb=document.getElementById('rangeBar');
-  if (rb) rb.className='range-bar'+((v==='comparativo'||v==='servicios')?' show':'');
+  if (rb) rb.style.display='none';
   var gw =document.getElementById('gridWrap');
   var cmp=document.getElementById('comparativoWrap');
   if (v==='comparativo') { if(gw)gw.style.display='none'; if(cmp)cmp.className='show'; }
