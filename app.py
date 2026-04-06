@@ -1450,22 +1450,18 @@ function showProdPanel(rowData, opts) {
     var wkCodeShort2 = ((yr%100)*100) + wkStart;
     var wkSrc2 = (DATA.siembra_data||{})[wkCodeShort2] || (DATA.siembra_data||{})[String(wkCodeShort2)] || null;
     var sRow2 = wkSrc2 ? (ranchFilter ? (wkSrc2[ranchFilter] || wkSrc2['TOTAL'] || {}) : (wkSrc2['TOTAL'] || {})) : {};
-    kpiSection =
-      '<div style="flex-shrink:0; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:8px 10px;">' +
-        '<div style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">INDICADORES DE SIEMBRA</div>' +
-        '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">';
-    sMetas.forEach(function(m){
+    kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;gap:0;overflow:hidden;">';
+    sMetas.forEach(function(m, i){
       var raw = sRow2[m.k];
       var v = (raw !== undefined && raw !== '' && raw !== 0) ? Number(raw).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
-      var hasData = (raw !== undefined && raw !== '' && raw !== 0);
+      if (i > 0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
       kpiSection +=
-        '<div style="background:#fff; border:1px solid '+(hasData?'#a8bedf':'#e2e8f0')+'; border-top:3px solid '+(hasData?'#4472C4':'#cbd5e1')+'; border-radius:4px; padding:6px 8px; text-align:center;">' +
-          '<div style="font-size:16px; line-height:1; margin-bottom:3px;">'+m.icon+'</div>' +
-          '<div style="font-size:16px; font-weight:800; color:'+(hasData?'#0f172a':'#cbd5e1')+'; line-height:1.1;">'+v+'</div>' +
-          '<div style="font-size:8px; color:#64748b; text-transform:uppercase; letter-spacing:0.4px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+m.lbl+'</div>' +
+        '<div style="display:flex;align-items:baseline;gap:4px;white-space:nowrap;">' +
+          '<span style="font-size:9px;color:#44546A;text-transform:uppercase;letter-spacing:0.3px;">' + m.lbl + ':</span>' +
+          '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">' + v + '</span>' +
         '</div>';
     });
-    kpiSection += '</div></div>';
+    kpiSection += '</div>';
   }
 
   // ── Zona 2: Tabla de productos ────────────────────────────────────
