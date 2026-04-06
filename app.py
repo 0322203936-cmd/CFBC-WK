@@ -1457,7 +1457,9 @@ function showProdPanel(rowData, opts) {
 
     // ── Indicadores de siembra para este WK/rancho ────────────────────────
     var siembraHtml = '';
-    var siemDs = (DATA.siembra_data||{})[wkStart] || (DATA.siembra_data||{})[String(wkStart)] || {};
+    var siemCode = ((yr%100)*100)+wkStart;
+    var siemDs = (DATA.siembra_data||{})[siemCode] || (DATA.siembra_data||{})[String(siemCode)] || {};
+    console.log('[SIEM] buscando código:', siemCode, '| keys disponibles:', Object.keys(DATA.siembra_data||{}).slice(0,10), '| encontrado:', Object.keys(siemDs));
     // si hay filtro de rancho usamos ese, si no usamos _total
     var siemKey = ranchFilter || '_total';
     var siemRec = siemDs[siemKey] || siemDs['_total'] || null;
