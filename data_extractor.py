@@ -418,6 +418,14 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         productos_debug[f"PR{pr_code}_ranchos"] = list(parsed.keys()) if parsed else []
 
     # 3. Procesar cada hoja WK
+    siembra_data: dict = {}  # {wk_code: {ranch: {charolas,esquejes,metros,hectareas}}}
+    SIEMBRA_LABELS = [
+        ("charolas", "NUMERO DE CHAROLAS SEMBRADAS"),
+        ("esquejes", "NUMERO DE ESQUEJES SEMBRADOS"),
+        ("metros",   "METROS DE SIEMBRA"),
+        ("hectareas","HECTAREAS EN SIEMBRA"),
+    ]
+
     for titulo, code in hojas_validas:
         raw = batch_data.get(titulo, [])
         if not raw:
@@ -539,6 +547,23 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                     "usd_ranches": usd_ranches,
                 })
 
+        # ── Extraer filas de siembra (89-92 Excel = labels fijos) ────────────
+        wk_siembra: dict = {}
+        for field_key, field_label in SIEMBRA_LABELS:
+            for row in data:
+                cell_text = " ".join(str(row[c]).strip().upper() for c in range(min(5, len(row))))
+                if field_label in cell_text:
+                    # Total MXN (columna total)
+                    total_val = sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0
+                    wk_siembra.setdefault("TOTAL", {})[field_key] = total_val
+                    # Por rancho
+                    for j, rn in mxn_ranch_cols.items():
+                        if j < len(row):
+                            wk_siembra.setdefault(rn, {})[field_key] = sv(row[j])
+                    break
+        if wk_siembra:
+            siembra_data[code] = wk_siembra
+
     print(f"\n✅ servicios_data: {len(servicios_data)} registros encontrados")
     if servicios_data:
         print(f"   subcats: {list({r['subcat'] for r in servicios_data})}")
@@ -595,6 +620,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         "productos_debug":  productos_debug,
         "servicios_data":   servicios_data,
         "mano_obra_data":   mano_obra_data,
+        "siembra_data":     siembra_data,
     }
 
 
