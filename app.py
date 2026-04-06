@@ -10,7 +10,14 @@ import os
 import streamlit as st
 import streamlit.components.v1 as components
 
-from data_extractor import get_datos
+import sys
+import importlib.util
+import os
+_spec = importlib.util.spec_from_file_location("data_extractor", os.path.join(os.path.dirname(__file__), "data_extractor (10).py"))
+_mod = importlib.util.module_from_spec(_spec)
+sys.modules["data_extractor"] = _mod
+_spec.loader.exec_module(_mod)
+get_datos = _mod.get_datos
 
 st.set_page_config(
     page_title="CFBC WK",
@@ -1598,7 +1605,7 @@ function renderManoObra() {
   var debugStr = ' | DEBUG HC_RANCHES: ' + JSON.stringify(d0.hc_ranches || 'VACÍO');
   document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym + debugStr;
   setTimeout(resizeTable,80);
-}
+}DEBUG HC_RANCHES: "VACÍO"
 
 function onMainCellClick(evt) {
   if (!evt||!evt.data||!evt.colDef) return;
