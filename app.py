@@ -1445,20 +1445,20 @@ function showProdPanel(rowData, opts) {
     var siemDs = (DATA.siembra_data||{})[siemCode] || (DATA.siembra_data||{})[String(siemCode)] || {};
     var siemKey = ranchFilter || '_total';
     var siemRec = siemDs[siemKey] || siemDs['_total'] || null;
-    function sfmt(v){ return (v!=null&&v!==''&&parseFloat(v)!==0) ? (parseFloat(v)||0).toLocaleString('es-MX',{maximumFractionDigits:1}) : '—'; }
+    var sfmt = function(v){ return (v!=null&&v!==''&&parseFloat(v)!==0) ? (parseFloat(v)||0).toLocaleString('es-MX',{maximumFractionDigits:1}) : '--'; };
+    var kpi = function(lbl, val) {
+      return '<div style="flex:1;padding:5px 10px;border-right:1px solid #d1d5db;text-align:center;">' +
+        '<div style="font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">'+lbl+'</div>' +
+        '<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-top:1px;">'+val+'</div>' +
+      '</div>';
+    };
     if (siemRec) {
-      function kpi(lbl, val) {
-        return '<div style="flex:1;padding:5px 10px;border-right:1px solid #d1d5db;text-align:center;">' +
-          '<div style="font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">'+lbl+'</div>' +
-          '<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-top:1px;">'+val+'</div>' +
-        '</div>';
-      }
       siembraHtml =
         '<div style="display:flex;background:#f8fafc;border-bottom:2px solid #e2e8f0;flex-shrink:0;">' +
           kpi('Charolas Sembradas', sfmt(siemRec.charolas)) +
           kpi('Esquejes Sembrados', sfmt(siemRec.esquejes)) +
           kpi('Metros de Siembra',  sfmt(siemRec.metros))   +
-          kpi('Hectáreas en Siembra', sfmt(siemRec.hectareas)) +
+          kpi('Hectareas en Siembra', sfmt(siemRec.hectareas)) +
         '</div>';
     }
 
