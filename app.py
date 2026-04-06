@@ -1092,6 +1092,7 @@ function renderServicios() {
   var yrs=getActiveYears();
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
 
+  // ── Acumular datos ─────────────────────────────────────
   var weekMap={};
   var src=Array.isArray(DATA.servicios_data)&&DATA.servicios_data.length ? DATA.servicios_data : DATA.weekly_detail;
   src.forEach(function(r){
@@ -1116,6 +1117,7 @@ function renderServicios() {
     });
   });
 
+  // ── Semanas con datos ─────────────────────────────────
   var weekKeys=[];
   yrs.forEach(function(yr){
     rangeWeeks.forEach(function(w){
@@ -1128,6 +1130,7 @@ function renderServicios() {
     });
   });
 
+  // ── Subcats ordenadas ─────────────────────────────────
   var subcatsSet={};
   weekKeys.forEach(function(key){
     Object.keys(weekMap[key]||{}).forEach(function(k){
@@ -1137,12 +1140,14 @@ function renderServicios() {
   var orderedSubcats=SV_SUBCATS.filter(function(sc){return subcatsSet[sc];});
   Object.keys(subcatsSet).forEach(function(sc){if(orderedSubcats.indexOf(sc)===-1)orderedSubcats.push(sc);});
 
+  // ── Ranchos activos ───────────────────────────────────
   var activeRanches=RANCH_ORDER.filter(function(rn){
     return weekKeys.some(function(key){
       return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
     });
   });
 
+  // ── Sin datos ─────────────────────────────────────────
   if (!weekKeys.length || !orderedSubcats.length) {
     document.getElementById('gridWrap').style.display='';
     document.getElementById('gridWrap').innerHTML='<div style="padding:20px;color:#888;font-size:12px">Sin datos para el rango seleccionado.</div>';
@@ -1151,35 +1156,103 @@ function renderServicios() {
     return;
   }
 
+  // ─────────────────────────────────────────────────────
+  // NUEVO LAYOUT: columnas = RANCHO, sub-columnas = semanas
+  // CONCEPTO | [Isabela: wk1 wk2 ... SUB] | [PosCo: wk1 wk2 ... SUB] | TOTAL
+  // ─────────────────────────────────────────────────────
+  var nWeeks = weekKeys.length;
+  var nColsPerRanch = nWeeks + 1; // semanas + SUB
+
   var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
-  var thPin=thBase+'position:sticky;top:0;z-index:4;';
+  var thPin =thBase+'position:sticky;top:0;z-index:4;';
   var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
 
-  var h1='<tr><th rowspan="2" style="'+thPin+'left:0;min-width:190px">CONCEPTO</th>';
+  // ── Header nivel 1: CONCEPTO | [Ranch colspan=nColsPerRanch] ... | TOTAL ──
+  var h1='<tr>';
+  h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:190px">CONCEPTO</th>';
   activeRanches.forEach(function(rn){
-    var col=RANCH_COLORS[rn]||'#555';
-    h1+='<th colspan="'+weekKeys.length+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
+    var col=RANCH_COLORS[rn]||'#888';
+    h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
   });
-  h1+='<th rowspan="2" style="'+thScroll+'border-left:2px solid #4472C4;min-width:100px;background:#9DC3E6">TOTAL</th></tr>';
+  h1+='<th rowspan="2" style="'+thScroll+'border-left:2px solid #4472C4;min-width:100px;background:#9DC3E6">TOTAL</th>';
+  h1+='</tr>';
 
+  // ── Header nivel 2: por cada rancho → [wk labels... | SUB] ──
   var h2='<tr>';
-  activeRanches.forEach(function(rn){
+  activeRanches.forEach(function(){
     weekKeys.forEach(function(key){
       var d=weekMap[key];
       var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
-      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;min-width:60px">'+lbl+'</th>';
+      var col=YEAR_COLORS[d._year]||'#888';
+      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:60px">'+lbl+'</th>';
     });
+    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">SUB</th>';
   });
-  h2+='<th></th></tr>';
+  h2+='</tr>';
 
-  var grandByRnWk={}; activeRanches.forEach(function(rn){grandByRnWk[rn]={}; weekKeys.forEach(function(k){grandByRnWk[rn][k]=0;});});
-  var grandTotal=0;
+  // ── Acumuladores totales ──────────────────────────────
+  var grandByRnWk={}, grandByRn={}, grandTotal=0;
+  activeRanches.forEach(function(rn){
+    grandByRnWk[rn]={}; grandByRn[rn]=0;
+    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; });
+  });
 
+  function cell(v,bold,color){
+    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">—</td>';
+    var s='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
+    if(bold) s+='font-weight:700;';
+    s+='color:'+(color||'#1e3a5f')+';';
+    return '<td style="'+s+'">'+fmt(v)+'</td>';
+  }
+
+  // ── Filas por subcat ──────────────────────────────────
   var bodyHtml='';
   orderedSubcats.forEach(function(sc){
+    var scByRnWk={}, scByRn={}, scTotal=0;
+    activeRanches.forEach(function(rn){
+      scByRnWk[rn]={}; scByRn[rn]=0;
+      weekKeys.forEach(function(k){
+        var v=(weekMap[k]&&weekMap[k][sc+'__r__'+rn])?weekMap[k][sc+'__r__'+rn]:0;
+        scByRnWk[rn][k]=v;
+        scByRn[rn]+=v;
+        scTotal+=v;
+        grandByRnWk[rn][k]+=v;
+        grandByRn[rn]+=v;
+        grandTotal+=v;
+      });
+    });
+    if(scTotal===0) return;
+
+    var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;font-size:11px;';
+    bodyHtml+='<tr class="pt-row">';
+    bodyHtml+='<td style="'+tdPin+'left:0;color:#1e3a5f;font-weight:700">'+sc+'</td>';
+    activeRanches.forEach(function(rn){
+      var col=RANCH_COLORS[rn]||'#555';
+      weekKeys.forEach(function(key){
+        var v=scByRnWk[rn][key];
+        if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
+        else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:'+col+';font-weight:600">'+fmt(v)+'</td>';}
+      });
+      // SUB rancho
+      bodyHtml+=cell(scByRn[rn],true,col);
+    });
+    // TOTAL fila
+    bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:#1e3a5f;border-left:2px solid #4472C4">'+fmt(scTotal)+'</td>';
+    bodyHtml+='</tr>';
+  });
+
+  // ── Fila total general ────────────────────────────────
+  var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;';
+  var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
+  bodyHtml+='<tr>';
+  bodyHtml+='<td style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
+  activeRanches.forEach(function(rn){
+    var col=RANCH_COLORS[rn]||'#555';
+    weekKeys.forEach(function(key){
+      var v=grandByRnWk[rn][key];
       bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+(v?fmt(v):'—')+'</td>';
     });
-    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(grandByWk[key]?fmt(grandByWk[key]):'—')+'</td>';
+    bodyHtml+='<td style="'+totStyle+'color:'+col+';border-left:1px solid #aaa">'+(grandByRn[rn]?fmt(grandByRn[rn]):'—')+'</td>';
   });
   bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
   bodyHtml+='</tr>';
