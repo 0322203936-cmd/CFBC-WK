@@ -639,6 +639,14 @@ function inicializar() {
   var prefCat = 'MATERIAL DE EMPAQUE';
   state.cat = DATA.categories.indexOf(prefCat)>-1 ? prefCat : DATA.categories[0];
 
+  // Asegurar que los años del conteo de mano de obra también estén activos
+  if (Array.isArray(DATA.mano_obra_data)) {
+    DATA.mano_obra_data.forEach(function(r){
+      if (DATA.years.indexOf(r.year)<0) DATA.years.push(r.year);
+    });
+    DATA.years.sort(function(a,b){return a-b;});
+  }
+
   state.activeYears = {};
   var latestYr = DATA.years[DATA.years.length-1];
   var prevYr   = DATA.years[DATA.years.length-2];
@@ -647,13 +655,25 @@ function inicializar() {
 
   var wSet = {};
   DATA.weekly_detail.forEach(function(r){ wSet[r.week]=1; });
+  // Incluir semanas del conteo de mano de obra
+  if (Array.isArray(DATA.mano_obra_data)) {
+    DATA.mano_obra_data.forEach(function(r){ wSet[r.week]=1; });
+  }
   allWeeks = Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
 
+  // Semanas del año más reciente (considerar también mano_obra_data)
   var wksLatest = DATA.weekly_detail
     .filter(function(r){return r.year===latestYr;})
     .map(function(r){return r.week;})
     .filter(function(v,i,a){return a.indexOf(v)===i;})
     .sort(function(a,b){return a-b;});
+  if (!wksLatest.length && Array.isArray(DATA.mano_obra_data)) {
+    wksLatest = DATA.mano_obra_data
+      .filter(function(r){return r.year===latestYr;})
+      .map(function(r){return r.week;})
+      .filter(function(v,i,a){return a.indexOf(v)===i;})
+      .sort(function(a,b){return a-b;});
+  }
   var curWeek = wksLatest[wksLatest.length-1] || allWeeks[allWeeks.length-1];
   var idx = allWeeks.indexOf(curWeek);
   state.weekIdx = idx>=0 ? idx : allWeeks.length-1;
@@ -1267,11 +1287,30 @@ function renderServicios() {
 // =======================================================
 var MO_SUBCATS = [
   'Ing. Y Admon.','Supervisores','Corte','Trasplante','Manejo P.',
-  'Consolidacion','Siembra','Phlox','Hoops','MIPE Y MIRFE',
+  'Consolidacion','Siembra','Mov. Charolas','Riego','Phlox','Hoops','MIPE Y MIRFE',
   'Tract. Y Cameros','Veladores','Soldadores','Transporte',
   'Admon Posco','Alm.upc y empaq','Contratista y com.',
   'Prod. Patina y rec','IMSS,INFO Y RCV','Imp. 1.8%'
 ];
+
+// Colores para ranchos del conteo de personal (distintos a los ranchos físicos)
+var MO_RANCH_COLORS = {
+  'Administracion':  '#374151',
+  'Propagacion':     '#047857',
+  'Poscosecha':      '#0369a1',
+  'Ramona':          '#b45309',
+  'Isabela':         '#7c3aed',
+  'Christina':       '#0369a1',
+  'Cecilia':         '#be185d',
+  'Cecilia 25':      '#047857',
+};
+
+// Orden preferido de ranchos en mano de obra
+var MO_RANCH_ORDER = [
+  'Administracion','Propagacion','Poscosecha','Ramona',
+  'Isabela','Christina','Cecilia','Cecilia 25'
+];
+
 function renderManoObra() {
   var sym=state.currency.toUpperCase();
   var f=state.fromWeek, t=state.toWeek;
@@ -1303,6 +1342,8 @@ function renderManoObra() {
     {label:'MANEJO PLANTA',      subcats:['Manejo P.']},
     {label:'CONSOLIDACIÓN',      subcats:['Consolidacion']},
     {label:'SIEMBRA',            subcats:['Siembra']},
+    {label:'MOV. CHAROLAS',      subcats:['Mov. Charolas']},
+    {label:'RIEGO',              subcats:['Riego']},
     {label:'PHLOX',              subcats:['Phlox']},
     {label:'HOOPS',              subcats:['Hoops']},
     {label:'MIPE / MIRFE',       subcats:['MIPE Y MIRFE']},
@@ -1329,11 +1370,20 @@ function renderManoObra() {
     });
   });
 
-  // Ranchos con datos en este rango
-  var activeRanches=RANCH_ORDER.filter(function(rn){
-    return weekKeys.some(function(key){
-      return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
+  // Ranchos con datos: usar los ranchos del conteo (no RANCH_ORDER físico)
+  // Primero recolectar todos los ranchos que aparecen en los datos
+  var ranchesEnDatos={};
+  weekKeys.forEach(function(key){
+    Object.keys(weekMap[key]||{}).forEach(function(k){
+      if(!k.includes('__r__')) return;
+      var rn=k.split('__r__')[1];
+      if(weekMap[key][k]>0) ranchesEnDatos[rn]=true;
     });
+  });
+  // Ordenar: primero los del orden preferido, luego cualquier otro
+  var activeRanches=MO_RANCH_ORDER.filter(function(rn){ return ranchesEnDatos[rn]; });
+  Object.keys(ranchesEnDatos).forEach(function(rn){
+    if(activeRanches.indexOf(rn)<0) activeRanches.push(rn);
   });
 
   function shortLabel(sc){
@@ -1374,7 +1424,7 @@ function renderManoObra() {
   h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:120px">GRUPO</th>';
   h1+='<th rowspan="2" style="'+thPin+'left:120px;min-width:140px">CONCEPTO</th>';
   activeRanches.forEach(function(rn){
-    var col=RANCH_COLORS[rn]||'#888';
+    var col=MO_RANCH_COLORS[rn]||RANCH_COLORS[rn]||'#374151';
     h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
   });
   h1+='<th rowspan="2" style="'+thScroll+'border-left:2px solid #4472C4;min-width:100px;background:#9DC3E6">TOTAL</th>';
