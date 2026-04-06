@@ -1473,12 +1473,13 @@ function renderManoObra() {
   var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
   bodyHtml+='<tr>';
   bodyHtml+='<td colspan="2" style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
-  weekKeys.forEach(function(key){
-    activeRanches.forEach(function(rn){
-      var v=grandByRn[rn][key]; var col=RANCH_COLORS[rn]||'#555';
+  activeRanches.forEach(function(rn){
+    var col=RANCH_COLORS[rn]||'#555';
+    weekKeys.forEach(function(key){
+      var v=grandByRnWk[rn][key];
       bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+( v?fmt(v):'—')+'</td>';
     });
-    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(grandByWk[key]?fmt(grandByWk[key]):'—')+'</td>';
+    bodyHtml+='<td style="'+totStyle+'color:'+col+';border-left:1px solid #aaa">'+(grandByRn[rn]?fmt(grandByRn[rn]):'—')+'</td>';
   });
   bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
   bodyHtml+='</tr>';
