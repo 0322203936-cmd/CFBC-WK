@@ -1401,8 +1401,20 @@ function renderManoObra() {
   }
 
   if (!weekKeys.length || !activeRanches.length) {
+    var diagHtml = '<div style="padding:16px;font-family:monospace;font-size:11px;background:#fff3cd;border:1px solid #ffc107;margin:10px">';
+    diagHtml += '<b>DEBUG</b><br>';
+    diagHtml += 'mano_obra_data.length: ' + (Array.isArray(DATA.mano_obra_data) ? DATA.mano_obra_data.length : 'NO ARRAY') + '<br>';
+    if (Array.isArray(DATA.mano_obra_data) && DATA.mano_obra_data.length > 0) {
+      var s=DATA.mano_obra_data[0];
+      diagHtml += 'sample: year='+s.year+' week='+s.week+' subcat="'+s.subcat+'" mxn='+s.mxn_total+'<br>';
+      diagHtml += 'mxn_ranches='+JSON.stringify(s.mxn_ranches)+'<br>';
+    }
+    diagHtml += 'activeYears='+JSON.stringify(state.activeYears)+'<br>';
+    diagHtml += 'weekMap keys='+JSON.stringify(Object.keys(weekMap))+'<br>';
+    diagHtml += 'activeRanches='+JSON.stringify(activeRanches)+'<br>';
+    diagHtml += '</div>';
     var gw=document.getElementById('gridWrap');
-    if(gw) { gw.style.display=''; gw.innerHTML='<div style="padding:20px;color:#888;font-size:12px">Sin datos para el rango seleccionado.</div>'; }
+    if(gw){gw.style.display='';gw.innerHTML=diagHtml;}
     document.getElementById('comparativoWrap').className='';
     document.getElementById('stTotal').textContent='—';
     return;
