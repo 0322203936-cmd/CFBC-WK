@@ -62,6 +62,7 @@ CATEGORIAS_ORDEN = [
     "EXPANSION CECILIA 25",
     "RENOVACION DE SIEMBRA",
     "MATERIAL DE EMPAQUE",
+    "COSTO SERVICIOS",
 ]
 
 SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
@@ -140,7 +141,7 @@ def norm_cat(s: str):
     if "RENOVACION" in s:                         return "RENOVACION DE SIEMBRA"
     if "MATERIAL DE EMP" in s:                    return "MATERIAL DE EMPAQUE"
     if "COSTO DE MAT" in s:                       return "COSTO_STOP"
-    if "COSTO DE SERV" in s:                      return "COSTO_STOP"
+    if "COSTO DE SERV" in s:                      return "COSTO SERVICIOS"
     if s.startswith("ELECTRICIDAD"):                        return "SV:Electricidad"
     if s.startswith("FLETES Y ACARREOS"):                   return "SV:Fletes y Acarreos"
     if s.startswith("GASTOS DE EXPORTACION"):               return "SV:Gastos de Exportación"
