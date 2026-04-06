@@ -26,8 +26,6 @@ st.markdown("""
   .block-container { padding: 0 !important; max-width: 100% !important; margin-top: -1rem !important; }
   .stMainBlockContainer { padding-top: 0 !important; }
   section[data-testid="stSidebar"] { display: none !important; }
-  /* iframe ocupa todo el viewport */
-  iframe { width: 100% !important; height: 100vh !important; border: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -80,8 +78,6 @@ body {
   font-family: Calibri, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   font-size: 12px;
   background: #f0f0f0;
-  overflow: hidden;
-  height: 100vh;
 }
 
 /* ── LOADER ─────────────────────────────────── */
@@ -192,15 +188,11 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   background: #fff;
   border: 1px solid #d5d5d5;
   border-top: none;
-  overflow: hidden;
-  height: calc(100vh - var(--ui-offset, 175px));
+  overflow: visible;
 }
 .pt-table-wrap {
-  overflow: auto;
+  overflow: visible;
   width: 100%;
-  height: 100%;
-  scrollbar-width: thin;
-  scrollbar-color: #b0c4d8 transparent;
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
@@ -274,10 +266,10 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .prod-link  { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
 
 /* ── COMPARATIVO TABLE ───────────────────────── */
-#comparativoWrap { display: none; background: #fff; border: 1px solid #d5d5d5; border-top: none; height: calc(100vh - var(--ui-offset, 175px)); overflow: hidden; }
+#comparativoWrap { display: none; background: #fff; border: 1px solid #d5d5d5; border-top: none; }
 #comparativoWrap.show { display: block; }
 .cmp-stat-strip { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 10px; background: #f4f4f4; border-bottom: 1px solid #d5d5d5; }
-.cmp-tbl-wrap { overflow: auto; height: 100%; scrollbar-width: thin; scrollbar-color: #b0c4d8 transparent; }
+.cmp-tbl-wrap { overflow-x: auto; scrollbar-width: thin; scrollbar-color: #b0c4d8 transparent; }
 .cmp-tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
 .cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
 .cmp-tbl { border-collapse: collapse; width: 100%; font-size: 12px; font-family: Calibri,'Segoe UI',Arial,sans-serif; }
@@ -1501,17 +1493,7 @@ function showProdFromCmp(yr,wk,ranch) { showProdPanel({_cat:state.cat,_year:yr,_
 // RESIZE
 // =======================================================
 function resizeTable() {
-  // Calcular offset real sumando la altura de todos los elementos fijos sobre la tabla
-  var offset = 0;
-  ['app-hdr','toolbar','view-tabs','rangeBar','statusbar'].forEach(function(cls){
-    var el = document.querySelector('.'+cls) || document.getElementById(cls);
-    if (el && el.offsetHeight) offset += el.offsetHeight;
-  });
-  // prodPanel si está visible
-  var pp = document.getElementById('prodPanel');
-  if (pp && pp.classList.contains('show')) offset += pp.offsetHeight;
-  offset += 6; // micro margen
-  document.documentElement.style.setProperty('--ui-offset', offset+'px');
+  reportHeight();
 }
 window.addEventListener('resize', resizeTable);
 
@@ -1520,13 +1502,17 @@ window.addEventListener('resize', resizeTable);
 // =======================================================
 function reportHeight() {
   var appEl=document.getElementById('app');
-  var h=appEl?appEl.scrollHeight+60:document.body.scrollHeight+60;
+  var h=appEl?appEl.scrollHeight+40:document.body.scrollHeight+40;
   window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h,700)},'*');
 }
 var ro=new ResizeObserver(reportHeight);
-ro.observe(document.body);
+ro.observe(document.getElementById('app')||document.body);
 reportHeight();
-setInterval(reportHeight,500);
+// Reportar varias veces al inicio para que Streamlit capture la altura real
+setTimeout(reportHeight,100);
+setTimeout(reportHeight,300);
+setTimeout(reportHeight,700);
+setTimeout(reportHeight,1500);
 
 // =======================================================
 // ARRANCAR &#8212; diferido con protección
@@ -1685,4 +1671,4 @@ if available_weeks:
                         st.error(f"❌ Falta credencial {e}.")
 
 # Renderizamos el iframe DESPUÉS
-components.html(html_final, height=1, scrolling=False)
+components.html(html_final, height=800, scrolling=False)
