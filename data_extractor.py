@@ -420,10 +420,22 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
     # 3. Procesar cada hoja WK
     siembra_data: dict = {}  # {wk_code: {ranch: {charolas,esquejes,metros,hectareas}}}
     SIEMBRA_LABELS = [
-        ("charolas", "NUMERO DE CHAROLAS SEMBRADAS"),
-        ("esquejes", "NUMERO DE ESQUEJES SEMBRADOS"),
-        ("metros",   "METROS DE SIEMBRA"),
-        ("hectareas","HECTAREAS EN SIEMBRA"),
+        ("inv_inicial",     "INVENTARIO INICIAL"),
+        ("tallos_cos",      "TALLOS COSECHADOS"),
+        ("tallos_des",      "TALLOS DESECHADOS"),
+        ("tallos_des_sf",   "TALLOS DESECHADOS SF"),
+        ("tallos_comp",     "TALLOS COMPRADOS"),
+        ("tallos_bouq",     "TALLOS EN BOUQUETS O PROCESADOS"),
+        ("tallos_desp",     "TALLOS DESPACHADOS"),
+        ("libras_alb",      "LIBRAS DESPACHADAS ALBAHACA"),
+        ("tallos_mues",     "TALLOS MUESTRA"),
+        ("inv_final",       "INVENTARIO FINAL"),
+        ("tallos_proc",     "TALLOS PROCESADOS TOTALES"),
+        ("charolas_288",    "CHAROLAS SEMBRADAS"),
+        ("charolas",        "NUMERO DE CHAROLAS SEMBRADAS"),
+        ("esquejes",        "NUMERO DE ESQUEJES SEMBRADOS"),
+        ("metros",          "METROS DE SIEMBRA"),
+        ("hectareas",       "HECTAREAS EN SIEMBRA"),
     ]
 
     for titulo, code in hojas_validas:
