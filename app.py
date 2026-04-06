@@ -822,8 +822,7 @@ function onRangeChange() {
   if (f>t){var tmp=f;f=t;t=tmp;}
   state.fromWeek=f; state.toWeek=t;
   updateRangeSliders();
-  if (state.view==='comparativo') renderComparativo();
-  else if (state.view==='servicios') renderServicios();
+  renderView();
 }
 function resetRange() {
   var latestYr=DATA.years[DATA.years.length-1];
