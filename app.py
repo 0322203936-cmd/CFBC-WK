@@ -693,9 +693,10 @@ function inicializar() {
   buildYearChips();
   updateWeekControls();
   updateRangeSliders();
-  // Ocultar tab Costo Servicios si la cat inicial no es COSTO SERVICIOS
+  // Ocultar tab Costo Servicios si la cat inicial no es de tipo servicio
   var vtSrv = document.getElementById('vtServicios');
-  if (vtSrv) vtSrv.style.display = (state.cat === 'COSTO SERVICIOS') ? '' : 'none';
+  var _isSrvCat = (state.cat === 'COSTO SERVICIOS' || state.cat === 'COSTO MANO DE OBRA');
+  if (vtSrv) vtSrv.style.display = _isSrvCat ? '' : 'none';
   renderView();
 
   document.getElementById('loader').style.display = 'none';
@@ -735,16 +736,16 @@ function updateWeekControls() {
 // =======================================================
 function onCatChange(val) {
   state.cat = val;
-  var isCostoSrv = (val === 'COSTO SERVICIOS');
+  var isSrvCat = (val === 'COSTO SERVICIOS' || val === 'COSTO MANO DE OBRA');
   ['Anual','Comparativo','Rancho'].forEach(function(name) {
     var el = document.getElementById('vt' + name);
-    if (el) el.style.display = isCostoSrv ? 'none' : '';
+    if (el) el.style.display = isSrvCat ? 'none' : '';
   });
   var vtSrv = document.getElementById('vtServicios');
-  if (vtSrv) vtSrv.style.display = isCostoSrv ? '' : 'none';
-  if (isCostoSrv && state.view !== 'servicios') {
+  if (vtSrv) vtSrv.style.display = isSrvCat ? '' : 'none';
+  if (isSrvCat && state.view !== 'servicios') {
     setView('servicios');
-  } else if (!isCostoSrv && state.view === 'servicios') {
+  } else if (!isSrvCat && state.view === 'servicios') {
     setView('comparativo');
   } else {
     renderView();
@@ -841,7 +842,10 @@ function renderView() {
   if      (state.view==='anual')       renderAnual();
   else if (state.view==='comparativo') renderComparativo();
   else if (state.view==='rancho')      renderRancho();
-  else if (state.view==='servicios')   renderServicios();
+  else if (state.view==='servicios') {
+    if (state.cat==='COSTO MANO DE OBRA') renderManoObra();
+    else renderServicios();
+  }
 }
 
 // =======================================================
@@ -1182,8 +1186,74 @@ function renderServicios() {
 }
 
 // =======================================================
-// CELL CLICK HANDLER
+// VIEW 8: COSTO MANO DE OBRA
 // =======================================================
+var MO_SUBCATS = [
+  'Nómina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)',
+  'Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)',
+  'Nómina Prod. Corte','H.Extra Corte','Bonos Corte',
+  'Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante',
+  'Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta',
+  'Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS',
+  'Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE',
+  'Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros',
+  'Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer',
+  'Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores',
+  'Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador',
+  'Nómina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado'
+];
+function renderManoObra() {
+  var sym=state.currency.toUpperCase();
+  var f=state.fromWeek, t=state.toWeek;
+  var yrs=getActiveYears();
+  var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
+
+  var subcatsSet={};
+  var weekMap={};
+  var src=Array.isArray(DATA.mano_obra_data)&&DATA.mano_obra_data.length ? DATA.mano_obra_data : [];
+  src.forEach(function(r){
+    if (!state.activeYears[r.year]) return;
+    if (r.week<f||r.week>t) return;
+    var key=r.year+'-'+r.week;
+    if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,_total:0,date_range:r.date_range||''};
+    var subcat=(r.subcat||'').trim(); if (!subcat) return;
+    var val=state.currency==='usd'?r.usd_total:r.mxn_total;
+    subcatsSet[subcat]=1;
+    weekMap[key][subcat]=(weekMap[key][subcat]||0)+(val||0);
+    weekMap[key]._total=(weekMap[key]._total||0)+(val||0);
+  });
+
+  var orderedSubcats=MO_SUBCATS.filter(function(sc){return subcatsSet[sc];});
+  Object.keys(subcatsSet).forEach(function(sc){if(orderedSubcats.indexOf(sc)===-1)orderedSubcats.push(sc);});
+
+  var cols=[
+    {field:'semana', headerName:'SEMANA', width:80, pinned:'left',
+     cellRenderer:function(p){var c=YEAR_COLORS[p.data._year]||'#888';return '<span style="color:'+c+';font-weight:700">'+p.value+'</span>';}},
+    {field:'fecha',  headerName:'FECHA',  width:120, pinned:'left',
+     cellRenderer:function(p){return '<span style="color:#777;font-size:11px">'+p.value+'</span>';}},
+    {field:'total',    headerName:'TOTAL '+sym, width:110, type:'numericColumn', cellRenderer:moneyRenderer},
+    {field:'deltaAmt', headerName:'Δ $',        width:90,  type:'numericColumn', cellRenderer:deltaAmtRenderer},
+  ];
+  orderedSubcats.forEach(function(sc){
+    cols.push({field:'sc_'+sc.replace(/[^a-zA-Z0-9]/g,'_'), headerName:sc, width:150, type:'numericColumn', cellRenderer:moneyRenderer});
+  });
+
+  var rows=[]; var prevVal=null; var grandTotal=0;
+  yrs.forEach(function(yr){
+    prevVal=null;
+    rangeWeeks.forEach(function(w){
+      var key=yr+'-'+w;
+      var d=weekMap[key];
+      var total=d?d._total:0;
+      var row={semana:String(yr).slice(2)+String(w).padStart(2,'0'), fecha:d?fmtMes(d.date_range):'', total:total, _year:yr, _week:w};
+      row.deltaAmt=(prevVal!==null&&total>0)?total-prevVal:null;
+      orderedSubcats.forEach(function(sc){row['sc_'+sc.replace(/[^a-zA-Z0-9]/g,'_')]=d?d[sc]||0:0;});
+      if (total>0) { rows.push(row); prevVal=total; grandTotal+=total; }
+    });
+  });
+
+  renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym);
+}
 function onMainCellClick(evt) {
   if (!evt||!evt.data||!evt.colDef) return;
   var data=evt.data, clickedField=evt.colDef.field||'';
