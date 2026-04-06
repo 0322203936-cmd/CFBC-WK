@@ -1355,9 +1355,14 @@ function renderManoObra() {
     var subcat=(r.subcat||'').trim(); if (!subcat) return;
     var val=state.currency==='usd'?r.usd_total:r.mxn_total;
     var ranches=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;
+    var valHc=r.hc_total||0;
+    var hcRanches=r.hc_ranches||{};
     weekMap[key][subcat]=(weekMap[key][subcat]||0)+(val||0);
     Object.keys(ranches||{}).forEach(function(rn){
       weekMap[key][subcat+'__r__'+rn]=(weekMap[key][subcat+'__r__'+rn]||0)+(ranches[rn]||0);
+    });
+    Object.keys(hcRanches||{}).forEach(function(rn){
+      weekMap[key][subcat+'__hc_r__'+rn]=(weekMap[key][subcat+'__hc_r__'+rn]||0)+(hcRanches[rn]||0);
     });
   });
 
@@ -1509,13 +1514,19 @@ function renderManoObra() {
 
     grp.subcats.forEach(function(sc){
       var scByRnWk={}, scByRn={}, scTotal=0;
+      var hcByRnWk={}, hcByRn={}, hcTotal=0;
       activeRanches.forEach(function(rn){
         scByRnWk[rn]={}; scByRn[rn]=0;
+        hcByRnWk[rn]={}; hcByRn[rn]=0;
         weekKeys.forEach(function(k){
           var val=(weekMap[k]&&weekMap[k][sc+'__r__'+rn])?weekMap[k][sc+'__r__'+rn]:0;
+          var hc_val=(weekMap[k]&&weekMap[k][sc+'__hc_r__'+rn])?weekMap[k][sc+'__hc_r__'+rn]:0;
           scByRnWk[rn][k]=val;
           scByRn[rn]+=val;
           scTotal+=val;
+          hcByRnWk[rn][k]=hc_val;
+          hcByRn[rn]+=hc_val;
+          hcTotal+=hc_val;
           grpByRnWk[rn][k]+=val;
           grpByRn[rn]+=val;
           grpTotal+=val;
@@ -1524,7 +1535,7 @@ function renderManoObra() {
           grandTotal+=val;
         });
       });
-      if(scTotal>0) scRows.push({label:shortLabel(sc),byRnWk:scByRnWk,byRn:scByRn,total:scTotal});
+      if(scTotal>0) scRows.push({label:shortLabel(sc),byRnWk:scByRnWk,byRn:scByRn,total:scTotal, hcByRnWk:hcByRnWk, hcByRn:hcByRn, hcTotal:hcTotal});
     });
     if(grpTotal===0) return;
 
@@ -1545,18 +1556,20 @@ function renderManoObra() {
     // Filas subcat
     scRows.forEach(function(sc){
       var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;';
-      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;">';
+      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="Número de personas (Headcount)">';
       bodyHtml+='<td style="'+tdPin+'left:0"></td>';
-      bodyHtml+='<td style="'+tdPin+'left:120px;color:#334155;font-size:11px">'+sc.label+'</td>';
+      bodyHtml+='<td style="'+tdPin+'left:120px;color:#334155;font-size:11px"><span style="color:#888;font-size:9px;margin-right:4px;">👤</span>'+sc.label+'</td>';
       activeRanches.forEach(function(rn){
         weekKeys.forEach(function(key){
-          var v=sc.byRnWk[rn][key];
+          var v=sc.hcByRnWk[rn][key];
           if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
-          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#334155;font-weight:600">'+fmt(v)+'</td>';}
+          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#475569;font-weight:600">'+fmt(v)+'</td>';}
         });
-        bodyHtml+=cell(sc.byRn[rn],true,'#1e3a5f');
+        var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
+        bodyHtml+='<td style="'+cellStyle+'">'+(sc.hcByRn[rn]?fmt(sc.hcByRn[rn]):'—')+'</td>';
       });
-      bodyHtml+=cell(sc.total,true,'#1e3a5f');
+      var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
+      bodyHtml+='<td style="'+cellStyle+'border-left:2px solid #4472C4">'+(sc.hcTotal?fmt(sc.hcTotal):'—')+'</td>';
       bodyHtml+='</tr>';
     });
   });
