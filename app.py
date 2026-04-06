@@ -1433,10 +1433,38 @@ function showProdPanel(rowData, opts) {
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = 'Reg: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
 
+    // ── Barra de métricas de siembra ─────────────────────────────────
+    var siembraBar = '';
+    if (DATA.siembra_data) {
+      var wkSrc = DATA.siembra_data[wkStart] || DATA.siembra_data[wkEnd] || null;
+      if (wkSrc) {
+        var sRow = ranchFilter ? (wkSrc[ranchFilter] || wkSrc['TOTAL'] || {}) : (wkSrc['TOTAL'] || {});
+        var sMetas = [
+          {k:'charolas', lbl:'N\u00ba CHAROLAS SEMBRADAS'},
+          {k:'esquejes', lbl:'N\u00ba ESQUEJES SEMBRADOS'},
+          {k:'metros',   lbl:'METROS DE SIEMBRA'},
+          {k:'hectareas',lbl:'HECT\u00c1REAS EN SIEMBRA'},
+        ];
+        var anyVal = sMetas.some(function(m){ return sRow[m.k]!==undefined && sRow[m.k]!==0; });
+        if (anyVal) {
+          siembraBar = '<div style="display:flex;gap:6px;padding:4px 6px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;flex-shrink:0;flex-wrap:wrap;">';
+          sMetas.forEach(function(m){
+            var v = (sRow[m.k]!==undefined && sRow[m.k]!=='') ? Number(sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
+            siembraBar += '<div style="flex:1;min-width:110px;text-align:center;padding:3px 6px;background:#fff;border:1px solid #bbf7d0;border-radius:3px;">' +
+              '<div style="font-size:8px;color:#16a34a;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;">' + m.lbl + '</div>' +
+              '<div style="font-size:13px;font-weight:700;color:#0f172a;">' + v + '</div>' +
+              '</div>';
+          });
+          siembraBar += '</div>';
+        }
+      }
+    }
+
     var html='<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
       '<div style="background:#f1f5f9; color:#0f172a; padding:4px 6px; border-bottom:1px solid #cbd5e1; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">' + 
       '<div style="font-weight:bold; font-size:11px; text-transform:uppercase; letter-spacing:0px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">' + panelTitle + '</div>' + 
       '<div style="color:#475569; font-size:10px; margin-left:8px; white-space:nowrap;">' + panelMeta + '</div></div>' +
+      siembraBar +
       '<div style="overflow-x:auto; scrollbar-width:thin;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
       '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">WK</th>'+
       '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UBICACIÓN</th>'+
