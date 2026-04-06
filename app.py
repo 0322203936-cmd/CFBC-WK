@@ -64,7 +64,7 @@ APP_CSS = """<style>
   /* Pivot-table palette — Excel style */
   --pt-hdr-bg:      #D9E1F2;   /* header de columnas  */
   --pt-hdr-border:  #8EA9C1;
-  --pt-grp-bg:      #4472C4;   /* fila de grupo/año   */
+  --pt-grp-bg:      #698DC8;   /* fila de grupo/año - azul suavizado */
   --pt-grp-fg:      #ffffff;
   --pt-sub-bg:      #BDD7EE;   /* fila subtotal       */
   --pt-sub-fg:      #000000;
@@ -1356,9 +1356,19 @@ function renderManoObra() {
     return '<td style="padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700">'+fmt(v)+'</td>';
   }
 
+  if (!weekKeys.length || !activeRanches.length) {
+    var gw=document.getElementById('gridWrap');
+    if(gw) { gw.style.display=''; gw.innerHTML='<div style="padding:20px;color:#888;font-size:12px">Sin datos para el rango seleccionado.</div>'; }
+    document.getElementById('comparativoWrap').className='';
+    document.getElementById('stTotal').textContent='—';
+    return;
+  }
+
   // ── Construir HTML ────────────────────────────────────
-  // HEADER nivel 1: GRUPO | CONCEPTO | [WKxxxx colspan=R+1] ... | TOTAL
-  var ncols=activeRanches.length+1; // ranchos + subtotal por semana
+  // NUEVO LAYOUT: GRUPO | CONCEPTO | [Rancho: wk1 wk2 ... SUB] | TOTAL
+  var nWeeks = weekKeys.length;
+  var nColsPerRanch = nWeeks + 1; // semanas + SUB
+
   var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
   var thPin=thBase+'position:sticky;top:0;z-index:4;';
   var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
@@ -1366,53 +1376,61 @@ function renderManoObra() {
   var h1='<tr>';
   h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:120px">GRUPO</th>';
   h1+='<th rowspan="2" style="'+thPin+'left:120px;min-width:140px">CONCEPTO</th>';
-  weekKeys.forEach(function(key){
-    var d=weekMap[key];
-    var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
-    var borderL='border-left:2px solid #8EA9C1;';
-    h1+='<th colspan="'+ncols+'" style="'+thScroll+borderL+'text-align:center">WK '+lbl+'</th>';
+  activeRanches.forEach(function(rn){
+    var col=RANCH_COLORS[rn]||'#888';
+    h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
   });
   h1+='<th rowspan="2" style="'+thScroll+'border-left:2px solid #4472C4;min-width:100px;background:#9DC3E6">TOTAL</th>';
   h1+='</tr>';
 
-  // HEADER nivel 2: [por cada semana: ranchos... | SUB]
+  // HEADER nivel 2: [por cada rancho: wk labels... | SUB]
   var h2='<tr>';
-  weekKeys.forEach(function(key){
-    activeRanches.forEach(function(rn){
-      var col=RANCH_COLORS[rn]||'#555';
-      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:80px">'+rn+'</th>';
+  activeRanches.forEach(function(){
+    weekKeys.forEach(function(key){
+      var d=weekMap[key];
+      var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+      var col=YEAR_COLORS[d._year]||'#888';
+      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:60px">'+lbl+'</th>';
     });
-    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;min-width:88px;background:#BDD7EE">SUB</th>';
+    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">SUB</th>';
   });
   h2+='</tr>';
 
   // ── FILAS ─────────────────────────────────────────────
-  var grandByWk={}; var grandByRn={}; var grandTotal=0;
-  weekKeys.forEach(function(k){grandByWk[k]=0;});
-  activeRanches.forEach(function(rn){grandByRn[rn]={}; weekKeys.forEach(function(k){grandByRn[rn][k]=0;});});
+  var grandByRnWk={}, grandByRn={}, grandTotal=0;
+  activeRanches.forEach(function(rn){
+    grandByRnWk[rn]={}; grandByRn[rn]=0;
+    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; });
+  });
 
   var bodyHtml='';
 
   MO_GROUPS.forEach(function(grp){
-    var grpByWk={}; weekKeys.forEach(function(k){grpByWk[k]=0;});
-    var grpByRnWk={}; activeRanches.forEach(function(rn){grpByRnWk[rn]={}; weekKeys.forEach(function(k){grpByRnWk[rn][k]=0;});});
-    var grpTotal=0;
+    var grpByRnWk={}, grpByRn={}, grpTotal=0;
+    activeRanches.forEach(function(rn){
+      grpByRnWk[rn]={}; grpByRn[rn]=0;
+      weekKeys.forEach(function(k){ grpByRnWk[rn][k]=0; });
+    });
     var scRows=[];
 
     grp.subcats.forEach(function(sc){
-      var scByWk={}; var scByRnWk={}; var scTotal=0;
-      weekKeys.forEach(function(k){scByWk[k]=0;});
-      activeRanches.forEach(function(rn){scByRnWk[rn]={}; weekKeys.forEach(function(k){scByRnWk[rn][k]=0;});});
-      weekKeys.forEach(function(key){
-        var val=(weekMap[key]&&weekMap[key][sc])?weekMap[key][sc]:0;
-        scByWk[key]=val; scTotal+=val; grpByWk[key]+=val; grandByWk[key]+=val;
-        activeRanches.forEach(function(rn){
-          var rv=(weekMap[key]&&weekMap[key][sc+'__r__'+rn])?weekMap[key][sc+'__r__'+rn]:0;
-          scByRnWk[rn][key]=rv; grpByRnWk[rn][key]+=rv; grandByRn[rn][key]+=rv;
+      var scByRnWk={}, scByRn={}, scTotal=0;
+      activeRanches.forEach(function(rn){
+        scByRnWk[rn]={}; scByRn[rn]=0;
+        weekKeys.forEach(function(k){
+          var val=(weekMap[k]&&weekMap[k][sc+'__r__'+rn])?weekMap[k][sc+'__r__'+rn]:0;
+          scByRnWk[rn][k]=val;
+          scByRn[rn]+=val;
+          scTotal+=val;
+          grpByRnWk[rn][k]+=val;
+          grpByRn[rn]+=val;
+          grpTotal+=val;
+          grandByRnWk[rn][k]+=val;
+          grandByRn[rn]+=val;
+          grandTotal+=val;
         });
       });
-      grpTotal+=scTotal; grandTotal+=scTotal;
-      if(scTotal>0) scRows.push({label:shortLabel(sc),byWk:scByWk,byRnWk:scByRnWk,total:scTotal});
+      if(scTotal>0) scRows.push({label:shortLabel(sc),byRnWk:scByRnWk,byRn:scByRn,total:scTotal});
     });
     if(grpTotal===0) return;
 
@@ -1421,11 +1439,13 @@ function renderManoObra() {
     bodyHtml+='<tr>';
     bodyHtml+='<td style="'+gTdPin+'left:0">'+grp.label+'</td>';
     bodyHtml+='<td style="'+gTdPin+'left:120px"></td>';
-    weekKeys.forEach(function(key){
-      activeRanches.forEach(function(rn){bodyHtml+=cellGrp(grpByRnWk[rn][key]);});
-      bodyHtml+=cellGrp(grpByWk[key]);
+    activeRanches.forEach(function(rn){
+      weekKeys.forEach(function(key){
+        bodyHtml+=cellGrp(grpByRnWk[rn][key]);
+      });
+      bodyHtml+=cellGrp(grpByRn[rn]); // SUB rancho
     });
-    bodyHtml+=cellGrp(grpTotal);
+    bodyHtml+=cellGrp(grpTotal); // TOTAL fila
     bodyHtml+='</tr>';
 
     // Filas subcat
@@ -1434,14 +1454,14 @@ function renderManoObra() {
       bodyHtml+='<tr class="pt-row">';
       bodyHtml+='<td style="'+tdPin+'left:0"></td>';
       bodyHtml+='<td style="'+tdPin+'left:120px;color:#334155;font-size:11px">'+sc.label+'</td>';
-      weekKeys.forEach(function(key){
-        activeRanches.forEach(function(rn){
+      activeRanches.forEach(function(rn){
+        var col=RANCH_COLORS[rn]||'#555';
+        weekKeys.forEach(function(key){
           var v=sc.byRnWk[rn][key];
-          var col=RANCH_COLORS[rn]||'#555';
           if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
           else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:'+col+';font-weight:600">'+fmt(v)+'</td>';}
         });
-        bodyHtml+=cell(sc.byWk[key],false,'#1e3a5f');
+        bodyHtml+=cell(sc.byRn[rn],true,col);
       });
       bodyHtml+=cell(sc.total,true,'#1e3a5f');
       bodyHtml+='</tr>';
