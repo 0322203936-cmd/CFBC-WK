@@ -941,7 +941,7 @@ function renderComparativo() {
     });
   });
 
-  var head='<tr><th>Semana</th><th>Fecha</th><th>Total '+sym+'</th><th>Δ$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
+  var head='<tr><th>Semana</th><th>Total '+sym+'</th><th>Δ$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
   var body=yrs.map(function(yr,yi){
     var col=YEAR_COLORS[yr]||'#888';
     var prevWkVal=null;
@@ -962,7 +962,6 @@ function renderComparativo() {
       var totalAttrs=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
       return '<tr class="cmp-row">'+
         '<td style="color:'+col+';font-weight:600">'+String(yr).slice(2)+String(w).padStart(2,'0')+'</td>'+
-        '<td style="color:#777;font-size:11px">'+fmtMes(d&&d.date_range)+'</td>'+
         '<td style="'+totalStyle+'"'+totalAttrs+'>'+fmt(val)+'</td>'+
         dCell+ranchCells+'</tr>';
     }).join('');
