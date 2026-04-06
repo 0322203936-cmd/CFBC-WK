@@ -586,9 +586,10 @@ def get_datos() -> dict:
         resultado["productos_me"]       = productos_me
         resultado["productos_me_debug"] = productos_me_debug
 
+        HIDDEN_RANCHES = {"Albahaca-RM", "Campo-VI"}
         resultado["config"] = {
-            "ranch_order": list(RANCH_CONFIG.keys()),
-            "ranch_colors": {k: v["color"] for k, v in RANCH_CONFIG.items()}
+            "ranch_order": [k for k in RANCH_CONFIG.keys() if k not in HIDDEN_RANCHES],
+            "ranch_colors": {k: v["color"] for k, v in RANCH_CONFIG.items() if k not in HIDDEN_RANCHES}
         }
 
     return resultado
