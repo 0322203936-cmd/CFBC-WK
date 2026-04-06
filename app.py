@@ -1207,22 +1207,20 @@ function renderManoObra() {
   var yrs=getActiveYears();
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
 
-  // weekMap[key][subcat] = total, weekMap[key][subcat+'__r__'+ranch] = val por rancho
+  // ── Acumular datos ─────────────────────────────────────
   var weekMap={};
   var src=Array.isArray(DATA.mano_obra_data)&&DATA.mano_obra_data.length?DATA.mano_obra_data:[];
   src.forEach(function(r){
     if (!state.activeYears[r.year]) return;
     if (r.week<f||r.week>t) return;
     var key=r.year+'-'+r.week;
-    if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,_total:0,date_range:r.date_range||''};
+    if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,date_range:r.date_range||''};
     var subcat=(r.subcat||'').trim(); if (!subcat) return;
     var val=state.currency==='usd'?r.usd_total:r.mxn_total;
     var ranches=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;
     weekMap[key][subcat]=(weekMap[key][subcat]||0)+(val||0);
-    weekMap[key]._total=(weekMap[key]._total||0)+(val||0);
     Object.keys(ranches||{}).forEach(function(rn){
-      var rk=subcat+'__r__'+rn;
-      weekMap[key][rk]=(weekMap[key][rk]||0)+(ranches[rn]||0);
+      weekMap[key][subcat+'__r__'+rn]=(weekMap[key][subcat+'__r__'+rn]||0)+(ranches[rn]||0);
     });
   });
 
@@ -1241,12 +1239,21 @@ function renderManoObra() {
     {label:'OTROS',subcats:['Nómina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado']}
   ];
 
-  // Semanas con datos en orden cronológico
+  // Semanas con datos
   var weekKeys=[];
   yrs.forEach(function(yr){
     rangeWeeks.forEach(function(w){
       var key=yr+'-'+w;
-      if (weekMap[key]&&weekMap[key]._total>0) weekKeys.push(key);
+      var hasSome=false;
+      Object.keys(weekMap[key]||{}).forEach(function(k){if(k[0]!=='_'&&!k.includes('__r__')&&weekMap[key][k]>0)hasSome=true;});
+      if(hasSome) weekKeys.push(key);
+    });
+  });
+
+  // Ranchos con datos en este rango
+  var activeRanches=RANCH_ORDER.filter(function(rn){
+    return weekKeys.some(function(key){
+      return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
     });
   });
 
@@ -1255,75 +1262,134 @@ function renderManoObra() {
       .replace('H.Extra Dom. y Festivos ','H.Extra ').replace('H.Extra Dom. y Fest. ','H.Extra ')
       .replace('Bonos Asist./Puntualidad ','Bonos ');
   }
+  function cell(v,bold,color){
+    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">—</td>';
+    var s='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
+    if(bold) s+='font-weight:700;';
+    s+='color:'+(color||'#1e3a5f')+';';
+    return '<td style="'+s+'">'+fmt(v)+'</td>';
+  }
+  function cellGrp(v){
+    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700">—</td>';
+    return '<td style="padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700">'+fmt(v)+'</td>';
+  }
 
-  // ColDefs: GRUPO (pin) + CONCEPTO (pin) + 1 col por semana + TOTAL + ranchos
-  var cols=[
-    {field:'grupo',headerName:'GRUPO',width:120,pinned:'left',
-     cellRenderer:function(p){return p.value?'<span style="font-weight:700;color:#1e3a5f;font-size:11px">'+p.value+'</span>':'';}},
-    {field:'concepto',headerName:'CONCEPTO',width:145,pinned:'left',
-     cellRenderer:function(p){return '<span style="color:#334155;font-size:11px">'+p.value+'</span>';}},
-  ];
+  // ── Construir HTML ────────────────────────────────────
+  // HEADER nivel 1: GRUPO | CONCEPTO | [WKxxxx colspan=R+1] ... | TOTAL
+  var ncols=activeRanches.length+1; // ranchos + subtotal por semana
+  var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
+  var thPin=thBase+'position:sticky;top:0;z-index:4;';
+  var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
+
+  var h1='<tr>';
+  h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:120px">GRUPO</th>';
+  h1+='<th rowspan="2" style="'+thPin+'left:120px;min-width:140px">CONCEPTO</th>';
   weekKeys.forEach(function(key){
     var d=weekMap[key];
     var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
-    cols.push({field:'wk_'+key.replace(/-/g,'_'),headerName:lbl,width:88,type:'numericColumn',cellRenderer:moneyRenderer});
+    var borderL='border-left:2px solid #8EA9C1;';
+    h1+='<th colspan="'+ncols+'" style="'+thScroll+borderL+'text-align:center">WK '+lbl+'</th>';
   });
-  cols.push({field:'wtotal',headerName:'TOTAL '+sym,width:110,type:'numericColumn',
-    cellRenderer:function(p){var v=p.value;if(!v||isNaN(v))return '';return '<span style="font-weight:700;color:#1e3a5f;">'+fmt(v)+'</span>';}});
-  RANCH_ORDER.forEach(function(rn){
-    cols.push({field:'rn_'+rn.replace(/[^a-zA-Z0-9]/g,'_'),headerName:rn,width:100,type:'numericColumn',cellRenderer:ranchRenderer(rn)});
-  });
+  h1+='<th rowspan="2" style="'+thScroll+'border-left:2px solid #4472C4;min-width:100px;background:#9DC3E6">TOTAL</th>';
+  h1+='</tr>';
 
-  // Filas: header grupo → subcats → ... → total general
-  var rows=[];
-  var grandTotal=0;
-  var grandByWk={}; var grandByRn={};
+  // HEADER nivel 2: [por cada semana: ranchos... | SUB]
+  var h2='<tr>';
+  weekKeys.forEach(function(key){
+    activeRanches.forEach(function(rn){
+      var col=RANCH_COLORS[rn]||'#555';
+      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:80px">'+rn+'</th>';
+    });
+    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;min-width:88px;background:#BDD7EE">SUB</th>';
+  });
+  h2+='</tr>';
+
+  // ── FILAS ─────────────────────────────────────────────
+  var grandByWk={}; var grandByRn={}; var grandTotal=0;
   weekKeys.forEach(function(k){grandByWk[k]=0;});
-  RANCH_ORDER.forEach(function(rn){grandByRn[rn]=0;});
+  activeRanches.forEach(function(rn){grandByRn[rn]={}; weekKeys.forEach(function(k){grandByRn[rn][k]=0;});});
+
+  var bodyHtml='';
 
   MO_GROUPS.forEach(function(grp){
     var grpByWk={}; weekKeys.forEach(function(k){grpByWk[k]=0;});
-    var grpByRn={}; RANCH_ORDER.forEach(function(rn){grpByRn[rn]=0;});
-    var grpTotal=0; var scRows=[];
+    var grpByRnWk={}; activeRanches.forEach(function(rn){grpByRnWk[rn]={}; weekKeys.forEach(function(k){grpByRnWk[rn][k]=0;});});
+    var grpTotal=0;
+    var scRows=[];
 
     grp.subcats.forEach(function(sc){
-      var scTotal=0;
-      var scByRn={}; RANCH_ORDER.forEach(function(rn){scByRn[rn]=0;});
-      var scRow={grupo:'',concepto:shortLabel(sc)};
+      var scByWk={}; var scByRnWk={}; var scTotal=0;
+      weekKeys.forEach(function(k){scByWk[k]=0;});
+      activeRanches.forEach(function(rn){scByRnWk[rn]={}; weekKeys.forEach(function(k){scByRnWk[rn][k]=0;});});
       weekKeys.forEach(function(key){
         var val=(weekMap[key]&&weekMap[key][sc])?weekMap[key][sc]:0;
-        scRow['wk_'+key.replace(/-/g,'_')]=val>0?val:null;
-        scTotal+=val; grpByWk[key]+=val; grandByWk[key]+=val;
-        RANCH_ORDER.forEach(function(rn){
+        scByWk[key]=val; scTotal+=val; grpByWk[key]+=val; grandByWk[key]+=val;
+        activeRanches.forEach(function(rn){
           var rv=(weekMap[key]&&weekMap[key][sc+'__r__'+rn])?weekMap[key][sc+'__r__'+rn]:0;
-          scByRn[rn]+=rv; grpByRn[rn]+=rv; grandByRn[rn]+=rv;
+          scByRnWk[rn][key]=rv; grpByRnWk[rn][key]+=rv; grandByRn[rn][key]+=rv;
         });
       });
-      scRow.wtotal=scTotal>0?scTotal:null;
-      RANCH_ORDER.forEach(function(rn){scRow['rn_'+rn.replace(/[^a-zA-Z0-9]/g,'_')]=scByRn[rn]>0?scByRn[rn]:null;});
       grpTotal+=scTotal; grandTotal+=scTotal;
-      if (scTotal>0) scRows.push(scRow);
+      if(scTotal>0) scRows.push({label:shortLabel(sc),byWk:scByWk,byRnWk:scByRnWk,total:scTotal});
     });
+    if(grpTotal===0) return;
 
-    if (grpTotal===0) return;
+    // Fila grupo
+    var gTdPin='padding:4px 8px;background:var(--pt-grp-bg);color:#fff;font-weight:700;font-size:11px;position:sticky;z-index:2;border-bottom:1px solid #ddd;border-right:1px solid rgba(255,255,255,0.2);white-space:nowrap;';
+    bodyHtml+='<tr>';
+    bodyHtml+='<td style="'+gTdPin+'left:0">'+grp.label+'</td>';
+    bodyHtml+='<td style="'+gTdPin+'left:120px"></td>';
+    weekKeys.forEach(function(key){
+      activeRanches.forEach(function(rn){bodyHtml+=cellGrp(grpByRnWk[rn][key]);});
+      bodyHtml+=cellGrp(grpByWk[key]);
+    });
+    bodyHtml+=cellGrp(grpTotal);
+    bodyHtml+='</tr>';
 
-    var grpRow={grupo:grp.label,concepto:'',_isGroup:true};
-    weekKeys.forEach(function(key){grpRow['wk_'+key.replace(/-/g,'_')]=grpByWk[key]>0?grpByWk[key]:null;});
-    grpRow.wtotal=grpTotal;
-    RANCH_ORDER.forEach(function(rn){grpRow['rn_'+rn.replace(/[^a-zA-Z0-9]/g,'_')]=grpByRn[rn]>0?grpByRn[rn]:null;});
-    rows.push(grpRow);
-    scRows.forEach(function(r){rows.push(r);});
+    // Filas subcat
+    scRows.forEach(function(sc){
+      var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;';
+      bodyHtml+='<tr class="pt-row">';
+      bodyHtml+='<td style="'+tdPin+'left:0"></td>';
+      bodyHtml+='<td style="'+tdPin+'left:120px;color:#334155;font-size:11px">'+sc.label+'</td>';
+      weekKeys.forEach(function(key){
+        activeRanches.forEach(function(rn){
+          var v=sc.byRnWk[rn][key];
+          var col=RANCH_COLORS[rn]||'#555';
+          if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
+          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:'+col+';font-weight:600">'+fmt(v)+'</td>';}
+        });
+        bodyHtml+=cell(sc.byWk[key],false,'#1e3a5f');
+      });
+      bodyHtml+=cell(sc.total,true,'#1e3a5f');
+      bodyHtml+='</tr>';
+    });
   });
 
-  var totRow={grupo:'TOTAL GENERAL',concepto:'',_isTotal:true};
-  weekKeys.forEach(function(key){totRow['wk_'+key.replace(/-/g,'_')]=grandByWk[key]>0?grandByWk[key]:null;});
-  totRow.wtotal=grandTotal;
-  RANCH_ORDER.forEach(function(rn){totRow['rn_'+rn.replace(/[^a-zA-Z0-9]/g,'_')]=grandByRn[rn]>0?grandByRn[rn]:null;});
-  rows.push(totRow);
+  // Fila total general
+  var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;';
+  var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
+  bodyHtml+='<tr>';
+  bodyHtml+='<td colspan="2" style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
+  weekKeys.forEach(function(key){
+    activeRanches.forEach(function(rn){
+      var v=grandByRn[rn][key]; var col=RANCH_COLORS[rn]||'#555';
+      bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+( v?fmt(v):'—')+'</td>';
+    });
+    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(grandByWk[key]?fmt(grandByWk[key]):'—')+'</td>';
+  });
+  bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
+  bodyHtml+='</tr>';
 
-  renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym);
-
+  // ── Inyectar en el DOM ────────────────────────────────
+  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:auto"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var gw=document.getElementById('gridWrap');
+  if(gw){ gw.style.display=''; gw.innerHTML=html; }
+  document.getElementById('comparativoWrap').className='';
+  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
+  setTimeout(resizeTable,80);
 }
+
 function onMainCellClick(evt) {
   if (!evt||!evt.data||!evt.colDef) return;
   var data=evt.data, clickedField=evt.colDef.field||'';
