@@ -1581,8 +1581,10 @@ HTML = f'''<!DOCTYPE html>
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
 
+# Renderizamos el iframe PRIMERO
+components.html(html_final, height=900, scrolling=False)
+
 # ─── POPUP EXCEL / SHAREPOINT ────────────────────────────────────────────────
-# Lo renderizamos ANTES del iframe usando float para que coexista en el scroll
 available_weeks = sorted(
     {str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2) for r in DATA.get("weekly_detail", [])},
     reverse=True
@@ -1596,46 +1598,7 @@ if available_weeks:
     except ImportError:
         _crear_disponible = False
 
-    st.markdown("""
-    <style>
-    /* El contenedor principal del popover que flota sobre la app */
-    div[data-testid="stPopover"] {
-        position: fixed !important;
-        top: 6px !important;
-        right: 125px !important; /* Ajustado justo a la izquierda del CSV */
-        z-index: 999999 !important;
-        width: 75px !important; /* Idéntico ancho aproximado al botón CSV */
-        height: 24px !important; max-height: 24px !important;
-        margin: 0 !important; padding: 0 !important;
-    }
-    /* Estilizar SOLO el botón principal que abre el panel para que luzca idéntico al .hdr-btn */
-    div[data-testid="stPopover"] button {
-        width: 100% !important;
-        padding: 0px 4px !important; font-size: 10px !important; font-weight: 700 !important; color: #ffffff !important;
-        background: rgba(255,255,255,0.35) !important; border: 1px solid rgba(255,255,255,0.35) !important;
-        border-radius: 3px !important; height: 24px !important; min-height: 24px !important; max-height: 24px !important;
-        display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;
-        margin: 0 !important;
-    }
-    /* Forzar que el texto de adentro del Popover no arrastre márgenes */
-    div[data-testid="stPopover"] button * {
-        font-size: 10px !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; color: #ffffff !important;
-        min-height: 0 !important; max-height: 24px !important;
-    }
-    div[data-testid="stPopover"] button p {
-        font-size: 10px !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; color: #ffffff !important;
-    }
-    div[data-testid="stPopover"] button:hover {
-        background: rgba(255,255,255,0.55) !important; border-color: rgba(255,255,255,0.55) !important;
-    }
-    div[data-testid="stPopoverBody"] {
-        width: 250px !important;
-        padding: 10px 15px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    with st.popover("⚙ EXCEL", use_container_width=True):
+    with st.expander("⚙ EXCEL / SHAREPOINT"):
         st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>⬇ Descargar Archivo WK</p>", unsafe_allow_html=True)
         selected_wk = st.selectbox(
             "Semana a descargar",
@@ -1657,7 +1620,7 @@ if available_weeks:
                 )
             else:
                 st.error(f"No se encontró WK{selected_wk}.")
-        
+
         if _crear_disponible:
             st.divider()
             st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>✚ Nueva hoja SharePoint</p>", unsafe_allow_html=True)
@@ -1667,7 +1630,7 @@ if available_weeks:
                 placeholder="Ej: WK2518",
                 label_visibility="collapsed"
             ).strip().upper()
-            
+
             if st.button("Crear Hoja", key="btn_crear_hoja", type="primary", use_container_width=True):
                 if not nuevo_nombre:
                     st.warning("⚠️ Escribe el nombre de la hoja.")
@@ -1687,6 +1650,3 @@ if available_weeks:
                             st.error(f"❌ {resultado['error']}")
                     except KeyError as e:
                         st.error(f"❌ Falta credencial {e}.")
-
-# Renderizamos el iframe DESPUÉS
-components.html(html_final, height=900, scrolling=False)
