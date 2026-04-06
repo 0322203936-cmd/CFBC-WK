@@ -1605,9 +1605,19 @@ function renderManoObra() {
   var gw=document.getElementById('gridWrap');
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
   document.getElementById('comparativoWrap').className='';
-  var d0 = (DATA.mano_obra_data && DATA.mano_obra_data.length) ? DATA.mano_obra_data[0] : {};
-  var debugStr = ' | DEBUG HC_RANCHES: ' + JSON.stringify(d0.hc_ranches || 'VACÍO');
-  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym + debugStr;
+  // ── Debug extendido: mostrar qué hay en hc_ranches del primer registro
+  var _dbgLines = [];
+  if (Array.isArray(DATA.mano_obra_data) && DATA.mano_obra_data.length) {
+    var d0 = DATA.mano_obra_data[0];
+    _dbgLines.push('subcat='+d0.subcat+' hc_total='+d0.hc_total);
+    _dbgLines.push('hc_ranches='+JSON.stringify(d0.hc_ranches||{}));
+    _dbgLines.push('mxn_ranches='+JSON.stringify(d0.mxn_ranches||{}));
+    // Buscar primer registro con hc_total > 0
+    var d1 = DATA.mano_obra_data.find(function(r){return (r.hc_total||0)>0;});
+    if(d1) _dbgLines.push('[hc>0] subcat='+d1.subcat+' hc_total='+d1.hc_total+' hc_ranches='+JSON.stringify(d1.hc_ranches||{}));
+    else _dbgLines.push('⚠️ NINGÚN registro tiene hc_total > 0');
+  }
+  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym+' | '+_dbgLines.join(' || ');
   setTimeout(resizeTable,80);
 }
 
