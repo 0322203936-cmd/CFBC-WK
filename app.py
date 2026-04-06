@@ -1594,7 +1594,9 @@ function renderManoObra() {
   var gw=document.getElementById('gridWrap');
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
   document.getElementById('comparativoWrap').className='';
-  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
+  var d0 = (DATA.mano_obra_data && DATA.mano_obra_data.length) ? DATA.mano_obra_data[0] : {};
+  var debugStr = ' | DEBUG HC_RANCHES: ' + JSON.stringify(d0.hc_ranches || 'VACÍO');
+  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym + debugStr;
   setTimeout(resizeTable,80);
 }
 
