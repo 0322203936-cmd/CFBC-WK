@@ -1394,7 +1394,15 @@ function renderManoObra() {
   // Semanas con datos — directamente del weekMap (orden año-semana)
   var weekKeys=Object.keys(weekMap).filter(function(key){
     var hasSome=false;
-    Object.keys(weekMap[key]).forEach(function(k){if(k[0]!=='_'&&!k.includes('__r__')&&weekMap[key][k]>0)hasSome=true;});
+    Object.keys(weekMap[key]).forEach(function(k){
+      if(k[0]==='_') return;
+      // Clave de headcount por rancho (__hc_r__): contar como dato válido
+      if(k.includes('__hc_r__')&&weekMap[key][k]>0){hasSome=true;return;}
+      // Clave de costo por rancho (__r__ sin __hc_r__): es desglose, ignorar para hasSome
+      if(k.includes('__r__')) return;
+      // Clave total de costo (sin sufijo): contar
+      if(weekMap[key][k]>0) hasSome=true;
+    });
     return hasSome;
   }).sort(function(a,b){
     var pa=a.split('-'), pb=b.split('-');
@@ -1406,9 +1414,12 @@ function renderManoObra() {
   var ranchesEnDatos={};
   weekKeys.forEach(function(key){
     Object.keys(weekMap[key]||{}).forEach(function(k){
-      if(!k.includes('__r__')) return;
-      var rn=k.split('__r__')[1];
-      if(weekMap[key][k]>0) ranchesEnDatos[rn]=true;
+      var rn=null;
+      // Claves de headcount: subcat__hc_r__<rancho>
+      if(k.includes('__hc_r__')) rn=k.split('__hc_r__')[1];
+      // Claves de costo por rancho: subcat__r__<rancho>
+      else if(k.includes('__r__')) rn=k.split('__r__')[1];
+      if(rn&&weekMap[key][k]>0) ranchesEnDatos[rn]=true;
     });
   });
   // Ordenar: primero los del orden preferido, luego cualquier otro
@@ -1535,7 +1546,7 @@ function renderManoObra() {
           grandTotal+=val;
         });
       });
-      if(scTotal>0) scRows.push({label:shortLabel(sc),byRnWk:scByRnWk,byRn:scByRn,total:scTotal, hcByRnWk:hcByRnWk, hcByRn:hcByRn, hcTotal:hcTotal});
+      if(scTotal>0||hcTotal>0) scRows.push({label:shortLabel(sc),byRnWk:scByRnWk,byRn:scByRn,total:scTotal, hcByRnWk:hcByRnWk, hcByRn:hcByRn, hcTotal:hcTotal});
     });
     if(grpTotal===0) return;
 
