@@ -1598,7 +1598,7 @@ function renderManoObra() {
   var debugStr = ' | DEBUG HC_RANCHES: ' + JSON.stringify(d0.hc_ranches || 'VACÍO');
   document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym + debugStr;
   setTimeout(resizeTable,80);
-}DEBUG HC_RANCHES: "VACÍO"
+}
 
 function onMainCellClick(evt) {
   if (!evt||!evt.data||!evt.colDef) return;
