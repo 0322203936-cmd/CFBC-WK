@@ -1266,18 +1266,11 @@ function renderServicios() {
 // VIEW 8: COSTO MANO DE OBRA
 // =======================================================
 var MO_SUBCATS = [
-  'Nómina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)',
-  'Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)',
-  'Nómina Prod. Corte','H.Extra Corte','Bonos Corte',
-  'Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante',
-  'Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta',
-  'Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS',
-  'Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE',
-  'Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros',
-  'Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer',
-  'Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores',
-  'Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador',
-  'Nómina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado'
+  'Ing. Y Admon.','Supervisores','Corte','Trasplante','Manejo P.',
+  'Consolidacion','Siembra','Phlox','Hoops','MIPE Y MIRFE',
+  'Tract. Y Cameros','Veladores','Soldadores','Transporte',
+  'Admon Posco','Alm.upc y empaq','Contratista y com.',
+  'Prod. Patina y rec','IMSS,INFO Y RCV','Imp. 1.8%'
 ];
 function renderManoObra() {
   var sym=state.currency.toUpperCase();
@@ -1303,18 +1296,26 @@ function renderManoObra() {
   });
 
   var MO_GROUPS=[
-    {label:'ADMINISTRACIÓN',subcats:['Nómina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)']},
-    {label:'PRODUCCIÓN',subcats:['Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)']},
-    {label:'CORTE',subcats:['Nómina Prod. Corte','H.Extra Corte','Bonos Corte']},
-    {label:'TRANSPLANTE',subcats:['Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante']},
-    {label:'MANEJO PLANTA',subcats:['Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta']},
-    {label:'HOOPS',subcats:['Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS']},
-    {label:'MIPE / MIRFE',subcats:['Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE']},
-    {label:'TRACTORES',subcats:['Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros']},
-    {label:'CHOFER',subcats:['Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer']},
-    {label:'VELADORES',subcats:['Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores']},
-    {label:'SOLDADOR',subcats:['Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador']},
-    {label:'OTROS',subcats:['Nómina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado']}
+    {label:'ING. Y ADMON.',      subcats:['Ing. Y Admon.']},
+    {label:'SUPERVISORES',       subcats:['Supervisores']},
+    {label:'CORTE',              subcats:['Corte']},
+    {label:'TRASPLANTE',         subcats:['Trasplante']},
+    {label:'MANEJO PLANTA',      subcats:['Manejo P.']},
+    {label:'CONSOLIDACIÓN',      subcats:['Consolidacion']},
+    {label:'SIEMBRA',            subcats:['Siembra']},
+    {label:'PHLOX',              subcats:['Phlox']},
+    {label:'HOOPS',              subcats:['Hoops']},
+    {label:'MIPE / MIRFE',       subcats:['MIPE Y MIRFE']},
+    {label:'TRACTORES/CAMEROS',  subcats:['Tract. Y Cameros']},
+    {label:'VELADORES',          subcats:['Veladores']},
+    {label:'SOLDADORES',         subcats:['Soldadores']},
+    {label:'TRANSPORTE',         subcats:['Transporte']},
+    {label:'ADMON POSCO',        subcats:['Admon Posco']},
+    {label:'ALM. UPC Y EMPAQUE', subcats:['Alm.upc y empaq']},
+    {label:'CONTRATISTA',        subcats:['Contratista y com.']},
+    {label:'PROD. PÁTINA Y REC', subcats:['Prod. Patina y rec']},
+    {label:'IMSS/INFO/RCV',      subcats:['IMSS,INFO Y RCV']},
+    {label:'IMP. 1.8%',          subcats:['Imp. 1.8%']},
   ];
 
   // Semanas con datos
