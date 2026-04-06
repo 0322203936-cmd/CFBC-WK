@@ -698,6 +698,11 @@ def _extraer_mano_obra_conteo() -> list:
                 break
     if conteo_col:
         print(f"✅ Columna de Conteo encontrada: '{conteo_col}'")
+        # Mostrar valores brutos de esa columna para diagnóstico
+        sample_raw = df[conteo_col].dropna().head(10).tolist()
+        non_zero   = df[conteo_col].apply(lambda v: str(v).strip() not in ('', '0', 'nan', 'None', '-')).sum()
+        print(f"   → primeros valores brutos: {sample_raw}")
+        print(f"   → filas con valor no-vacío: {non_zero} de {len(df)}")
     else:
         print(f"⚠️  No se encontró columna de Conteo. Columnas disponibles: {list(df.columns)}")
 
