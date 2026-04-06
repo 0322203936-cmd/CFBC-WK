@@ -1,7 +1,7 @@
 """
 app.py
 Centro Floricultor de Baja California
-Streamlit — tablas HTML estilo tabla dinámica Excel, sin AG Grid
+Streamlit â€” tablas HTML estilo tabla dinÃ¡mica Excel, sin AG Grid
 """
 
 import json
@@ -14,7 +14,7 @@ from data_extractor import get_datos
 
 st.set_page_config(
     page_title="CFBC WK",
-    page_icon="📊",
+    page_icon="ðŸ“Š",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -38,12 +38,12 @@ def load_data():
 try:
     DATA = load_data()
 except Exception as e:
-    st.error(f"❌ Error cargando datos: {e}")
+    st.error(f"âŒ Error cargando datos: {e}")
     st.stop()
 
 if "error" in DATA:
-    st.error(f"❌ {DATA['error']}")
-    if st.button("🔄 Reintentar"):
+    st.error(f"âŒ {DATA['error']}")
+    if st.button("ðŸ”„ Reintentar"):
         st.cache_data.clear()
         st.rerun()
     st.stop()
@@ -61,10 +61,10 @@ APP_CSS = """<style>
   --blue:   #2563eb;
   --border: #d0d0d0;
 
-  /* Pivot-table palette — Excel style */
+  /* Pivot-table palette â€” Excel style */
   --pt-hdr-bg:      #D9E1F2;   /* header de columnas  */
   --pt-hdr-border:  #8EA9C1;
-  --pt-grp-bg:      #4472C4;   /* fila de grupo/año   */
+  --pt-grp-bg:      #4472C4;   /* fila de grupo/aÃ±o   */
   --pt-grp-fg:      #ffffff;
   --pt-sub-bg:      #BDD7EE;   /* fila subtotal       */
   --pt-sub-fg:      #000000;
@@ -80,7 +80,7 @@ body {
   background: #f0f0f0;
 }
 
-/* ── LOADER ─────────────────────────────────── */
+/* â”€â”€ LOADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #loader {
   position: fixed; inset: 0; background: #fff; z-index: 999;
   display: flex; flex-direction: column; align-items: center;
@@ -94,7 +94,7 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .load-txt { font-size: 12px; color: #666; letter-spacing: 0.5px; }
 
-/* ── HEADER ─────────────────────────────────── */
+/* â”€â”€ HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .app-hdr {
   background: #4472C4;
   border-bottom: 3px solid var(--green);
@@ -119,7 +119,7 @@ body {
 }
 .hdr-btn:hover { background: rgba(255,255,255,0.55); }
 
-/* ── TOOLBAR ─────────────────────────────────── */
+/* â”€â”€ TOOLBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .toolbar {
   background: #ebebeb; border-bottom: 1px solid var(--border);
   padding: 2px 8px; display: flex; align-items: center; gap: 6px;
@@ -156,7 +156,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 }
 .yr-chip.on { background: #fff; }
 
-/* ── RANGE BAR ───────────────────────────────── */
+/* â”€â”€ RANGE BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .range-bar {
   display: none; background: #f4f4f4; border-bottom: 1px solid var(--border);
   padding: 3px 10px; align-items: center; gap: 8px; height: 26px; overflow: hidden;
@@ -168,7 +168,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   color: var(--green); padding: 1px 8px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
 }
 
-/* ── VIEW TABS ───────────────────────────────── */
+/* â”€â”€ VIEW TABS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .view-tabs {
   background: #f8f8f8; border-bottom: 2px solid #d5d5d5;
   display: flex; padding: 0; height: 28px;
@@ -183,7 +183,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .vtab:hover  { color: #333; background: rgba(0,0,0,0.03); }
 .vtab.active { color: var(--green); border-bottom-color: var(--green); background: #fff; }
 
-/* ── TABLE WRAPPER ───────────────────────────── */
+/* â”€â”€ TABLE WRAPPER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #gridWrap {
   background: #fff;
   border: 1px solid #d5d5d5;
@@ -199,7 +199,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
 
-/* ── PIVOT TABLE ─────────────────────────────── */
+/* â”€â”€ PIVOT TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .pt-table {
   border-collapse: collapse;
   width: 100%;
@@ -267,7 +267,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .cell-navy  { color: #1e3a5f !important; font-weight: 600; }
 .prod-link  { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
 
-/* ── COMPARATIVO TABLE ───────────────────────── */
+/* â”€â”€ COMPARATIVO TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #comparativoWrap { display: none; background: #fff; border: 1px solid #d5d5d5; border-top: none; }
 #comparativoWrap.show { display: block; }
 .cmp-stat-strip { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 10px; background: #f4f4f4; border-bottom: 1px solid #d5d5d5; }
@@ -300,7 +300,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .chg-neg { color: #dc2626; font-weight: 600; }
 .chg-0   { color: #aaa; }
 
-/* ── PRODUCTOS PANEL ─────────────────────────── */
+/* â”€â”€ PRODUCTOS PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #prodPanel { 
   display: none; background: #fdfdfd; border: 1px solid #cbd5e1; border-top: 2px solid #0f172a;
   box-shadow: 0 4px 12px rgba(0,0,0,0.06);
@@ -309,7 +309,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 #prodPanel.show { display: block; }
 #prodTableWrap { overflow: visible; }
 
-/* ── STATUS BAR ──────────────────────────────── */
+/* â”€â”€ STATUS BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .statusbar {
   background: #ebebeb; border-top: 1px solid #ccc;
   padding: 2px 10px; font-size: 10px; color: #666;
@@ -350,14 +350,14 @@ APP_HTML_BODY = """
     <span class="tb-label">Desde</span>
     <span class="range-val" id="fromWeekLabel">W01</span>
     <input type="range" class="tb-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
-    <span style="color:#aaa;font-size:11px;flex-shrink:0;">→</span>
+    <span style="color:#aaa;font-size:11px;flex-shrink:0;">â†’</span>
     <span class="tb-label">Hasta</span>
     <span class="range-val" id="toWeekLabel">W52</span>
     <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
-    <span class="range-badge" id="rangeBadge">W01 → W52</span>
+    <span class="range-badge" id="rangeBadge">W01 â†’ W52</span>
     </span>
     <div class="tb-sep"></div>
-    <span class="tb-label">Años</span>
+    <span class="tb-label">AÃ±os</span>
     <div id="yearChips" style="display:flex;gap:3px"></div>
   </div>
 
@@ -369,7 +369,7 @@ APP_HTML_BODY = """
     <button class="vtab"        id="vtServicios"    onclick="setView('servicios')">Costo Servicios</button>
   </div>
 
-  <!-- RANGE BAR eliminada — controles movidos al toolbar -->
+  <!-- RANGE BAR eliminada â€” controles movidos al toolbar -->
 
   <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
   <div id="gridWrap">
@@ -408,7 +408,7 @@ window.onerror = function(msg, src, line, col, err) {
   if (loader) loader.innerHTML =
     '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;' +
     'border-radius:8px;border:1px solid #fecaca;max-width:600px;margin:20px auto">' +
-    '<b>ERROR (línea ' + line + '):</b><br>' + msg +
+    '<b>ERROR (lÃ­nea ' + line + '):</b><br>' + msg +
     (err && err.stack ? '<br><pre style="font-size:10px;color:#999;margin-top:8px;overflow:auto">' + err.stack + '</pre>' : '') +
     '</div>';
   return true;
@@ -428,7 +428,7 @@ try {
 }
 
 // =======================================================
-// CONSTANTES Y CONFIGURACIÓN DINÁMICA
+// CONSTANTES Y CONFIGURACIÃ“N DINÃMICA
 // =======================================================
 var RANCH_ORDER  = (DATA && DATA.config) ? DATA.config.ranch_order : [];
 var RANCH_COLORS = (DATA && DATA.config) ? DATA.config.ranch_colors : {};
@@ -544,7 +544,7 @@ function renderPivotTable(colDefs, rows, statusText) {
   _tableColDefs = colDefs;
   _tableRows    = rows;
 
-  // Detectar qué columnas son pinned (las primeras hasta que termine la racha pinned)
+  // Detectar quÃ© columnas son pinned (las primeras hasta que termine la racha pinned)
   var pinnedCount = 0;
   for (var pi=0; pi<colDefs.length; pi++) {
     if (colDefs[pi].pinned === 'left') pinnedCount++;
@@ -556,7 +556,7 @@ function renderPivotTable(colDefs, rows, statusText) {
   colDefs.forEach(function(col, ci) {
     var align = col.type==='numericColumn' ? 'text-align:right' : 'text-align:left';
     var pinnedCls = ci < pinnedCount ? ' pt-pinned' : '';
-    // Calcular left offset para múltiples columnas pinned
+    // Calcular left offset para mÃºltiples columnas pinned
     var leftOff = 0;
     if (ci < pinnedCount) {
       for (var px=0; px<ci; px++) leftOff += (colDefs[px].width || 120);
@@ -698,7 +698,7 @@ function buildYearChips() {
   }).join('');
 }
 function updateWeekControls() {
-  // weekSlider y weekLabel eliminados del toolbar — no-op
+  // weekSlider y weekLabel eliminados del toolbar â€” no-op
 }
 
 // =======================================================
@@ -786,7 +786,7 @@ function updateRangeSliders() {
   if(fLbl)fLbl.textContent=yy+String(f).padStart(2,'0');
   if(tLbl)tLbl.textContent=yy+String(t).padStart(2,'0');
   var count=allWeeks.filter(function(w){return w>=f&&w<=t;}).length;
-  if(badge)badge.textContent=yy+String(f).padStart(2,'0')+' → '+yy+String(t).padStart(2,'0')+' · '+count+' sem';
+  if(badge)badge.textContent=yy+String(f).padStart(2,'0')+' â†’ '+yy+String(t).padStart(2,'0')+' Â· '+count+' sem';
 }
 function onRangeChange() {
   var f=parseInt(document.getElementById('fromSlider').value);
@@ -825,14 +825,14 @@ function renderView() {
 function renderSemana() {
   var yrs=getActiveYears(), wn=allWeeks[state.weekIdx]||1, sym=state.currency.toUpperCase();
   var cols = [
-    { field:'year', headerName:'AÑO', width:70, pinned:'left',
+    { field:'year', headerName:'AÃ‘O', width:70, pinned:'left',
       cellRenderer:function(p){ var c=YEAR_COLORS[p.value]||'#888'; return '<span style="color:'+c+';font-weight:700">'+p.value+'</span>'; }},
     { field:'week', headerName:'SEM', width:60, type:'numericColumn', pinned:'left',
       cellRenderer:function(p){ return wFmt(p.value); }},
-    { field:'cat_label', headerName:'CATEGORÍA', width:170, pinned:'left', cellRenderer:catRenderer },
+    { field:'cat_label', headerName:'CATEGORÃA', width:170, pinned:'left', cellRenderer:catRenderer },
     { field:'total',    headerName:'TOTAL '+sym, width:110, type:'numericColumn', cellRenderer:moneyRenderer },
-    { field:'deltaAmt', headerName:'Δ $',        width:90,  type:'numericColumn', cellRenderer:deltaAmtRenderer },
-    { field:'deltaPct', headerName:'Δ %',        width:72,  type:'numericColumn', cellRenderer:deltaRenderer },
+    { field:'deltaAmt', headerName:'Î” $',        width:90,  type:'numericColumn', cellRenderer:deltaAmtRenderer },
+    { field:'deltaPct', headerName:'Î” %',        width:72,  type:'numericColumn', cellRenderer:deltaRenderer },
   ];
   RANCH_ORDER.forEach(function(r){ cols.push({field:ranchFieldName(r),headerName:r,width:100,type:'numericColumn',cellRenderer:ranchRenderer(r)}); });
 
@@ -847,7 +847,7 @@ function renderSemana() {
     rows.push(row);
     if (yr===yrs[yrs.length-1]) grandTotal+=agg.total;
   });
-  renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym+' · AÑO '+yrs[yrs.length-1]);
+  renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym+' Â· AÃ‘O '+yrs[yrs.length-1]);
 }
 
 // =======================================================
@@ -856,12 +856,12 @@ function renderSemana() {
 function renderAnual() {
   var yrs=getActiveYears(), sym=state.currency.toUpperCase();
   var cols=[
-    { field:'year', headerName:'AÑO', width:70, type:'numericColumn', pinned:'left',
+    { field:'year', headerName:'AÃ‘O', width:70, type:'numericColumn', pinned:'left',
       cellRenderer:function(p){ var c=YEAR_COLORS[p.value]||'#888'; return '<span style="color:'+c+';font-weight:700">'+p.value+'</span>'; }},
-    { field:'cat_label', headerName:'CATEGORÍA', width:170, pinned:'left', cellRenderer:catRenderer },
+    { field:'cat_label', headerName:'CATEGORÃA', width:170, pinned:'left', cellRenderer:catRenderer },
     { field:'total',    headerName:'TOTAL '+sym, width:110, type:'numericColumn', cellRenderer:moneyRenderer },
-    { field:'deltaAmt', headerName:'Δ $',        width:90,  type:'numericColumn', cellRenderer:deltaAmtRenderer },
-    { field:'deltaPct', headerName:'Δ %',        width:72,  type:'numericColumn', cellRenderer:deltaRenderer },
+    { field:'deltaAmt', headerName:'Î” $',        width:90,  type:'numericColumn', cellRenderer:deltaAmtRenderer },
+    { field:'deltaPct', headerName:'Î” %',        width:72,  type:'numericColumn', cellRenderer:deltaRenderer },
   ];
   RANCH_ORDER.forEach(function(r){ cols.push({field:ranchFieldName(r),headerName:r,width:100,type:'numericColumn',cellRenderer:ranchRenderer(r)}); });
 
@@ -880,7 +880,7 @@ function renderAnual() {
     rows.push(row);
     if (yr===yrs[yrs.length-1]) grandTotal+=agg.total;
   });
-  renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym+' · AÑO '+yrs[yrs.length-1]);
+  renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym+' Â· AÃ‘O '+yrs[yrs.length-1]);
 }
 
 // =======================================================
@@ -946,7 +946,7 @@ function renderComparativo() {
     });
   });
 
-  var head='<tr><th>Semana</th><th>Fecha</th><th>Total '+sym+'</th><th>Δ$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
+  var head='<tr><th>Semana</th><th>Fecha</th><th>Total '+sym+'</th><th>Î”$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
   var body=yrs.map(function(yr,yi){
     var col=YEAR_COLORS[yr]||'#888';
     var prevWkVal=null;
@@ -999,8 +999,8 @@ function renderRancho() {
   if (prev) cols.push({field:'v'+prev, headerName:String(prev)+' '+sym, width:120, type:'numericColumn', cellRenderer:moneyRenderer});
   cols.push({field:'v'+cur, headerName:String(cur)+' '+sym+' &#9733;', width:120, type:'numericColumn', cellRenderer:moneyRenderer});
   if (prev) {
-    cols.push({field:'deltaAmt',headerName:'Δ $',width:100,type:'numericColumn',cellRenderer:deltaAmtRenderer});
-    cols.push({field:'deltaPct',headerName:'Δ %',width:90, type:'numericColumn',cellRenderer:deltaRenderer});
+    cols.push({field:'deltaAmt',headerName:'Î” $',width:100,type:'numericColumn',cellRenderer:deltaAmtRenderer});
+    cols.push({field:'deltaPct',headerName:'Î” %',width:90, type:'numericColumn',cellRenderer:deltaRenderer});
   }
   var grandCur=0,grandPrev=0;
   var rows=RANCH_ORDER.map(function(ranch){
@@ -1013,7 +1013,7 @@ function renderRancho() {
     if (prev){ row['v'+prev]=totalPrev; grandPrev+=totalPrev; row.deltaAmt=totalCur-totalPrev; row.deltaPct=totalPrev>0?(totalCur-totalPrev)/totalPrev*100:null; }
     return row;
   }).filter(function(r){return (r['v'+cur]||0)>0||(r['v'+(prev||cur)]||0)>0;});
-  renderPivotTable(cols, rows, fmt(grandCur)+' '+sym+' · '+state.cat);
+  renderPivotTable(cols, rows, fmt(grandCur)+' '+sym+' Â· '+state.cat);
 }
 
 // =======================================================
@@ -1022,12 +1022,12 @@ function renderRancho() {
 function renderDetalle() {
   var sym=state.currency.toUpperCase();
   var cols=[
-    { field:'year',      headerName:'AÑO',      width:60,  type:'numericColumn', pinned:'left' },
+    { field:'year',      headerName:'AÃ‘O',      width:60,  type:'numericColumn', pinned:'left' },
     { field:'week',      headerName:'SEM',       width:55,  type:'numericColumn', pinned:'left', cellRenderer:function(p){return wFmt(p.value);} },
-    { field:'categoria', headerName:'CATEGORÍA', width:220, pinned:'left', cellRenderer:catRenderer },
+    { field:'categoria', headerName:'CATEGORÃA', width:220, pinned:'left', cellRenderer:catRenderer },
     { field:'usd_total', headerName:'USD',       width:100, type:'numericColumn', cellRenderer:moneyRenderer },
     { field:'mxn_total', headerName:'MXN',       width:110, type:'numericColumn', cellRenderer:moneyRenderer },
-    { field:'date_range',headerName:'PERÍODO',   width:160,
+    { field:'date_range',headerName:'PERÃODO',   width:160,
       cellRenderer:function(p){return '<span style="color:#888;font-size:11px">'+(p.value||'')+'</span>';}},
   ];
   RANCH_ORDER.forEach(function(r){
@@ -1045,7 +1045,7 @@ function renderDetalle() {
     rows.push(row);
   });
   rows.sort(function(a,b){return b.year!==a.year?b.year-a.year:b.week-a.week;});
-  renderPivotTable(cols,rows,fmt(grandTotal)+' '+sym+' ('+rows.length+' registros) · '+state.cat);
+  renderPivotTable(cols,rows,fmt(grandTotal)+' '+sym+' ('+rows.length+' registros) Â· '+state.cat);
 }
 
 // =======================================================
@@ -1083,24 +1083,23 @@ function renderProductosFull() {
   flattenProd(DATA.productos,'PR'); flattenProd(DATA.productos_mp,'MP'); flattenProd(DATA.productos_me,'ME');
   rows.sort(function(a,b){if(b.week_code!==a.week_code)return (b.week_code||0)-(a.week_code||0);return (a.rancho||'').localeCompare(b.rancho||'');});
   var total=rows.reduce(function(s,r){return s+(r.gasto||0);},0);
-  renderPivotTable(cols,rows,fmt(total)+' · '+rows.length+' registros');
+  renderPivotTable(cols,rows,fmt(total)+' Â· '+rows.length+' registros');
 }
 
 // =======================================================
 // VIEW 7: COSTO SERVICIOS  (con desglose por rancho)
 // =======================================================
-var SV_SUBCATS=['Electricidad','Fletes y Acarreos','Gastos de Exportación','Certificado Fitosanitario','Transporte de Personal','Compra de Flor a Terceros','Comida para el Personal','RO, TEL, RTA.Alim'];
+var SV_SUBCATS=['Electricidad','Fletes y Acarreos','Gastos de ExportaciÃ³n','Certificado Fitosanitario','Transporte de Personal','Compra de Flor a Terceros','Comida para el Personal','RO, TEL, RTA.Alim'];
 function renderServicios() {
   var sym=state.currency.toUpperCase();
   var yrs=getActiveYears();
   var rangeWeeks=allWeeks;
 
-  // ── Acumular datos ─────────────────────────────────────
+  // â”€â”€ Acumular datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var weekMap={};
   var src=Array.isArray(DATA.servicios_data)&&DATA.servicios_data.length ? DATA.servicios_data : DATA.weekly_detail;
   src.forEach(function(r){
     if (!state.activeYears[r.year]) return;
-    if (r.week<f||r.week>t) return;
     var key=r.year+'-'+r.week;
     if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,date_range:r.date_range||''};
     var subcat, val, ranches;
@@ -1120,7 +1119,7 @@ function renderServicios() {
     });
   });
 
-  // ── Semanas con datos ─────────────────────────────────
+  // â”€â”€ Semanas con datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var weekKeys=[];
   yrs.forEach(function(yr){
     rangeWeeks.forEach(function(w){
@@ -1133,7 +1132,7 @@ function renderServicios() {
     });
   });
 
-  // ── Subcats ordenadas ─────────────────────────────────
+  // â”€â”€ Subcats ordenadas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var subcatsSet={};
   weekKeys.forEach(function(key){
     Object.keys(weekMap[key]||{}).forEach(function(k){
@@ -1143,24 +1142,24 @@ function renderServicios() {
   var orderedSubcats=SV_SUBCATS.filter(function(sc){return subcatsSet[sc];});
   Object.keys(subcatsSet).forEach(function(sc){if(orderedSubcats.indexOf(sc)===-1)orderedSubcats.push(sc);});
 
-  // ── Ranchos activos ───────────────────────────────────
+  // â”€â”€ Ranchos activos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var activeRanches=RANCH_ORDER.filter(function(rn){
     return weekKeys.some(function(key){
       return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
     });
   });
 
-  // ── Sin datos: tabla simple de fallback ───────────────
+  // â”€â”€ Sin datos: tabla simple de fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!weekKeys.length || !orderedSubcats.length) {
     document.getElementById('gridWrap').style.display='';
     document.getElementById('gridWrap').innerHTML='<div style="padding:20px;color:#888;font-size:12px">Sin datos para el rango seleccionado.</div>';
     document.getElementById('comparativoWrap').className='';
-    document.getElementById('stTotal').textContent='—';
+    document.getElementById('stTotal').textContent='â€”';
     return;
   }
 
-  // ── Construir tabla con desglose por rancho ───────────
-  // Idéntica en estructura a renderManoObra
+  // â”€â”€ Construir tabla con desglose por rancho â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // IdÃ©ntica en estructura a renderManoObra
   var ncols=activeRanches.length+1; // ranchos + subtotal semana
 
   var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
@@ -1190,20 +1189,20 @@ function renderServicios() {
   });
   h2+='</tr>';
 
-  // ── Acumuladores de totales ───────────────────────────
+  // â”€â”€ Acumuladores de totales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var grandByWk={}; var grandByRn={}; var grandTotal=0;
   weekKeys.forEach(function(k){grandByWk[k]=0;});
   activeRanches.forEach(function(rn){grandByRn[rn]={}; weekKeys.forEach(function(k){grandByRn[rn][k]=0;});});
 
   function cell(v,bold,color){
-    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">—</td>';
+    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">â€”</td>';
     var s='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
     if(bold) s+='font-weight:700;';
     s+='color:'+(color||'#1e3a5f')+';';
     return '<td style="'+s+'">'+fmt(v)+'</td>';
   }
 
-  // ── Filas por subcat ──────────────────────────────────
+  // â”€â”€ Filas por subcat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var bodyHtml='';
   orderedSubcats.forEach(function(sc){
     var scByWk={}; var scByRnWk={}; var scTotal=0;
@@ -1228,7 +1227,7 @@ function renderServicios() {
       activeRanches.forEach(function(rn){
         var v=scByRnWk[rn][key];
         var col=RANCH_COLORS[rn]||'#555';
-        if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
+        if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">â€”</td>';}
         else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:'+col+';font-weight:600">'+fmt(v)+'</td>';}
       });
       bodyHtml+=cell(scByWk[key],true,'#1e3a5f');
@@ -1238,7 +1237,7 @@ function renderServicios() {
     bodyHtml+='</tr>';
   });
 
-  // ── Fila total general ────────────────────────────────
+  // â”€â”€ Fila total general â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;';
   var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
   bodyHtml+='<tr>';
@@ -1246,14 +1245,14 @@ function renderServicios() {
   weekKeys.forEach(function(key){
     activeRanches.forEach(function(rn){
       var v=grandByRn[rn][key]; var col=RANCH_COLORS[rn]||'#555';
-      bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+(v?fmt(v):'—')+'</td>';
+      bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+(v?fmt(v):'â€”')+'</td>';
     });
-    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(grandByWk[key]?fmt(grandByWk[key]):'—')+'</td>';
+    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(grandByWk[key]?fmt(grandByWk[key]):'â€”')+'</td>';
   });
-  bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
+  bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'â€”')+'</td>';
   bodyHtml+='</tr>';
 
-  // ── Inyectar en el DOM ────────────────────────────────
+  // â”€â”€ Inyectar en el DOM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:auto"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
   var gw=document.getElementById('gridWrap');
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
@@ -1266,18 +1265,18 @@ function renderServicios() {
 // VIEW 8: COSTO MANO DE OBRA
 // =======================================================
 var MO_SUBCATS = [
-  'Nómina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)',
-  'Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)',
-  'Nómina Prod. Corte','H.Extra Corte','Bonos Corte',
-  'Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante',
-  'Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta',
-  'Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS',
-  'Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE',
-  'Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros',
-  'Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer',
-  'Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores',
-  'Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador',
-  'Nómina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado'
+  'NÃ³mina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)',
+  'NÃ³mina ProducciÃ³n','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)',
+  'NÃ³mina Prod. Corte','H.Extra Corte','Bonos Corte',
+  'NÃ³mina Prod. Transplante','H.Extra Transplante','Bonos Transplante',
+  'NÃ³mina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta',
+  'NÃ³mina HOOPS','H.Extra HOOPS','Bonos HOOPS',
+  'NÃ³mina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE',
+  'NÃ³mina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros',
+  'NÃ³mina Op. Chofer','H.Extra Chofer','Bonos Chofer',
+  'NÃ³mina Op. Veladores','H.Extra Veladores','Bonos Veladores',
+  'NÃ³mina Op. Soldador','H.Extra Soldador','Bonos Soldador',
+  'NÃ³mina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado'
 ];
 function renderManoObra() {
   var sym=state.currency.toUpperCase();
@@ -1285,12 +1284,11 @@ function renderManoObra() {
   var yrs=getActiveYears();
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
 
-  // ── Acumular datos ─────────────────────────────────────
+  // â”€â”€ Acumular datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var weekMap={};
   var src=Array.isArray(DATA.mano_obra_data)&&DATA.mano_obra_data.length?DATA.mano_obra_data:[];
   src.forEach(function(r){
     if (!state.activeYears[r.year]) return;
-    if (r.week<f||r.week>t) return;
     var key=r.year+'-'+r.week;
     if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,date_range:r.date_range||''};
     var subcat=(r.subcat||'').trim(); if (!subcat) return;
@@ -1303,18 +1301,18 @@ function renderManoObra() {
   });
 
   var MO_GROUPS=[
-    {label:'ADMINISTRACIÓN',subcats:['Nómina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)']},
-    {label:'PRODUCCIÓN',subcats:['Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)']},
-    {label:'CORTE',subcats:['Nómina Prod. Corte','H.Extra Corte','Bonos Corte']},
-    {label:'TRANSPLANTE',subcats:['Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante']},
-    {label:'MANEJO PLANTA',subcats:['Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta']},
-    {label:'HOOPS',subcats:['Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS']},
-    {label:'MIPE / MIRFE',subcats:['Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE']},
-    {label:'TRACTORES',subcats:['Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros']},
-    {label:'CHOFER',subcats:['Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer']},
-    {label:'VELADORES',subcats:['Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores']},
-    {label:'SOLDADOR',subcats:['Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador']},
-    {label:'OTROS',subcats:['Nómina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado']}
+    {label:'ADMINISTRACIÃ“N',subcats:['NÃ³mina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)']},
+    {label:'PRODUCCIÃ“N',subcats:['NÃ³mina ProducciÃ³n','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)']},
+    {label:'CORTE',subcats:['NÃ³mina Prod. Corte','H.Extra Corte','Bonos Corte']},
+    {label:'TRANSPLANTE',subcats:['NÃ³mina Prod. Transplante','H.Extra Transplante','Bonos Transplante']},
+    {label:'MANEJO PLANTA',subcats:['NÃ³mina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta']},
+    {label:'HOOPS',subcats:['NÃ³mina HOOPS','H.Extra HOOPS','Bonos HOOPS']},
+    {label:'MIPE / MIRFE',subcats:['NÃ³mina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE']},
+    {label:'TRACTORES',subcats:['NÃ³mina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros']},
+    {label:'CHOFER',subcats:['NÃ³mina Op. Chofer','H.Extra Chofer','Bonos Chofer']},
+    {label:'VELADORES',subcats:['NÃ³mina Op. Veladores','H.Extra Veladores','Bonos Veladores']},
+    {label:'SOLDADOR',subcats:['NÃ³mina Op. Soldador','H.Extra Soldador','Bonos Soldador']},
+    {label:'OTROS',subcats:['NÃ³mina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado']}
   ];
 
   // Semanas con datos
@@ -1336,23 +1334,23 @@ function renderManoObra() {
   });
 
   function shortLabel(sc){
-    return sc.replace('Nómina Prod. ','').replace('Nómina Op. ','')
+    return sc.replace('NÃ³mina Prod. ','').replace('NÃ³mina Op. ','')
       .replace('H.Extra Dom. y Festivos ','H.Extra ').replace('H.Extra Dom. y Fest. ','H.Extra ')
       .replace('Bonos Asist./Puntualidad ','Bonos ');
   }
   function cell(v,bold,color){
-    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">—</td>';
+    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">â€”</td>';
     var s='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
     if(bold) s+='font-weight:700;';
     s+='color:'+(color||'#1e3a5f')+';';
     return '<td style="'+s+'">'+fmt(v)+'</td>';
   }
   function cellGrp(v){
-    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700">—</td>';
+    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700">â€”</td>';
     return '<td style="padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700">'+fmt(v)+'</td>';
   }
 
-  // ── Construir HTML ────────────────────────────────────
+  // â”€â”€ Construir HTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // HEADER nivel 1: GRUPO | CONCEPTO | [WKxxxx colspan=R+1] ... | TOTAL
   var ncols=activeRanches.length+1; // ranchos + subtotal por semana
   var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
@@ -1382,7 +1380,7 @@ function renderManoObra() {
   });
   h2+='</tr>';
 
-  // ── FILAS ─────────────────────────────────────────────
+  // â”€â”€ FILAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var grandByWk={}; var grandByRn={}; var grandTotal=0;
   weekKeys.forEach(function(k){grandByWk[k]=0;});
   activeRanches.forEach(function(rn){grandByRn[rn]={}; weekKeys.forEach(function(k){grandByRn[rn][k]=0;});});
@@ -1434,7 +1432,7 @@ function renderManoObra() {
         activeRanches.forEach(function(rn){
           var v=sc.byRnWk[rn][key];
           var col=RANCH_COLORS[rn]||'#555';
-          if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
+          if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">â€”</td>';}
           else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:'+col+';font-weight:600">'+fmt(v)+'</td>';}
         });
         bodyHtml+=cell(sc.byWk[key],false,'#1e3a5f');
@@ -1452,14 +1450,14 @@ function renderManoObra() {
   weekKeys.forEach(function(key){
     activeRanches.forEach(function(rn){
       var v=grandByRn[rn][key]; var col=RANCH_COLORS[rn]||'#555';
-      bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+( v?fmt(v):'—')+'</td>';
+      bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+( v?fmt(v):'â€”')+'</td>';
     });
-    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(grandByWk[key]?fmt(grandByWk[key]):'—')+'</td>';
+    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(grandByWk[key]?fmt(grandByWk[key]):'â€”')+'</td>';
   });
-  bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
+  bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'â€”')+'</td>';
   bodyHtml+='</tr>';
 
-  // ── Inyectar en el DOM ────────────────────────────────
+  // â”€â”€ Inyectar en el DOM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:auto"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
   var gw=document.getElementById('gridWrap');
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
@@ -1517,12 +1515,12 @@ function showProdPanel(rowData, opts) {
     });
   }
 
-  var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
-  var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
+  var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' Â· '+yr):(wFmt(wkStart)+'â†’'+wFmt(wkEnd)+' Â· '+yr);
+  var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' Â· '+ranchFilter:'');
   
   var panelHtml = '';
 
-  // ── KPI de siembra ────────────────────────────────────────────────
+  // â”€â”€ KPI de siembra â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var kpiSection = '';
   var _allMetas = [
     {k:'inv_inicial',  lbl:'INV. INICIAL'},
@@ -1562,10 +1560,10 @@ function showProdPanel(rowData, opts) {
     }
   }
 
-  // ── Zona 2: Tabla de productos ────────────────────────────────────
+  // â”€â”€ Zona 2: Tabla de productos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var productSection = '';
   if (rows.length === 0) {
-    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
+    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este perÃ­odo.</div>';
   } else {
     rows.sort(function(a,b){return b.gasto-a.gasto;});
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
@@ -1643,7 +1641,7 @@ setTimeout(reportHeight,700);
 setTimeout(reportHeight,1500);
 
 // =======================================================
-// ARRANCAR &#8212; diferido con protección
+// ARRANCAR &#8212; diferido con protecciÃ³n
 // =======================================================
 if (!DATA || !DATA.weekly_series) {
   if (DATA) {
@@ -1694,7 +1692,7 @@ html_final = HTML.replace('__DATA_JSON__', data_json)
 # Renderizamos el iframe PRIMERO
 components.html(html_final, height=900, scrolling=False)
 
-# ─── POPUP EXCEL / SHAREPOINT ────────────────────────────────────────────────
+# â”€â”€â”€ POPUP EXCEL / SHAREPOINT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 available_weeks = sorted(
     {str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2) for r in DATA.get("weekly_detail", [])},
     reverse=True
@@ -1708,8 +1706,8 @@ if available_weeks:
     except ImportError:
         _crear_disponible = False
 
-    with st.expander("⚙ EXCEL / SHAREPOINT"):
-        st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>⬇ Descargar Archivo WK</p>", unsafe_allow_html=True)
+    with st.expander("âš™ EXCEL / SHAREPOINT"):
+        st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>â¬‡ Descargar Archivo WK</p>", unsafe_allow_html=True)
         selected_wk = st.selectbox(
             "Semana a descargar",
             options=available_weeks,
@@ -1721,7 +1719,7 @@ if available_weeks:
                 xlsx_bytes = get_sheet_xlsx(selected_wk)
             if xlsx_bytes:
                 st.download_button(
-                    label=f"💾 Confirmar WK{selected_wk}",
+                    label=f"ðŸ’¾ Confirmar WK{selected_wk}",
                     data=xlsx_bytes,
                     file_name=f"WK{selected_wk}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1729,11 +1727,11 @@ if available_weeks:
                     use_container_width=True
                 )
             else:
-                st.error(f"No se encontró WK{selected_wk}.")
+                st.error(f"No se encontrÃ³ WK{selected_wk}.")
 
         if _crear_disponible:
             st.divider()
-            st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>✚ Nueva hoja SharePoint</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>âœš Nueva hoja SharePoint</p>", unsafe_allow_html=True)
             nuevo_nombre = st.text_input(
                 "Nombre (Ej: WK2518)",
                 key="nuevo_wk_nombre",
@@ -1743,20 +1741,21 @@ if available_weeks:
 
             if st.button("Crear Hoja", key="btn_crear_hoja", type="primary", use_container_width=True):
                 if not nuevo_nombre:
-                    st.warning("⚠️ Escribe el nombre de la hoja.")
+                    st.warning("âš ï¸ Escribe el nombre de la hoja.")
                 elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
-                    st.warning("⚠️ El formato debe ser WK####.")
+                    st.warning("âš ï¸ El formato debe ser WK####.")
                 else:
                     try:
                         tenant_id     = st.secrets["sharepoint"]["tenant_id"]
                         client_id     = st.secrets["sharepoint"]["client_id"]
                         client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Creando {nuevo_nombre}…"):
+                        with st.spinner(f"Creando {nuevo_nombre}â€¦"):
                             resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
                         if resultado.get("ok"):
                             st.success(resultado["mensaje"])
                             st.cache_data.clear()
                         else:
-                            st.error(f"❌ {resultado['error']}")
+                            st.error(f"âŒ {resultado['error']}")
                     except KeyError as e:
-                        st.error(f"❌ Falta credencial {e}.")
+                        st.error(f"âŒ Falta credencial {e}.")
+
