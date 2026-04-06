@@ -1474,7 +1474,7 @@ function showProdPanel(rowData, opts) {
       var v = (raw !== undefined && raw !== '' && raw !== 0) ? Number(raw).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
       var hasData = (raw !== undefined && raw !== '' && raw !== 0);
       kpiSection +=
-        '<div style="background:#fff; border:1px solid '+(hasData?'#bfdbfe':'#e2e8f0')+'; border-top:3px solid '+(hasData?'#2563eb':'#cbd5e1')+'; border-radius:4px; padding:6px 8px; text-align:center;">' +
+        '<div style="background:#fff; border:1px solid '+(hasData?'#a8bedf':'#e2e8f0')+'; border-top:3px solid '+(hasData?'#4472C4':'#cbd5e1')+'; border-radius:4px; padding:6px 8px; text-align:center;">' +
           '<div style="font-size:16px; line-height:1; margin-bottom:3px;">'+m.icon+'</div>' +
           '<div style="font-size:16px; font-weight:800; color:'+(hasData?'#0f172a':'#cbd5e1')+'; line-height:1.1;">'+v+'</div>' +
           '<div style="font-size:8px; color:#64748b; text-transform:uppercase; letter-spacing:0.4px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+m.lbl+'</div>' +
@@ -1519,8 +1519,8 @@ function showProdPanel(rowData, opts) {
   }
 
   panelHtml =
-    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #2563eb; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
-      '<div style="background:#1e3a5f; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
+    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #4472C4; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
+      '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
         '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
       '</div>' +
       kpiSection +
