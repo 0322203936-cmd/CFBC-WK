@@ -30,7 +30,7 @@ SHAREPOINT_URL_PR = (
 # Conteo de personal (Mano de Obra)
 SHAREPOINT_URL_CONTEO = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE?e=7P5ex4"
+    "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE"
 )
 
 # ─── Constantes ───────────────────────────────────────────────────────────────
@@ -80,11 +80,23 @@ def _descargar_excel(url: str, label: str = "archivo") -> BytesIO | None:
     """
     Descarga un archivo .xlsx desde un link público de SharePoint/OneDrive.
     Agrega el parámetro download=1 necesario para la descarga directa.
+    Funciona con URLs que tengan o no el token ?e=...
     """
-    download_url = url.replace("?e=", "?download=1&e=")
+    url = url.strip()
+    if "?e=" in url:
+        download_url = url.replace("?e=", "?download=1&e=")
+    elif "?" in url:
+        download_url = url + "&download=1"
+    else:
+        download_url = url + "?download=1"
     try:
         response = requests.get(download_url, timeout=30)
         response.raise_for_status()
+        # SharePoint a veces devuelve HTML si la URL no es válida
+        content_type = response.headers.get("Content-Type", "")
+        if "html" in content_type.lower():
+            print(f"❌ {label}: SharePoint devolvió HTML en vez de Excel. Verifica que el link sea público.")
+            return None
         return BytesIO(response.content)
     except Exception as e:
         print(f"❌ Error descargando {label}: {e}")
