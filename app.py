@@ -693,6 +693,9 @@ function inicializar() {
   buildYearChips();
   updateWeekControls();
   updateRangeSliders();
+  // Ocultar tab Costo Servicios si la cat inicial no es COSTO SERVICIOS
+  var vtSrv = document.getElementById('vtServicios');
+  if (vtSrv) vtSrv.style.display = (state.cat === 'COSTO SERVICIOS') ? '' : 'none';
   renderView();
 
   document.getElementById('loader').style.display = 'none';
@@ -737,6 +740,8 @@ function onCatChange(val) {
     var el = document.getElementById('vt' + name);
     if (el) el.style.display = isCostoSrv ? 'none' : '';
   });
+  var vtSrv = document.getElementById('vtServicios');
+  if (vtSrv) vtSrv.style.display = isCostoSrv ? '' : 'none';
   if (isCostoSrv && state.view !== 'servicios') {
     setView('servicios');
   } else if (!isCostoSrv && state.view === 'servicios') {
