@@ -730,7 +730,21 @@ function updateWeekControls() {
 // =======================================================
 // EVENTS
 // =======================================================
-function onCatChange(val) { state.cat=val; renderView(); }
+function onCatChange(val) {
+  state.cat = val;
+  var isCostoSrv = (val === 'COSTO SERVICIOS');
+  ['Anual','Comparativo','Rancho'].forEach(function(name) {
+    var el = document.getElementById('vt' + name);
+    if (el) el.style.display = isCostoSrv ? 'none' : '';
+  });
+  if (isCostoSrv && state.view !== 'servicios') {
+    setView('servicios');
+  } else if (!isCostoSrv && state.view === 'servicios') {
+    setView('comparativo');
+  } else {
+    renderView();
+  }
+}
 function setCurrency(cur) {
   state.currency=cur;
   document.getElementById('btnUSD').className='tb-btn'+(cur==='usd'?' active':'');
