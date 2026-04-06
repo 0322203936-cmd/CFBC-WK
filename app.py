@@ -346,6 +346,7 @@ APP_HTML_BODY = """
       <button class="tb-btn active" id="btnMXN" onclick="setCurrency('mxn')">MXN</button>
     </div>
     <div class="tb-sep"></div>
+    <span id="rangeControls" style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
     <span class="tb-label">Desde</span>
     <span class="range-val" id="fromWeekLabel">W01</span>
     <input type="range" class="tb-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
@@ -354,6 +355,7 @@ APP_HTML_BODY = """
     <span class="range-val" id="toWeekLabel">W52</span>
     <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
     <span class="range-badge" id="rangeBadge">W01 → W52</span>
+    </span>
     <div class="tb-sep"></div>
     <span class="tb-label">Años</span>
     <div id="yearChips" style="display:flex;gap:3px"></div>
@@ -747,6 +749,8 @@ function setView(v) {
   });
   var rb=document.getElementById('rangeBar');
   if (rb) rb.style.display='none';
+  var rc=document.getElementById('rangeControls');
+  if (rc) rc.style.display=(v==='servicios')?'none':'flex';
   var gw =document.getElementById('gridWrap');
   var cmp=document.getElementById('comparativoWrap');
   if (v==='comparativo') { if(gw)gw.style.display='none'; if(cmp)cmp.className='show'; }
@@ -1088,9 +1092,8 @@ function renderProductosFull() {
 var SV_SUBCATS=['Electricidad','Fletes y Acarreos','Gastos de Exportación','Certificado Fitosanitario','Transporte de Personal','Compra de Flor a Terceros','Comida para el Personal','RO, TEL, RTA.Alim'];
 function renderServicios() {
   var sym=state.currency.toUpperCase();
-  var f=state.fromWeek, t=state.toWeek;
   var yrs=getActiveYears();
-  var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
+  var rangeWeeks=allWeeks;
 
   // ── Acumular datos ─────────────────────────────────────
   var weekMap={};
