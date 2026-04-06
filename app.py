@@ -48,8 +48,20 @@ if "error" in DATA:
         st.rerun()
     st.stop()
 
+import math
+
+def _sanitize(obj):
+    """Convierte NaN/Inf a 0 recursivamente para JSON válido."""
+    if isinstance(obj, float):
+        return 0 if (math.isnan(obj) or math.isinf(obj)) else obj
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    return obj
+
 data_json = base64.b64encode(
-    json.dumps(DATA, ensure_ascii=True, default=str).encode('utf-8')
+    json.dumps(_sanitize(DATA), ensure_ascii=True, default=str).encode('utf-8')
 ).decode('ascii')
 
 APP_CSS = """<style>
