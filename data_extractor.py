@@ -658,16 +658,17 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
 def _extraer_mano_obra_conteo() -> list:
     """
     Lee el Excel de conteo de personal desde SharePoint.
-    Estructura: Año | Semana | Área | Concepto | Rancho | Conteo | Costo MN | Tipo Cambio | Costo DLLS
-    Retorna lista de registros compatibles con mano_obra_data.
     """
+    print(f"📥 Descargando conteo desde: {SHAREPOINT_URL_CONTEO}")
     archivo = _descargar_excel(SHAREPOINT_URL_CONTEO, "Conteo Personal")
     if archivo is None:
         print("⚠️  No se pudo descargar conteo.xlsx — mano_obra_data vacío")
         return []
+    print(f"✅ Descarga OK, tamaño={len(archivo.getvalue())} bytes")
 
     try:
-        df = pd.read_excel(archivo, sheet_name=0, header=2)  # headers en fila 3
+        df = pd.read_excel(archivo, sheet_name=0, header=2)
+        print(f"✅ Excel leído: {df.shape[0]} filas, columnas={list(df.columns)}")
     except Exception as e:
         print(f"⚠️  Error leyendo conteo.xlsx: {e}")
         return []
