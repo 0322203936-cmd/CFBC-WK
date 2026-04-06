@@ -1420,28 +1420,11 @@ function showProdPanel(rowData, opts) {
     if (wkSrc) {
       var sRow = ranchFilter ? (wkSrc[ranchFilter] || wkSrc['TOTAL'] || {}) : (wkSrc['TOTAL'] || {});
       var sMetas = [
-        {k:'inv_inicial',  lbl:'INV. INICIAL'},
-        {k:'tallos_cos',   lbl:'TALLOS COSECHADOS'},
-        {k:'tallos_des',   lbl:'TALLOS DESECHADOS'},
-        {k:'tallos_des_sf',lbl:'TALLOS DESECHADOS SF'},
-        {k:'tallos_comp',  lbl:'TALLOS COMPRADOS'},
-        {k:'tallos_bouq',  lbl:'TALLOS BOUQUETS/PROC.'},
-        {k:'tallos_desp',  lbl:'TALLOS DESPACHADOS'},
-        {k:'libras_alb',   lbl:'LIBRAS ALBAHACA'},
-        {k:'tallos_mues',  lbl:'TALLOS MUESTRA'},
-        {k:'inv_final',    lbl:'INV. FINAL'},
-        {k:'tallos_proc',  lbl:'TALLOS PROC. TOTALES'},
-        {k:'charolas_288', lbl:'CHAROLAS *288'},
-        {k:'charolas',     lbl:'N\u00ba CHAROLAS SEMBRADAS'},
-        {k:'esquejes',     lbl:'N\u00ba ESQUEJES SEMBRADOS'},
-        {k:'metros',       lbl:'METROS SIEMBRA'},
-        {k:'hectareas',    lbl:'HECT\u00c1REAS SIEMBRA'},
+        {k:'charolas', lbl:'N\u00ba CHAROLAS SEMBRADAS'},
+        {k:'esquejes', lbl:'N\u00ba ESQUEJES SEMBRADOS'},
+        {k:'metros',   lbl:'METROS DE SIEMBRA'},
+        {k:'hectareas',lbl:'HECT\u00c1REAS EN SIEMBRA'},
       ];
-      // Filtrar solo los que tienen valor real
-      var sMetasActivos = sMetas.filter(function(m){
-        var v = sRow2[m.k];
-        return v !== undefined && v !== '' && v !== 0 && v !== null;
-      });
       siembraBar = '<div style="display:flex;gap:6px;padding:4px 6px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;flex-shrink:0;flex-wrap:wrap;">';
       sMetas.forEach(function(m){
         var v = (sRow[m.k]!==undefined && sRow[m.k]!=='') ? Number(sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
@@ -1467,19 +1450,18 @@ function showProdPanel(rowData, opts) {
     var wkCodeShort2 = ((yr%100)*100) + wkStart;
     var wkSrc2 = (DATA.siembra_data||{})[wkCodeShort2] || (DATA.siembra_data||{})[String(wkCodeShort2)] || null;
     var sRow2 = wkSrc2 ? (ranchFilter ? (wkSrc2[ranchFilter] || wkSrc2['TOTAL'] || {}) : (wkSrc2['TOTAL'] || {})) : {};
-      if (sMetasActivos.length > 0) {
-        kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;gap:0;overflow-x:auto;scrollbar-width:none;white-space:nowrap;">';
-        sMetasActivos.forEach(function(m, i){
-          var v = Number(sRow2[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2});
-          if (i > 0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
-          kpiSection +=
-            '<div style="display:flex;align-items:baseline;gap:4px;flex-shrink:0;">' +
-              '<span style="font-size:9px;color:#44546A;text-transform:uppercase;letter-spacing:0.3px;">' + m.lbl + ':</span>' +
-              '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">' + v + '</span>' +
-            '</div>';
-        });
-        kpiSection += '</div>';
-      }
+    kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;gap:0;overflow:hidden;">';
+    sMetas.forEach(function(m, i){
+      var raw = sRow2[m.k];
+      var v = (raw !== undefined && raw !== '' && raw !== 0) ? Number(raw).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
+      if (i > 0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
+      kpiSection +=
+        '<div style="display:flex;align-items:baseline;gap:4px;white-space:nowrap;">' +
+          '<span style="font-size:9px;color:#44546A;text-transform:uppercase;letter-spacing:0.3px;">' + m.lbl + ':</span>' +
+          '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">' + v + '</span>' +
+        '</div>';
+    });
+    kpiSection += '</div>';
   }
 
   // ── Zona 2: Tabla de productos ────────────────────────────────────
