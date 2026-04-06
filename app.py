@@ -1439,48 +1439,70 @@ function showProdPanel(rowData, opts) {
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = 'Reg: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
 
-    // ── Indicadores de siembra para este WK/rancho ────────────────────────
+    // ── KPIs siembra ─────────────────────────────────────────────────────
     var siembraHtml = '';
     var siemCode = ((yr%100)*100)+wkStart;
     var siemDs = (DATA.siembra_data||{})[siemCode] || (DATA.siembra_data||{})[String(siemCode)] || {};
-    console.log('[SIEM] buscando código:', siemCode, '| keys disponibles:', Object.keys(DATA.siembra_data||{}).slice(0,10), '| encontrado:', Object.keys(siemDs));
-    // si hay filtro de rancho usamos ese, si no usamos _total
     var siemKey = ranchFilter || '_total';
     var siemRec = siemDs[siemKey] || siemDs['_total'] || null;
+    function sfmt(v){ return (v!=null&&v!==''&&parseFloat(v)!==0) ? (parseFloat(v)||0).toLocaleString('es-MX',{maximumFractionDigits:1}) : '—'; }
     if (siemRec) {
-      function sfmt(v){ return v!=null&&v!==0 ? (parseFloat(v)||0).toLocaleString('es-MX',{maximumFractionDigits:1}) : '—'; }
+      function kpi(lbl, val) {
+        return '<div style="flex:1;padding:5px 10px;border-right:1px solid #d1d5db;text-align:center;">' +
+          '<div style="font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">'+lbl+'</div>' +
+          '<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-top:1px;">'+val+'</div>' +
+        '</div>';
+      }
       siembraHtml =
-        '<div style="display:flex;gap:0;border-bottom:1px solid #cbd5e1;flex-shrink:0;">' +
-          _siem('🌿 Charolas', sfmt(siemRec.charolas), '#e0f2fe', '#0369a1') +
-          _siem('🌱 Esquejes',  sfmt(siemRec.esquejes),  '#f0fdf4', '#15803d') +
-          _siem('📏 Metros',    sfmt(siemRec.metros),    '#fff7ed', '#c2410c') +
-          _siem('🏞 Hectáreas', sfmt(siemRec.hectareas), '#faf5ff', '#7e22ce') +
+        '<div style="display:flex;background:#f8fafc;border-bottom:2px solid #e2e8f0;flex-shrink:0;">' +
+          kpi('Charolas Sembradas', sfmt(siemRec.charolas)) +
+          kpi('Esquejes Sembrados', sfmt(siemRec.esquejes)) +
+          kpi('Metros de Siembra',  sfmt(siemRec.metros))   +
+          kpi('Hectáreas en Siembra', sfmt(siemRec.hectareas)) +
         '</div>';
     }
 
-    var html='<div style="flex:1; min-width:400px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
-      '<div style="background:#f1f5f9; color:#0f172a; padding:4px 6px; border-bottom:1px solid #cbd5e1; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">' +
-      '<div style="font-weight:bold; font-size:11px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">' + panelTitle + '</div>' +
-      '<div style="color:#475569; font-size:10px; margin-left:8px; white-space:nowrap;">' + panelMeta + '</div></div>' +
-      siembraHtml +
-      '<div style="overflow:auto; scrollbar-width:thin; flex:1;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">WK</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">UBICACIÓN</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">PRODUCTO</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">UNID.</th>'+
-      '<th style="text-align:right; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569; position:sticky; top:0; z-index:2;">GASTO</th>'+
-      '</tr></thead><tbody>';
-    rows.forEach(function(r,i){
-      var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
-      html+='<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">'+
-        '<td style="padding:2px 5px; color:#64748b;">'+r.week_code+'</td>'+
-        '<td style="padding:2px 5px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>'+
-        '<td style="padding:2px 5px; color:#0f172a; font-weight:500;">'+r.producto+'</td>'+
-        '<td style="padding:2px 5px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>'+
-        '<td style="padding:2px 5px; text-align:right;"><span style="font-weight:600; color:#0f172a;">'+fmt(r.gasto)+'</span></td>'+
+    // ── Tabla ejecutiva ───────────────────────────────────────────────────
+    var TH = 'background:#1e3a5f;color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;padding:4px 7px;white-space:nowrap;position:sticky;top:0;z-index:2;';
+    var html =
+      '<div style="flex:1;min-width:380px;border:1px solid #cbd5e1;border-top:3px solid #1e3a5f;display:flex;flex-direction:column;background:#fff;overflow:hidden;">' +
+        '<div style="background:#1e3a5f;color:#fff;padding:5px 8px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+panelTitle+'</span>' +
+          '<span style="font-size:10px;color:#93c5fd;white-space:nowrap;margin-left:10px;">'+rows.length+' registros</span>' +
+        '</div>' +
+        siembraHtml +
+        '<div style="overflow:auto;flex:1;scrollbar-width:thin;">' +
+          '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:Calibri,Arial,sans-serif;">' +
+            '<thead><tr>' +
+              '<th style="'+TH+'text-align:left;">WK</th>' +
+              '<th style="'+TH+'text-align:left;">Ubicación</th>' +
+              '<th style="'+TH+'text-align:left;">Producto</th>' +
+              '<th style="'+TH+'text-align:right;">Unidades</th>' +
+              '<th style="'+TH+'text-align:right;">Gasto</th>' +
+            '</tr></thead>' +
+            '<tbody>';
+
+    rows.forEach(function(r, i) {
+      var bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+      html +=
+        '<tr style="background:'+bg+';" onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\''+bg+'\'">' +
+          '<td style="padding:3px 7px;color:#6b7280;border-bottom:1px solid #f1f5f9;white-space:nowrap;">'+r.week_code+'</td>' +
+          '<td style="padding:3px 7px;color:#1e3a5f;font-weight:700;border-bottom:1px solid #f1f5f9;white-space:nowrap;">'+r.ubicacion+'</td>' +
+          '<td style="padding:3px 7px;color:#111827;border-bottom:1px solid #f1f5f9;">'+r.producto+'</td>' +
+          '<td style="padding:3px 7px;color:#374151;text-align:right;border-bottom:1px solid #f1f5f9;">'+r.unidades+'</td>' +
+          '<td style="padding:3px 7px;text-align:right;border-bottom:1px solid #f1f5f9;font-weight:700;color:#111827;">'+fmt(r.gasto)+'</td>' +
         '</tr>';
     });
-    html+='</tbody></table></div></div>';
+
+    // fila de total
+    html +=
+        '</tbody>' +
+        '<tfoot><tr style="background:#1e3a5f;">' +
+          '<td colspan="4" style="padding:4px 7px;color:#fff;font-weight:700;font-size:11px;">TOTAL</td>' +
+          '<td style="padding:4px 7px;text-align:right;color:#4ade80;font-weight:800;font-size:12px;">'+fmt(total)+'</td>' +
+        '</tr></tfoot>' +
+      '</table></div></div>';
+
     panelHtml = html;
   }
   
