@@ -1227,14 +1227,13 @@ function renderServicios() {
     bodyHtml+='<tr class="pt-row">';
     bodyHtml+='<td style="'+tdPin+'left:0;color:#1e3a5f;font-weight:700">'+sc+'</td>';
     activeRanches.forEach(function(rn){
-      var col=RANCH_COLORS[rn]||'#555';
       weekKeys.forEach(function(key){
         var v=scByRnWk[rn][key];
         if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
-        else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:'+col+';font-weight:600">'+fmt(v)+'</td>';}
+        else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#334155;font-weight:600">'+fmt(v)+'</td>';}
       });
       // SUB rancho
-      bodyHtml+=cell(scByRn[rn],true,col);
+      bodyHtml+=cell(scByRn[rn],true,'#1e3a5f');
     });
     // TOTAL fila
     bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:#1e3a5f;border-left:2px solid #4472C4">'+fmt(scTotal)+'</td>';
@@ -1247,12 +1246,11 @@ function renderServicios() {
   bodyHtml+='<tr>';
   bodyHtml+='<td style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
   activeRanches.forEach(function(rn){
-    var col=RANCH_COLORS[rn]||'#555';
     weekKeys.forEach(function(key){
       var v=grandByRnWk[rn][key];
-      bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+(v?fmt(v):'—')+'</td>';
+      bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(v?fmt(v):'—')+'</td>';
     });
-    bodyHtml+='<td style="'+totStyle+'color:'+col+';border-left:1px solid #aaa">'+(grandByRn[rn]?fmt(grandByRn[rn]):'—')+'</td>';
+    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:1px solid #aaa">'+(grandByRn[rn]?fmt(grandByRn[rn]):'—')+'</td>';
   });
   bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
   bodyHtml+='</tr>';
@@ -1455,13 +1453,12 @@ function renderManoObra() {
       bodyHtml+='<td style="'+tdPin+'left:0"></td>';
       bodyHtml+='<td style="'+tdPin+'left:120px;color:#334155;font-size:11px">'+sc.label+'</td>';
       activeRanches.forEach(function(rn){
-        var col=RANCH_COLORS[rn]||'#555';
         weekKeys.forEach(function(key){
           var v=sc.byRnWk[rn][key];
           if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
-          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:'+col+';font-weight:600">'+fmt(v)+'</td>';}
+          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#334155;font-weight:600">'+fmt(v)+'</td>';}
         });
-        bodyHtml+=cell(sc.byRn[rn],true,col);
+        bodyHtml+=cell(sc.byRn[rn],true,'#1e3a5f');
       });
       bodyHtml+=cell(sc.total,true,'#1e3a5f');
       bodyHtml+='</tr>';
@@ -1474,12 +1471,11 @@ function renderManoObra() {
   bodyHtml+='<tr>';
   bodyHtml+='<td colspan="2" style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
   activeRanches.forEach(function(rn){
-    var col=RANCH_COLORS[rn]||'#555';
     weekKeys.forEach(function(key){
       var v=grandByRnWk[rn][key];
-      bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+( v?fmt(v):'—')+'</td>';
+      bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+( v?fmt(v):'—')+'</td>';
     });
-    bodyHtml+='<td style="'+totStyle+'color:'+col+';border-left:1px solid #aaa">'+(grandByRn[rn]?fmt(grandByRn[rn]):'—')+'</td>';
+    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:1px solid #aaa">'+(grandByRn[rn]?fmt(grandByRn[rn]):'—')+'</td>';
   });
   bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
   bodyHtml+='</tr>';
