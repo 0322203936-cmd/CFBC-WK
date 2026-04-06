@@ -1426,40 +1426,40 @@ function showProdPanel(rowData, opts) {
   var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
   
   var panelHtml = '';
+
+  // ── Barra de métricas de siembra (siempre visible) ───────────────
+  var siembraBar = '';
+  if (DATA.siembra_data) {
+    var wkCodeShort = ((yr%100)*100) + wkStart;
+    var wkSrc = DATA.siembra_data[wkCodeShort] || DATA.siembra_data[String(wkCodeShort)] || null;
+    if (wkSrc) {
+      var sRow = ranchFilter ? (wkSrc[ranchFilter] || wkSrc['TOTAL'] || {}) : (wkSrc['TOTAL'] || {});
+      var sMetas = [
+        {k:'charolas', lbl:'N\u00ba CHAROLAS SEMBRADAS'},
+        {k:'esquejes', lbl:'N\u00ba ESQUEJES SEMBRADOS'},
+        {k:'metros',   lbl:'METROS DE SIEMBRA'},
+        {k:'hectareas',lbl:'HECT\u00c1REAS EN SIEMBRA'},
+      ];
+      siembraBar = '<div style="display:flex;gap:6px;padding:4px 6px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;flex-shrink:0;flex-wrap:wrap;">';
+      sMetas.forEach(function(m){
+        var v = (sRow[m.k]!==undefined && sRow[m.k]!=='') ? Number(sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
+        siembraBar += '<div style="flex:1;min-width:110px;text-align:center;padding:3px 6px;background:#fff;border:1px solid #bbf7d0;border-radius:3px;">' +
+          '<div style="font-size:8px;color:#16a34a;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;">' + m.lbl + '</div>' +
+          '<div style="font-size:13px;font-weight:700;color:#0f172a;">' + v + '</div>' +
+          '</div>';
+      });
+      siembraBar += '</div>';
+    }
+  }
+
   if (rows.length===0){
-    panelHtml = '<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; background:#fff;"><p style="padding:8px;color:#64748b;font-size:11px;margin:0;">No hay registros para este período.</p></div>';
+    panelHtml = '<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; background:#fff; display:flex; flex-direction:column; overflow:hidden;">' +
+      siembraBar +
+      '<p style="padding:8px;color:#64748b;font-size:11px;margin:0;">No hay registros para este período.</p></div>';
   } else {
     rows.sort(function(a,b){return b.gasto-a.gasto;});
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = 'Reg: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
-
-    // ── Barra de métricas de siembra ─────────────────────────────────
-    var siembraBar = '';
-    if (DATA.siembra_data) {
-      var wkCodeShort = ((yr%100)*100) + wkStart;
-      var wkSrc = DATA.siembra_data[wkCodeShort] || DATA.siembra_data[String(wkCodeShort)] || null;
-      if (wkSrc) {
-        var sRow = ranchFilter ? (wkSrc[ranchFilter] || wkSrc['TOTAL'] || {}) : (wkSrc['TOTAL'] || {});
-        var sMetas = [
-          {k:'charolas', lbl:'N\u00ba CHAROLAS SEMBRADAS'},
-          {k:'esquejes', lbl:'N\u00ba ESQUEJES SEMBRADOS'},
-          {k:'metros',   lbl:'METROS DE SIEMBRA'},
-          {k:'hectareas',lbl:'HECT\u00c1REAS EN SIEMBRA'},
-        ];
-        var anyVal = sMetas.some(function(m){ return sRow[m.k]!==undefined && sRow[m.k]!==0; });
-        if (anyVal) {
-          siembraBar = '<div style="display:flex;gap:6px;padding:4px 6px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;flex-shrink:0;flex-wrap:wrap;">';
-          sMetas.forEach(function(m){
-            var v = (sRow[m.k]!==undefined && sRow[m.k]!=='') ? Number(sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
-            siembraBar += '<div style="flex:1;min-width:110px;text-align:center;padding:3px 6px;background:#fff;border:1px solid #bbf7d0;border-radius:3px;">' +
-              '<div style="font-size:8px;color:#16a34a;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;">' + m.lbl + '</div>' +
-              '<div style="font-size:13px;font-weight:700;color:#0f172a;">' + v + '</div>' +
-              '</div>';
-          });
-          siembraBar += '</div>';
-        }
-      }
-    }
 
     var html='<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
       '<div style="background:#f1f5f9; color:#0f172a; padding:4px 6px; border-bottom:1px solid #cbd5e1; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">' + 
