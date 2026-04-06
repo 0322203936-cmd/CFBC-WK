@@ -63,6 +63,7 @@ CATEGORIAS_ORDEN = [
     "RENOVACION DE SIEMBRA",
     "MATERIAL DE EMPAQUE",
     "COSTO SERVICIOS",
+    "COSTO MANO DE OBRA",
 ]
 
 SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
@@ -150,6 +151,46 @@ def norm_cat(s: str):
     if s.startswith("COMPRA DE FLOR"):                      return "SV:Compra de Flor a Terceros"
     if s.startswith("COMIDA PARA EL PERSONAL"):             return "SV:Comida para el Personal"
     if s.startswith("RO, TEL") or s.startswith("RO , TEL"): return "SV:RO, TEL, RTA.Alim"
+    # ── MANO DE OBRA ──────────────────────────────────────────────────────────
+    if "NOMINA" in s or "NÓMINA" in s:
+        if "ADMON" in s:                               return "MO:Nómina Admon"
+        if "CONTRATISTA" in s:                         return "MO:Nómina Prod. Contratista"
+        if "CORTE" in s:                               return "MO:Nómina Prod. Corte"
+        if "TRANSPLANTE" in s:                         return "MO:Nómina Prod. Transplante"
+        if "MANEJO PLANTA" in s:                       return "MO:Nómina Prod. Manejo Planta"
+        if "HOOPS" in s:                               return "MO:Nómina HOOPS"
+        if "MIPE" in s or "MIRFE" in s:                return "MO:Nómina MIPE/MIRFE"
+        if "TRACTORES" in s or "CAMEROS" in s:         return "MO:Nómina Op. Tractores/Cameros"
+        if "CHOFER" in s:                              return "MO:Nómina Op. Chofer"
+        if "VELADOR" in s:                             return "MO:Nómina Op. Veladores"
+        if "SOLDADOR" in s:                            return "MO:Nómina Op. Soldador"
+        if "PRODUCCION" in s or "PRODUCCIÓN" in s:     return "MO:Nómina Producción"
+    if "HORAS EXTR" in s:
+        if "CORTE" in s:                               return "MO:H.Extra Corte"
+        if "TRANSPLANTE" in s:                         return "MO:H.Extra Transplante"
+        if "MANEJO PLANTA" in s:                       return "MO:H.Extra Manejo Planta"
+        if "HOOPS" in s:                               return "MO:H.Extra HOOPS"
+        if "MIPE" in s or "MIRFE" in s:                return "MO:H.Extra MIPE/MIRFE"
+        if "TRACTORES" in s or "CAMEROS" in s:         return "MO:H.Extra Tractores/Cameros"
+        if "CHOFER" in s:                              return "MO:H.Extra Chofer"
+        if "VELADOR" in s:                             return "MO:H.Extra Veladores"
+        if "SOLDADOR" in s:                            return "MO:H.Extra Soldador"
+        if "FESTIVOS" in s and "FEST." not in s:       return "MO:H.Extra Dom. y Festivos (Admon)"
+        return                                                "MO:H.Extra Dom. y Fest. (Prod.)"
+    if "BONOS ASISIT" in s:
+        if "CORTE" in s:                               return "MO:Bonos Corte"
+        if "TRANSPLANTE" in s:                         return "MO:Bonos Transplante"
+        if "MANEJO PLANTA" in s:                       return "MO:Bonos Manejo Planta"
+        if "HOOPS" in s:                               return "MO:Bonos HOOPS"
+        if "MIPE" in s or "MIRFE" in s:                return "MO:Bonos MIPE/MIRFE"
+        if "TRACTORES" in s or "CAMEROS" in s:         return "MO:Bonos Tractores/Cameros"
+        if "CHOFER" in s:                              return "MO:Bonos Chofer"
+        if "VELADOR" in s:                             return "MO:Bonos Veladores"
+        if "SOLDADOR" in s:                            return "MO:Bonos Soldador"
+        if "DESPENSA" in s:                            return "MO:Bonos Asist./Puntualidad (Admon)"
+        return                                                "MO:Bonos Asist./Puntualidad (Prod.)"
+    if "IMSS" in s or "INFONAVIT" in s:                return "MO:IMSS/INFONAVIT RCV"
+    if "1.8%" in s or "TASA EFECTIVA" in s:            return "MO:1.8% Estado"
     return None
 
 
@@ -306,6 +347,7 @@ def _fetch_desde_sharepoint(prefix: str, parser_fn, label: str) -> tuple[dict, d
 def extraer_datos(xls: pd.ExcelFile) -> dict:
     all_data       = []
     servicios_data = []
+    mano_obra_data = []
 
     hojas_validas = []
     pr_hojas      = []
@@ -472,6 +514,18 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                     "mxn_ranches": mxn_ranches,
                     "usd_ranches": usd_ranches,
                 })
+            elif cat.startswith("MO:"):
+                mano_obra_data.append({
+                    "semana":      code,
+                    "year":        year,
+                    "week":        ww,
+                    "date_range":  date_range,
+                    "subcat":      cat[3:],
+                    "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
+                    "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
+                    "mxn_ranches": mxn_ranches,
+                    "usd_ranches": usd_ranches,
+                })
             else:
                 all_data.append({
                     "semana":      code,
@@ -488,8 +542,11 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
     print(f"\n✅ servicios_data: {len(servicios_data)} registros encontrados")
     if servicios_data:
         print(f"   subcats: {list({r['subcat'] for r in servicios_data})}")
+    print(f"✅ mano_obra_data: {len(mano_obra_data)} registros encontrados")
 
     cats_found = {r["categoria"] for r in all_data}
+    if mano_obra_data:
+        cats_found.add("COSTO MANO DE OBRA")
     cats  = [c for c in CATEGORIAS_ORDEN if c in cats_found]
     years = sorted({r["year"] for r in all_data})
 
@@ -537,6 +594,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         "productos":        productos,
         "productos_debug":  productos_debug,
         "servicios_data":   servicios_data,
+        "mano_obra_data":   mano_obra_data,
     }
 
 
