@@ -674,11 +674,14 @@ def _extraer_mano_obra_conteo() -> list:
         return []
 
     df.columns = [str(c).strip() for c in df.columns]
-    needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS", "Conteo"}
+    needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS"}
     missing = needed - set(df.columns)
     if missing:
         print(f"⚠️  Conteo.xlsx — columnas faltantes: {missing}")
         return []
+    has_conteo = "Conteo" in df.columns
+    if not has_conteo:
+        print("⚠️  Conteo.xlsx — columna 'Conteo' no encontrada; headcount = 0 para todas las filas")
 
     df = df.dropna(subset=["Año", "Semana", "Área"])
     df["Año"]    = pd.to_numeric(df["Año"],    errors="coerce")
@@ -705,7 +708,7 @@ def _extraer_mano_obra_conteo() -> list:
             rancho     = str(row.get("Rancho", "")).strip()
             costo_mn   = _sv(row.get("Costo MN",   0))
             costo_dlls = _sv(row.get("Costo DLLS", 0))
-            conteo_val = _sv(row.get("Conteo", 0))
+            conteo_val = _sv(row.get("Conteo", 0)) if has_conteo else 0.0
             mxn_total += costo_mn
             usd_total += costo_dlls
             hc_total  += conteo_val
