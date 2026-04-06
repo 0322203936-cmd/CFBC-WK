@@ -1207,6 +1207,7 @@ function renderManoObra() {
   var yrs=getActiveYears();
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
 
+  // weekMap[key][subcat] = total, weekMap[key][subcat+'__r__'+ranch] = val por rancho
   var weekMap={};
   var src=Array.isArray(DATA.mano_obra_data)&&DATA.mano_obra_data.length?DATA.mano_obra_data:[];
   src.forEach(function(r){
@@ -1216,8 +1217,13 @@ function renderManoObra() {
     if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,_total:0,date_range:r.date_range||''};
     var subcat=(r.subcat||'').trim(); if (!subcat) return;
     var val=state.currency==='usd'?r.usd_total:r.mxn_total;
+    var ranches=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;
     weekMap[key][subcat]=(weekMap[key][subcat]||0)+(val||0);
     weekMap[key]._total=(weekMap[key]._total||0)+(val||0);
+    Object.keys(ranches||{}).forEach(function(rn){
+      var rk=subcat+'__r__'+rn;
+      weekMap[key][rk]=(weekMap[key][rk]||0)+(ranches[rn]||0);
+    });
   });
 
   var MO_GROUPS=[
@@ -1250,7 +1256,7 @@ function renderManoObra() {
       .replace('Bonos Asist./Puntualidad ','Bonos ');
   }
 
-  // ColDefs: GRUPO (pin) + CONCEPTO (pin) + 1 col por semana + TOTAL
+  // ColDefs: GRUPO (pin) + CONCEPTO (pin) + 1 col por semana + TOTAL + ranchos
   var cols=[
     {field:'grupo',headerName:'GRUPO',width:120,pinned:'left',
      cellRenderer:function(p){return p.value?'<span style="font-weight:700;color:#1e3a5f;font-size:11px">'+p.value+'</span>':'';}},
@@ -1264,26 +1270,37 @@ function renderManoObra() {
   });
   cols.push({field:'wtotal',headerName:'TOTAL '+sym,width:110,type:'numericColumn',
     cellRenderer:function(p){var v=p.value;if(!v||isNaN(v))return '';return '<span style="font-weight:700;color:#1e3a5f;">'+fmt(v)+'</span>';}});
+  RANCH_ORDER.forEach(function(rn){
+    cols.push({field:'rn_'+rn.replace(/[^a-zA-Z0-9]/g,'_'),headerName:rn,width:100,type:'numericColumn',cellRenderer:ranchRenderer(rn)});
+  });
 
-  // Construir filas: header grupo → subcats → ... → total general
+  // Filas: header grupo → subcats → ... → total general
   var rows=[];
   var grandTotal=0;
-  var grandByWk={};
+  var grandByWk={}; var grandByRn={};
   weekKeys.forEach(function(k){grandByWk[k]=0;});
+  RANCH_ORDER.forEach(function(rn){grandByRn[rn]=0;});
 
   MO_GROUPS.forEach(function(grp){
     var grpByWk={}; weekKeys.forEach(function(k){grpByWk[k]=0;});
+    var grpByRn={}; RANCH_ORDER.forEach(function(rn){grpByRn[rn]=0;});
     var grpTotal=0; var scRows=[];
 
     grp.subcats.forEach(function(sc){
       var scTotal=0;
+      var scByRn={}; RANCH_ORDER.forEach(function(rn){scByRn[rn]=0;});
       var scRow={grupo:'',concepto:shortLabel(sc)};
       weekKeys.forEach(function(key){
         var val=(weekMap[key]&&weekMap[key][sc])?weekMap[key][sc]:0;
         scRow['wk_'+key.replace(/-/g,'_')]=val>0?val:null;
         scTotal+=val; grpByWk[key]+=val; grandByWk[key]+=val;
+        RANCH_ORDER.forEach(function(rn){
+          var rv=(weekMap[key]&&weekMap[key][sc+'__r__'+rn])?weekMap[key][sc+'__r__'+rn]:0;
+          scByRn[rn]+=rv; grpByRn[rn]+=rv; grandByRn[rn]+=rv;
+        });
       });
       scRow.wtotal=scTotal>0?scTotal:null;
+      RANCH_ORDER.forEach(function(rn){scRow['rn_'+rn.replace(/[^a-zA-Z0-9]/g,'_')]=scByRn[rn]>0?scByRn[rn]:null;});
       grpTotal+=scTotal; grandTotal+=scTotal;
       if (scTotal>0) scRows.push(scRow);
     });
@@ -1293,6 +1310,7 @@ function renderManoObra() {
     var grpRow={grupo:grp.label,concepto:'',_isGroup:true};
     weekKeys.forEach(function(key){grpRow['wk_'+key.replace(/-/g,'_')]=grpByWk[key]>0?grpByWk[key]:null;});
     grpRow.wtotal=grpTotal;
+    RANCH_ORDER.forEach(function(rn){grpRow['rn_'+rn.replace(/[^a-zA-Z0-9]/g,'_')]=grpByRn[rn]>0?grpByRn[rn]:null;});
     rows.push(grpRow);
     scRows.forEach(function(r){rows.push(r);});
   });
@@ -1300,9 +1318,11 @@ function renderManoObra() {
   var totRow={grupo:'TOTAL GENERAL',concepto:'',_isTotal:true};
   weekKeys.forEach(function(key){totRow['wk_'+key.replace(/-/g,'_')]=grandByWk[key]>0?grandByWk[key]:null;});
   totRow.wtotal=grandTotal;
+  RANCH_ORDER.forEach(function(rn){totRow['rn_'+rn.replace(/[^a-zA-Z0-9]/g,'_')]=grandByRn[rn]>0?grandByRn[rn]:null;});
   rows.push(totRow);
 
   renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym);
+
 }
 function onMainCellClick(evt) {
   if (!evt||!evt.data||!evt.colDef) return;
