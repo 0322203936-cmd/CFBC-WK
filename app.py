@@ -1490,7 +1490,20 @@ function renderManoObra() {
 
   var bodyHtml='';
 
-  MO_GROUPS.forEach(function(grp){
+  window.togglePtGroup = window.togglePtGroup || function(grpClass, iconId) {
+    var rows = document.getElementsByClassName(grpClass);
+    var icon = document.getElementById(iconId);
+    if (!rows.length) return;
+    var isHidden = rows[0].style.display === 'none';
+    for(var i=0; i<rows.length; i++){
+      rows[i].style.display = isHidden ? '' : 'none';
+    }
+    if(icon){
+      icon.innerHTML = isHidden ? '&#9660;' : '&#9654;';
+    }
+  };
+
+  MO_GROUPS.forEach(function(grp, grpIdx){
     var grpByRnWk={}, grpByRn={}, grpTotal=0;
     activeRanches.forEach(function(rn){
       grpByRnWk[rn]={}; grpByRn[rn]=0;
@@ -1521,8 +1534,8 @@ function renderManoObra() {
 
     // Fila grupo
     var gTdPin='padding:4px 8px;background:var(--pt-grp-bg);color:#fff;font-weight:700;font-size:11px;position:sticky;z-index:2;border-bottom:1px solid #ddd;border-right:1px solid rgba(255,255,255,0.2);white-space:nowrap;';
-    bodyHtml+='<tr>';
-    bodyHtml+='<td style="'+gTdPin+'left:0">'+grp.label+'</td>';
+    bodyHtml+='<tr style="cursor:pointer;" onclick="togglePtGroup(\'mo_grp_'+grpIdx+'\', \'mo_icon_'+grpIdx+'\')" title="Hacer clic para expandir o contraer categoría">';
+    bodyHtml+='<td style="'+gTdPin+'left:0"><span id="mo_icon_'+grpIdx+'" style="display:inline-block;width:12px;font-size:9px;text-align:center;">&#9654;</span> '+grp.label+'</td>';
     bodyHtml+='<td style="'+gTdPin+'left:120px"></td>';
     activeRanches.forEach(function(rn){
       weekKeys.forEach(function(key){
@@ -1536,7 +1549,7 @@ function renderManoObra() {
     // Filas subcat
     scRows.forEach(function(sc){
       var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;';
-      bodyHtml+='<tr class="pt-row">';
+      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;">';
       bodyHtml+='<td style="'+tdPin+'left:0"></td>';
       bodyHtml+='<td style="'+tdPin+'left:120px;color:#334155;font-size:11px">'+sc.label+'</td>';
       activeRanches.forEach(function(rn){
