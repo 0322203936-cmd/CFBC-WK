@@ -1416,7 +1416,7 @@ function showProdPanel(rowData, opts) {
       Object.keys(byTipo).forEach(function(tipo){
         if (tipoFilter&&tipo!==tipoFilter) return;
         (byTipo[tipo]||[]).forEach(function(item){
-          rows.push({week_code:wkCodeShort,rancho:ranch,tipo:tipo,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0});
+          rows.push({week_code:wkCodeShort,rancho:ranch,tipo:tipo,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0,ubicacion:item[3]||''});
         });
       });
     });
@@ -1439,8 +1439,7 @@ function showProdPanel(rowData, opts) {
       '<div style="color:#475569; font-size:10px; margin-left:8px; white-space:nowrap;">' + panelMeta + '</div></div>' +
       '<div style="overflow-x:auto; scrollbar-width:thin;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
       '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">WK</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">RANCHO</th>'+
-      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">TIPO</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UBICACIÓN</th>'+
       '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">PRODUCTO</th>'+
       '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UNID.</th>'+
       '<th style="text-align:right; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">GASTO</th>'+
@@ -1450,8 +1449,7 @@ function showProdPanel(rowData, opts) {
       var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
       html+='<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">'+
         '<td style="padding:2px 5px; color:#64748b;">'+r.week_code+'</td>'+
-        '<td style="padding:2px 5px; white-space:nowrap;"><span style="color:'+rc+';font-weight:600">'+r.rancho+'</span></td>'+
-        '<td style="padding:2px 5px; color:#64748b;">'+r.tipo+'</td>'+
+        '<td style="padding:2px 5px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>'+
         '<td style="padding:2px 5px; color:#0f172a; font-weight:500;">'+r.producto+'</td>'+
         '<td style="padding:2px 5px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>'+
         '<td style="padding:2px 5px; text-align:right;"><span style="font-weight:600; color:#0f172a;">'+fmt(r.gasto)+'</span></td>'+
