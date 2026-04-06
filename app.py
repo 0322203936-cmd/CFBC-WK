@@ -1480,7 +1480,6 @@ function showProdPanel(rowData, opts) {
       '<div style="overflow-x:auto; overflow-y:auto; flex:1; scrollbar-width:thin;">' +
         '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
           '<thead><tr style="position:sticky;top:0;z-index:1;">' +
-            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">WK</th>' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
@@ -1489,7 +1488,6 @@ function showProdPanel(rowData, opts) {
     rows.forEach(function(r,i){
       var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
       productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
-        '<td style="padding:3px 6px; color:#94a3b8; white-space:nowrap;">'+r.week_code+'</td>' +
         '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
         '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
         '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
