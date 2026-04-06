@@ -1436,7 +1436,8 @@ function showProdPanel(rowData, opts) {
     // ── Barra de métricas de siembra ─────────────────────────────────
     var siembraBar = '';
     if (DATA.siembra_data) {
-      var wkSrc = DATA.siembra_data[wkStart] || DATA.siembra_data[wkEnd] || null;
+      var wkCodeShort = ((yr%100)*100) + wkStart;
+      var wkSrc = DATA.siembra_data[wkCodeShort] || DATA.siembra_data[String(wkCodeShort)] || null;
       if (wkSrc) {
         var sRow = ranchFilter ? (wkSrc[ranchFilter] || wkSrc['TOTAL'] || {}) : (wkSrc['TOTAL'] || {});
         var sMetas = [
