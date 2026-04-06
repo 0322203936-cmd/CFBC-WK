@@ -680,6 +680,13 @@ def _extraer_mano_obra_conteo() -> list:
         print(f"⚠️  Conteo.xlsx — columnas faltantes: {missing}")
         return []
 
+    # ── Diagnóstico columna Conteo ────────────────────────────────────────────
+    print(f"🔍 Conteo dtype  : {df['Conteo'].dtype}")
+    print(f"🔍 Conteo sample : {df['Conteo'].head(10).tolist()}")
+    print(f"🔍 Conteo no-nulos: {df['Conteo'].notna().sum()} de {len(df)} filas")
+    # Forzar conversión numérica por si llegan como string o formula
+    df["Conteo"] = pd.to_numeric(df["Conteo"], errors="coerce").fillna(0.0)
+
     df = df.dropna(subset=["Año", "Semana", "Área"])
     df["Año"]    = pd.to_numeric(df["Año"],    errors="coerce")
     df["Semana"] = pd.to_numeric(df["Semana"], errors="coerce")
