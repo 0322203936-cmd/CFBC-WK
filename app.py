@@ -1207,9 +1207,8 @@ function renderManoObra() {
   var yrs=getActiveYears();
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
 
-  var subcatsSet={};
   var weekMap={};
-  var src=Array.isArray(DATA.mano_obra_data)&&DATA.mano_obra_data.length ? DATA.mano_obra_data : [];
+  var src=Array.isArray(DATA.mano_obra_data)&&DATA.mano_obra_data.length?DATA.mano_obra_data:[];
   src.forEach(function(r){
     if (!state.activeYears[r.year]) return;
     if (r.week<f||r.week>t) return;
@@ -1217,39 +1216,91 @@ function renderManoObra() {
     if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,_total:0,date_range:r.date_range||''};
     var subcat=(r.subcat||'').trim(); if (!subcat) return;
     var val=state.currency==='usd'?r.usd_total:r.mxn_total;
-    subcatsSet[subcat]=1;
     weekMap[key][subcat]=(weekMap[key][subcat]||0)+(val||0);
     weekMap[key]._total=(weekMap[key]._total||0)+(val||0);
   });
 
-  var orderedSubcats=MO_SUBCATS.filter(function(sc){return subcatsSet[sc];});
-  Object.keys(subcatsSet).forEach(function(sc){if(orderedSubcats.indexOf(sc)===-1)orderedSubcats.push(sc);});
-
-  var cols=[
-    {field:'semana', headerName:'SEMANA', width:80, pinned:'left',
-     cellRenderer:function(p){var c=YEAR_COLORS[p.data._year]||'#888';return '<span style="color:'+c+';font-weight:700">'+p.value+'</span>';}},
-    {field:'fecha',  headerName:'FECHA',  width:120, pinned:'left',
-     cellRenderer:function(p){return '<span style="color:#777;font-size:11px">'+p.value+'</span>';}},
-    {field:'total',    headerName:'TOTAL '+sym, width:110, type:'numericColumn', cellRenderer:moneyRenderer},
-    {field:'deltaAmt', headerName:'Δ $',        width:90,  type:'numericColumn', cellRenderer:deltaAmtRenderer},
+  var MO_GROUPS=[
+    {label:'ADMINISTRACIÓN',subcats:['Nómina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)']},
+    {label:'PRODUCCIÓN',subcats:['Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)']},
+    {label:'CORTE',subcats:['Nómina Prod. Corte','H.Extra Corte','Bonos Corte']},
+    {label:'TRANSPLANTE',subcats:['Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante']},
+    {label:'MANEJO PLANTA',subcats:['Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta']},
+    {label:'HOOPS',subcats:['Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS']},
+    {label:'MIPE / MIRFE',subcats:['Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE']},
+    {label:'TRACTORES',subcats:['Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros']},
+    {label:'CHOFER',subcats:['Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer']},
+    {label:'VELADORES',subcats:['Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores']},
+    {label:'SOLDADOR',subcats:['Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador']},
+    {label:'OTROS',subcats:['Nómina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado']}
   ];
-  orderedSubcats.forEach(function(sc){
-    cols.push({field:'sc_'+sc.replace(/[^a-zA-Z0-9]/g,'_'), headerName:sc, width:150, type:'numericColumn', cellRenderer:moneyRenderer});
-  });
 
-  var rows=[]; var prevVal=null; var grandTotal=0;
+  // Semanas con datos en orden cronológico
+  var weekKeys=[];
   yrs.forEach(function(yr){
-    prevVal=null;
     rangeWeeks.forEach(function(w){
       var key=yr+'-'+w;
-      var d=weekMap[key];
-      var total=d?d._total:0;
-      var row={semana:String(yr).slice(2)+String(w).padStart(2,'0'), fecha:d?fmtMes(d.date_range):'', total:total, _year:yr, _week:w};
-      row.deltaAmt=(prevVal!==null&&total>0)?total-prevVal:null;
-      orderedSubcats.forEach(function(sc){row['sc_'+sc.replace(/[^a-zA-Z0-9]/g,'_')]=d?d[sc]||0:0;});
-      if (total>0) { rows.push(row); prevVal=total; grandTotal+=total; }
+      if (weekMap[key]&&weekMap[key]._total>0) weekKeys.push(key);
     });
   });
+
+  function shortLabel(sc){
+    return sc.replace('Nómina Prod. ','').replace('Nómina Op. ','')
+      .replace('H.Extra Dom. y Festivos ','H.Extra ').replace('H.Extra Dom. y Fest. ','H.Extra ')
+      .replace('Bonos Asist./Puntualidad ','Bonos ');
+  }
+
+  // ColDefs: GRUPO (pin) + CONCEPTO (pin) + 1 col por semana + TOTAL
+  var cols=[
+    {field:'grupo',headerName:'GRUPO',width:120,pinned:'left',
+     cellRenderer:function(p){return p.value?'<span style="font-weight:700;color:#1e3a5f;font-size:11px">'+p.value+'</span>':'';}},
+    {field:'concepto',headerName:'CONCEPTO',width:145,pinned:'left',
+     cellRenderer:function(p){return '<span style="color:#334155;font-size:11px">'+p.value+'</span>';}},
+  ];
+  weekKeys.forEach(function(key){
+    var d=weekMap[key];
+    var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+    cols.push({field:'wk_'+key.replace(/-/g,'_'),headerName:lbl,width:88,type:'numericColumn',cellRenderer:moneyRenderer});
+  });
+  cols.push({field:'wtotal',headerName:'TOTAL '+sym,width:110,type:'numericColumn',
+    cellRenderer:function(p){var v=p.value;if(!v||isNaN(v))return '';return '<span style="font-weight:700;color:#1e3a5f;">'+fmt(v)+'</span>';}});
+
+  // Construir filas: header grupo → subcats → ... → total general
+  var rows=[];
+  var grandTotal=0;
+  var grandByWk={};
+  weekKeys.forEach(function(k){grandByWk[k]=0;});
+
+  MO_GROUPS.forEach(function(grp){
+    var grpByWk={}; weekKeys.forEach(function(k){grpByWk[k]=0;});
+    var grpTotal=0; var scRows=[];
+
+    grp.subcats.forEach(function(sc){
+      var scTotal=0;
+      var scRow={grupo:'',concepto:shortLabel(sc)};
+      weekKeys.forEach(function(key){
+        var val=(weekMap[key]&&weekMap[key][sc])?weekMap[key][sc]:0;
+        scRow['wk_'+key.replace(/-/g,'_')]=val>0?val:null;
+        scTotal+=val; grpByWk[key]+=val; grandByWk[key]+=val;
+      });
+      scRow.wtotal=scTotal>0?scTotal:null;
+      grpTotal+=scTotal; grandTotal+=scTotal;
+      if (scTotal>0) scRows.push(scRow);
+    });
+
+    if (grpTotal===0) return;
+
+    var grpRow={grupo:grp.label,concepto:'',_isGroup:true};
+    weekKeys.forEach(function(key){grpRow['wk_'+key.replace(/-/g,'_')]=grpByWk[key]>0?grpByWk[key]:null;});
+    grpRow.wtotal=grpTotal;
+    rows.push(grpRow);
+    scRows.forEach(function(r){rows.push(r);});
+  });
+
+  var totRow={grupo:'TOTAL GENERAL',concepto:'',_isTotal:true};
+  weekKeys.forEach(function(key){totRow['wk_'+key.replace(/-/g,'_')]=grandByWk[key]>0?grandByWk[key]:null;});
+  totRow.wtotal=grandTotal;
+  rows.push(totRow);
 
   renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym);
 }
