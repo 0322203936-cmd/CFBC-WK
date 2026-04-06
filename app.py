@@ -1313,16 +1313,14 @@ var MO_RANCH_ORDER = [
 
 function renderManoObra() {
   var sym=state.currency.toUpperCase();
-  var f=state.fromWeek, t=state.toWeek;
   var yrs=getActiveYears();
-  var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
 
   // ── Acumular datos ─────────────────────────────────────
+  // Mano de obra usa sus propias semanas (conteo.xlsx), no el rango WK
   var weekMap={};
   var src=Array.isArray(DATA.mano_obra_data)&&DATA.mano_obra_data.length?DATA.mano_obra_data:[];
   src.forEach(function(r){
     if (!state.activeYears[r.year]) return;
-    if (r.week<f||r.week>t) return;
     var key=r.year+'-'+r.week;
     if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,date_range:r.date_range||''};
     var subcat=(r.subcat||'').trim(); if (!subcat) return;
@@ -1359,15 +1357,14 @@ function renderManoObra() {
     {label:'IMP. 1.8%',          subcats:['Imp. 1.8%']},
   ];
 
-  // Semanas con datos
-  var weekKeys=[];
-  yrs.forEach(function(yr){
-    rangeWeeks.forEach(function(w){
-      var key=yr+'-'+w;
-      var hasSome=false;
-      Object.keys(weekMap[key]||{}).forEach(function(k){if(k[0]!=='_'&&!k.includes('__r__')&&weekMap[key][k]>0)hasSome=true;});
-      if(hasSome) weekKeys.push(key);
-    });
+  // Semanas con datos — directamente del weekMap (orden año-semana)
+  var weekKeys=Object.keys(weekMap).filter(function(key){
+    var hasSome=false;
+    Object.keys(weekMap[key]).forEach(function(k){if(k[0]!=='_'&&!k.includes('__r__')&&weekMap[key][k]>0)hasSome=true;});
+    return hasSome;
+  }).sort(function(a,b){
+    var pa=a.split('-'), pb=b.split('-');
+    return (parseInt(pa[0])-parseInt(pb[0]))||( parseInt(pa[1])-parseInt(pb[1]));
   });
 
   // Ranchos con datos: usar los ranchos del conteo (no RANCH_ORDER físico)
