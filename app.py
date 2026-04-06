@@ -527,11 +527,10 @@ function catRenderer(p) {
   return '<span style="font-weight:700;color:#1e3a5f;font-size:11px">'+v+'</span>';
 }
 function ranchRenderer(ranch) {
-  var col = RANCH_COLORS[ranch]||'#888';
   return function(p) {
     var v = p.value;
     if (!v||isNaN(v)||v===0) return '';
-    return '<span style="color:'+col+';font-weight:600">'+fmt(v)+'</span>';
+    return '<span style="color:#334155;font-weight:600">'+fmt(v)+'</span>';
   };
 }
 
@@ -955,11 +954,11 @@ function renderComparativo() {
         if (!d) return '<td></td>';
         var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
         var v=src[r]||0;
-        var style='color:'+(v>0?(RANCH_COLORS[r]||'#888'):'#ddd')+(v>0?';cursor:pointer':'');
+        var style='color:'+(v>0?'#334155':'#ddd')+(v>0?';cursor:pointer;font-weight:600':'');
         var attrs=v>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch="'+r+'"':'';
         return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'')+'</td>';
       }).join('');
-      var totalStyle='color:'+(val>0?col:'#bbb')+';font-weight:'+(val>0?'600':'400')+(val>0?';cursor:pointer':'');
+      var totalStyle='color:'+(val>0?'#1e3a5f':'#bbb')+';font-weight:'+(val>0?'700':'400')+(val>0?';cursor:pointer':'');
       var totalAttrs=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
       return '<tr class="cmp-row">'+
         '<td style="color:'+col+';font-weight:600">'+String(yr).slice(2)+String(w).padStart(2,'0')+'</td>'+
