@@ -674,14 +674,32 @@ def _extraer_mano_obra_conteo() -> list:
         return []
 
     df.columns = [str(c).strip() for c in df.columns]
+    print(f"🔎 Conteo.xlsx — columnas detectadas: {list(df.columns)}")
+
     needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS"}
     missing = needed - set(df.columns)
     if missing:
         print(f"⚠️  Conteo.xlsx — columnas faltantes: {missing}")
         return []
-    has_conteo = "Conteo" in df.columns
-    if not has_conteo:
-        print("⚠️  Conteo.xlsx — columna 'Conteo' no encontrada; headcount = 0 para todas las filas")
+
+    # Buscar columna de conteo/personas (sin distinguir mayúsculas ni variantes)
+    _CONTEO_ALIASES = ["Conteo", "conteo", "CONTEO", "Personas", "personas",
+                       "PERSONAS", "# Personas", "#Personas", "Headcount", "HC"]
+    conteo_col = None
+    for alias in _CONTEO_ALIASES:
+        if alias in df.columns:
+            conteo_col = alias
+            break
+    if conteo_col is None:
+        col_lower = {c.lower(): c for c in df.columns}
+        for alias in _CONTEO_ALIASES:
+            if alias.lower() in col_lower:
+                conteo_col = col_lower[alias.lower()]
+                break
+    if conteo_col:
+        print(f"✅ Columna de Conteo encontrada: '{conteo_col}'")
+    else:
+        print(f"⚠️  No se encontró columna de Conteo. Columnas disponibles: {list(df.columns)}")
 
     df = df.dropna(subset=["Año", "Semana", "Área"])
     df["Año"]    = pd.to_numeric(df["Año"],    errors="coerce")
@@ -708,7 +726,7 @@ def _extraer_mano_obra_conteo() -> list:
             rancho     = str(row.get("Rancho", "")).strip()
             costo_mn   = _sv(row.get("Costo MN",   0))
             costo_dlls = _sv(row.get("Costo DLLS", 0))
-            conteo_val = _sv(row.get("Conteo", 0)) if has_conteo else 0.0
+            conteo_val = _sv(row.get(conteo_col, 0)) if conteo_col else 0.0
             mxn_total += costo_mn
             usd_total += costo_dlls
             hc_total  += conteo_val
