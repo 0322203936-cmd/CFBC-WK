@@ -1401,22 +1401,8 @@ function renderManoObra() {
   }
 
   if (!weekKeys.length || !activeRanches.length) {
-    var diagHtml = '<div style="padding:16px;font-family:monospace;font-size:11px;background:#fff3cd;border:1px solid #ffc107;margin:10px">';
-    diagHtml += '<b>🔍 DEBUG - Sin datos para el rango</b><br><br>';
-    diagHtml += 'DATA.years: ' + JSON.stringify(DATA.years) + '<br>';
-    diagHtml += 'state.activeYears: ' + JSON.stringify(state.activeYears) + '<br>';
-    diagHtml += 'mano_obra_data.length: ' + (Array.isArray(DATA.mano_obra_data) ? DATA.mano_obra_data.length : 'NO ES ARRAY') + '<br>';
-    if (Array.isArray(DATA.mano_obra_data) && DATA.mano_obra_data.length > 0) {
-      var sample = DATA.mano_obra_data[0];
-      diagHtml += 'Primer registro: year=' + sample.year + ' week=' + sample.week + ' subcat="' + sample.subcat + '"<br>';
-      diagHtml += 'mxn_total=' + sample.mxn_total + ' mxn_ranches=' + JSON.stringify(sample.mxn_ranches) + '<br>';
-    }
-    diagHtml += 'weekMap keys: ' + JSON.stringify(Object.keys(weekMap)) + '<br>';
-    diagHtml += 'weekKeys: ' + JSON.stringify(weekKeys) + '<br>';
-    diagHtml += 'activeRanches: ' + JSON.stringify(activeRanches) + '<br>';
-    diagHtml += '</div>';
     var gw=document.getElementById('gridWrap');
-    if(gw) { gw.style.display=''; gw.innerHTML=diagHtml; }
+    if(gw) { gw.style.display=''; gw.innerHTML='<div style="padding:20px;color:#888;font-size:12px">Sin datos para el rango seleccionado.</div>'; }
     document.getElementById('comparativoWrap').className='';
     document.getElementById('stTotal').textContent='—';
     return;
