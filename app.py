@@ -188,11 +188,13 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   background: #fff;
   border: 1px solid #d5d5d5;
   border-top: none;
-  overflow: visible;
+  overflow: hidden;
 }
 .pt-table-wrap {
-  overflow: visible;
+  overflow: auto;
   width: 100%;
+  /* 36px header + 28px toolbar + 26px range-bar + 28px view-tabs = 118px aprox */
+  max-height: calc(100vh - 118px);
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
@@ -1501,8 +1503,7 @@ window.addEventListener('resize', resizeTable);
 // HEIGHT REPORTING
 // =======================================================
 function reportHeight() {
-  var appEl=document.getElementById('app');
-  var h=appEl?appEl.scrollHeight+40:document.body.scrollHeight+40;
+  var h = window.innerHeight || document.documentElement.clientHeight || 700;
   window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h,700)},'*');
 }
 var ro=new ResizeObserver(reportHeight);
@@ -1671,4 +1672,4 @@ if available_weeks:
                         st.error(f"❌ Falta credencial {e}.")
 
 # Renderizamos el iframe DESPUÉS
-components.html(html_final, height=800, scrolling=False)
+components.html(html_final, height=900, scrolling=False)
