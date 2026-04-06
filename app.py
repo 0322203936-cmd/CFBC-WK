@@ -188,11 +188,13 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   background: #fff;
   border: 1px solid #d5d5d5;
   border-top: none;
-  overflow: visible;
+  overflow: hidden;
 }
 .pt-table-wrap {
-  overflow: visible;
+  overflow: auto;
   width: 100%;
+  /* 36px header + 28px toolbar + 26px range-bar + 28px view-tabs = 118px aprox */
+  max-height: calc(100vh - 118px);
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
@@ -1381,14 +1383,6 @@ function onMainCellClick(evt) {
 
 // =======================================================
 // PRODUCTOS SUBPANEL
-// helper: tarjeta de indicador siembra
-function _siem(label, val, bg, fg) {
-  return '<div style="flex:1; padding:4px 8px; background:'+bg+'; text-align:center; border-right:1px solid #e2e8f0;">' +
-    '<div style="font-size:9px; color:'+fg+'; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">'+label+'</div>' +
-    '<div style="font-size:13px; font-weight:800; color:'+fg+'; margin-top:1px;">'+val+'</div>' +
-  '</div>';
-}
-
 // =======================================================
 var _prodViews = [];
 
@@ -1439,70 +1433,29 @@ function showProdPanel(rowData, opts) {
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = 'Reg: <b>' + rows.length + '</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">' + fmt(total) + '</b>';
 
-    // ── KPIs siembra ─────────────────────────────────────────────────────
-    var siembraHtml = '';
-    var siemCode = ((yr%100)*100)+wkStart;
-    var siemDs = (DATA.siembra_data||{})[siemCode] || (DATA.siembra_data||{})[String(siemCode)] || {};
-    var siemKey = ranchFilter || '_total';
-    var siemRec = siemDs[siemKey] || siemDs['_total'] || null;
-    var sfmt = function(v){ return (v!=null&&v!==''&&parseFloat(v)!==0) ? (parseFloat(v)||0).toLocaleString('es-MX',{maximumFractionDigits:1}) : '--'; };
-    var kpi = function(lbl, val) {
-      return '<div style="flex:1;padding:5px 10px;border-right:1px solid #d1d5db;text-align:center;">' +
-        '<div style="font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">'+lbl+'</div>' +
-        '<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-top:1px;">'+val+'</div>' +
-      '</div>';
-    };
-    if (siemRec) {
-      siembraHtml =
-        '<div style="display:flex;background:#f8fafc;border-bottom:2px solid #e2e8f0;flex-shrink:0;">' +
-          kpi('Charolas Sembradas', sfmt(siemRec.charolas)) +
-          kpi('Esquejes Sembrados', sfmt(siemRec.esquejes)) +
-          kpi('Metros de Siembra',  sfmt(siemRec.metros))   +
-          kpi('Hectareas en Siembra', sfmt(siemRec.hectareas)) +
-        '</div>';
-    }
-
-    // ── Tabla ejecutiva ───────────────────────────────────────────────────
-    var TH = 'background:#1e3a5f;color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;padding:4px 7px;white-space:nowrap;position:sticky;top:0;z-index:2;';
-    var html =
-      '<div style="flex:1;min-width:380px;border:1px solid #cbd5e1;border-top:3px solid #1e3a5f;display:flex;flex-direction:column;background:#fff;overflow:hidden;">' +
-        '<div style="background:#1e3a5f;color:#fff;padding:5px 8px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;">' +
-          '<span style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+panelTitle+'</span>' +
-          '<span style="font-size:10px;color:#93c5fd;white-space:nowrap;margin-left:10px;">'+rows.length+' registros</span>' +
-        '</div>' +
-        siembraHtml +
-        '<div style="overflow:auto;flex:1;scrollbar-width:thin;">' +
-          '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:Calibri,Arial,sans-serif;">' +
-            '<thead><tr>' +
-              '<th style="'+TH+'text-align:left;">WK</th>' +
-              '<th style="'+TH+'text-align:left;">Ubicación</th>' +
-              '<th style="'+TH+'text-align:left;">Producto</th>' +
-              '<th style="'+TH+'text-align:right;">Unidades</th>' +
-              '<th style="'+TH+'text-align:right;">Gasto</th>' +
-            '</tr></thead>' +
-            '<tbody>';
-
-    rows.forEach(function(r, i) {
-      var bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-      html +=
-        '<tr style="background:'+bg+';" onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\''+bg+'\'">' +
-          '<td style="padding:3px 7px;color:#6b7280;border-bottom:1px solid #f1f5f9;white-space:nowrap;">'+r.week_code+'</td>' +
-          '<td style="padding:3px 7px;color:#1e3a5f;font-weight:700;border-bottom:1px solid #f1f5f9;white-space:nowrap;">'+r.ubicacion+'</td>' +
-          '<td style="padding:3px 7px;color:#111827;border-bottom:1px solid #f1f5f9;">'+r.producto+'</td>' +
-          '<td style="padding:3px 7px;color:#374151;text-align:right;border-bottom:1px solid #f1f5f9;">'+r.unidades+'</td>' +
-          '<td style="padding:3px 7px;text-align:right;border-bottom:1px solid #f1f5f9;font-weight:700;color:#111827;">'+fmt(r.gasto)+'</td>' +
+    var html='<div style="flex:1; min-width:320px; border:1px solid #cbd5e1; border-top:2px solid #0f172a; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
+      '<div style="background:#f1f5f9; color:#0f172a; padding:4px 6px; border-bottom:1px solid #cbd5e1; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">' + 
+      '<div style="font-weight:bold; font-size:11px; text-transform:uppercase; letter-spacing:0px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">' + panelTitle + '</div>' + 
+      '<div style="color:#475569; font-size:10px; margin-left:8px; white-space:nowrap;">' + panelMeta + '</div></div>' +
+      '<div style="overflow-x:auto; scrollbar-width:thin;"><table class="pt-table" style="font-size:10px; width:100%; border-collapse:collapse;"><thead><tr>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">WK</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UBICACIÓN</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">PRODUCTO</th>'+
+      '<th style="text-align:left; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">UNID.</th>'+
+      '<th style="text-align:right; background:#fff; border-bottom:1px solid #cbd5e1; padding:3px 5px; color:#475569;">GASTO</th>'+
+      '</tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      var rc=RANCH_COLORS[r.rancho]||'#64748b';
+      var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
+      html+='<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">'+
+        '<td style="padding:2px 5px; color:#64748b;">'+r.week_code+'</td>'+
+        '<td style="padding:2px 5px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>'+
+        '<td style="padding:2px 5px; color:#0f172a; font-weight:500;">'+r.producto+'</td>'+
+        '<td style="padding:2px 5px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>'+
+        '<td style="padding:2px 5px; text-align:right;"><span style="font-weight:600; color:#0f172a;">'+fmt(r.gasto)+'</span></td>'+
         '</tr>';
     });
-
-    // fila de total
-    html +=
-        '</tbody>' +
-        '<tfoot><tr style="background:#1e3a5f;">' +
-          '<td colspan="4" style="padding:4px 7px;color:#fff;font-weight:700;font-size:11px;">TOTAL</td>' +
-          '<td style="padding:4px 7px;text-align:right;color:#4ade80;font-weight:800;font-size:12px;">'+fmt(total)+'</td>' +
-        '</tr></tfoot>' +
-      '</table></div></div>';
-
+    html+='</tbody></table></div></div>';
     panelHtml = html;
   }
   
@@ -1532,8 +1485,7 @@ window.addEventListener('resize', resizeTable);
 // HEIGHT REPORTING
 // =======================================================
 function reportHeight() {
-  var appEl=document.getElementById('app');
-  var h=appEl?appEl.scrollHeight+40:document.body.scrollHeight+40;
+  var h = window.innerHeight || document.documentElement.clientHeight || 700;
   window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h,700)},'*');
 }
 var ro=new ResizeObserver(reportHeight);
@@ -1702,4 +1654,4 @@ if available_weeks:
                         st.error(f"❌ Falta credencial {e}.")
 
 # Renderizamos el iframe DESPUÉS
-components.html(html_final, height=800, scrolling=False)
+components.html(html_final, height=900, scrolling=False)
