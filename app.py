@@ -1116,10 +1116,12 @@ function renderProductosFull() {
 var SV_SUBCATS=['Electricidad','Fletes y Acarreos','Gastos de Exportación','Certificado Fitosanitario','Transporte de Personal','Compra de Flor a Terceros','Comida para el Personal','RO, TEL, RTA.Alim'];
 function renderServicios() {
   var sym=state.currency.toUpperCase();
+  var wn=allWeeks[state.weekIdx]||1;
   var svRows={};
   if (Array.isArray(DATA.servicios_data)&&DATA.servicios_data.length){
     DATA.servicios_data.forEach(function(r){
       if (!state.activeYears[r.year]) return;
+      if (r.week !== wn) return;
       var subcat=(r.subcat||'').trim(); if (!subcat) return;
       if (!svRows[subcat]) svRows[subcat]={};
       var src=state.currency==='usd'?(r.usd_ranches||{}):(r.mxn_ranches||{});
@@ -1130,6 +1132,7 @@ function renderServicios() {
   } else {
     DATA.weekly_detail.forEach(function(r){
       if (!state.activeYears[r.year]) return;
+      if (r.week !== wn) return;
       if (!r.categoria||!r.categoria.startsWith('SV:')) return;
       var subcat=r.categoria.replace('SV:','');
       if (!svRows[subcat]) svRows[subcat]={};
