@@ -674,7 +674,7 @@ def _extraer_mano_obra_conteo() -> list:
         return []
 
     df.columns = [str(c).strip() for c in df.columns]
-    needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS"}
+    needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS", "Conteo"}
     missing = needed - set(df.columns)
     if missing:
         print(f"⚠️  Conteo.xlsx — columnas faltantes: {missing}")
@@ -699,17 +699,20 @@ def _extraer_mano_obra_conteo() -> list:
     result = []
     for (anio, semana, area), grp in df.groupby(["Año", "Semana", "Área"]):
         code = (int(anio) - 2000) * 100 + int(semana)
-        mxn_ranches, usd_ranches = {}, {}
-        mxn_total = usd_total = 0.0
+        mxn_ranches, usd_ranches, hc_ranches = {}, {}, {}
+        mxn_total = usd_total = hc_total = 0.0
         for _, row in grp.iterrows():
             rancho     = str(row.get("Rancho", "")).strip()
             costo_mn   = _sv(row.get("Costo MN",   0))
             costo_dlls = _sv(row.get("Costo DLLS", 0))
+            conteo_val = _sv(row.get("Conteo", 0))
             mxn_total += costo_mn
             usd_total += costo_dlls
+            hc_total  += conteo_val
             if rancho:
                 mxn_ranches[rancho] = round(mxn_ranches.get(rancho, 0.0) + costo_mn,   2)
                 usd_ranches[rancho] = round(usd_ranches.get(rancho, 0.0) + costo_dlls, 2)
+                hc_ranches[rancho]  = hc_ranches.get(rancho, 0.0) + conteo_val
         result.append({
             "semana":      code,
             "year":        int(anio),
@@ -718,8 +721,10 @@ def _extraer_mano_obra_conteo() -> list:
             "subcat":      str(area).strip(),
             "mxn_total":   round(mxn_total, 2),
             "usd_total":   round(usd_total, 2),
+            "hc_total":    hc_total,
             "mxn_ranches": mxn_ranches,
             "usd_ranches": usd_ranches,
+            "hc_ranches":  hc_ranches,
         })
 
     print(f"✅ conteo mano_obra_data: {len(result)} registros desde conteo.xlsx")
