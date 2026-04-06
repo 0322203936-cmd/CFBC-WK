@@ -674,51 +674,11 @@ def _extraer_mano_obra_conteo() -> list:
         return []
 
     df.columns = [str(c).strip() for c in df.columns]
-    print(f"🔎 Conteo.xlsx — columnas detectadas: {list(df.columns)}")
-    print(f"🔎 repr columnas: {[repr(c) for c in df.columns]}")
-
-    needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS"}
+    needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS", "Conteo"}
     missing = needed - set(df.columns)
     if missing:
         print(f"⚠️  Conteo.xlsx — columnas faltantes: {missing}")
         return []
-
-    # Buscar columna de conteo/personas (sin distinguir mayúsculas ni variantes)
-    _CONTEO_ALIASES = ["Conteo", "conteo", "CONTEO", "Personas", "personas",
-                       "PERSONAS", "# Personas", "#Personas", "Headcount", "HC"]
-    conteo_col = None
-    for alias in _CONTEO_ALIASES:
-        if alias in df.columns:
-            conteo_col = alias
-            break
-    if conteo_col is None:
-        col_lower = {c.lower(): c for c in df.columns}
-        for alias in _CONTEO_ALIASES:
-            if alias.lower() in col_lower:
-                conteo_col = col_lower[alias.lower()]
-                break
-    # Fallback: buscar por posición — columna numérica inmediatamente anterior a "Costo MN"
-    if conteo_col is None and "Costo MN" in df.columns:
-        cols = list(df.columns)
-        idx_costo = cols.index("Costo MN")
-        if idx_costo > 0:
-            candidate = cols[idx_costo - 1]
-            # Verificar que sea numérica (tiene al menos un valor > 0)
-            try:
-                if pd.to_numeric(df[candidate], errors="coerce").dropna().gt(0).any():
-                    conteo_col = candidate
-                    print(f"✅ Columna de Conteo detectada por posición (antes de 'Costo MN'): '{conteo_col}'")
-            except Exception:
-                pass
-    if conteo_col:
-        print(f"✅ Columna de Conteo encontrada: '{conteo_col}'")
-        # Mostrar valores brutos de esa columna para diagnóstico
-        sample_raw = df[conteo_col].dropna().head(10).tolist()
-        non_zero   = df[conteo_col].apply(lambda v: str(v).strip() not in ('', '0', 'nan', 'None', '-')).sum()
-        print(f"   → primeros valores brutos: {sample_raw}")
-        print(f"   → filas con valor no-vacío: {non_zero} de {len(df)}")
-    else:
-        print(f"⚠️  No se encontró columna de Conteo. Columnas disponibles: {list(df.columns)}")
 
     df = df.dropna(subset=["Año", "Semana", "Área"])
     df["Año"]    = pd.to_numeric(df["Año"],    errors="coerce")
@@ -745,7 +705,7 @@ def _extraer_mano_obra_conteo() -> list:
             rancho     = str(row.get("Rancho", "")).strip()
             costo_mn   = _sv(row.get("Costo MN",   0))
             costo_dlls = _sv(row.get("Costo DLLS", 0))
-            conteo_val = _sv(row.get(conteo_col, 0)) if conteo_col else 0.0
+            conteo_val = _sv(row.get("Conteo", 0))
             mxn_total += costo_mn
             usd_total += costo_dlls
             hc_total  += conteo_val
