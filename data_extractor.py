@@ -675,6 +675,7 @@ def _extraer_mano_obra_conteo() -> list:
 
     df.columns = [str(c).strip() for c in df.columns]
     print(f"🔎 Conteo.xlsx — columnas detectadas: {list(df.columns)}")
+    print(f"🔎 repr columnas: {[repr(c) for c in df.columns]}")
 
     needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS"}
     missing = needed - set(df.columns)
@@ -696,6 +697,19 @@ def _extraer_mano_obra_conteo() -> list:
             if alias.lower() in col_lower:
                 conteo_col = col_lower[alias.lower()]
                 break
+    # Fallback: buscar por posición — columna numérica inmediatamente anterior a "Costo MN"
+    if conteo_col is None and "Costo MN" in df.columns:
+        cols = list(df.columns)
+        idx_costo = cols.index("Costo MN")
+        if idx_costo > 0:
+            candidate = cols[idx_costo - 1]
+            # Verificar que sea numérica (tiene al menos un valor > 0)
+            try:
+                if pd.to_numeric(df[candidate], errors="coerce").dropna().gt(0).any():
+                    conteo_col = candidate
+                    print(f"✅ Columna de Conteo detectada por posición (antes de 'Costo MN'): '{conteo_col}'")
+            except Exception:
+                pass
     if conteo_col:
         print(f"✅ Columna de Conteo encontrada: '{conteo_col}'")
         # Mostrar valores brutos de esa columna para diagnóstico
