@@ -476,6 +476,10 @@ function fmtPct(n) {
   var sign = n > 0 ? '+' : '';
   return sign + n.toFixed(1) + '%';
 }
+function fmtHc(n) {
+  if (!n || isNaN(n) || n === 0) return '';
+  return Math.round(n).toLocaleString('en-US');
+}
 function wFmt(n) { return 'W' + String(n).padStart(2,'0'); }
 function recargar() { window.location.reload(); }
 
@@ -1563,13 +1567,13 @@ function renderManoObra() {
         weekKeys.forEach(function(key){
           var v=sc.hcByRnWk[rn][key];
           if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
-          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#475569;font-weight:600">'+fmt(v)+'</td>';}
+          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#475569;font-weight:600">'+fmtHc(v)+'</td>';}
         });
         var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
-        bodyHtml+='<td style="'+cellStyle+'">'+(sc.hcByRn[rn]?fmt(sc.hcByRn[rn]):'—')+'</td>';
+        bodyHtml+='<td style="'+cellStyle+'">'+(sc.hcByRn[rn]?fmtHc(sc.hcByRn[rn]):'—')+'</td>';
       });
       var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
-      bodyHtml+='<td style="'+cellStyle+'border-left:2px solid #4472C4">'+(sc.hcTotal?fmt(sc.hcTotal):'—')+'</td>';
+      bodyHtml+='<td style="'+cellStyle+'border-left:2px solid #4472C4">'+(sc.hcTotal?fmtHc(sc.hcTotal):'—')+'</td>';
       bodyHtml+='</tr>';
     });
   });
@@ -1594,9 +1598,7 @@ function renderManoObra() {
   var gw=document.getElementById('gridWrap');
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
   document.getElementById('comparativoWrap').className='';
-  var d0 = (DATA.mano_obra_data && DATA.mano_obra_data.length) ? DATA.mano_obra_data[0] : {};
-  var debugStr = ' | DEBUG HC_RANCHES: ' + JSON.stringify(d0.hc_ranches || 'VACÍO');
-  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym + debugStr;
+  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
   setTimeout(resizeTable,80);
 }
 
