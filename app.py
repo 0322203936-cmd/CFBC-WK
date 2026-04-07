@@ -1048,6 +1048,7 @@ function renderRancho() {
     if (prev){ row['v'+prev]=totalPrev; grandPrev+=totalPrev; row.deltaAmt=totalCur-totalPrev; row.deltaPct=totalPrev>0?(totalCur-totalPrev)/totalPrev*100:null; }
     return row;
   }).filter(function(r){return (r['v'+cur]||0)>0||(r['v'+(prev||cur)]||0)>0;});
+  rows.sort(function(a,b){ return Math.abs(b['v'+cur]||0) - Math.abs(a['v'+cur]||0); });
   renderPivotTable(cols, rows, fmt(grandCur)+' '+sym+' · '+state.cat);
 }
 
@@ -1784,7 +1785,7 @@ function showProdPanel(rowData, opts) {
   if (rows.length === 0) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
   } else {
-    rows.sort(function(a,b){return b.gasto-a.gasto;});
+    rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = 'Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>';
     productSection =
