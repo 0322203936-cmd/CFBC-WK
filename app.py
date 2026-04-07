@@ -760,8 +760,8 @@ function onCatChange(val) {
       .filter(function(v,i,a){ return a.indexOf(v)===i; })
       .sort(function(a,b){ return a-b; });
     if (moWeeks.length) {
-      state.fromWeek = moWeeks[0];
       state.toWeek   = moWeeks[moWeeks.length-1];
+      state.fromWeek = moWeeks[moWeeks.length-2] || moWeeks[0] || state.toWeek;
       updateRangeSliders();
     }
   }
@@ -1560,10 +1560,16 @@ function renderManoObra() {
       weekKeys.forEach(function(key){
         bodyHtml+=cellGrp(grpByRnWk[rn][key]);
       });
+      var firstKey=weekKeys[0], lastKey=weekKeys[weekKeys.length-1];
+      var costDif=Math.abs((grpByRnWk[rn][lastKey]||0)-(grpByRnWk[rn][firstKey]||0));
       var grpDifStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700';
-      bodyHtml+='<td style="'+grpDifStyle+'">'+fmtHcDiff(grpHcByRn[rn])+'</td>'; // DIF rancho
+      bodyHtml+='<td style="'+grpDifStyle+'">'+(costDif?fmt(costDif):'—')+'</td>'; // DIF costo rancho
     });
-    bodyHtml+=cellGrp(grpTotal); // TOTAL fila
+      var _fk=weekKeys[0], _lk=weekKeys[weekKeys.length-1];
+      var _totFirst=activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][_fk]||0);},0);
+      var _totLast =activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][_lk]||0);},0);
+      var grpTotalDif=Math.abs(_totLast-_totFirst);
+      bodyHtml+=cellGrp(grpTotalDif||0); // TOTAL DIF fila
     bodyHtml+='</tr>';
 
     // Filas subcat
