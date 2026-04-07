@@ -1298,7 +1298,8 @@ function renderServicios() {
         if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
         else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#334155;font-weight:600">'+fmt(v)+'</td>';}
       });
-      bodyHtml+=cell(scByRn[rn],true,'#1e3a5f');
+      var rnDif=(scByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(scByRnWk[rn][weekKeys[0]]||0);
+      bodyHtml+=cell(rnDif||0,true,'#1e3a5f');
     });
     // Celdas TOTAL por semana
     var totCellStyle='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;background:#EAF3FF;font-weight:700;color:#1e3a5f;';
@@ -1321,7 +1322,8 @@ function renderServicios() {
       var v=grandByRnWk[rn][key];
       bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(v?fmt(v):'—')+'</td>';
     });
-    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:1px solid #aaa">'+(grandByRn[rn]?fmt(grandByRn[rn]):'—')+'</td>';
+    var rnTotDif=(grandByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(grandByRnWk[rn][weekKeys[0]]||0);
+    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:1px solid #aaa">'+(rnTotDif?fmt(rnTotDif):'—')+'</td>';
   });
   var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
   weekKeys.forEach(function(key){
