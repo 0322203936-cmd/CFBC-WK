@@ -1889,7 +1889,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             timeout=20,
         )
 
-        # ── 7. Clonación Nativa (range copy) ─────────────────────────
+        # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
         import re
         prev_wk_name = None
         m = re.search(r'\d+', nombre_hoja)
@@ -1897,33 +1897,38 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             num = int(m.group())
             prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
 
+        copied_data = None
         if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
-            # Duplicar TODO el contenido visual, fórmulas y bordes de la pestaña anterior a la nueva iterando API nativamente.
-            copy_addr = "A1:Z1500" # Amplio suficiente para incluir el Dashboard entero modificado
-            payload = {
-                "destinationRange": f"{nombre_hoja}!A1",
-                "copyType": "All",
-                "skipBlanks": False
-            }
-            range_copy_resp = requests.post(
-                f"{wb_url}/worksheets/{prev_wk_name}/range(address='{copy_addr}')/copy",
-                headers=hdrs,
-                json=payload,
-                timeout=60
-            )
-
-            if range_copy_resp.status_code in (200, 201, 204):
-                # Sobrescribir B3 para actualizar la etiqueta de nombre de semana
-                requests.patch(
-                    f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
-                    headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
+            # Traer fórmulas y formatos de número explícitamente de A1 hasta Z1500
+            try:
+                get_resp = requests.get(
+                    f"{wb_url}/worksheets/{prev_wk_name}/range(address='A1:Z1500')?$select=formulas,numberFormat",
+                    headers=hdrs, timeout=60
                 )
-                
-                # Para evitar que el archivo colapse sobreescribiendo nuestro propio clon recién pintado...
-                # ¡Rompemos ejecución exitosamente aquí!
-                return {"ok": True, "res": 180}
-            else:
-                return {"ok": False, "error": f"Error nativo range-copy: {range_copy_resp.text}"}
+                if get_resp.status_code == 200:
+                    copied_data = get_resp.json()
+            except:
+                pass
+
+        if copied_data and "formulas" in copied_data:
+            # Pegar el bloque de 1500 filas directo
+            patch_resp = requests.patch(
+                f"{wb_url}/worksheets/{nombre_hoja}/range(address='A1:Z1500')",
+                headers=hdrs, 
+                json={
+                    "formulas": copied_data["formulas"],
+                    "numberFormat": copied_data.get("numberFormat", [])
+                }, 
+                timeout=120
+            )
+            # Actualizar nombre de la semana en la celda B3 independientemente
+            requests.patch(
+                f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
+                headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
+            )
+            
+            # NOTE: Dejamos que el código continúe hacia el Paso 8 para "pintar" la plantilla (colores/bordes), 
+            # ya que leer puras fórmulas no copia los colores de fondo nativamente.
 
         else:
             # ── Alternativa: Escribir celdas desde cero (batchUpdate vía range) ───────────
