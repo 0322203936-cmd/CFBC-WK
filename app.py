@@ -751,21 +751,6 @@ function onCatChange(val) {
   var vtSrv = document.getElementById('vtServicios');
   if (vtSrv) vtSrv.style.display = isSrvCat ? '' : 'none';
 
-  // Ajustar rango de semanas según la fuente de datos
-  if (val === 'COSTO MANO DE OBRA' && Array.isArray(DATA.mano_obra_data) && DATA.mano_obra_data.length) {
-    // Usar las semanas disponibles en mano_obra_data para los años activos
-    var moWeeks = DATA.mano_obra_data
-      .filter(function(r){ return state.activeYears[r.year]; })
-      .map(function(r){ return r.week; })
-      .filter(function(v,i,a){ return a.indexOf(v)===i; })
-      .sort(function(a,b){ return a-b; });
-    if (moWeeks.length) {
-      state.toWeek   = moWeeks[moWeeks.length-1];
-      state.fromWeek = moWeeks[moWeeks.length-2] || moWeeks[0] || state.toWeek;
-      updateRangeSliders();
-    }
-  }
-
   if (isSrvCat && state.view !== 'servicios') {
     setView('servicios');
   } else if (!isSrvCat && state.view === 'servicios') {
