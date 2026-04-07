@@ -2572,9 +2572,13 @@ def insertar_hojas_pr_me_mp(
                 continue
                 
             fecha = row[0]
+            
+            # El usuario indicó que se tomó el producto incorrecto (probablemente el código de la col 5)
+            # CONTPAQ suele tener: Col 5 = Código, Col 6 = Descripción del producto. 
+            # Tomaremos la columna 6 como el nombre real del producto.
             prod_c = str(row[5]).strip() if len(row) > 5 else ""
             prod_n = str(row[6]).strip() if len(row) > 6 else ""
-            prod = f"{prod_c} {prod_n}".strip() if prod_n and prod_n != prod_c else prod_c
+            prod = prod_n if prod_n else prod_c
             
             unid = row[7] if len(row) > 7 else ""
             gasto = row[9] if len(row) > 9 else ""
