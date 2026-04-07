@@ -1246,9 +1246,11 @@ function renderServicios() {
 
   // ── Acumuladores totales ──────────────────────────────
   var grandByRnWk={}, grandByRn={}, grandTotal=0;
+  var grandHcByRnWk={};
   activeRanches.forEach(function(rn){
     grandByRnWk[rn]={}; grandByRn[rn]=0;
-    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; });
+    grandHcByRnWk[rn]={};
+    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; grandHcByRnWk[rn][k]=0; });
   });
 
   function cell(v,bold,color){
@@ -1495,9 +1497,11 @@ function renderManoObra() {
 
   // ── FILAS ─────────────────────────────────────────────
   var grandByRnWk={}, grandByRn={}, grandTotal=0;
+  var grandHcByRnWk={};
   activeRanches.forEach(function(rn){
     grandByRnWk[rn]={}; grandByRn[rn]=0;
-    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; });
+    grandHcByRnWk[rn]={};
+    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; grandHcByRnWk[rn][k]=0; });
   });
 
   var bodyHtml='';
@@ -1532,6 +1536,7 @@ function renderManoObra() {
           scByRn[rn]+=val;
           scTotal+=val;
           hcByRnWk[rn][k]=hc_val;
+          grandHcByRnWk[rn][k]=(grandHcByRnWk[rn][k]||0)+hc_val;
           grpByRnWk[rn][k]+=val;
           grpByRn[rn]+=val;
           grpTotal+=val;
@@ -1593,16 +1598,44 @@ function renderManoObra() {
   // Fila total general
   var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;';
   var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
+  var totHcStyle='padding:4px 8px;background:#E8F0E9;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  var totHcPin='padding:4px 8px;background:#E8F0E9;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;color:#1e3a5f;';
+  var _fk=weekKeys[0], _lk=weekKeys[weekKeys.length-1];
+
+  // ── Fila TOTAL $ ──────────────────────────────────────
+  var grandCostWk={};
+  weekKeys.forEach(function(k){ grandCostWk[k]=activeRanches.reduce(function(s,rn){return s+(grandByRnWk[rn][k]||0);},0); });
+  var grandCostFirst=grandCostWk[_fk]||0, grandCostLast=grandCostWk[_lk]||0;
+  var grandCostDif=Math.abs(grandCostLast-grandCostFirst);
   bodyHtml+='<tr>';
-  bodyHtml+='<td style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
+  bodyHtml+='<td style="'+totPin+'left:0;text-align:left">TOTAL $</td>';
   activeRanches.forEach(function(rn){
     weekKeys.forEach(function(key){
       var v=grandByRnWk[rn][key];
-      bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+( v?fmt(v):'—')+'</td>';
+      bodyHtml+='<td style="'+totStyle+'">'+( v?fmt(v):'—')+'</td>';
     });
-    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:1px solid #aaa">'+(grandByRn[rn]?fmt(grandByRn[rn]):'—')+'</td>';
+    var rnDif=Math.abs((grandByRnWk[rn][_lk]||0)-(grandByRnWk[rn][_fk]||0));
+    bodyHtml+='<td style="'+totStyle+'border-left:1px solid #aaa">'+(rnDif?fmt(rnDif):'—')+'</td>';
   });
-  bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
+  bodyHtml+='<td style="'+totStyle+'border-left:2px solid #4472C4">'+(grandCostDif?fmt(grandCostDif):'—')+'</td>';
+  bodyHtml+='</tr>';
+
+  // ── Fila TOTAL 👤 ─────────────────────────────────────
+  var grandHcWk={};
+  weekKeys.forEach(function(k){ grandHcWk[k]=activeRanches.reduce(function(s,rn){return s+(grandHcByRnWk[rn][k]||0);},0); });
+  var grandHcFirst=grandHcWk[_fk]||0, grandHcLast=grandHcWk[_lk]||0;
+  var grandHcDif=Math.abs(grandHcLast-grandHcFirst);
+  bodyHtml+='<tr>';
+  bodyHtml+='<td style="'+totHcPin+'left:0;text-align:left">TOTAL 👤</td>';
+  activeRanches.forEach(function(rn){
+    weekKeys.forEach(function(key){
+      var v=grandHcByRnWk[rn][key];
+      bodyHtml+='<td style="'+totHcStyle+'">'+( v?fmtHc(v):'—')+'</td>';
+    });
+    var rnHcDif=Math.abs((grandHcByRnWk[rn][_lk]||0)-(grandHcByRnWk[rn][_fk]||0));
+    bodyHtml+='<td style="'+totHcStyle+'border-left:1px solid #aaa">'+(rnHcDif?fmtHcDiff(rnHcDif):'—')+'</td>';
+  });
+  bodyHtml+='<td style="'+totHcStyle+'border-left:2px solid #4472C4">'+(grandHcDif?fmtHcDiff(grandHcDif):'—')+'</td>';
   bodyHtml+='</tr>';
 
   // ── Inyectar en el DOM ────────────────────────────────
