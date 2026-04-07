@@ -1901,19 +1901,18 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
         copied_data = None
         if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
-            # Traer fórmulas (retorna valores estáticos y fórmulas) y formatos de número de la hoja anterior
+            # Traer fórmulas y formatos de número explícitamente de A1 hasta T250 para asegurar TODO el diseño
             get_resp = requests.get(
-                f"{wb_url}/worksheets/{prev_wk_name}/usedRange(valuesOnly=false)?$select=address,formulas,numberFormat",
+                f"{wb_url}/worksheets/{prev_wk_name}/range(address='A1:T250')?$select=formulas,numberFormat",
                 headers=hdrs, timeout=30
             )
             if get_resp.status_code == 200:
                 copied_data = get_resp.json()
 
-        if copied_data and "formulas" in copied_data and "address" in copied_data:
-            # Pegar el data-block completo en la nueva hoja
-            addr = copied_data["address"].split("!")[-1] # Ej. "A1:S175"
+        if copied_data and "formulas" in copied_data:
+            # Pegar el bloque rígido exacto en A1
             patch_resp = requests.patch(
-                f"{wb_url}/worksheets/{nombre_hoja}/range(address='{addr}')",
+                f"{wb_url}/worksheets/{nombre_hoja}/range(address='A1:T250')",
                 headers=hdrs, 
                 json={
                     "formulas": copied_data["formulas"],
@@ -1924,7 +1923,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             if patch_resp.status_code not in (200, 201):
                 return {"ok": False, "error": f"Error copiando de {prev_wk_name}: {patch_resp.text}"}
 
-            # Acualizar nombre de la semana (ej. cambiar WK2612 a WK2613) en la celda B3 (donde va el nombre)
+            # Actualizar nombre de la semana en la celda B3
             requests.patch(
                 f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
                 headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
