@@ -19,15 +19,35 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-st.markdown("""
-<style>
-  #MainMenu, header, footer { display: none !important; }
-  .stApp { background: #f0f0f0; }
-  .block-container { padding: 0 !important; max-width: 100% !important; margin-top: -1rem !important; }
-  .stMainBlockContainer { padding-top: 0 !important; }
-  section[data-testid="stSidebar"] { display: none !important; }
-</style>
-""", unsafe_allow_html=True)
+if "show_auto" not in st.session_state:
+    st.session_state.show_auto = False
+
+def toggle_auto():
+    st.session_state.show_auto = not st.session_state.show_auto
+
+if st.session_state.show_auto:
+    # CSS para el Panel de Automatización (Ancho y con márgenes limpios)
+    st.markdown('''
+    <style>
+      #MainMenu, header, footer { display: none !important; }
+      .stApp { background: #f4f6f9; }
+      .block-container { padding: 3rem !important; max-width: 1200px !important; }
+      section[data-testid="stSidebar"] { display: none !important; }
+    </style>
+    ''', unsafe_allow_html=True)
+else:
+    # CSS para el Dashboard (Full screen, sin márgenes)
+    st.markdown('''
+    <style>
+      #MainMenu, header, footer { display: none !important; }
+      .stApp { background: #f0f0f0; }
+      .block-container { padding: 0 !important; max-width: 100% !important; margin-top: -1rem !important; }
+      .stMainBlockContainer { padding-top: 0 !important; }
+      section[data-testid="stSidebar"] { display: none !important; }
+      /* Subir el botón de automatización para que se fusione con el iframe */
+      div[data-testid="stButton"] { margin-top: 8px; margin-right: 15px; }
+    </style>
+    ''', unsafe_allow_html=True)
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -1909,72 +1929,92 @@ HTML = f'''<!DOCTYPE html>
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
 
-# Renderizamos el iframe PRIMERO
-components.html(html_final, height=900, scrolling=False)
 
-# ─── POPUP EXCEL / SHAREPOINT ────────────────────────────────────────────────
+# ─── LÓGICA DE RENDERIZADO (DASHBOARD VS AUTOMATIZACIÓN) ─────────────────────
 available_weeks = sorted(
     {str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2) for r in DATA.get("weekly_detail", [])},
     reverse=True
 )
 
-if available_weeks:
-    from data_extractor import get_sheet_xlsx
-    try:
-        from data_extractor import crear_hoja_wk
-        _crear_disponible = True
-    except ImportError:
-        _crear_disponible = False
+from data_extractor import get_sheet_xlsx
+try:
+    from data_extractor import crear_hoja_wk
+    _crear_disponible = True
+except ImportError:
+    _crear_disponible = False
 
-    with st.expander("⚙ EXCEL / SHAREPOINT"):
-        st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>⬇ Descargar Archivo WK</p>", unsafe_allow_html=True)
-        selected_wk = st.selectbox(
-            "Semana a descargar",
-            options=available_weeks,
-            format_func=lambda c: f"WK{c}",
-            label_visibility="collapsed"
-        )
-        if st.button("Preparar XLSX", key="dl_xlsx", use_container_width=True):
-            with st.spinner(f"Preparando WK{selected_wk}..."):
-                xlsx_bytes = get_sheet_xlsx(selected_wk)
-            if xlsx_bytes:
-                st.download_button(
-                    label=f"💾 Confirmar WK{selected_wk}",
-                    data=xlsx_bytes,
-                    file_name=f"WK{selected_wk}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="dl_xlsx_btn",
-                    use_container_width=True
-                )
-            else:
-                st.error(f"No se encontró WK{selected_wk}.")
+if not st.session_state.show_auto:
+    # ==== MODO DASHBOARD ====
+    # Agregamos el botón arriba a la derecha
+    col_empty, col_btn = st.columns([0.88, 0.12])
+    with col_btn:
+        st.button("⚙️ Automatización", on_click=toggle_auto, use_container_width=True)
+        
+    # Renderizamos el iframe
+    components.html(html_final, height=900, scrolling=False)
 
+else:
+    # ==== MODO PANEL DE AUTOMATIZACIÓN ====
+    st.title("⚙️ Panel de Automatización y Sincronización")
+    st.markdown("Administra la creación y descarga de las hojas de SharePoint con el formato oficial CFBC.")
+    
+    if st.button("⬅️ Volver al Dashboard", type="secondary", on_click=toggle_auto):
+        pass
+        
+    st.divider()
+    
+    # Dividimos la pantalla en 2 tarjetas grandes
+    col_down, col_create = st.columns(2, gap="large")
+    
+    with col_down:
+        st.header("⬇️ Descargar Archivo WK")
+        st.info("Descarga una hoja individual con formato completo desde SharePoint.")
+        if available_weeks:
+            selected_wk = st.selectbox("Selecciona la semana a descargar:", options=available_weeks, format_func=lambda c: f"WK{c}")
+            
+            if st.button("Preparar Archivo XLSX", use_container_width=True):
+                with st.spinner(f"Conectando con SharePoint y preparando WK{selected_wk}..."):
+                    xlsx_bytes = get_sheet_xlsx(selected_wk)
+                if xlsx_bytes:
+                    st.success("✅ Archivo procesado y listo para descargar.")
+                    st.download_button(
+                        label=f"💾 Descargar WK{selected_wk}.xlsx",
+                        data=xlsx_bytes,
+                        file_name=f"WK{selected_wk}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="primary",
+                        use_container_width=True
+                    )
+                else:
+                    st.error(f"❌ No se encontró WK{selected_wk} en el servidor.")
+        else:
+            st.warning("No hay semanas disponibles para descargar.")
+            
+    with col_create:
+        st.header("➕ Nueva Hoja SharePoint")
+        st.info("Crea una hoja WK en blanco en el Excel principal, aplicando celdas, fórmulas y colores oficiales.")
         if _crear_disponible:
-            st.divider()
-            st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>✚ Nueva hoja SharePoint</p>", unsafe_allow_html=True)
-            nuevo_nombre = st.text_input(
-                "Nombre (Ej: WK2518)",
-                key="nuevo_wk_nombre",
-                placeholder="Ej: WK2518",
-                label_visibility="collapsed"
-            ).strip().upper()
-
-            if st.button("Crear Hoja", key="btn_crear_hoja", type="primary", use_container_width=True):
+            nuevo_nombre = st.text_input("Nombre de la nueva hoja (Ej: WK2518):", placeholder="Ej: WK2518").strip().upper()
+            
+            if st.button("🚀 Crear Hoja en SharePoint", type="primary", use_container_width=True):
                 if not nuevo_nombre:
                     st.warning("⚠️ Escribe el nombre de la hoja.")
                 elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
-                    st.warning("⚠️ El formato debe ser WK####.")
+                    st.warning("⚠️ El formato debe ser exactamente WK#### (Ej: WK2518).")
                 else:
                     try:
                         tenant_id     = st.secrets["sharepoint"]["tenant_id"]
                         client_id     = st.secrets["sharepoint"]["client_id"]
                         client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Creando {nuevo_nombre}…"):
+                        with st.spinner(f"Escribiendo {nuevo_nombre} vía Microsoft Graph API… (Esto toma unos segundos)"):
                             resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
                         if resultado.get("ok"):
-                            st.success(resultado["mensaje"])
+                            st.success(f"🎉 {resultado['mensaje']}")
+                            st.balloons()
                             st.cache_data.clear()
                         else:
                             st.error(f"❌ {resultado['error']}")
                     except KeyError as e:
-                        st.error(f"❌ Falta credencial {e}.")
+                        st.error(f"❌ Falta configurar la credencial en secrets.toml: {e}.")
+        else:
+            st.error("⚠️ La función de crear hojas no está disponible en data_extractor.py")
