@@ -2559,33 +2559,32 @@ def insertar_hojas_pr_me_mp(
         import re
         cleaned = [["FECHA", "UBICACION", "PRODUCTO", "UNIDADES", "GASTO"]]
         for row in matrix:
-            if not row or len(row) < 10:
-                continue
+            # Asegurar que la fila tenga al menos 12 elementos rellenando con vacíos
+            r = list(row) + [""] * max(0, 12 - len(row))
             
-            ubicacion = str(row[2]).strip().upper()
+            ubicacion = str(r[2]).strip().upper()
             ubicacion_cln = re.sub(r'\s+', '', ubicacion)
             
-            # Filtro básico: la ubicación debe ser algo como 'POSCOEMPAQ'
-            if not ubicacion_cln or len(ubicacion_cln) < 6:
+            if not ubicacion_cln or len(ubicacion_cln) < 5:
                 continue
             if not re.match(r'^[A-Z0-9]+$', ubicacion_cln):
                 continue
                 
-            fecha = row[0]
+            fecha = r[0]
             
-            # El usuario indicó que se tomó el producto incorrecto (probablemente el código de la col 5)
-            # CONTPAQ suele tener: Col 5 = Código, Col 6 = Descripción del producto. 
-            # Tomaremos la columna 6 como el nombre real del producto.
-            prod_c = str(row[5]).strip() if len(row) > 5 else ""
-            prod_n = str(row[6]).strip() if len(row) > 6 else ""
-            prod = prod_n if prod_n else prod_c
+            # El dashboard originalmente usa la columna 5 para producto.
+            # Vamos a usar col 5. Si está vacía, intentamos col 6.
+            prod_c = str(r[5]).strip()
+            prod_n = str(r[6]).strip()
+            prod = prod_c if prod_c else prod_n
             
-            unid = row[7] if len(row) > 7 else ""
-            gasto = row[9] if len(row) > 9 else ""
+            # Unidades y Gasto
+            unid = r[7]
+            gasto = r[9]
             
             cleaned.append([fecha, ubicacion_cln, prod, unid, gasto])
             
-        # Si por alguna razón el filtro borró todo (ej. formato distinto), subimos la original
+        print(f"   [Debug Clean] Matriz original tenía {len(matrix)} filas, la limpia tiene {len(cleaned)} filas")
         return cleaned if len(cleaned) > 1 else matrix
 
     # ── Procesar PR ─────────────────────────────────────────────────────────
