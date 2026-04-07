@@ -2293,3 +2293,250 @@ def get_sheet_xlsx(week_code: str) -> bytes | None:
     except Exception as e:
         print(f"⚠️  Error extrayendo hoja {sheet_name}: {e}")
         return None
+
+
+# ─── Subir hojas PR / ME / MP al Excel secundario de SharePoint ──────────────
+def insertar_hojas_pr_me_mp(
+    semana_code: str,
+    tenant_id: str,
+    client_id: str,
+    client_secret: str,
+    pr_file=None,
+    mp_file=None,
+    me_file1=None,
+    me_file2=None,
+) -> dict:
+    """
+    Inserta hojas PR####, MP#### y/o ME#### en el Excel secundario de SharePoint
+    usando Microsoft Graph API (misma técnica que crear_hoja_wk).
+
+    Args:
+        semana_code : código de 4 dígitos, ej "2613"
+        tenant_id   : Azure AD tenant ID
+        client_id   : App registration client ID
+        client_secret: App registration client secret
+        pr_file     : BytesIO o file-like del Excel PR (opcional)
+        mp_file     : BytesIO o file-like del Excel MP (opcional)
+        me_file1    : BytesIO o file-like del primer Excel ME (opcional)
+        me_file2    : BytesIO o file-like del segundo Excel ME (opcional)
+
+    Returns:
+        dict con claves "PR", "MP", "ME" → cada una con {"ok": bool, "msg": str}
+    """
+    import base64 as _b64
+    import time
+
+    code = semana_code.strip().upper()
+    # Aceptar "WK2613" o "2613"
+    if code.startswith("WK"):
+        code = code[2:]
+
+    resultado = {}
+
+    # ── Helper: leer Excel → matriz de valores ─────────────────────────────
+    def _read_matrix(f, max_rows=700, max_cols=20):
+        """Lee un archivo Excel y devuelve lista de listas de valores (str/num/None)."""
+        try:
+            wb = openpyxl.load_workbook(f, read_only=True, data_only=True)
+            ws = wb.active
+            rows = []
+            for row in ws.iter_rows(max_row=max_rows, max_col=max_cols, values_only=True):
+                # Convertir cada celda: None → ""
+                rows.append([v if v is not None else "" for v in row])
+            wb.close()
+            return rows
+        except Exception as e:
+            raise RuntimeError(f"Error leyendo Excel: {e}")
+
+    # ── Helper: obtener token OAuth2 ───────────────────────────────────────
+    def _get_token():
+        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        r = requests.post(token_url, data={
+            "grant_type":    "client_credentials",
+            "client_id":     client_id,
+            "client_secret": client_secret,
+            "scope":         "https://graph.microsoft.com/.default",
+        }, timeout=20)
+        if r.status_code != 200:
+            raise RuntimeError(f"Error obteniendo token: {r.text[:300]}")
+        return r.json()["access_token"]
+
+    # ── Helper: resolver driveId + itemId desde URL de SharePoint ──────────
+    def _resolver_item(token, url):
+        encoded = _b64.b64encode(url.encode()).decode().rstrip("=")
+        encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
+        hdrs = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        r = requests.get(
+            f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem",
+            headers=hdrs, timeout=20,
+        )
+        if r.status_code != 200:
+            raise RuntimeError(f"No se pudo resolver el archivo PR/ME/MP: {r.text[:300]}")
+        item     = r.json()
+        drive_id = item.get("parentReference", {}).get("driveId")
+        item_id  = item.get("id")
+        if not drive_id or not item_id:
+            raise RuntimeError("No se pudo obtener driveId o itemId del Excel secundario.")
+        return drive_id, item_id
+
+    # ── Helper: abrir sesión de workbook ────────────────────────────────────
+    def _abrir_sesion(wb_url, hdrs_json):
+        r = requests.post(
+            f"{wb_url}/createSession",
+            headers=hdrs_json,
+            json={"persistChanges": True},
+            timeout=30,
+        )
+        if r.status_code not in (200, 201):
+            raise RuntimeError(f"Error abriendo sesión: {r.text[:300]}")
+        return r.json()["id"]
+
+    # ── Helper: crear e insertar una hoja ───────────────────────────────────
+    def _crear_hoja(wb_url, hdrs, nombre_hoja, matrix):
+        """
+        1. Verifica que la hoja no exista.
+        2. Crea la hoja nueva.
+        3. Escribe la matriz de valores via PATCH range.
+        """
+        # Verificar existencia
+        sheets_r = requests.get(f"{wb_url}/worksheets", headers=hdrs, timeout=20)
+        if sheets_r.status_code != 200:
+            raise RuntimeError(f"Error listando hojas: {sheets_r.text[:300]}")
+        existentes = [h["name"].strip().upper() for h in sheets_r.json().get("value", [])]
+        if nombre_hoja.upper() in existentes:
+            raise RuntimeError(f"La hoja '{nombre_hoja}' ya existe en SharePoint.")
+
+        # Crear hoja
+        add_r = requests.post(
+            f"{wb_url}/worksheets/add",
+            headers=hdrs,
+            json={"name": nombre_hoja},
+            timeout=20,
+        )
+        if add_r.status_code not in (200, 201):
+            raise RuntimeError(f"Error creando hoja '{nombre_hoja}': {add_r.text[:300]}")
+
+        time.sleep(0.5)  # pequeña pausa para que SharePoint registre la hoja
+
+        # Preparar matriz (asegurar que todas las filas tienen el mismo número de cols)
+        if not matrix:
+            raise RuntimeError("Matriz vacía — el archivo parece estar vacío.")
+
+        max_cols = max(len(r) for r in matrix)
+        # Normalizar a max_cols columnas y serializar valores a strings seguros para JSON
+        def _safe(v):
+            if v is None or v == "":
+                return ""
+            if isinstance(v, float) and (v != v):  # NaN check
+                return ""
+            return v
+
+        padded = [
+            [_safe(v) for v in (row + [""] * (max_cols - len(row)))]
+            for row in matrix
+        ]
+        nrows = len(padded)
+        # Convertir número de columna a letra Excel (A, B, ..., Z, AA, ...)
+        def _col_letter(n):  # n = 1-indexed
+            s = ""
+            while n > 0:
+                n, r = divmod(n - 1, 26)
+                s = chr(65 + r) + s
+            return s
+
+        end_col = _col_letter(max_cols)
+        range_addr = f"A1:{end_col}{nrows}"
+
+        patch_r = requests.patch(
+            f"{wb_url}/worksheets/{nombre_hoja}/range(address='{range_addr}')",
+            headers=hdrs,
+            json={"values": padded},
+            timeout=120,
+        )
+        if patch_r.status_code not in (200, 201):
+            raise RuntimeError(
+                f"Error escribiendo datos en '{nombre_hoja}': {patch_r.text[:400]}"
+            )
+
+        return nrows
+
+    # ── Obtener token y resolver Excel secundario UNA sola vez ─────────────
+    # (reutilizamos para todas las hojas que se vayan a crear)
+    token = None
+    drive_id = None
+    item_id  = None
+    wb_url   = None
+    session_id = None
+    hdrs_json  = None
+    hdrs       = None
+
+    def _init_conexion():
+        nonlocal token, drive_id, item_id, wb_url, session_id, hdrs_json, hdrs
+        if wb_url is not None:
+            return  # ya inicializado
+        token     = _get_token()
+        hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        drive_id, item_id = _resolver_item(token, SHAREPOINT_URL_PR)
+        wb_url    = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
+        session_id = _abrir_sesion(wb_url, hdrs_json)
+        hdrs       = {**hdrs_json, "workbook-session-id": session_id}
+
+    # ── Procesar PR ─────────────────────────────────────────────────────────
+    if pr_file is not None:
+        nombre = f"PR{code}"
+        try:
+            _init_conexion()
+            matrix = _read_matrix(pr_file)
+            filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
+            resultado["PR"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas)"}
+            print(f"✅ {nombre} insertada con {filas} filas.")
+        except Exception as e:
+            resultado["PR"] = {"ok": False, "msg": f"❌ PR — {e}"}
+            print(f"❌ Error PR: {e}")
+    else:
+        resultado["PR"] = {"ok": None, "msg": "⏭️ PR — no se subió archivo"}
+
+    # ── Procesar MP ─────────────────────────────────────────────────────────
+    if mp_file is not None:
+        nombre = f"MP{code}"
+        try:
+            _init_conexion()
+            matrix = _read_matrix(mp_file)
+            filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
+            resultado["MP"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas)"}
+            print(f"✅ {nombre} insertada con {filas} filas.")
+        except Exception as e:
+            resultado["MP"] = {"ok": False, "msg": f"❌ MP — {e}"}
+            print(f"❌ Error MP: {e}")
+    else:
+        resultado["MP"] = {"ok": None, "msg": "⏭️ MP — no se subió archivo"}
+
+    # ── Procesar ME (fusión de hasta 2 archivos) ────────────────────────────
+    if me_file1 is not None or me_file2 is not None:
+        nombre = f"ME{code}"
+        try:
+            _init_conexion()
+            matrix = []
+            conteo = []
+            if me_file1 is not None:
+                m1     = _read_matrix(me_file1)
+                matrix += m1
+                conteo.append(f"{len(m1)} filas (archivo 1)")
+            if me_file2 is not None:
+                m2     = _read_matrix(me_file2)
+                matrix += m2
+                conteo.append(f"{len(m2)} filas (archivo 2)")
+            detalle = " + ".join(conteo)
+            filas   = _crear_hoja(wb_url, hdrs, nombre, matrix)
+            resultado["ME"] = {
+                "ok":  True,
+                "msg": f"✅ {nombre} creada ({detalle} → {filas} filas totales)",
+            }
+            print(f"✅ {nombre} insertada: {detalle} → {filas} filas.")
+        except Exception as e:
+            resultado["ME"] = {"ok": False, "msg": f"❌ ME — {e}"}
+            print(f"❌ Error ME: {e}")
+    else:
+        resultado["ME"] = {"ok": None, "msg": "⏭️ ME — no se subió archivo"}
+
+    return resultado
