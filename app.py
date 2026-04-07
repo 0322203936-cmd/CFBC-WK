@@ -427,8 +427,6 @@ APP_HTML_BODY = """
     <div class="tb-sep"></div>
     <span class="tb-label">Años</span>
     <div id="yearChips" style="display:flex;gap:3px"></div>
-    <div class="tb-sep"></div>
-    <button class="tb-btn" onclick="exportCSV()" title="Exportar a CSV" style="flex-shrink:0">&#11015; CSV</button>
   </div>
 
   <!-- VIEW TABS -->
