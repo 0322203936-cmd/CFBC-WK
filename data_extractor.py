@@ -1848,81 +1848,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     wb_url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook'
 
-    # ── 2.5. Clonación Profunda y Perfecta (openpyxl) ─────────────────────
-    import re
-    prev_wk_name = None
-    m = re.search(r'\d+', nombre_hoja)
-    if m:
-        num = int(m.group())
-        prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
-
-    # Revisar hojas existentes antes de crear sesión
-    ws_check_resp = requests.get(f'{wb_url}/worksheets', headers=hdrs_json, timeout=20)
-    if ws_check_resp.status_code == 200:
-        nombres = [h['name'].strip() for h in ws_check_resp.json().get('value', [])]
-        if nombre_hoja.upper() in [n.upper() for n in nombres]:
-            return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
-            
-        if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
-            # Sí existe la semana anterior; clonamos el archivo
-            import openpyxl
-            import io
-            content_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/content"
-            dl_resp = requests.get(content_url, headers=hdrs_json, timeout=120)
-            
-            if dl_resp.status_code == 200:
-                try:
-                    file_stream = io.BytesIO(dl_resp.content)
-                    wb = openpyxl.load_workbook(file_stream)
-                    
-                    source_ws = None
-                    for sheetname in wb.sheetnames:
-                        if sheetname.upper() == prev_wk_name.upper():
-                            source_ws = wb[sheetname]
-                            break
-                    
-                    if source_ws:
-                        # Clonar la pestaña, poner título y B3
-                        target_ws = wb.copy_worksheet(source_ws)
-                        target_ws.title = nombre_hoja
-                        target_ws['B3'] = nombre_hoja
-                        
-                        # Mover la pestaña hasta el inicio
-                        wb.move_sheet(target_ws, offset=-wb.index(target_ws))
-                        
-                        # Guardar a buffer
-                        out_stream = io.BytesIO()
-                        wb.save(out_stream)
-                        out_bytes = out_stream.getvalue()
-                        file_size = len(out_bytes)
-                        
-                        # Para Excels pesados (>4MB), la Graph API bloquea un PUT directo. 
-                        # Debemos abrir una 'Upload Session' oficial y mandar los datos.
-                        upload_session_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/createUploadSession"
-                        sess_payload = {"item": {"@microsoft.graph.conflictBehavior": "replace"}}
-                        session_resp = requests.post(upload_session_url, headers=hdrs_json, json=sess_payload, timeout=60)
-                        
-                        if session_resp.status_code in (200, 201):
-                            upload_url = session_resp.json().get('uploadUrl')
-                            
-                            chunk_headers = {
-                                "Content-Length": str(file_size),
-                                "Content-Range": f"bytes 0-{file_size-1}/{file_size}"
-                            }
-                            # Subiendo la info al uploadUrl (que ya no necesita auth headers porque tiene un token incorporado)
-                            up_resp = requests.put(upload_url, headers=chunk_headers, data=out_bytes, timeout=300)
-                            
-                            if up_resp.status_code in (200, 201):
-                                return {"ok": True, "res": 180}
-                            else:
-                                return {"ok": False, "error": f"Fallo al completar la sesión de subida del clon: {up_resp.text}"}
-                        else:
-                            return {"ok": False, "error": f"Error abriendo sesión de subida (archivo pesado): {session_resp.text}"}
-                            
-                except Exception as e:
-                    return {"ok": False, "error": f"Error de librería procesando el archivo gigante (openpyxl): {str(e)}"}
-
-    # ── 3. Abrir sesión de workbook (para Fallback - crear desde cero) ─────
+    # ── 3. Abrir sesión de workbook (permite trabajar con archivo abierto) ─
     sess_resp = requests.post(
         f'{wb_url}/createSession',
         headers=hdrs_json,
@@ -1936,7 +1862,15 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
     hdrs = {**hdrs_json, "workbook-session-id": session_id}
 
     try:
-        # ── 4. Generar hoja si no hay semana anterior (Fallback) ───────────
+        # ── 4. Verificar que la hoja no exista ────────────────────────────
+        sheets_resp = requests.get(f'{wb_url}/worksheets', headers=hdrs, timeout=20)
+        if sheets_resp.status_code != 200:
+            return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
+        nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
+        if nombre_hoja.upper() in [n.upper() for n in nombres]:
+            return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
+
+        # ── 5. Crear la hoja nueva ────────────────────────────────────────
         add_resp = requests.post(
             f'{wb_url}/worksheets/add',
             headers=hdrs,
@@ -1947,6 +1881,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
 
         ws_id = add_resp.json().get('id', nombre_hoja)
+        # ── 6. Mover al inicio (posición 0) ───────────────────────
         requests.patch(
             f'{wb_url}/worksheets/{nombre_hoja}',
             headers=hdrs,
@@ -1954,31 +1889,68 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             timeout=20,
         )
 
-        # ── 5. Escribir celdas desde cero (batchUpdate vía range) ───────────
-        NROWS, NCOLS = 175, 19  # cols A(0)..S(18)
-        col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRS")}
-        matrix = [[""] * NCOLS for _ in range(NROWS)]
+        # ── 7. Clonación Nativa (range copy) ─────────────────────────
+        import re
+        prev_wk_name = None
+        m = re.search(r'\d+', nombre_hoja)
+        if m:
+            num = int(m.group())
+            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
 
-        for cell in _celdas_de_la_hoja(nombre_hoja):
-            addr = cell["address"]
-            val  = cell["value"]
-            col_str = ''.join(ch for ch in addr if ch.isalpha())
-            row_str = ''.join(ch for ch in addr if ch.isdigit())
-            if col_str in col_idx and row_str:
-                r = int(row_str) - 1
-                col_c = col_idx[col_str]
-                if 0 <= r < NROWS and 0 <= col_c < NCOLS:
-                    matrix[r][col_c] = val if val is not None else ""
+        if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
+            # Duplicar TODO el contenido visual, fórmulas y bordes de la pestaña anterior a la nueva iterando API nativamente.
+            copy_addr = "A1:Z1500" # Amplio suficiente para incluir el Dashboard entero modificado
+            payload = {
+                "destinationRange": f"{nombre_hoja}!A1",
+                "copyType": "All",
+                "skipBlanks": False
+            }
+            range_copy_resp = requests.post(
+                f"{wb_url}/worksheets/{prev_wk_name}/range(address='{copy_addr}')/copy",
+                headers=hdrs,
+                json=payload,
+                timeout=60
+            )
 
-        range_addr = f"A1:S{NROWS}"
-        patch_resp = requests.patch(
-            f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{range_addr}\')',
-            headers=hdrs,
-            json={"values": matrix},
-            timeout=60,
-        )
-        if patch_resp.status_code not in (200, 201):
-            return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
+            if range_copy_resp.status_code in (200, 201, 204):
+                # Sobrescribir B3 para actualizar la etiqueta de nombre de semana
+                requests.patch(
+                    f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
+                    headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
+                )
+                
+                # Para evitar que el archivo colapse sobreescribiendo nuestro propio clon recién pintado...
+                # ¡Rompemos ejecución exitosamente aquí!
+                return {"ok": True, "res": 180}
+            else:
+                return {"ok": False, "error": f"Error nativo range-copy: {range_copy_resp.text}"}
+
+        else:
+            # ── Alternativa: Escribir celdas desde cero (batchUpdate vía range) ───────────
+            NROWS, NCOLS = 175, 19  # cols A(0)..S(18)
+            col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRS")}
+            matrix = [[""] * NCOLS for _ in range(NROWS)]
+    
+            for cell in _celdas_de_la_hoja(nombre_hoja):
+                addr = cell["address"]
+                val  = cell["value"]
+                col_str = ''.join(ch for ch in addr if ch.isalpha())
+                row_str = ''.join(ch for ch in addr if ch.isdigit())
+                if col_str in col_idx and row_str:
+                    r = int(row_str) - 1
+                    col_c = col_idx[col_str]
+                    if 0 <= r < NROWS and 0 <= col_c < NCOLS:
+                        matrix[r][col_c] = val if val is not None else ""
+    
+            range_addr = f"A1:S{NROWS}"
+            patch_resp = requests.patch(
+                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{range_addr}\')',
+                headers=hdrs,
+                json={"values": matrix},
+                timeout=60,
+            )
+            if patch_resp.status_code not in (200, 201):
+                return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
 
         # ── 8. Aplicar formatos via Graph API ─────────────────────────────
         def fmt(rng, body):
