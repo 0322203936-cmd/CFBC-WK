@@ -1553,7 +1553,7 @@ function renderManoObra() {
     // Fila grupo
     var gTdPin='padding:4px 8px;background:var(--pt-grp-bg);color:#fff;font-weight:700;font-size:11px;position:sticky;z-index:2;border-bottom:1px solid #ddd;border-right:1px solid rgba(255,255,255,0.2);white-space:nowrap;';
     bodyHtml+='<tr style="cursor:pointer;" onclick="togglePtGroup(`mo_grp_'+grpIdx+'`)" title="Clic para expandir/contraer">';
-    bodyHtml+='<td style="'+gTdPin+'left:0">▶ '+grp.label+'</td>';
+    bodyHtml+='<td style="'+gTdPin+'left:0">'+grp.label+'</td>';
     activeRanches.forEach(function(rn){
       weekKeys.forEach(function(key){
         bodyHtml+=cellGrp(grpByRnWk[rn][key]);
