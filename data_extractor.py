@@ -1891,37 +1891,71 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         )
         # No es fatal si falla el reordenamiento
 
-        # ── 7. Escribir celdas en lotes (batchUpdate vía range) ───────────
-        #   Graph API permite escribir un rango completo de una vez con:
-        #   PATCH /workbook/worksheets/{id}/range(address='A1:Z200')
-        #   Body: { "values": [[row0col0, row0col1, ...], [row1col0, ...]] }
-        #
-        #   Construimos una matriz 175 x 19 (filas 1-175, cols A-S)
-        NROWS, NCOLS = 175, 19  # cols A(0)..S(18)
-        col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRS")}
-        matrix = [[""] * NCOLS for _ in range(NROWS)]
+        # ── 7. Intentar copiar fórmulas y valores de la semana anterior ─────────
+        prev_wk_name = None
+        import re
+        m = re.search(r'\d+', nombre_hoja)
+        if m:
+            num = int(m.group())
+            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
 
-        for cell in _celdas_de_la_hoja(nombre_hoja):
-            addr = cell["address"]          # ej "B3"
-            val  = cell["value"]
-            # Parsear dirección
-            col_str = ''.join(ch for ch in addr if ch.isalpha())
-            row_str = ''.join(ch for ch in addr if ch.isdigit())
-            if col_str in col_idx and row_str:
-                r = int(row_str) - 1
-                col_c = col_idx[col_str]
-                if 0 <= r < NROWS and 0 <= col_c < NCOLS:
-                    matrix[r][col_c] = val if val is not None else ""
+        copied_data = None
+        if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
+            # Traer fórmulas (retorna valores estáticos y fórmulas) y formatos de número de la hoja anterior
+            get_resp = requests.get(
+                f"{wb_url}/worksheets/{prev_wk_name}/usedRange(valuesOnly=false)?$select=address,formulas,numberFormat",
+                headers=hdrs, timeout=30
+            )
+            if get_resp.status_code == 200:
+                copied_data = get_resp.json()
 
-        range_addr = f"A1:S{NROWS}"
-        patch_resp = requests.patch(
-            f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{range_addr}\')',
-            headers=hdrs,
-            json={"values": matrix},
-            timeout=60,
-        )
-        if patch_resp.status_code not in (200, 201):
-            return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
+        if copied_data and "formulas" in copied_data and "address" in copied_data:
+            # Pegar el data-block completo en la nueva hoja
+            addr = copied_data["address"].split("!")[-1] # Ej. "A1:S175"
+            patch_resp = requests.patch(
+                f"{wb_url}/worksheets/{nombre_hoja}/range(address='{addr}')",
+                headers=hdrs, 
+                json={
+                    "formulas": copied_data["formulas"],
+                    "numberFormat": copied_data.get("numberFormat", [])
+                }, 
+                timeout=60
+            )
+            if patch_resp.status_code not in (200, 201):
+                return {"ok": False, "error": f"Error copiando de {prev_wk_name}: {patch_resp.text}"}
+
+            # Acualizar nombre de la semana (ej. cambiar WK2612 a WK2613) en la celda B3 (donde va el nombre)
+            requests.patch(
+                f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
+                headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
+            )
+
+        else:
+            # ── Alternativa: Escribir celdas desde cero (batchUpdate vía range) ───────────
+            NROWS, NCOLS = 175, 19  # cols A(0)..S(18)
+            col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRS")}
+            matrix = [[""] * NCOLS for _ in range(NROWS)]
+    
+            for cell in _celdas_de_la_hoja(nombre_hoja):
+                addr = cell["address"]
+                val  = cell["value"]
+                col_str = ''.join(ch for ch in addr if ch.isalpha())
+                row_str = ''.join(ch for ch in addr if ch.isdigit())
+                if col_str in col_idx and row_str:
+                    r = int(row_str) - 1
+                    col_c = col_idx[col_str]
+                    if 0 <= r < NROWS and 0 <= col_c < NCOLS:
+                        matrix[r][col_c] = val if val is not None else ""
+    
+            range_addr = f"A1:S{NROWS}"
+            patch_resp = requests.patch(
+                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{range_addr}\')',
+                headers=hdrs,
+                json={"values": matrix},
+                timeout=60,
+            )
+            if patch_resp.status_code not in (200, 201):
+                return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
 
         # ── 8. Aplicar formatos via Graph API ─────────────────────────────
         def fmt(rng, body):
