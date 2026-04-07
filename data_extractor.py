@@ -2335,18 +2335,71 @@ def insertar_hojas_pr_me_mp(
 
     # ── Helper: leer Excel → matriz de valores ─────────────────────────────
     def _read_matrix(f, max_rows=700, max_cols=20):
-        """Lee un archivo Excel y devuelve lista de listas de valores (str/num/None)."""
+        """Lee un archivo Excel y devuelve lista de listas de valores (str/num/None).
+        Acepta: Streamlit UploadedFile, BytesIO, o cualquier file-like object.
+        Soporta .xlsx (openpyxl) y .xls antiguo (xlrd).
+        """
+        from io import BytesIO as _BytesIO
         try:
-            wb = openpyxl.load_workbook(f, read_only=True, data_only=True)
-            ws = wb.active
-            rows = []
-            for row in ws.iter_rows(max_row=max_rows, max_col=max_cols, values_only=True):
-                # Convertir cada celda: None → ""
-                rows.append([v if v is not None else "" for v in row])
-            wb.close()
-            return rows
+            # Leer todos los bytes en memoria para garantizar compatibilidad
+            if hasattr(f, "read"):
+                raw = f.read()
+                if hasattr(f, "seek"):
+                    try:
+                        f.seek(0)
+                    except Exception:
+                        pass
+            elif isinstance(f, (bytes, bytearray)):
+                raw = bytes(f)
+            else:
+                raw = f.getvalue()
+
+            if not raw:
+                raise RuntimeError("El archivo está vacío o no se pudo leer.")
+
+            file_obj = _BytesIO(raw)
+
+            # Intentar openpyxl (.xlsx)
+            try:
+                wb = openpyxl.load_workbook(file_obj, read_only=True, data_only=True)
+                ws = wb.active
+                rows = []
+                for row in ws.iter_rows(max_row=max_rows, max_col=max_cols, values_only=True):
+                    rows.append([v if v is not None else "" for v in row])
+                wb.close()
+                return rows
+            except Exception as xlsx_err:
+                # Si falla openpyxl intentar con xlrd (.xls legacy)
+                file_obj.seek(0)
+                try:
+                    import xlrd
+                    wb_xls = xlrd.open_workbook(file_contents=file_obj.read())
+                    ws_xls = wb_xls.sheet_by_index(0)
+                    rows = []
+                    for ri in range(min(ws_xls.nrows, max_rows)):
+                        row = []
+                        for ci in range(min(ws_xls.ncols, max_cols)):
+                            cell = ws_xls.cell(ri, ci)
+                            row.append(cell.value if cell.value != "" else "")
+                        rows.append(row)
+                    return rows
+                except ImportError:
+                    raise RuntimeError(
+                        f"No se pudo leer el archivo. "
+                        f"Si es un archivo .xls antiguo, instala xlrd (pip install xlrd). "
+                        f"Error original: {xlsx_err}"
+                    )
+                except Exception as xls_err:
+                    raise RuntimeError(
+                        f"No se pudo leer como .xlsx ({xlsx_err}) ni como .xls ({xls_err}). "
+                        f"Asegúrate de que el archivo no esté corrupto o protegido con contraseña."
+                    )
+        except RuntimeError:
+            raise
         except Exception as e:
             raise RuntimeError(f"Error leyendo Excel: {e}")
+
+
 
     # ── Helper: obtener token OAuth2 ───────────────────────────────────────
     def _get_token():
