@@ -1894,16 +1894,33 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
                         out_stream = io.BytesIO()
                         wb.save(out_stream)
                         out_bytes = out_stream.getvalue()
+                        file_size = len(out_bytes)
                         
-                        # Sobrescribir en SharePoint
-                        up_resp = requests.put(content_url, headers=hdrs_json, data=out_bytes, timeout=180)
-                        if up_resp.status_code in (200, 201):
-                            # ¡Misión cumplida! Fue idéntico y no requiere formato manual
-                            return {"ok": True, "res": 180}
+                        # Para Excels pesados (>4MB), la Graph API bloquea un PUT directo. 
+                        # Debemos abrir una 'Upload Session' oficial y mandar los datos.
+                        upload_session_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/createUploadSession"
+                        sess_payload = {"item": {"@microsoft.graph.conflictBehavior": "replace"}}
+                        session_resp = requests.post(upload_session_url, headers=hdrs_json, json=sess_payload, timeout=60)
+                        
+                        if session_resp.status_code in (200, 201):
+                            upload_url = session_resp.json().get('uploadUrl')
+                            
+                            chunk_headers = {
+                                "Content-Length": str(file_size),
+                                "Content-Range": f"bytes 0-{file_size-1}/{file_size}"
+                            }
+                            # Subiendo la info al uploadUrl (que ya no necesita auth headers porque tiene un token incorporado)
+                            up_resp = requests.put(upload_url, headers=chunk_headers, data=out_bytes, timeout=300)
+                            
+                            if up_resp.status_code in (200, 201):
+                                return {"ok": True, "res": 180}
+                            else:
+                                return {"ok": False, "error": f"Fallo al completar la sesión de subida del clon: {up_resp.text}"}
                         else:
-                            return {"ok": False, "error": f"Fallo al sobrescribir archivo clonado: {up_resp.text}"}
+                            return {"ok": False, "error": f"Error abriendo sesión de subida (archivo pesado): {session_resp.text}"}
+                            
                 except Exception as e:
-                    return {"ok": False, "error": f"Error de librería clonando (openpyxl): {str(e)}"}
+                    return {"ok": False, "error": f"Error de librería procesando el archivo gigante (openpyxl): {str(e)}"}
 
     # ── 3. Abrir sesión de workbook (para Fallback - crear desde cero) ─────
     sess_resp = requests.post(
