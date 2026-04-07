@@ -41,8 +41,14 @@ else:
     <style>
       #MainMenu, header, footer { display: none !important; }
       .stApp { background: #f0f0f0; }
-      .block-container { padding: 0 !important; max-width: 100% !important; margin-top: 0 !important; }
-      .stMainBlockContainer { padding-top: 0 !important; }
+      /* Eliminar TODO espacio blanco sobre el header */
+      .block-container          { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+      .stMainBlockContainer     { padding: 0 !important; margin: 0 !important; }
+      [data-testid="stAppViewContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
+      [data-testid="stAppViewBlockContainer"] { padding: 0 !important; }
+      section.main              { padding-top: 0 !important; }
+      /* Primer bloque vertical (donde vive nuestro header de columnas) */
+      [data-testid="stVerticalBlock"] { gap: 0 !important; padding: 0 !important; }
       section[data-testid="stSidebar"] { display: none !important; }
 
       /* ── HEADER NATIVO: columnas de Streamlit que contienen #cfbc-brand ── */
