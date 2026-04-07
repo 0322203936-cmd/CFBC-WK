@@ -1463,7 +1463,7 @@ function renderManoObra() {
   }
 
   // ── Construir HTML ────────────────────────────────────
-  // NUEVO LAYOUT: GRUPO | CONCEPTO | [Rancho: wk1 wk2 ... SUB] | TOTAL
+  // LAYOUT: CONCEPTO (grupo+subcat colapsable) | [Rancho: wk1 wk2 ... DIF] | TOTAL
   var nWeeks = weekKeys.length;
   var nColsPerRanch = nWeeks + 1; // semanas + SUB
 
@@ -1472,8 +1472,7 @@ function renderManoObra() {
   var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
 
   var h1='<tr>';
-  h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:120px">GRUPO</th>';
-  h1+='<th rowspan="2" style="'+thPin+'left:120px;min-width:140px">CONCEPTO</th>';
+  h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:200px">CONCEPTO</th>';
   activeRanches.forEach(function(rn){
     var col=MO_RANCH_COLORS[rn]||RANCH_COLORS[rn]||'#374151';
     h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
@@ -1553,9 +1552,8 @@ function renderManoObra() {
 
     // Fila grupo
     var gTdPin='padding:4px 8px;background:var(--pt-grp-bg);color:#fff;font-weight:700;font-size:11px;position:sticky;z-index:2;border-bottom:1px solid #ddd;border-right:1px solid rgba(255,255,255,0.2);white-space:nowrap;';
-    bodyHtml+='<tr style="cursor:pointer;" onclick="togglePtGroup(`mo_grp_'+grpIdx+'`)" title="Hacer clic para expandir o contraer categoría">';
-    bodyHtml+='<td style="'+gTdPin+'left:0">'+grp.label+'</td>';
-    bodyHtml+='<td style="'+gTdPin+'left:120px"></td>';
+    bodyHtml+='<tr style="cursor:pointer;" onclick="togglePtGroup(`mo_grp_'+grpIdx+'`)" title="Clic para expandir/contraer">';
+    bodyHtml+='<td style="'+gTdPin+'left:0">▶ '+grp.label+'</td>';
     activeRanches.forEach(function(rn){
       weekKeys.forEach(function(key){
         bodyHtml+=cellGrp(grpByRnWk[rn][key]);
@@ -1576,8 +1574,7 @@ function renderManoObra() {
     scRows.forEach(function(sc){
       var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;';
       bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="Número de personas (Headcount)">';
-      bodyHtml+='<td style="'+tdPin+'left:0"></td>';
-      bodyHtml+='<td style="'+tdPin+'left:120px;color:#334155;font-size:11px"><span style="color:#888;font-size:9px;margin-right:4px;">👤</span>'+sc.label+'</td>';
+      bodyHtml+='<td style="'+tdPin+'left:0;padding-left:20px;color:#334155;font-size:11px"><span style="color:#888;font-size:9px;margin-right:4px;">👤</span>'+sc.label+'</td>';
       activeRanches.forEach(function(rn){
         weekKeys.forEach(function(key){
           var v=sc.hcByRnWk[rn][key];
@@ -1597,7 +1594,7 @@ function renderManoObra() {
   var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;';
   var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
   bodyHtml+='<tr>';
-  bodyHtml+='<td colspan="2" style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
+  bodyHtml+='<td style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
   activeRanches.forEach(function(rn){
     weekKeys.forEach(function(key){
       var v=grandByRnWk[rn][key];
