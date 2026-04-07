@@ -45,36 +45,38 @@ else:
       .stMainBlockContainer { padding-top: 0 !important; }
       section[data-testid="stSidebar"] { display: none !important; }
       
-      /* MAGIA SENIOR: Posicionar el botón nativo de Python SOBRE la barra azul del iframe */
+      /* Botón ⚙️ fijo al viewport — position:fixed garantiza visibilidad sobre cualquier iframe */
       div[data-testid="stButton"] {
-          position: absolute !important;
-          top: 6px !important;
-          right: 50px !important; /* Posición exacta antes del botón de refresco */
-          z-index: 999999 !important;
-          width: 32px !important;
+          position: fixed !important;
+          top: 5px !important;
+          right: 10px !important;
+          z-index: 2147483647 !important; /* max z-index del navegador */
+          width: auto !important;
+          pointer-events: auto !important;
       }
       div[data-testid="stButton"] button {
-          background-color: rgba(255,255,255,0.35) !important;
-          color: white !important;
-          border: 1px solid rgba(255,255,255,0.35) !important;
-          border-radius: 3px !important;
-          height: 24px !important;
-          min-height: 24px !important;
-          padding: 0 !important;
-          width: 32px !important;
+          background-color: #4472C4 !important;
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.4) !important;
+          border-radius: 4px !important;
+          height: 26px !important;
+          min-height: 26px !important;
+          padding: 0 10px !important;
           display: flex !important;
           justify-content: center !important;
           align-items: center !important;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
+          cursor: pointer !important;
       }
       div[data-testid="stButton"] button:hover {
-          background-color: rgba(255,255,255,0.55) !important;
-          border-color: transparent !important;
-          color: white !important;
+          background-color: #2563eb !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.35) !important;
       }
       div[data-testid="stButton"] button p {
-          font-size: 14px !important;
+          font-size: 13px !important;
           margin: 0 !important;
           line-height: 1 !important;
+          color: #ffffff !important;
       }
     </style>
     ''', unsafe_allow_html=True)
