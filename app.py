@@ -2060,7 +2060,6 @@ else:
                             resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
                         if resultado.get("ok"):
                             st.success(f"🎉 {resultado['mensaje']}")
-                            st.balloons()
                             st.cache_data.clear()
                         else:
                             st.error(f"❌ {resultado['error']}")
@@ -2208,7 +2207,6 @@ else:
                         # ok is None → no se subió archivo, no mostrar nada
 
                     if not hubo_error:
-                        st.balloons()
                         st.cache_data.clear()
                         st.info("💡 Recarga el dashboard para ver los nuevos datos.")
                     else:
