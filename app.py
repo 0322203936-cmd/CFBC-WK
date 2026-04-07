@@ -1479,9 +1479,10 @@ function renderManoObra() {
     var col=MO_RANCH_COLORS[rn]||RANCH_COLORS[rn]||'#374151';
     h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
   });
+  h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #4472C4;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
   h1+='</tr>';
 
-  // HEADER nivel 2: [por cada rancho: wk labels... | SUB]
+  // HEADER nivel 2: [por cada rancho: wk labels... | DIF] + TOTAL group
   var h2='<tr>';
   activeRanches.forEach(function(){
     weekKeys.forEach(function(key){
@@ -1492,6 +1493,14 @@ function renderManoObra() {
     });
     h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">DIF</th>';
   });
+  // Sub-headers del grupo TOTAL
+  weekKeys.forEach(function(key){
+    var d=weekMap[key];
+    var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+    var col=YEAR_COLORS[d._year]||'#888';
+    h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:70px;background:#EAF3FF">'+lbl+'</th>';
+  });
+  h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
   h2+='</tr>';
 
   // ── FILAS ─────────────────────────────────────────────
@@ -1565,8 +1574,19 @@ function renderManoObra() {
       var firstKey=weekKeys[0], lastKey=weekKeys[weekKeys.length-1];
       var costDif=Math.abs((grpByRnWk[rn][lastKey]||0)-(grpByRnWk[rn][firstKey]||0));
       var grpDifStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700';
-      bodyHtml+='<td style="'+grpDifStyle+'">'+(costDif?fmt(costDif):'—')+'</td>'; // DIF costo rancho
+      bodyHtml+='<td style="'+grpDifStyle+'">'+(costDif?fmt(costDif):'—')+'</td>';
     });
+    // Celdas TOTAL por semana (suma todos los ranchos)
+    var grpTotStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:#9DC3E6;color:#1e3a5f;font-weight:700;border-left:1px solid #8EA9C1;';
+    weekKeys.forEach(function(key){
+      var v=activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][key]||0);},0);
+      bodyHtml+='<td style="'+grpTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+    });
+    var grpTotDif=Math.abs(
+      activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[weekKeys.length-1]]||0);},0)-
+      activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[0]]||0);},0)
+    );
+    bodyHtml+='<td style="'+grpTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(grpTotDif?fmt(grpTotDif):'—')+'</td>';
     bodyHtml+='</tr>';
 
     // Filas subcat
@@ -1583,6 +1603,13 @@ function renderManoObra() {
         var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
         bodyHtml+='<td style="'+cellStyle+'">'+(sc.hcByRn[rn]?fmtHcDiff(sc.hcByRn[rn]):'—')+'</td>';
       });
+      // Celdas TOTAL HC por semana
+      var scTotHcStyle='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;background:#EAF3FF;color:#1e3a5f;font-weight:700;';
+      weekKeys.forEach(function(key){
+        var v=activeRanches.reduce(function(s,rn){return s+(sc.hcByRnWk[rn][key]||0);},0);
+        bodyHtml+='<td style="'+scTotHcStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+      });
+      bodyHtml+='<td style="'+scTotHcStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(sc.hcTotal?fmtHcDiff(sc.hcTotal):'—')+'</td>';
       bodyHtml+='</tr>';
     });
   });
@@ -1614,6 +1641,13 @@ function renderManoObra() {
     var rnDif=Math.abs((grandByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(grandByRnWk[rn][weekKeys[0]]||0));
     bodyHtml+='<td style="'+totStyle+'border-left:1px solid #aaa">'+(rnDif?fmt(rnDif):'—')+'</td>';
   });
+  var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  weekKeys.forEach(function(key){
+    var v=grandCostWk[key]||0;
+    bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+  });
+  var gtDif=Math.abs((grandCostWk[weekKeys[weekKeys.length-1]]||0)-(grandCostWk[weekKeys[0]]||0));
+  bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
   bodyHtml+='</tr>';
 
   // Fila TOTAL 👤
@@ -1626,6 +1660,12 @@ function renderManoObra() {
     });
     bodyHtml+=dashHc;
   });
+  var totHcTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  weekKeys.forEach(function(key){
+    var v=grandHcWk[key]||0;
+    bodyHtml+='<td style="'+totHcTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+  });
+  bodyHtml+='<td style="'+totHcTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">—</td>';
   bodyHtml+='</tr>';
 
   // ── Inyectar en el DOM ────────────────────────────────
