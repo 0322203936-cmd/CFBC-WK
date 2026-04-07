@@ -2579,8 +2579,20 @@ def insertar_hojas_pr_me_mp(
             prod = prod_c if prod_c else prod_n
             
             # Unidades y Gasto
-            unid = r[7]
-            gasto = r[9]
+            unid = str(r[7]).strip()
+            gasto = str(r[9]).strip()
+            
+            # Para evitar que filas 2 y 3 con "basura" pasen el filtro (metadatos de CONTPAQ), 
+            # aseguramos que unidades o gasto contengan un número real.
+            def is_num(v):
+                if not v: return False
+                try:
+                    float(v.replace(',', '').replace('$', '').strip())
+                    return True
+                except ValueError: return False
+                
+            if not is_num(unid) and not is_num(gasto):
+                continue
             
             cleaned.append([fecha, ubicacion_cln, prod, unid, gasto])
             
