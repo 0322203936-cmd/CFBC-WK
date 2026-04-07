@@ -1891,7 +1891,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         )
         # No es fatal si falla el reordenamiento
 
-        # ── 7. Intentar copiar fórmulas y valores de la semana anterior ─────────
+        # ── 7. Clonación Nativa de la Semana Anterior ─────────
         prev_wk_name = None
         import re
         m = re.search(r'\d+', nombre_hoja)
@@ -1899,35 +1899,38 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             num = int(m.group())
             prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
 
-        copied_data = None
         if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
-            # Traer fórmulas y formatos de número explícitamente de A1 hasta T250 para asegurar TODO el diseño
-            get_resp = requests.get(
-                f"{wb_url}/worksheets/{prev_wk_name}/range(address='A1:T250')?$select=formulas,numberFormat",
-                headers=hdrs, timeout=30
-            )
-            if get_resp.status_code == 200:
-                copied_data = get_resp.json()
-
-        if copied_data and "formulas" in copied_data:
-            # Pegar el bloque rígido exacto en A1
-            patch_resp = requests.patch(
-                f"{wb_url}/worksheets/{nombre_hoja}/range(address='A1:T250')",
-                headers=hdrs, 
-                json={
-                    "formulas": copied_data["formulas"],
-                    "numberFormat": copied_data.get("numberFormat", [])
-                }, 
+            # Enviar solicitud nativa de Excel Online para duplicar la pestaña al 100%
+            payload = {
+                "name": nombre_hoja,
+                "positionType": "Before",
+                "targetWorksheet": prev_wk_name
+            }
+            copy_resp = requests.post(
+                f"{wb_url}/worksheets/{prev_wk_name}/copy",
+                headers=hdrs,
+                json=payload,
                 timeout=60
             )
-            if patch_resp.status_code not in (200, 201):
-                return {"ok": False, "error": f"Error copiando de {prev_wk_name}: {patch_resp.text}"}
-
-            # Actualizar nombre de la semana en la celda B3
-            requests.patch(
-                f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
-                headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
-            )
+            
+            if copy_resp.status_code in (200, 201):
+                # Opcional: asegurar que queda en posición 0 (primera pestaña)
+                requests.patch(
+                    f"{wb_url}/worksheets/{nombre_hoja}",
+                    headers=hdrs,
+                    json={"position": 0},
+                    timeout=20
+                )
+                # Actualizar el texto del nombre de semana (Ej. "WK2613") en la celda B3
+                requests.patch(
+                    f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
+                    headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
+                )
+                
+                # ¡DETENEMOS AQUÍ! Si se clonó nativamente, terminamos el proceso de crear hoja.
+                return 180 
+            else:
+                return {"ok": False, "error": f"Fallo en clonación nativa de Microsoft: {copy_resp.text}"}
 
         else:
             # ── Alternativa: Escribir celdas desde cero (batchUpdate vía range) ───────────
