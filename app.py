@@ -41,11 +41,41 @@ else:
     <style>
       #MainMenu, header, footer { display: none !important; }
       .stApp { background: #f0f0f0; }
-      .block-container { padding: 0 !important; max-width: 100% !important; margin-top: -1rem !important; }
+      .block-container { position: relative; padding: 0 !important; max-width: 100% !important; margin-top: -1rem !important; }
       .stMainBlockContainer { padding-top: 0 !important; }
       section[data-testid="stSidebar"] { display: none !important; }
-      /* Subir el botón de automatización para que se fusione con el iframe */
-      div[data-testid="stButton"] { margin-top: 8px; margin-right: 15px; }
+      
+      /* MAGIA SENIOR: Posicionar el botón nativo de Python SOBRE la barra azul del iframe */
+      div[data-testid="stButton"] {
+          position: absolute !important;
+          top: 6px !important;
+          right: 50px !important; /* Posición exacta antes del botón de refresco */
+          z-index: 999999 !important;
+          width: 32px !important;
+      }
+      div[data-testid="stButton"] button {
+          background-color: rgba(255,255,255,0.35) !important;
+          color: white !important;
+          border: 1px solid rgba(255,255,255,0.35) !important;
+          border-radius: 3px !important;
+          height: 24px !important;
+          min-height: 24px !important;
+          padding: 0 !important;
+          width: 32px !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+      }
+      div[data-testid="stButton"] button:hover {
+          background-color: rgba(255,255,255,0.55) !important;
+          border-color: transparent !important;
+          color: white !important;
+      }
+      div[data-testid="stButton"] button p {
+          font-size: 14px !important;
+          margin: 0 !important;
+          line-height: 1 !important;
+      }
     </style>
     ''', unsafe_allow_html=True)
 
@@ -365,6 +395,8 @@ APP_HTML_BODY = """
   <div class="app-hdr">
     <div class="hdr-brand">CFBC &#9656; CONTROL SEMANAL</div>
     <button class="hdr-btn" onclick="exportCSV()" style="margin-left:auto">&#11015; CSV</button>
+    <!-- Agujero invisible donde aterrizará nuestro botón flotante de Python -->
+    <div style="width: 32px; height: 24px; margin-left:4px;"></div>
     <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">&#8635;</button>
   </div>
 
@@ -1945,10 +1977,8 @@ except ImportError:
 
 if not st.session_state.show_auto:
     # ==== MODO DASHBOARD ====
-    # Agregamos el botón arriba a la derecha
-    col_empty, col_btn = st.columns([0.88, 0.12])
-    with col_btn:
-        st.button("⚙️ Automatización", on_click=toggle_auto, use_container_width=True)
+    # Este botón quedará invisiblemente anclado a la barra azul gracias al CSS Overlay
+    st.button("⚙️", on_click=toggle_auto, help="Abrir Panel de Automatización")
         
     # Renderizamos el iframe
     components.html(html_final, height=900, scrolling=False)
