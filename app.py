@@ -1221,17 +1221,17 @@ function renderServicios() {
   var thPin =thBase+'position:sticky;top:0;z-index:4;';
   var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
 
-  // ── Header nivel 1: CONCEPTO | [Ranch colspan=nColsPerRanch] ... | TOTAL ──
+  // ── Header nivel 1: CONCEPTO | [Ranch colspan=nColsPerRanch] ... | TOTAL group ──
   var h1='<tr>';
   h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:190px">CONCEPTO</th>';
   activeRanches.forEach(function(rn){
     var col=RANCH_COLORS[rn]||'#888';
     h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
   });
-  h1+='<th rowspan="2" style="'+thScroll+'border-left:2px solid #4472C4;min-width:100px;background:#9DC3E6">TOTAL</th>';
+  h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #4472C4;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
   h1+='</tr>';
 
-  // ── Header nivel 2: por cada rancho → [wk labels... | SUB] ──
+  // ── Header nivel 2: por cada rancho → [wk labels... | DIF] + TOTAL group ──
   var h2='<tr>';
   activeRanches.forEach(function(){
     weekKeys.forEach(function(key){
@@ -1242,16 +1242,23 @@ function renderServicios() {
     });
     h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">DIF</th>';
   });
+  weekKeys.forEach(function(key){
+    var d=weekMap[key];
+    var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+    var col=YEAR_COLORS[d._year]||'#888';
+    h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:70px;background:#EAF3FF">'+lbl+'</th>';
+  });
+  h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
   h2+='</tr>';
 
   // ── Acumuladores totales ──────────────────────────────
   var grandByRnWk={}, grandByRn={}, grandTotal=0;
-  var grandHcByRnWk={};
+  var grandTotWk={};
   activeRanches.forEach(function(rn){
     grandByRnWk[rn]={}; grandByRn[rn]=0;
-    grandHcByRnWk[rn]={};
-    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; grandHcByRnWk[rn][k]=0; });
+    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; });
   });
+  weekKeys.forEach(function(k){ grandTotWk[k]=0; });
 
   function cell(v,bold,color){
     if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">—</td>';
@@ -1264,7 +1271,8 @@ function renderServicios() {
   // ── Filas por subcat ──────────────────────────────────
   var bodyHtml='';
   orderedSubcats.forEach(function(sc){
-    var scByRnWk={}, scByRn={}, scTotal=0;
+    var scByRnWk={}, scByRn={}, scTotal=0, scByWk={};
+    weekKeys.forEach(function(k){ scByWk[k]=0; });
     activeRanches.forEach(function(rn){
       scByRnWk[rn]={}; scByRn[rn]=0;
       weekKeys.forEach(function(k){
@@ -1272,9 +1280,11 @@ function renderServicios() {
         scByRnWk[rn][k]=v;
         scByRn[rn]+=v;
         scTotal+=v;
+        scByWk[k]+=v;
         grandByRnWk[rn][k]+=v;
         grandByRn[rn]+=v;
         grandTotal+=v;
+        grandTotWk[k]+=v;
       });
     });
     if(scTotal===0) return;
@@ -1288,15 +1298,20 @@ function renderServicios() {
         if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
         else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#334155;font-weight:600">'+fmt(v)+'</td>';}
       });
-      // SUB rancho
       bodyHtml+=cell(scByRn[rn],true,'#1e3a5f');
     });
-    // TOTAL fila
-    bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:#1e3a5f;border-left:2px solid #4472C4">'+fmt(scTotal)+'</td>';
+    // Celdas TOTAL por semana
+    var totCellStyle='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;background:#EAF3FF;font-weight:700;color:#1e3a5f;';
+    weekKeys.forEach(function(key){
+      var v=scByWk[key];
+      bodyHtml+='<td style="'+totCellStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+    });
+    var scDif=Math.abs((scByWk[weekKeys[weekKeys.length-1]]||0)-(scByWk[weekKeys[0]]||0));
+    bodyHtml+='<td style="'+totCellStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(scDif?fmt(scDif):'—')+'</td>';
     bodyHtml+='</tr>';
   });
 
-  // ── Fila total general ────────────────────────────────
+  // ── Fila TOTAL GENERAL ────────────────────────────────
   var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;';
   var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
   bodyHtml+='<tr>';
@@ -1308,7 +1323,13 @@ function renderServicios() {
     });
     bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:1px solid #aaa">'+(grandByRn[rn]?fmt(grandByRn[rn]):'—')+'</td>';
   });
-  bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
+  var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  weekKeys.forEach(function(key){
+    var v=grandTotWk[key]||0;
+    bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+  });
+  var gtDif=Math.abs((grandTotWk[weekKeys[weekKeys.length-1]]||0)-(grandTotWk[weekKeys[0]]||0));
+  bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
   bodyHtml+='</tr>';
 
   // ── Inyectar en el DOM ────────────────────────────────
