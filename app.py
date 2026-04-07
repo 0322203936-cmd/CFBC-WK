@@ -480,6 +480,12 @@ function fmtHc(n) {
   if (!n || isNaN(n) || n === 0) return '';
   return Math.round(n).toLocaleString('en-US');
 }
+function fmtHcDiff(n) {
+  if (n === null || n === undefined || isNaN(n) || n === 0) return '—';
+  var sign = n > 0 ? '+' : '';
+  var color = n > 0 ? '#16a34a' : '#dc2626';
+  return '<span style="color:'+color+';font-weight:700">'+sign+Math.round(n).toLocaleString('en-US')+"</span>";
+}
 function wFmt(n) { return 'W' + String(n).padStart(2,'0'); }
 function recargar() { window.location.reload(); }
 
@@ -1529,8 +1535,6 @@ function renderManoObra() {
           scByRn[rn]+=val;
           scTotal+=val;
           hcByRnWk[rn][k]=hc_val;
-          hcByRn[rn]+=hc_val;
-          hcTotal+=hc_val;
           grpByRnWk[rn][k]+=val;
           grpByRn[rn]+=val;
           grpTotal+=val;
@@ -1538,7 +1542,12 @@ function renderManoObra() {
           grandByRn[rn]+=val;
           grandTotal+=val;
         });
+        // SUB HC = ultima semana - primera semana del rango
+        var firstKey=weekKeys[0], lastKey=weekKeys[weekKeys.length-1];
+        hcByRn[rn]=(hcByRnWk[rn][lastKey]||0)-(hcByRnWk[rn][firstKey]||0);
       });
+      // hcTotal = suma de diferencias por rancho
+      hcTotal=activeRanches.reduce(function(s,rn){return s+(hcByRn[rn]||0);},0);
       if(scTotal>0) scRows.push({label:shortLabel(sc),byRnWk:scByRnWk,byRn:scByRn,total:scTotal, hcByRnWk:hcByRnWk, hcByRn:hcByRn, hcTotal:hcTotal});
     });
     if(grpTotal===0) return;
@@ -1570,10 +1579,10 @@ function renderManoObra() {
           else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#475569;font-weight:600">'+fmtHc(v)+'</td>';}
         });
         var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
-        bodyHtml+='<td style="'+cellStyle+'">'+(sc.hcByRn[rn]?fmtHc(sc.hcByRn[rn]):'—')+'</td>';
+        bodyHtml+='<td style="'+cellStyle+'">'+(sc.hcByRn[rn]?fmtHcDiff(sc.hcByRn[rn]):'—')+'</td>';
       });
       var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
-      bodyHtml+='<td style="'+cellStyle+'border-left:2px solid #4472C4">'+(sc.hcTotal?fmtHc(sc.hcTotal):'—')+'</td>';
+      bodyHtml+='<td style="'+cellStyle+'border-left:2px solid #4472C4">'+(sc.hcTotal?fmtHcDiff(sc.hcTotal):'—')+'</td>';
       bodyHtml+='</tr>';
     });
   });
