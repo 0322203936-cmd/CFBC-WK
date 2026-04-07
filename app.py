@@ -36,47 +36,76 @@ if st.session_state.show_auto:
     </style>
     ''', unsafe_allow_html=True)
 else:
-    # CSS para el Dashboard (Full screen, sin márgenes)
+    # CSS para el Dashboard — header nativo de Streamlit, sin trucos de iframe
     st.markdown('''
     <style>
       #MainMenu, header, footer { display: none !important; }
       .stApp { background: #f0f0f0; }
-      .block-container { position: relative; padding: 0 !important; max-width: 100% !important; margin-top: -1rem !important; }
+      .block-container { padding: 0 !important; max-width: 100% !important; margin-top: 0 !important; }
       .stMainBlockContainer { padding-top: 0 !important; }
       section[data-testid="stSidebar"] { display: none !important; }
-      
-      /* Botón ⚙️ fijo al viewport — position:fixed garantiza visibilidad sobre cualquier iframe */
-      div[data-testid="stButton"] {
-          position: fixed !important;
-          top: 5px !important;
-          right: 10px !important;
-          z-index: 2147483647 !important; /* max z-index del navegador */
-          width: auto !important;
-          pointer-events: auto !important;
-      }
-      div[data-testid="stButton"] button {
-          background-color: #4472C4 !important;
-          color: #ffffff !important;
-          border: 1px solid rgba(255,255,255,0.4) !important;
-          border-radius: 4px !important;
-          height: 26px !important;
-          min-height: 26px !important;
+
+      /* ── HEADER NATIVO: columnas de Streamlit que contienen #cfbc-brand ── */
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) {
+          background: #4472C4 !important;
+          border-bottom: 3px solid #16a34a !important;
+          min-height: 36px !important;
+          max-height: 36px !important;
           padding: 0 10px !important;
-          display: flex !important;
-          justify-content: center !important;
           align-items: center !important;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
+          overflow: hidden !important;
+          gap: 4px !important;
+          margin: 0 !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) > [data-testid="stColumn"] {
+          padding: 0 2px !important;
+          display: flex !important;
+          align-items: center !important;
+      }
+      /* Texto de marca */
+      #cfbc-brand {
+          color: #ffffff;
+          font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          white-space: nowrap;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) p {
+          margin: 0 !important; padding: 0 !important; line-height: 36px !important;
+      }
+      /* Botones dentro del header nativo */
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] {
+          width: 100% !important;
+          display: flex !important;
+          justify-content: flex-end !important;
+          align-items: center !important;
+          padding: 0 !important;
+          margin: 0 !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button {
+          background: rgba(255,255,255,0.2) !important;
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.35) !important;
+          border-radius: 3px !important;
+          height: 24px !important;
+          min-height: 24px !important;
+          padding: 0 10px !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          white-space: nowrap !important;
           cursor: pointer !important;
+          width: auto !important;
       }
-      div[data-testid="stButton"] button:hover {
-          background-color: #2563eb !important;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.35) !important;
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button:hover {
+          background: rgba(255,255,255,0.38) !important;
       }
-      div[data-testid="stButton"] button p {
-          font-size: 13px !important;
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button p {
+          color: #ffffff !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
           margin: 0 !important;
           line-height: 1 !important;
-          color: #ffffff !important;
       }
     </style>
     ''', unsafe_allow_html=True)
@@ -158,30 +187,7 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .load-txt { font-size: 12px; color: #666; letter-spacing: 0.5px; }
 
-/* ── HEADER ─────────────────────────────────── */
-.app-hdr {
-  background: #4472C4;
-  border-bottom: 3px solid var(--green);
-  padding: 5px 10px;
-  display: flex; align-items: center; gap: 0;
-  height: 36px; overflow: hidden;
-}
-.hdr-brand {
-  color: #ffffff; font-size: 12px; font-weight: 700;
-  letter-spacing: 1px; white-space: nowrap;
-  padding-right: 12px; border-right: 1px solid rgba(255,255,255,0.3);
-  flex-shrink: 0;
-}
-.hdr-btn {
-  margin-left: auto; flex-shrink: 0;
-  font-size: 10px; font-weight: 700;
-  background: rgba(255,255,255,0.35);
-  border: 1px solid rgba(255,255,255,0.35);
-  border-radius: 3px; padding: 3px 10px; cursor: pointer;
-  color: #ffffff; height: 24px;
-  transition: background 0.1s; white-space: nowrap;
-}
-.hdr-btn:hover { background: rgba(255,255,255,0.55); }
+/* ── HEADER: ahora es nativo de Streamlit, no del iframe ─────────────── */
 
 /* ── TOOLBAR ─────────────────────────────────── */
 .toolbar {
@@ -257,8 +263,8 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .pt-table-wrap {
   overflow: auto;
   width: 100%;
-  /* 36px header + 28px toolbar + 26px range-bar + 28px view-tabs = 118px aprox */
-  max-height: calc(100vh - 118px);
+  /* 28px toolbar + 28px view-tabs + 26px range-bar = 82px (header movido a Streamlit) */
+  max-height: calc(100vh - 82px);
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
@@ -393,14 +399,6 @@ APP_HTML_BODY = """
 <!-- APP -->
 <div id="app" style="display:none">
 
-  <!-- HEADER -->
-  <div class="app-hdr">
-    <div class="hdr-brand">CFBC &#9656; CONTROL SEMANAL</div>
-    <button class="hdr-btn" onclick="exportCSV()" style="margin-left:auto">&#11015; CSV</button>
-    <!-- Agujero invisible donde aterrizará nuestro botón flotante de Python -->
-    <div style="width: 32px; height: 24px; margin-left:4px;"></div>
-    <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">&#8635;</button>
-  </div>
 
   <!-- TOOLBAR -->
   <div class="toolbar">
@@ -423,6 +421,8 @@ APP_HTML_BODY = """
     <div class="tb-sep"></div>
     <span class="tb-label">Años</span>
     <div id="yearChips" style="display:flex;gap:3px"></div>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" onclick="exportCSV()" title="Exportar a CSV" style="flex-shrink:0">&#11015; CSV</button>
   </div>
 
   <!-- VIEW TABS -->
@@ -1979,11 +1979,19 @@ except ImportError:
 
 if not st.session_state.show_auto:
     # ==== MODO DASHBOARD ====
-    # Este botón quedará invisiblemente anclado a la barra azul gracias al CSS Overlay
-    st.button("⚙️", on_click=toggle_auto, help="Abrir Panel de Automatización")
-        
-    # Renderizamos el iframe
-    components.html(html_final, height=900, scrolling=False)
+    # Header nativo de Streamlit — mismo color #4472C4, botones reales sin trucos de z-index
+    col_brand, col_reload, col_auto = st.columns([10, 1, 1])
+    with col_brand:
+        st.markdown('<span id="cfbc-brand">CFBC &#9656; CONTROL SEMANAL</span>', unsafe_allow_html=True)
+    with col_reload:
+        if st.button("⟳ Recargar", key="btn_reload", help="Recargar datos desde SharePoint"):
+            st.cache_data.clear()
+            st.rerun()
+    with col_auto:
+        st.button("⚙️ Auto", key="btn_auto", on_click=toggle_auto, help="Panel de Automatización")
+
+    # iframe sin header propio (36px ya los ocupa el header nativo de arriba)
+    components.html(html_final, height=864, scrolling=False)
 
 else:
     # ==== MODO PANEL DE AUTOMATIZACIÓN ====
