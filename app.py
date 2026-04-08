@@ -118,11 +118,11 @@ else:
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_data_conteo_v5():
+def load_data_conteo_v6():
     return get_datos()
 
 try:
-    DATA = load_data_conteo_v5()
+    DATA = load_data_conteo_v6()
 except Exception as e:
     st.error(f"❌ Error cargando datos: {e}")
     st.stop()
