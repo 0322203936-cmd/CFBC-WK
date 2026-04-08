@@ -72,6 +72,23 @@ CATEGORIAS_ORDEN = [
     "COSTO MANO DE OBRA",
 ]
 
+WK_MXN_RANCH_COLS = {
+    "Prop-RM": "D",
+    "PosCo-RM": "E",
+    "Campo-RM": "F",
+    "Isabela": "G",
+    "Christina": "H",
+    "Cecilia": "I",
+    "Cecilia 25": "J",
+}
+
+WK_MATERIAL_AUTOFILL = {
+    "FERTILIZANTES": {"row": 15, "prefix": "PR", "tipo": "MIRFE"},
+    "DESINFECCION / PLAGUICIDAS": {"row": 16, "prefix": "PR", "tipo": "MIPE"},
+    "MANTENIMIENTO": {"row": 17, "prefix": "MP", "tipo": None},
+    "MATERIAL DE EMPAQUE": {"row": 20, "prefix": "ME", "tipo": None},
+}
+
 SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
 
 
@@ -378,6 +395,42 @@ def _fetch_desde_sharepoint(prefix: str, parser_fn, label: str) -> tuple[dict, d
         print(f"   📦 {prefix}{code} ranchos detectados: {list(parsed.keys())}")
 
     return datos, debug
+
+
+def _normalizar_week_code(week_code: str) -> str:
+    code = str(week_code or "").strip().upper()
+    if code.startswith("WK"):
+        code = code[2:]
+    return code
+
+
+def _buscar_hoja_por_prefijo(sheet_names: list[str], prefix: str, week_code: str) -> str | None:
+    code = _normalizar_week_code(week_code)
+    pat = re.compile(rf'^{prefix}\s*{re.escape(code)}$', re.IGNORECASE)
+    for sname in sheet_names:
+        if pat.match(str(sname).strip()):
+            return str(sname).strip()
+    return None
+
+
+def _sumar_gasto_por_rancho(parsed: dict, tipo: str | None = None) -> tuple[dict, dict]:
+    totales = {rancho: 0.0 for rancho in WK_MXN_RANCH_COLS}
+    omitidos = {}
+    for rancho, by_tipo in (parsed or {}).items():
+        subtotal = 0.0
+        tipos = [tipo] if tipo else list((by_tipo or {}).keys())
+        for tipo_name in tipos:
+            for item in (by_tipo or {}).get(tipo_name, []):
+                try:
+                    subtotal += float(str(item[2]).replace(",", ""))
+                except Exception:
+                    continue
+        subtotal = round(subtotal, 2)
+        if rancho in totales:
+            totales[rancho] = round(totales[rancho] + subtotal, 2)
+        elif subtotal:
+            omitidos[rancho] = round(omitidos.get(rancho, 0.0) + subtotal, 2)
+    return totales, omitidos
 
 
 # ─── Extractor principal ──────────────────────────────────────────────────────
@@ -2292,6 +2345,157 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
     return {
         "ok": True,
         "mensaje": f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint.",
+    }
+
+
+def autorrellenar_materiales_wk(week_code: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
+    """
+    Autorrellena las filas de materiales en MN por rancho para una WK existente.
+
+    Categorías soportadas:
+    - FERTILIZANTES                  <- PR#### tipo MIRFE
+    - DESINFECCION / PLAGUICIDAS     <- PR#### tipo MIPE
+    - MANTENIMIENTO                  <- MP#### total por rancho
+    - MATERIAL DE EMPAQUE            <- ME#### total por rancho
+    """
+    import base64 as _b64
+
+    code = _normalizar_week_code(week_code)
+    if not (code.isdigit() and len(code) == 4):
+        return {"ok": False, "error": "El código de semana debe ser exactamente 4 dígitos (ej: 2614)."}
+
+    nombre_hoja = f"WK{code}"
+
+    archivo = _descargar_excel(SHAREPOINT_URL_PR, "Excel PR/MP/ME")
+    if archivo is None:
+        return {"ok": False, "error": "No se pudo descargar el Excel de PR/MP/ME desde SharePoint."}
+
+    try:
+        xls = pd.ExcelFile(archivo)
+    except Exception as e:
+        return {"ok": False, "error": f"No se pudo abrir el Excel de PR/MP/ME: {e}"}
+
+    resumen = {}
+    fuentes_ok = []
+    fuentes_faltantes = []
+    omitidos = {}
+
+    for categoria, cfg in WK_MATERIAL_AUTOFILL.items():
+        prefix = cfg["prefix"]
+        tipo = cfg["tipo"]
+        sheet_name = _buscar_hoja_por_prefijo(xls.sheet_names, prefix, code)
+        if not sheet_name:
+            resumen[categoria] = {"row": cfg["row"], "totales": {rn: 0.0 for rn in WK_MXN_RANCH_COLS}}
+            missing_name = f"{prefix}{code}"
+            if missing_name not in fuentes_faltantes:
+                fuentes_faltantes.append(missing_name)
+            continue
+
+        vals = _leer_hoja(xls, sheet_name, rango_filas=500, rango_cols=11)
+        parsed = _parse_generic(vals)
+        totales, omitidos_cat = _sumar_gasto_por_rancho(parsed, tipo=tipo)
+        resumen[categoria] = {"row": cfg["row"], "totales": totales}
+        if sheet_name not in fuentes_ok:
+            fuentes_ok.append(sheet_name)
+        if omitidos_cat:
+            omitidos[categoria] = omitidos_cat
+
+    if not fuentes_ok:
+        return {
+            "ok": False,
+            "error": f"No se encontraron las hojas PR{code}, MP{code} ni ME{code} en el Excel fuente.",
+        }
+
+    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    token_resp = requests.post(token_url, data={
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "scope": "https://graph.microsoft.com/.default",
+    }, timeout=20)
+    if token_resp.status_code != 200:
+        return {"ok": False, "error": f"Error obteniendo token: {token_resp.text[:300]}"}
+
+    token = token_resp.json().get("access_token")
+    hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip("=")
+    encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
+    res = requests.get(
+        f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem",
+        headers=hdrs_json,
+        timeout=20,
+    )
+    if res.status_code != 200:
+        return {"ok": False, "error": f"No se pudo resolver el archivo WK: {res.text[:300]}"}
+
+    item = res.json()
+    drive_id = item.get("parentReference", {}).get("driveId")
+    item_id = item.get("id")
+    if not drive_id or not item_id:
+        return {"ok": False, "error": "No se pudo obtener driveId o itemId del Excel WK."}
+
+    wb_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
+    sess_resp = requests.post(
+        f"{wb_url}/createSession",
+        headers=hdrs_json,
+        json={"persistChanges": True},
+        timeout=30,
+    )
+    if sess_resp.status_code not in (200, 201):
+        return {"ok": False, "error": f"Error abriendo sesión del workbook WK: {sess_resp.text[:300]}"}
+
+    session_id = sess_resp.json().get("id")
+    hdrs = {**hdrs_json, "workbook-session-id": session_id}
+
+    try:
+        sheets_resp = requests.get(f"{wb_url}/worksheets", headers=hdrs, timeout=20)
+        if sheets_resp.status_code != 200:
+            return {"ok": False, "error": f"Error listando hojas WK: {sheets_resp.text[:300]}"}
+
+        target_sheet = None
+        normalized_target = nombre_hoja.replace(" ", "").upper()
+        for ws in sheets_resp.json().get("value", []):
+            ws_name = str(ws.get("name", "")).strip()
+            if ws_name.replace(" ", "").upper() == normalized_target:
+                target_sheet = ws_name
+                break
+
+        if not target_sheet:
+            return {"ok": False, "error": f"La hoja '{nombre_hoja}' no existe en el Excel WK."}
+
+        cols = list(WK_MXN_RANCH_COLS.values())
+        for categoria, info in resumen.items():
+            row = info["row"]
+            values = [[info["totales"].get(rn, 0.0) for rn in WK_MXN_RANCH_COLS]]
+            patch_resp = requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='D{row}:J{row}')",
+                headers=hdrs,
+                json={"values": values},
+                timeout=30,
+            )
+            if patch_resp.status_code not in (200, 201):
+                return {
+                    "ok": False,
+                    "error": f"No se pudo escribir {categoria} en {target_sheet}: {patch_resp.text[:300]}",
+                }
+
+    finally:
+        requests.post(f"{wb_url}/closeSession", headers=hdrs, timeout=20)
+
+    fuentes_txt = ", ".join(fuentes_ok) if fuentes_ok else "ninguna"
+    faltantes_txt = f" Faltantes: {', '.join(fuentes_faltantes)}." if fuentes_faltantes else ""
+    omitidos_txt = ""
+    if omitidos:
+        partes = []
+        for categoria, datos in omitidos.items():
+            ranchos = ", ".join(f"{rn}={round(val, 2)}" for rn, val in datos.items())
+            partes.append(f"{categoria}: {ranchos}")
+        omitidos_txt = f" Ranchos omitidos sin columna WK: {' | '.join(partes)}."
+
+    return {
+        "ok": True,
+        "mensaje": f"Materiales MN autorrellenados en '{nombre_hoja}'. Fuentes: {fuentes_txt}.{faltantes_txt}{omitidos_txt}",
     }
 
 
