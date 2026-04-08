@@ -2186,7 +2186,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             "B": 69.4,
             "C": 14,
             "D": 11, "E": 11, "F": 11, "G": 11, "H": 11, "I": 11, "J": 11,
-            "K": 3,
+            "K": 11,
             "L": 11, "M": 11, "N": 11, "O": 11, "P": 11, "Q": 11, "R": 11, "S": 11, "T": 11, "U": 11,
         }
         for col_letter, width in column_widths.items():
