@@ -1911,8 +1911,21 @@ window.addEventListener('resize', resizeTable);
 // HEIGHT REPORTING
 // =======================================================
 function reportHeight() {
-  var h = window.innerHeight || document.documentElement.clientHeight || 700;
-  window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h,700)},'*');
+  var body = document.body || {};
+  var docEl = document.documentElement || {};
+  var appEl = document.getElementById('app');
+  var h = Math.max(
+    window.innerHeight || 0,
+    docEl.clientHeight || 0,
+    docEl.scrollHeight || 0,
+    docEl.offsetHeight || 0,
+    body.scrollHeight || 0,
+    body.offsetHeight || 0,
+    appEl ? appEl.scrollHeight : 0,
+    appEl ? appEl.offsetHeight : 0,
+    700
+  );
+  window.parent.postMessage({type:'streamlit:setFrameHeight',height:h},'*');
 }
 var ro=new ResizeObserver(reportHeight);
 ro.observe(document.getElementById('app')||document.body);
