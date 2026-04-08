@@ -24,8 +24,8 @@ SHAREPOINT_URL_WK = (
 # Archivo secundario: hojas PR####, MP####, ME####
 SHAREPOINT_URL_PR = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "jesus_sandoval_cfbc_co/IQCecMwUnigFQa1m-0AYEw-rAcDdYtnvXcPBELJi4oSstRc?e=9vbjA7"
-)                 
+    "jesus_sandoval_cfbc_co/IQCecMwUnigFQa1m-0AYEw-rAenSSKPasiHLi1p2cqtPHkc?e=wpBfv7"
+)
 
 # Conteo de personal (Mano de Obra)
 SHAREPOINT_URL_CONTEO = (
@@ -266,7 +266,7 @@ def _parse_generic(rows: list) -> dict:
         ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
         ubicacion = re.sub(r'\s+', '', ubicacion)
 
-        if not ubicacion or len(ubicacion) < 3:
+        if not ubicacion or len(ubicacion) < 6:
             continue
         if not re.match(r'^[A-Z0-9]+$', ubicacion):
             continue
@@ -278,7 +278,7 @@ def _parse_generic(rows: list) -> dict:
             rancho = 'Prop-RM'
 
         if not rancho:
-            rancho = 'Genérico-' + ranch_code
+            continue
 
         tipo = 'MIPE' if 'MIP' in ubicacion else 'MIRFE'
 
@@ -1860,91 +1860,45 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     session_id = sess_resp.json().get('id')
     hdrs = {**hdrs_json, "workbook-session-id": session_id}
-    success_msg = f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint."
 
     try:
         # ── 4. Verificar que la hoja no exista ────────────────────────────
         sheets_resp = requests.get(f'{wb_url}/worksheets', headers=hdrs, timeout=20)
         if sheets_resp.status_code != 200:
             return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
-        sheets_data = sheets_resp.json().get('value', [])
-
-        def _norm_name(name: str | None) -> str:
-            if not name:
-                return ""
-            return re.sub(r'\s+', '', name).upper()
-
-        target_norm = _norm_name(nombre_hoja)
-        nombres = [h.get('name', '').strip() for h in sheets_data]
-        norm_names = [_norm_name(n) for n in nombres]
-        if target_norm in norm_names:
+        nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
+        if nombre_hoja.upper() in [n.upper() for n in nombres]:
             return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
 
-        prev_wk_name = None
-        prev_position = None
-        prev_sheet_id = None
-        m_prev = re.search(r'\d+', nombre_hoja)
-        if m_prev:
-            num = int(m_prev.group())
-            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
-            prev_norm = _norm_name(prev_wk_name)
-            for sheet in sheets_data:
-                sheet_name = sheet.get('name', '').strip()
-                if _norm_name(sheet_name) == prev_norm:
-                    prev_position = sheet.get('position')
-                    prev_sheet_id = sheet.get('id')
-                    break
+        # ── 5. Crear la hoja nueva ────────────────────────────────────────
+        add_resp = requests.post(
+            f'{wb_url}/worksheets/add',
+            headers=hdrs,
+            json={"name": nombre_hoja},
+            timeout=20,
+        )
+        if add_resp.status_code not in (200, 201):
+            return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
 
-        # ── 5. Crear o clonar la hoja nueva ───────────────────────────────
-        used_sheet_clone = False
-        ws_id = None
-
-        if prev_sheet_id:
-            copy_resp = requests.post(
-                f'{wb_url}/worksheets/{prev_sheet_id}/copy',
-                headers=hdrs,
-                json={"name": nombre_hoja},
-                timeout=60,
-            )
-            if copy_resp.status_code in (200, 201):
-                ws_id = copy_resp.json().get('id', nombre_hoja)
-                used_sheet_clone = True
-
-        if not used_sheet_clone:
-            add_resp = requests.post(
-                f'{wb_url}/worksheets/add',
-                headers=hdrs,
-                json={"name": nombre_hoja},
-                timeout=20,
-            )
-            if add_resp.status_code not in (200, 201):
-                return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
-            ws_id = add_resp.json().get('id', nombre_hoja)
-
-        target_position = None
-        if prev_position is not None:
-            target_position = prev_position + 1
-
-        if target_position is not None:
-            requests.patch(
-                f'{wb_url}/worksheets/{nombre_hoja}',
-                headers=hdrs,
-                json={"position": target_position},
-                timeout=20,
-            )
-
-        if used_sheet_clone:
-            requests.patch(
-                f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
-                headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
-            )
-            clone_src = prev_wk_name or ""
-            print(f"✅ Hoja clonada desde {clone_src} → {nombre_hoja}")
-            return {"ok": True, "mensaje": success_msg}
+        ws_id = add_resp.json().get('id', nombre_hoja)
+        # ── 6. Mover al inicio (posición 0) ───────────────────────
+        requests.patch(
+            f'{wb_url}/worksheets/{nombre_hoja}',
+            headers=hdrs,
+            json={"position": 0},
+            timeout=20,
+        )
 
         # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
+        import re
+        prev_wk_name = None
+        m = re.search(r'\d+', nombre_hoja)
+        if m:
+            num = int(m.group())
+            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
+
         copied_data = None
-        if prev_wk_name and _norm_name(prev_wk_name) in norm_names:
+        if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
             # Traer fórmulas y formatos de número explícitamente de A1 hasta Z1500
             try:
                 get_resp = requests.get(
@@ -2337,7 +2291,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     return {
         "ok": True,
-        "mensaje": success_msg,
+        "mensaje": f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint.",
     }
 
 
@@ -2654,7 +2608,7 @@ def insertar_hojas_pr_me_mp(
             ubicacion = str(r[2]).strip().upper()
             ubicacion_cln = re.sub(r'\s+', '', ubicacion)
             
-            if not ubicacion_cln or len(ubicacion_cln) < 3:
+            if not ubicacion_cln or len(ubicacion_cln) < 5:
                 continue
             if not re.match(r'^[A-Z0-9]+$', ubicacion_cln):
                 continue
