@@ -1893,9 +1893,15 @@ function showProdPanel(rowData, opts) {
     // Siempre reemplazar el panel (evitar que datos viejos bloqueen la vista)
     _prodViews = [panelHtml];
     
-    document.getElementById('prodPanel').className='show';
+    var pp = document.getElementById('prodPanel');
+    pp.className='show';
     document.getElementById('prodTableWrap').innerHTML = panelHtml;
-    setTimeout(resizeTable,80);
+    
+    // Forzar el tamaño y hacer scroll hacia el panel para que no quede oculto abajo:
+    setTimeout(function() {
+      resizeTable();
+      pp.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }, 150);
 
   } catch(err) {
     document.getElementById('prodPanel').className='show';
@@ -1917,8 +1923,10 @@ window.addEventListener('resize', resizeTable);
 // HEIGHT REPORTING
 // =======================================================
 function reportHeight() {
-  var h = window.innerHeight || document.documentElement.clientHeight || 700;
-  window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h,700)},'*');
+  // Use scrollHeight to allow expanding when prodPanel appears
+  var h = document.documentElement.scrollHeight || document.body.scrollHeight || 700;
+  // Añadimos un pequeño margen por si el panel añade boxShadow u overflow
+  window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h + 20, 700)},'*');
 }
 var ro=new ResizeObserver(reportHeight);
 ro.observe(document.getElementById('app')||document.body);
