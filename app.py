@@ -781,8 +781,10 @@ function inicializar() {
 function buildCatSelect() {
   var el = document.getElementById('catSel');
   el.innerHTML = DATA.categories.map(function(c){
-    return '<option value="'+c.replace(/"/g,'&quot;')+'"'+(c===state.cat?' selected':'')+'>'+c+'</option>';
+    var hasData = categoryHasData(c);
+    return '<option value="'+c.replace(/"/g,'&quot;')+'"'+(c===state.cat?' selected':'')+' style="color:'+(hasData?'#222':'#dc2626')+';font-weight:'+(hasData?'400':'700')+';">'+c+'</option>';
   }).join('');
+  el.style.color = categoryHasData(state.cat) ? '#222' : '#dc2626';
 }
 function buildYearChips() {
   var el = document.getElementById('yearChips');
@@ -795,12 +797,33 @@ function buildYearChips() {
 function updateWeekControls() {
   // weekSlider y weekLabel eliminados del toolbar — no-op
 }
+function rowHasData(rec) {
+  if (!rec) return false;
+  return Math.abs(rec.mxn_total||0) > 0 || Math.abs(rec.usd_total||0) > 0 || Math.abs(rec.hc_total||0) > 0;
+}
+function categoryHasData(cat) {
+  var years = getActiveYears();
+  var fromW = state.fromWeek || 1;
+  var toW   = state.toWeek   || 52;
+  if (!cat || !years.length) return false;
+  function inScope(rec) {
+    return years.indexOf(rec.year) > -1 && rec.week >= fromW && rec.week <= toW;
+  }
+  if (cat === 'COSTO MANO DE OBRA') {
+    return (DATA.mano_obra_data || []).some(function(rec){ return inScope(rec) && rowHasData(rec); });
+  }
+  if (cat === 'COSTO SERVICIOS') {
+    if ((DATA.servicios_data || []).some(function(rec){ return inScope(rec) && rowHasData(rec); })) return true;
+  }
+  return (DATA.weekly_detail || []).some(function(rec){ return rec.categoria === cat && inScope(rec) && rowHasData(rec); });
+}
 
 // =======================================================
 // EVENTS
 // =======================================================
 function onCatChange(val) {
   state.cat = val;
+  buildCatSelect();
   var isSrvCat = (val === 'COSTO SERVICIOS' || val === 'COSTO MANO DE OBRA');
   ['Anual','Comparativo','Rancho'].forEach(function(name) {
     var el = document.getElementById('vt' + name);
@@ -828,6 +851,7 @@ function toggleYear(y) {
   if (state.activeYears[y]&&active.length>1) delete state.activeYears[y];
   else state.activeYears[y]=true;
   buildYearChips();
+  buildCatSelect();
   renderView();
 }
 function prevWeek() { if (state.weekIdx>0){state.weekIdx--;updateWeekControls();renderView();} }
@@ -888,6 +912,7 @@ function onRangeChange() {
   if (f>t){var tmp=f;f=t;t=tmp;}
   state.fromWeek=f; state.toWeek=t;
   updateRangeSliders();
+  buildCatSelect();
   renderView();
 }
 function resetRange() {
@@ -896,6 +921,7 @@ function resetRange() {
   state.toWeek   = wks[wks.length-1]||allWeeks[allWeeks.length-1]||52;
   state.fromWeek = wks[wks.length-2]||wks[0]||state.toWeek;
   updateRangeSliders();
+  buildCatSelect();
   if (state.view==='comparativo') renderComparativo();
 }
 
