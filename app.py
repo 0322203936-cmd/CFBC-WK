@@ -19,24 +19,110 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-st.markdown("""
-<style>
-  #MainMenu, header, footer { display: none !important; }
-  .stApp { background: #f0f0f0; }
-  .block-container { padding: 0 !important; max-width: 100% !important; margin-top: -1rem !important; }
-  .stMainBlockContainer { padding-top: 0 !important; }
-  section[data-testid="stSidebar"] { display: none !important; }
-</style>
-""", unsafe_allow_html=True)
+if "show_auto" not in st.session_state:
+    st.session_state.show_auto = False
+
+def toggle_auto():
+    st.session_state.show_auto = not st.session_state.show_auto
+
+if st.session_state.show_auto:
+    # CSS para el Panel de Automatización (Ancho y con márgenes limpios)
+    st.markdown('''
+    <style>
+      #MainMenu, header, footer { display: none !important; }
+      .stApp { background: #f4f6f9; }
+      .block-container { padding: 3rem !important; max-width: 1200px !important; }
+      section[data-testid="stSidebar"] { display: none !important; }
+    </style>
+    ''', unsafe_allow_html=True)
+else:
+    # CSS para el Dashboard — header nativo de Streamlit, sin trucos de iframe
+    st.markdown('''
+    <style>
+      #MainMenu, header, footer { display: none !important; }
+      .stApp { background: #f0f0f0; }
+      /* Eliminar TODO espacio blanco sobre el header */
+      .block-container          { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+      .stMainBlockContainer     { padding: 0 !important; margin: 0 !important; }
+      [data-testid="stAppViewContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
+      [data-testid="stAppViewBlockContainer"] { padding: 0 !important; }
+      section.main              { padding-top: 0 !important; }
+      /* Primer bloque vertical (donde vive nuestro header de columnas) */
+      [data-testid="stVerticalBlock"] { gap: 0 !important; padding: 0 !important; }
+      section[data-testid="stSidebar"] { display: none !important; }
+
+      /* ── HEADER NATIVO: columnas de Streamlit que contienen #cfbc-brand ── */
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) {
+          background: #4472C4 !important;
+          border-bottom: 3px solid #16a34a !important;
+          min-height: 36px !important;
+          max-height: 36px !important;
+          padding: 0 10px !important;
+          align-items: center !important;
+          overflow: hidden !important;
+          gap: 4px !important;
+          margin: 0 !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) > [data-testid="stColumn"] {
+          padding: 0 2px !important;
+          display: flex !important;
+          align-items: center !important;
+      }
+      /* Texto de marca */
+      #cfbc-brand {
+          color: #ffffff;
+          font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          white-space: nowrap;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) p {
+          margin: 0 !important; padding: 0 !important; line-height: 36px !important;
+      }
+      /* Botones dentro del header nativo */
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] {
+          width: 100% !important;
+          display: flex !important;
+          justify-content: flex-end !important;
+          align-items: center !important;
+          padding: 0 !important;
+          margin: 0 !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button {
+          background: rgba(255,255,255,0.2) !important;
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.35) !important;
+          border-radius: 3px !important;
+          height: 24px !important;
+          min-height: 24px !important;
+          padding: 0 10px !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          white-space: nowrap !important;
+          cursor: pointer !important;
+          width: auto !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button:hover {
+          background: rgba(255,255,255,0.38) !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button p {
+          color: #ffffff !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          margin: 0 !important;
+          line-height: 1 !important;
+      }
+    </style>
+    ''', unsafe_allow_html=True)
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_data():
+def load_data_conteo_v8():
     return get_datos()
 
-
 try:
-    DATA = load_data()
+    DATA = load_data_conteo_v8()
 except Exception as e:
     st.error(f"❌ Error cargando datos: {e}")
     st.stop()
@@ -48,8 +134,20 @@ if "error" in DATA:
         st.rerun()
     st.stop()
 
+import math
+
+def _sanitize(obj):
+    """Convierte NaN/Inf a 0 recursivamente para JSON válido."""
+    if isinstance(obj, float):
+        return 0 if (math.isnan(obj) or math.isinf(obj)) else obj
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    return obj
+
 data_json = base64.b64encode(
-    json.dumps(DATA, ensure_ascii=True, default=str).encode('utf-8')
+    json.dumps(_sanitize(DATA), ensure_ascii=True, default=str).encode('utf-8')
 ).decode('ascii')
 
 APP_CSS = """<style>
@@ -64,7 +162,7 @@ APP_CSS = """<style>
   /* Pivot-table palette — Excel style */
   --pt-hdr-bg:      #D9E1F2;   /* header de columnas  */
   --pt-hdr-border:  #8EA9C1;
-  --pt-grp-bg:      #4472C4;   /* fila de grupo/año   */
+  --pt-grp-bg:      #82A1C9;   /* fila de grupo/año - azul más suavizado */
   --pt-grp-fg:      #ffffff;
   --pt-sub-bg:      #BDD7EE;   /* fila subtotal       */
   --pt-sub-fg:      #000000;
@@ -94,30 +192,7 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .load-txt { font-size: 12px; color: #666; letter-spacing: 0.5px; }
 
-/* ── HEADER ─────────────────────────────────── */
-.app-hdr {
-  background: #4472C4;
-  border-bottom: 3px solid var(--green);
-  padding: 5px 10px;
-  display: flex; align-items: center; gap: 0;
-  height: 36px; overflow: hidden;
-}
-.hdr-brand {
-  color: #ffffff; font-size: 12px; font-weight: 700;
-  letter-spacing: 1px; white-space: nowrap;
-  padding-right: 12px; border-right: 1px solid rgba(255,255,255,0.3);
-  flex-shrink: 0;
-}
-.hdr-btn {
-  margin-left: auto; flex-shrink: 0;
-  font-size: 10px; font-weight: 700;
-  background: rgba(255,255,255,0.35);
-  border: 1px solid rgba(255,255,255,0.35);
-  border-radius: 3px; padding: 3px 10px; cursor: pointer;
-  color: #ffffff; height: 24px;
-  transition: background 0.1s; white-space: nowrap;
-}
-.hdr-btn:hover { background: rgba(255,255,255,0.55); }
+/* ── HEADER: ahora es nativo de Streamlit, no del iframe ─────────────── */
 
 /* ── TOOLBAR ─────────────────────────────────── */
 .toolbar {
@@ -193,8 +268,8 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .pt-table-wrap {
   overflow: auto;
   width: 100%;
-  /* 36px header + 28px toolbar + 26px range-bar + 28px view-tabs = 118px aprox */
-  max-height: calc(100vh - 118px);
+  /* 28px toolbar + 28px view-tabs + 26px range-bar = 82px (header movido a Streamlit) */
+  max-height: calc(100vh - 82px);
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
@@ -329,12 +404,6 @@ APP_HTML_BODY = """
 <!-- APP -->
 <div id="app" style="display:none">
 
-  <!-- HEADER -->
-  <div class="app-hdr">
-    <div class="hdr-brand">CFBC &#9656; CONTROL SEMANAL</div>
-    <button class="hdr-btn" onclick="exportCSV()" style="margin-left:auto">&#11015; CSV</button>
-    <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">&#8635;</button>
-  </div>
 
   <!-- TOOLBAR -->
   <div class="toolbar">
@@ -447,8 +516,18 @@ var _tableRows    = [];
 var _tableColDefs = [];
 
 // =======================================================
-// FORMATEO
+// FORMATEO Y UTILIDADES
 // =======================================================
+function reportHeight() {
+  if (window.parent) {
+    try {
+      var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'setHeight', height: Math.max(h, 600) }, '*');
+    } catch(e) {}
+  }
+}
+setInterval(reportHeight, 200);
+
 function fmt(n) {
   if (n === null || n === undefined || n === 0 || isNaN(n)) return '';
   var neg = n < 0, s = Math.abs(n);
@@ -463,6 +542,14 @@ function fmtPct(n) {
   if (n === null || n === undefined || isNaN(n)) return '';
   var sign = n > 0 ? '+' : '';
   return sign + n.toFixed(1) + '%';
+}
+function fmtHc(n) {
+  if (!n || isNaN(n) || n === 0) return '';
+  return Math.round(n).toLocaleString('en-US');
+}
+function fmtHcDiff(n) {
+  if (!n || isNaN(n) || n === 0) return '—';
+  return Math.abs(Math.round(n)).toLocaleString('en-US');
 }
 function wFmt(n) { return 'W' + String(n).padStart(2,'0'); }
 function recargar() { window.location.reload(); }
@@ -527,11 +614,10 @@ function catRenderer(p) {
   return '<span style="font-weight:700;color:#1e3a5f;font-size:11px">'+v+'</span>';
 }
 function ranchRenderer(ranch) {
-  var col = RANCH_COLORS[ranch]||'#888';
   return function(p) {
     var v = p.value;
     if (!v||isNaN(v)||v===0) return '';
-    return '<span style="color:'+col+';font-weight:600">'+fmt(v)+'</span>';
+    return '<span style="color:#334155;font-weight:600">'+fmt(v)+'</span>';
   };
 }
 
@@ -640,6 +726,14 @@ function inicializar() {
   var prefCat = 'MATERIAL DE EMPAQUE';
   state.cat = DATA.categories.indexOf(prefCat)>-1 ? prefCat : DATA.categories[0];
 
+  // Asegurar que los años del conteo de mano de obra también estén activos
+  if (Array.isArray(DATA.mano_obra_data)) {
+    DATA.mano_obra_data.forEach(function(r){
+      if (DATA.years.indexOf(r.year)<0) DATA.years.push(r.year);
+    });
+    DATA.years.sort(function(a,b){return a-b;});
+  }
+
   state.activeYears = {};
   var latestYr = DATA.years[DATA.years.length-1];
   var prevYr   = DATA.years[DATA.years.length-2];
@@ -648,13 +742,25 @@ function inicializar() {
 
   var wSet = {};
   DATA.weekly_detail.forEach(function(r){ wSet[r.week]=1; });
+  // Incluir semanas del conteo de mano de obra
+  if (Array.isArray(DATA.mano_obra_data)) {
+    DATA.mano_obra_data.forEach(function(r){ wSet[r.week]=1; });
+  }
   allWeeks = Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
 
+  // Semanas del año más reciente (considerar también mano_obra_data)
   var wksLatest = DATA.weekly_detail
     .filter(function(r){return r.year===latestYr;})
     .map(function(r){return r.week;})
     .filter(function(v,i,a){return a.indexOf(v)===i;})
     .sort(function(a,b){return a-b;});
+  if (!wksLatest.length && Array.isArray(DATA.mano_obra_data)) {
+    wksLatest = DATA.mano_obra_data
+      .filter(function(r){return r.year===latestYr;})
+      .map(function(r){return r.week;})
+      .filter(function(v,i,a){return a.indexOf(v)===i;})
+      .sort(function(a,b){return a-b;});
+  }
   var curWeek = wksLatest[wksLatest.length-1] || allWeeks[allWeeks.length-1];
   var idx = allWeeks.indexOf(curWeek);
   state.weekIdx = idx>=0 ? idx : allWeeks.length-1;
@@ -711,6 +817,7 @@ function onCatChange(val) {
   });
   var vtSrv = document.getElementById('vtServicios');
   if (vtSrv) vtSrv.style.display = isSrvCat ? '' : 'none';
+
   if (isSrvCat && state.view !== 'servicios') {
     setView('servicios');
   } else if (!isSrvCat && state.view === 'servicios') {
@@ -942,7 +1049,7 @@ function renderComparativo() {
     });
   });
 
-  var head='<tr><th>Semana</th><th>Fecha</th><th>Total '+sym+'</th><th>Δ$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
+  var head='<tr><th>Semana</th><th>Total '+sym+'</th><th>Δ$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
   var body=yrs.map(function(yr,yi){
     var col=YEAR_COLORS[yr]||'#888';
     var prevWkVal=null;
@@ -955,15 +1062,14 @@ function renderComparativo() {
         if (!d) return '<td></td>';
         var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
         var v=src[r]||0;
-        var style='color:'+(v>0?(RANCH_COLORS[r]||'#888'):'#ddd')+(v>0?';cursor:pointer':'');
+        var style='color:'+(v>0?'#334155':'#ddd')+(v>0?';cursor:pointer;font-weight:600':'');
         var attrs=v>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch="'+r+'"':'';
         return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'')+'</td>';
       }).join('');
-      var totalStyle='color:'+(val>0?col:'#bbb')+';font-weight:'+(val>0?'600':'400')+(val>0?';cursor:pointer':'');
+      var totalStyle='color:'+(val>0?'#1e3a5f':'#bbb')+';font-weight:'+(val>0?'700':'400')+(val>0?';cursor:pointer':'');
       var totalAttrs=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
       return '<tr class="cmp-row">'+
         '<td style="color:'+col+';font-weight:600">'+String(yr).slice(2)+String(w).padStart(2,'0')+'</td>'+
-        '<td style="color:#777;font-size:11px">'+fmtMes(d&&d.date_range)+'</td>'+
         '<td style="'+totalStyle+'"'+totalAttrs+'>'+fmt(val)+'</td>'+
         dCell+ranchCells+'</tr>';
     }).join('');
@@ -1009,6 +1115,7 @@ function renderRancho() {
     if (prev){ row['v'+prev]=totalPrev; grandPrev+=totalPrev; row.deltaAmt=totalCur-totalPrev; row.deltaPct=totalPrev>0?(totalCur-totalPrev)/totalPrev*100:null; }
     return row;
   }).filter(function(r){return (r['v'+cur]||0)>0||(r['v'+(prev||cur)]||0)>0;});
+  rows.sort(function(a,b){ return Math.abs(b['v'+cur]||0) - Math.abs(a['v'+cur]||0); });
   renderPivotTable(cols, rows, fmt(grandCur)+' '+sym+' · '+state.cat);
 }
 
@@ -1147,7 +1254,7 @@ function renderServicios() {
     });
   });
 
-  // ── Sin datos: tabla simple de fallback ───────────────
+  // ── Sin datos ─────────────────────────────────────────
   if (!weekKeys.length || !orderedSubcats.length) {
     document.getElementById('gridWrap').style.display='';
     document.getElementById('gridWrap').innerHTML='<div style="padding:20px;color:#888;font-size:12px">Sin datos para el rango seleccionado.</div>';
@@ -1156,41 +1263,55 @@ function renderServicios() {
     return;
   }
 
-  // ── Construir tabla con desglose por rancho ───────────
-  // Idéntica en estructura a renderManoObra
-  var ncols=activeRanches.length+1; // ranchos + subtotal semana
+  // ─────────────────────────────────────────────────────
+  // NUEVO LAYOUT: columnas = RANCHO, sub-columnas = semanas
+  // CONCEPTO | [Isabela: wk1 wk2 ... SUB] | [PosCo: wk1 wk2 ... SUB] | TOTAL
+  // ─────────────────────────────────────────────────────
+  var nWeeks = weekKeys.length;
+  var nColsPerRanch = nWeeks + 1; // semanas + SUB
 
   var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
-  var thPin=thBase+'position:sticky;top:0;z-index:4;';
+  var thPin =thBase+'position:sticky;top:0;z-index:4;';
   var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
 
-  // Header nivel 1: SUBCAT | [WKxxxx colspan=ncols] ... | TOTAL
+  // ── Header nivel 1: CONCEPTO | [Ranch colspan=nColsPerRanch] ... | TOTAL group ──
   var h1='<tr>';
   h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:190px">CONCEPTO</th>';
+  activeRanches.forEach(function(rn){
+    var col=RANCH_COLORS[rn]||'#888';
+    h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
+  });
+  h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #4472C4;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
+  h1+='</tr>';
+
+  // ── Header nivel 2: por cada rancho → [wk labels... | DIF] + TOTAL group ──
+  var h2='<tr>';
+  activeRanches.forEach(function(){
+    weekKeys.forEach(function(key){
+      var d=weekMap[key];
+      var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+      var col=YEAR_COLORS[d._year]||'#888';
+      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:60px">'+lbl+'</th>';
+    });
+    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">DIF</th>';
+  });
   weekKeys.forEach(function(key){
     var d=weekMap[key];
     var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
     var col=YEAR_COLORS[d._year]||'#888';
-    h1+='<th colspan="'+ncols+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">WK '+lbl+'</th>';
+    h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:70px;background:#EAF3FF">'+lbl+'</th>';
   });
-  h1+='<th rowspan="2" style="'+thScroll+'border-left:2px solid #4472C4;min-width:100px;background:#9DC3E6">TOTAL</th>';
-  h1+='</tr>';
-
-  // Header nivel 2: ranchos + SUB por semana
-  var h2='<tr>';
-  weekKeys.forEach(function(key){
-    activeRanches.forEach(function(rn){
-      var col=RANCH_COLORS[rn]||'#555';
-      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:80px">'+rn+'</th>';
-    });
-    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;min-width:88px;background:#BDD7EE">SUB</th>';
-  });
+  h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
   h2+='</tr>';
 
-  // ── Acumuladores de totales ───────────────────────────
-  var grandByWk={}; var grandByRn={}; var grandTotal=0;
-  weekKeys.forEach(function(k){grandByWk[k]=0;});
-  activeRanches.forEach(function(rn){grandByRn[rn]={}; weekKeys.forEach(function(k){grandByRn[rn][k]=0;});});
+  // ── Acumuladores totales ──────────────────────────────
+  var grandByRnWk={}, grandByRn={}, grandTotal=0;
+  var grandTotWk={};
+  activeRanches.forEach(function(rn){
+    grandByRnWk[rn]={}; grandByRn[rn]=0;
+    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; });
+  });
+  weekKeys.forEach(function(k){ grandTotWk[k]=0; });
 
   function cell(v,bold,color){
     if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">—</td>';
@@ -1203,51 +1324,67 @@ function renderServicios() {
   // ── Filas por subcat ──────────────────────────────────
   var bodyHtml='';
   orderedSubcats.forEach(function(sc){
-    var scByWk={}; var scByRnWk={}; var scTotal=0;
-    weekKeys.forEach(function(k){scByWk[k]=0;});
-    activeRanches.forEach(function(rn){scByRnWk[rn]={}; weekKeys.forEach(function(k){scByRnWk[rn][k]=0;});});
-
-    weekKeys.forEach(function(key){
-      var val=(weekMap[key]&&weekMap[key][sc])?weekMap[key][sc]:0;
-      scByWk[key]=val; scTotal+=val; grandByWk[key]+=val; grandTotal+=val;
-      activeRanches.forEach(function(rn){
-        var rv=(weekMap[key]&&weekMap[key][sc+'__r__'+rn])?weekMap[key][sc+'__r__'+rn]:0;
-        scByRnWk[rn][key]=rv; grandByRn[rn][key]+=rv;
+    var scByRnWk={}, scByRn={}, scTotal=0, scByWk={};
+    weekKeys.forEach(function(k){ scByWk[k]=0; });
+    activeRanches.forEach(function(rn){
+      scByRnWk[rn]={}; scByRn[rn]=0;
+      weekKeys.forEach(function(k){
+        var v=(weekMap[k]&&weekMap[k][sc+'__r__'+rn])?weekMap[k][sc+'__r__'+rn]:0;
+        scByRnWk[rn][k]=v;
+        scByRn[rn]+=v;
+        scTotal+=v;
+        scByWk[k]+=v;
+        grandByRnWk[rn][k]+=v;
+        grandByRn[rn]+=v;
+        grandTotal+=v;
+        grandTotWk[k]+=v;
       });
     });
-
     if(scTotal===0) return;
 
     var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;font-size:11px;';
     bodyHtml+='<tr class="pt-row">';
     bodyHtml+='<td style="'+tdPin+'left:0;color:#1e3a5f;font-weight:700">'+sc+'</td>';
-    weekKeys.forEach(function(key){
-      activeRanches.forEach(function(rn){
+    activeRanches.forEach(function(rn){
+      weekKeys.forEach(function(key){
         var v=scByRnWk[rn][key];
-        var col=RANCH_COLORS[rn]||'#555';
         if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
-        else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:'+col+';font-weight:600">'+fmt(v)+'</td>';}
+        else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#334155;font-weight:600">'+fmt(v)+'</td>';}
       });
-      bodyHtml+=cell(scByWk[key],true,'#1e3a5f');
+      var rnDif=(scByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(scByRnWk[rn][weekKeys[0]]||0);
+      bodyHtml+=cell(rnDif||0,true,'#1e3a5f');
     });
-    // Total fila
-    bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:#1e3a5f;border-left:2px solid #4472C4">'+fmt(scTotal)+'</td>';
+    // Celdas TOTAL por semana
+    var totCellStyle='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;background:#EAF3FF;font-weight:700;color:#1e3a5f;';
+    weekKeys.forEach(function(key){
+      var v=scByWk[key];
+      bodyHtml+='<td style="'+totCellStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+    });
+    var scDif=Math.abs((scByWk[weekKeys[weekKeys.length-1]]||0)-(scByWk[weekKeys[0]]||0));
+    bodyHtml+='<td style="'+totCellStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(scDif?fmt(scDif):'—')+'</td>';
     bodyHtml+='</tr>';
   });
 
-  // ── Fila total general ────────────────────────────────
+  // ── Fila TOTAL GENERAL ────────────────────────────────
   var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;';
   var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
   bodyHtml+='<tr>';
   bodyHtml+='<td style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
-  weekKeys.forEach(function(key){
-    activeRanches.forEach(function(rn){
-      var v=grandByRn[rn][key]; var col=RANCH_COLORS[rn]||'#555';
-      bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+(v?fmt(v):'—')+'</td>';
+  activeRanches.forEach(function(rn){
+    weekKeys.forEach(function(key){
+      var v=grandByRnWk[rn][key];
+      bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(v?fmt(v):'—')+'</td>';
     });
-    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(grandByWk[key]?fmt(grandByWk[key]):'—')+'</td>';
+    var rnTotDif=(grandByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(grandByRnWk[rn][weekKeys[0]]||0);
+    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:1px solid #aaa">'+(rnTotDif?fmt(rnTotDif):'—')+'</td>';
   });
-  bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
+  var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  weekKeys.forEach(function(key){
+    var v=grandTotWk[key]||0;
+    bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+  });
+  var gtDif=Math.abs((grandTotWk[weekKeys[weekKeys.length-1]]||0)-(grandTotWk[weekKeys[0]]||0));
+  bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
   bodyHtml+='</tr>';
 
   // ── Inyectar en el DOM ────────────────────────────────
@@ -1263,24 +1400,35 @@ function renderServicios() {
 // VIEW 8: COSTO MANO DE OBRA
 // =======================================================
 var MO_SUBCATS = [
-  'Nómina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)',
-  'Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)',
-  'Nómina Prod. Corte','H.Extra Corte','Bonos Corte',
-  'Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante',
-  'Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta',
-  'Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS',
-  'Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE',
-  'Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros',
-  'Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer',
-  'Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores',
-  'Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador',
-  'Nómina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado'
+  'Ing. Y Admon.','Supervisores','Corte','Trasplante','Manejo P.',
+  'Consolidacion','Siembra','Mov. Charolas','Riego','Phlox','Hoops','MIPE Y MIRFE',
+  'Tract. Y Cameros','Veladores','Soldadores','Transporte',
+  'Admon Posco','Alm.upc y empaq','Contratista y com.',
+  'Prod. Patina y rec','IMSS,INFO Y RCV','Imp. 1.8%'
 ];
+
+// Colores para ranchos del conteo de personal (distintos a los ranchos físicos)
+var MO_RANCH_COLORS = {
+  'Administracion':  '#374151',
+  'Propagacion':     '#047857',
+  'Poscosecha':      '#0369a1',
+  'Ramona':          '#b45309',
+  'Isabela':         '#7c3aed',
+  'Christina':       '#0369a1',
+  'Cecilia':         '#be185d',
+  'Cecilia 25':      '#047857',
+};
+
+// Orden preferido de ranchos en mano de obra
+var MO_RANCH_ORDER = [
+  'Administracion','Propagacion','Poscosecha','Ramona',
+  'Isabela','Christina','Cecilia','Cecilia 25'
+];
+
 function renderManoObra() {
   var sym=state.currency.toUpperCase();
   var f=state.fromWeek, t=state.toWeek;
   var yrs=getActiveYears();
-  var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
 
   // ── Acumular datos ─────────────────────────────────────
   var weekMap={};
@@ -1293,43 +1441,66 @@ function renderManoObra() {
     var subcat=(r.subcat||'').trim(); if (!subcat) return;
     var val=state.currency==='usd'?r.usd_total:r.mxn_total;
     var ranches=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;
+    var valHc=r.hc_total||0;
+    var hcRanches=r.hc_ranches||{};
     weekMap[key][subcat]=(weekMap[key][subcat]||0)+(val||0);
     Object.keys(ranches||{}).forEach(function(rn){
       weekMap[key][subcat+'__r__'+rn]=(weekMap[key][subcat+'__r__'+rn]||0)+(ranches[rn]||0);
     });
+    Object.keys(hcRanches||{}).forEach(function(rn){
+      weekMap[key][subcat+'__hc_r__'+rn]=(weekMap[key][subcat+'__hc_r__'+rn]||0)+(hcRanches[rn]||0);
+    });
   });
 
   var MO_GROUPS=[
-    {label:'ADMINISTRACIÓN',subcats:['Nómina Admon','H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)']},
-    {label:'PRODUCCIÓN',subcats:['Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)']},
-    {label:'CORTE',subcats:['Nómina Prod. Corte','H.Extra Corte','Bonos Corte']},
-    {label:'TRANSPLANTE',subcats:['Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante']},
-    {label:'MANEJO PLANTA',subcats:['Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta']},
-    {label:'HOOPS',subcats:['Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS']},
-    {label:'MIPE / MIRFE',subcats:['Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE']},
-    {label:'TRACTORES',subcats:['Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros']},
-    {label:'CHOFER',subcats:['Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer']},
-    {label:'VELADORES',subcats:['Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores']},
-    {label:'SOLDADOR',subcats:['Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador']},
-    {label:'OTROS',subcats:['Nómina Prod. Contratista','IMSS/INFONAVIT RCV','1.8% Estado']}
+    {label:'ING. Y ADMON.',      subcats:['Ing. Y Admon.']},
+    {label:'SUPERVISORES',       subcats:['Supervisores']},
+    {label:'CORTE',              subcats:['Corte']},
+    {label:'TRASPLANTE',         subcats:['Trasplante']},
+    {label:'MANEJO PLANTA',      subcats:['Manejo P.']},
+    {label:'CONSOLIDACIÓN',      subcats:['Consolidacion']},
+    {label:'SIEMBRA',            subcats:['Siembra']},
+    {label:'MOV. CHAROLAS',      subcats:['Mov. Charolas']},
+    {label:'RIEGO',              subcats:['Riego']},
+    {label:'PHLOX',              subcats:['Phlox']},
+    {label:'HOOPS',              subcats:['Hoops']},
+    {label:'MIPE / MIRFE',       subcats:['MIPE Y MIRFE']},
+    {label:'TRACTORES/CAMEROS',  subcats:['Tract. Y Cameros']},
+    {label:'VELADORES',          subcats:['Veladores']},
+    {label:'SOLDADORES',         subcats:['Soldadores']},
+    {label:'TRANSPORTE',         subcats:['Transporte']},
+    {label:'ADMON POSCO',        subcats:['Admon Posco']},
+    {label:'ALM. UPC Y EMPAQUE', subcats:['Alm.upc y empaq']},
+    {label:'CONTRATISTA',        subcats:['Contratista y com.']},
+    {label:'PROD. PÁTINA Y REC', subcats:['Prod. Patina y rec']},
+    {label:'IMSS/INFO/RCV',      subcats:['IMSS,INFO Y RCV']},
+    {label:'IMP. 1.8%',          subcats:['Imp. 1.8%']},
   ];
 
-  // Semanas con datos
-  var weekKeys=[];
-  yrs.forEach(function(yr){
-    rangeWeeks.forEach(function(w){
-      var key=yr+'-'+w;
-      var hasSome=false;
-      Object.keys(weekMap[key]||{}).forEach(function(k){if(k[0]!=='_'&&!k.includes('__r__')&&weekMap[key][k]>0)hasSome=true;});
-      if(hasSome) weekKeys.push(key);
-    });
+  // Semanas con datos — directamente del weekMap (orden año-semana)
+  var weekKeys=Object.keys(weekMap).filter(function(key){
+    var hasSome=false;
+    Object.keys(weekMap[key]).forEach(function(k){if(k[0]!=='_'&&!k.includes('__r__')&&weekMap[key][k]>0)hasSome=true;});
+    return hasSome;
+  }).sort(function(a,b){
+    var pa=a.split('-'), pb=b.split('-');
+    return (parseInt(pa[0])-parseInt(pb[0]))||( parseInt(pa[1])-parseInt(pb[1]));
   });
 
-  // Ranchos con datos en este rango
-  var activeRanches=RANCH_ORDER.filter(function(rn){
-    return weekKeys.some(function(key){
-      return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
+  // Ranchos con datos: usar los ranchos del conteo (no RANCH_ORDER físico)
+  // Primero recolectar todos los ranchos que aparecen en los datos
+  var ranchesEnDatos={};
+  weekKeys.forEach(function(key){
+    Object.keys(weekMap[key]||{}).forEach(function(k){
+      if(!k.includes('__r__')) return;
+      var rn=k.split('__r__')[1];
+      if(weekMap[key][k]>0) ranchesEnDatos[rn]=true;
     });
+  });
+  // Ordenar: primero los del orden preferido, luego cualquier otro
+  var activeRanches=MO_RANCH_ORDER.filter(function(rn){ return ranchesEnDatos[rn]; });
+  Object.keys(ranchesEnDatos).forEach(function(rn){
+    if(activeRanches.indexOf(rn)<0) activeRanches.push(rn);
   });
 
   function shortLabel(sc){
@@ -1349,111 +1520,228 @@ function renderManoObra() {
     return '<td style="padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700">'+fmt(v)+'</td>';
   }
 
+  if (!weekKeys.length || !activeRanches.length) {
+    var diagHtml = '<div style="padding:16px;font-family:monospace;font-size:11px;background:#fff3cd;border:1px solid #ffc107;margin:10px">';
+    diagHtml += '<b>DEBUG</b><br>';
+    diagHtml += 'mano_obra_data.length: ' + (Array.isArray(DATA.mano_obra_data) ? DATA.mano_obra_data.length : 'NO ARRAY') + '<br>';
+    if (Array.isArray(DATA.mano_obra_data) && DATA.mano_obra_data.length > 0) {
+      var s=DATA.mano_obra_data[0];
+      diagHtml += 'sample: year='+s.year+' week='+s.week+' subcat="'+s.subcat+'" mxn='+s.mxn_total+'<br>';
+      diagHtml += 'mxn_ranches='+JSON.stringify(s.mxn_ranches)+'<br>';
+    }
+    diagHtml += 'activeYears='+JSON.stringify(state.activeYears)+'<br>';
+    diagHtml += 'weekMap keys='+JSON.stringify(Object.keys(weekMap))+'<br>';
+    diagHtml += 'activeRanches='+JSON.stringify(activeRanches)+'<br>';
+    diagHtml += '</div>';
+    var gw=document.getElementById('gridWrap');
+    if(gw){gw.style.display='';gw.innerHTML=diagHtml;}
+    document.getElementById('comparativoWrap').className='';
+    document.getElementById('stTotal').textContent='—';
+    return;
+  }
+
   // ── Construir HTML ────────────────────────────────────
-  // HEADER nivel 1: GRUPO | CONCEPTO | [WKxxxx colspan=R+1] ... | TOTAL
-  var ncols=activeRanches.length+1; // ranchos + subtotal por semana
+  // LAYOUT: CONCEPTO (grupo+subcat colapsable) | [Rancho: wk1 wk2 ... DIF] | TOTAL
+  var nWeeks = weekKeys.length;
+  var nColsPerRanch = nWeeks + 1; // semanas + SUB
+
   var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
   var thPin=thBase+'position:sticky;top:0;z-index:4;';
   var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
 
   var h1='<tr>';
-  h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:120px">GRUPO</th>';
-  h1+='<th rowspan="2" style="'+thPin+'left:120px;min-width:140px">CONCEPTO</th>';
+  h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:200px">CONCEPTO</th>';
+  activeRanches.forEach(function(rn){
+    var col=MO_RANCH_COLORS[rn]||RANCH_COLORS[rn]||'#374151';
+    h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
+  });
+  h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #4472C4;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
+  h1+='</tr>';
+
+  // HEADER nivel 2: [por cada rancho: wk labels... | DIF] + TOTAL group
+  var h2='<tr>';
+  activeRanches.forEach(function(){
+    weekKeys.forEach(function(key){
+      var d=weekMap[key];
+      var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+      var col=YEAR_COLORS[d._year]||'#888';
+      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:60px">'+lbl+'</th>';
+    });
+    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">DIF</th>';
+  });
+  // Sub-headers del grupo TOTAL
   weekKeys.forEach(function(key){
     var d=weekMap[key];
     var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
-    var borderL='border-left:2px solid #8EA9C1;';
-    h1+='<th colspan="'+ncols+'" style="'+thScroll+borderL+'text-align:center">WK '+lbl+'</th>';
+    var col=YEAR_COLORS[d._year]||'#888';
+    h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:70px;background:#EAF3FF">'+lbl+'</th>';
   });
-  h1+='<th rowspan="2" style="'+thScroll+'border-left:2px solid #4472C4;min-width:100px;background:#9DC3E6">TOTAL</th>';
-  h1+='</tr>';
-
-  // HEADER nivel 2: [por cada semana: ranchos... | SUB]
-  var h2='<tr>';
-  weekKeys.forEach(function(key){
-    activeRanches.forEach(function(rn){
-      var col=RANCH_COLORS[rn]||'#555';
-      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:80px">'+rn+'</th>';
-    });
-    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;min-width:88px;background:#BDD7EE">SUB</th>';
-  });
+  h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
   h2+='</tr>';
 
   // ── FILAS ─────────────────────────────────────────────
-  var grandByWk={}; var grandByRn={}; var grandTotal=0;
-  weekKeys.forEach(function(k){grandByWk[k]=0;});
-  activeRanches.forEach(function(rn){grandByRn[rn]={}; weekKeys.forEach(function(k){grandByRn[rn][k]=0;});});
+  var grandByRnWk={}, grandByRn={}, grandTotal=0;
+  var grandHcByRnWk={};
+  activeRanches.forEach(function(rn){
+    grandByRnWk[rn]={}; grandByRn[rn]=0;
+    grandHcByRnWk[rn]={};
+    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; grandHcByRnWk[rn][k]=0; });
+  });
 
   var bodyHtml='';
 
-  MO_GROUPS.forEach(function(grp){
-    var grpByWk={}; weekKeys.forEach(function(k){grpByWk[k]=0;});
-    var grpByRnWk={}; activeRanches.forEach(function(rn){grpByRnWk[rn]={}; weekKeys.forEach(function(k){grpByRnWk[rn][k]=0;});});
-    var grpTotal=0;
+  window.togglePtGroup = window.togglePtGroup || function(grpClass) {
+    var rows = document.getElementsByClassName(grpClass);
+    if (!rows.length) return;
+    var isHidden = rows[0].style.display === 'none';
+    for(var i=0; i<rows.length; i++){
+      rows[i].style.display = isHidden ? '' : 'none';
+    }
+  };
+
+  MO_GROUPS.forEach(function(grp, grpIdx){
+    var grpByRnWk={}, grpByRn={}, grpTotal=0, grpHcByRn={};
+    activeRanches.forEach(function(rn){
+      grpByRnWk[rn]={}; grpByRn[rn]=0; grpHcByRn[rn]=0;
+      weekKeys.forEach(function(k){ grpByRnWk[rn][k]=0; });
+    });
     var scRows=[];
 
     grp.subcats.forEach(function(sc){
-      var scByWk={}; var scByRnWk={}; var scTotal=0;
-      weekKeys.forEach(function(k){scByWk[k]=0;});
-      activeRanches.forEach(function(rn){scByRnWk[rn]={}; weekKeys.forEach(function(k){scByRnWk[rn][k]=0;});});
-      weekKeys.forEach(function(key){
-        var val=(weekMap[key]&&weekMap[key][sc])?weekMap[key][sc]:0;
-        scByWk[key]=val; scTotal+=val; grpByWk[key]+=val; grandByWk[key]+=val;
-        activeRanches.forEach(function(rn){
-          var rv=(weekMap[key]&&weekMap[key][sc+'__r__'+rn])?weekMap[key][sc+'__r__'+rn]:0;
-          scByRnWk[rn][key]=rv; grpByRnWk[rn][key]+=rv; grandByRn[rn][key]+=rv;
+      var scByRnWk={}, scByRn={}, scTotal=0;
+      var hcByRnWk={}, hcByRn={}, hcTotal=0;
+      activeRanches.forEach(function(rn){
+        scByRnWk[rn]={}; scByRn[rn]=0;
+        hcByRnWk[rn]={}; hcByRn[rn]=0;
+        weekKeys.forEach(function(k){
+          var val=(weekMap[k]&&weekMap[k][sc+'__r__'+rn])?weekMap[k][sc+'__r__'+rn]:0;
+          var hc_val=(weekMap[k]&&weekMap[k][sc+'__hc_r__'+rn])?weekMap[k][sc+'__hc_r__'+rn]:0;
+          scByRnWk[rn][k]=val;
+          scByRn[rn]+=val;
+          scTotal+=val;
+          hcByRnWk[rn][k]=hc_val;
+          grandHcByRnWk[rn][k]=(grandHcByRnWk[rn][k]||0)+hc_val;
+          grpByRnWk[rn][k]+=val;
+          grpByRn[rn]+=val;
+          grpTotal+=val;
+          grandByRnWk[rn][k]+=val;
+          grandByRn[rn]+=val;
+          grandTotal+=val;
         });
+        // SUB HC = ultima semana - primera semana del rango
+        var firstKey=weekKeys[0], lastKey=weekKeys[weekKeys.length-1];
+        hcByRn[rn]=(hcByRnWk[rn][lastKey]||0)-(hcByRnWk[rn][firstKey]||0);
       });
-      grpTotal+=scTotal; grandTotal+=scTotal;
-      if(scTotal>0) scRows.push({label:shortLabel(sc),byWk:scByWk,byRnWk:scByRnWk,total:scTotal});
+      // hcTotal = suma de diferencias por rancho
+      hcTotal=activeRanches.reduce(function(s,rn){return s+(hcByRn[rn]||0);},0);
+      activeRanches.forEach(function(rn){ grpHcByRn[rn]+=(hcByRn[rn]||0); });
+      if(scTotal>0) scRows.push({label:shortLabel(sc),byRnWk:scByRnWk,byRn:scByRn,total:scTotal, hcByRnWk:hcByRnWk, hcByRn:hcByRn, hcTotal:hcTotal});
     });
     if(grpTotal===0) return;
 
     // Fila grupo
     var gTdPin='padding:4px 8px;background:var(--pt-grp-bg);color:#fff;font-weight:700;font-size:11px;position:sticky;z-index:2;border-bottom:1px solid #ddd;border-right:1px solid rgba(255,255,255,0.2);white-space:nowrap;';
-    bodyHtml+='<tr>';
+    bodyHtml+='<tr style="cursor:pointer;" onclick="togglePtGroup(`mo_grp_'+grpIdx+'`)" title="Clic para expandir/contraer">';
     bodyHtml+='<td style="'+gTdPin+'left:0">'+grp.label+'</td>';
-    bodyHtml+='<td style="'+gTdPin+'left:120px"></td>';
-    weekKeys.forEach(function(key){
-      activeRanches.forEach(function(rn){bodyHtml+=cellGrp(grpByRnWk[rn][key]);});
-      bodyHtml+=cellGrp(grpByWk[key]);
+    activeRanches.forEach(function(rn){
+      weekKeys.forEach(function(key){
+        bodyHtml+=cellGrp(grpByRnWk[rn][key]);
+      });
+      var firstKey=weekKeys[0], lastKey=weekKeys[weekKeys.length-1];
+      var costDif=Math.abs((grpByRnWk[rn][lastKey]||0)-(grpByRnWk[rn][firstKey]||0));
+      var grpDifStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700';
+      bodyHtml+='<td style="'+grpDifStyle+'">'+(costDif?fmt(costDif):'—')+'</td>';
     });
-    bodyHtml+=cellGrp(grpTotal);
+    // Celdas TOTAL por semana (suma todos los ranchos)
+    var grpTotStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:#9DC3E6;color:#1e3a5f;font-weight:700;border-left:1px solid #8EA9C1;';
+    weekKeys.forEach(function(key){
+      var v=activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][key]||0);},0);
+      bodyHtml+='<td style="'+grpTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+    });
+    var grpTotDif=Math.abs(
+      activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[weekKeys.length-1]]||0);},0)-
+      activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[0]]||0);},0)
+    );
+    bodyHtml+='<td style="'+grpTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(grpTotDif?fmt(grpTotDif):'—')+'</td>';
     bodyHtml+='</tr>';
 
     // Filas subcat
     scRows.forEach(function(sc){
       var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;';
-      bodyHtml+='<tr class="pt-row">';
-      bodyHtml+='<td style="'+tdPin+'left:0"></td>';
-      bodyHtml+='<td style="'+tdPin+'left:120px;color:#334155;font-size:11px">'+sc.label+'</td>';
-      weekKeys.forEach(function(key){
-        activeRanches.forEach(function(rn){
-          var v=sc.byRnWk[rn][key];
-          var col=RANCH_COLORS[rn]||'#555';
+      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="Número de personas (Headcount)">';
+      bodyHtml+='<td style="'+tdPin+'left:0;padding-left:20px;color:#334155;font-size:11px"><span style="color:#888;font-size:9px;margin-right:4px;">👤</span>'+sc.label+'</td>';
+      activeRanches.forEach(function(rn){
+        weekKeys.forEach(function(key){
+          var v=sc.hcByRnWk[rn][key];
           if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
-          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:'+col+';font-weight:600">'+fmt(v)+'</td>';}
+          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#475569;font-weight:600">'+fmtHc(v)+'</td>';}
         });
-        bodyHtml+=cell(sc.byWk[key],false,'#1e3a5f');
+        var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
+        bodyHtml+='<td style="'+cellStyle+'">'+(sc.hcByRn[rn]?fmtHcDiff(sc.hcByRn[rn]):'—')+'</td>';
       });
-      bodyHtml+=cell(sc.total,true,'#1e3a5f');
+      // Celdas TOTAL HC por semana
+      var scTotHcStyle='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;background:#EAF3FF;color:#1e3a5f;font-weight:700;';
+      weekKeys.forEach(function(key){
+        var v=activeRanches.reduce(function(s,rn){return s+(sc.hcByRnWk[rn][key]||0);},0);
+        bodyHtml+='<td style="'+scTotHcStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+      });
+      bodyHtml+='<td style="'+scTotHcStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(sc.hcTotal?fmtHcDiff(sc.hcTotal):'—')+'</td>';
       bodyHtml+='</tr>';
     });
   });
 
   // Fila total general
-  var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;';
-  var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
-  bodyHtml+='<tr>';
-  bodyHtml+='<td colspan="2" style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
-  weekKeys.forEach(function(key){
-    activeRanches.forEach(function(rn){
-      var v=grandByRn[rn][key]; var col=RANCH_COLORS[rn]||'#555';
-      bodyHtml+='<td style="'+totStyle+'color:'+col+'">'+( v?fmt(v):'—')+'</td>';
-    });
-    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(grandByWk[key]?fmt(grandByWk[key]):'—')+'</td>';
+  // ── Totales por semana (filas al fondo) ───────────────
+  var _fk=weekKeys[0], _lk=weekKeys[weekKeys.length-1];
+  var grandCostWk={}, grandHcWk={};
+  weekKeys.forEach(function(k){
+    grandCostWk[k]=activeRanches.reduce(function(s,rn){return s+(grandByRnWk[rn][k]||0);},0);
+    grandHcWk[k]=activeRanches.reduce(function(s,rn){return s+(grandHcByRnWk[rn][k]||0);},0);
   });
-  bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:2px solid #4472C4">'+(grandTotal?fmt(grandTotal):'—')+'</td>';
+
+  var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;left:0;z-index:2;white-space:nowrap;color:#1e3a5f;';
+  var totHcStyle='padding:4px 8px;background:#ddeedd;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  var totHcPin='padding:4px 8px;background:#ddeedd;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;left:0;z-index:2;white-space:nowrap;color:#1e3a5f;';
+  var dash='<td style="'+totStyle+'color:#bbb">—</td>';
+  var dashHc='<td style="'+totHcStyle+'color:#bbb">—</td>';
+
+  // Fila TOTAL $
+  bodyHtml+='<tr>';
+  bodyHtml+='<td style="'+totPin+'">TOTAL $</td>';
+  activeRanches.forEach(function(rn){
+    weekKeys.forEach(function(key){
+      var v=grandByRnWk[rn][key]||0;
+      bodyHtml+='<td style="'+totStyle+'">'+(v?fmt(v):'—')+'</td>';
+    });
+    var rnDif=Math.abs((grandByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(grandByRnWk[rn][weekKeys[0]]||0));
+    bodyHtml+='<td style="'+totStyle+'border-left:1px solid #aaa">'+(rnDif?fmt(rnDif):'—')+'</td>';
+  });
+  var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  weekKeys.forEach(function(key){
+    var v=grandCostWk[key]||0;
+    bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+  });
+  var gtDif=Math.abs((grandCostWk[weekKeys[weekKeys.length-1]]||0)-(grandCostWk[weekKeys[0]]||0));
+  bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
+  bodyHtml+='</tr>';
+
+  // Fila TOTAL 👤
+  bodyHtml+='<tr>';
+  bodyHtml+='<td style="'+totHcPin+'">TOTAL 👤</td>';
+  activeRanches.forEach(function(rn){
+    weekKeys.forEach(function(key){
+      var v=grandHcByRnWk[rn][key]||0;
+      bodyHtml+='<td style="'+totHcStyle+'">'+(v?fmtHc(v):'—')+'</td>';
+    });
+    bodyHtml+=dashHc;
+  });
+  var totHcTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  weekKeys.forEach(function(key){
+    var v=grandHcWk[key]||0;
+    bodyHtml+='<td style="'+totHcTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+  });
+  bodyHtml+='<td style="'+totHcTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">—</td>';
   bodyHtml+='</tr>';
 
   // ── Inyectar en el DOM ────────────────────────────────
@@ -1518,6 +1806,13 @@ function showProdPanel(rowData, opts) {
   var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
   
   var panelHtml = '';
+  
+  var pp = document.getElementById('prodPanel');
+  pp.className = 'show';
+  setTimeout(function(){
+    pp.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    reportHeight();
+  }, 100);
 
   // ── KPI de siembra ────────────────────────────────────────────────
   var kpiSection = '';
@@ -1564,7 +1859,7 @@ function showProdPanel(rowData, opts) {
   if (rows.length === 0) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
   } else {
-    rows.sort(function(a,b){return b.gasto-a.gasto;});
+    rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
     var total=rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = 'Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>';
     productSection =
@@ -1688,72 +1983,265 @@ HTML = f'''<!DOCTYPE html>
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
 
-# Renderizamos el iframe PRIMERO
-components.html(html_final, height=900, scrolling=False)
 
-# ─── POPUP EXCEL / SHAREPOINT ────────────────────────────────────────────────
+# ─── LÓGICA DE RENDERIZADO (DASHBOARD VS AUTOMATIZACIÓN) ─────────────────────
 available_weeks = sorted(
     {str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2) for r in DATA.get("weekly_detail", [])},
     reverse=True
 )
 
-if available_weeks:
-    from data_extractor import get_sheet_xlsx
-    try:
-        from data_extractor import crear_hoja_wk
-        _crear_disponible = True
-    except ImportError:
-        _crear_disponible = False
+from data_extractor import get_sheet_xlsx
+try:
+    from data_extractor import crear_hoja_wk
+    _crear_disponible = True
+except ImportError:
+    _crear_disponible = False
 
-    with st.expander("⚙ EXCEL / SHAREPOINT"):
-        st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>⬇ Descargar Archivo WK</p>", unsafe_allow_html=True)
-        selected_wk = st.selectbox(
-            "Semana a descargar",
-            options=available_weeks,
-            format_func=lambda c: f"WK{c}",
-            label_visibility="collapsed"
-        )
-        if st.button("Preparar XLSX", key="dl_xlsx", use_container_width=True):
-            with st.spinner(f"Preparando WK{selected_wk}..."):
-                xlsx_bytes = get_sheet_xlsx(selected_wk)
-            if xlsx_bytes:
-                st.download_button(
-                    label=f"💾 Confirmar WK{selected_wk}",
-                    data=xlsx_bytes,
-                    file_name=f"WK{selected_wk}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="dl_xlsx_btn",
-                    use_container_width=True
-                )
-            else:
-                st.error(f"No se encontró WK{selected_wk}.")
+try:
+    from data_extractor import insertar_hojas_pr_me_mp
+    _subir_disponible = True
+except ImportError:
+    _subir_disponible = False
 
+if not st.session_state.show_auto:
+    # ==== MODO DASHBOARD ====
+    # Header nativo de Streamlit — mismo color #4472C4, botones reales sin trucos de z-index
+    col_brand, col_reload, col_auto = st.columns([10, 1, 1])
+    with col_brand:
+        st.markdown('<span id="cfbc-brand">CFBC &#9656; CONTROL SEMANAL</span>', unsafe_allow_html=True)
+    with col_reload:
+        if st.button("⟳ Recargar", key="btn_reload", help="Recargar datos desde SharePoint"):
+            st.cache_data.clear()
+            st.rerun()
+    with col_auto:
+        st.button("⚙️ Auto", key="btn_auto", on_click=toggle_auto, help="Panel de Automatización")
+
+    # iframe sin header propio (36px ya los ocupa el header nativo de arriba)
+    st.info("### 🕵️‍♂️ DEBUG INFO (Muéstrame esta caja por favor)")
+    st.json({
+        "ME_DEBUG": DATA.get("productos_me_debug", {}),
+        "MP_DEBUG": DATA.get("productos_mp_debug", {})
+    })
+    components.html(html_final, height=864, scrolling=False)
+
+else:
+    # ==== MODO PANEL DE AUTOMATIZACIÓN ====
+    st.title("⚙️ Panel de Automatización y Sincronización")
+    st.markdown("Administra la creación y descarga de las hojas de SharePoint con el formato oficial CFBC.")
+    
+    if st.button("⬅️ Volver al Dashboard", type="secondary", on_click=toggle_auto):
+        pass
+        
+    st.divider()
+    
+    # Dividimos la pantalla en 2 tarjetas grandes
+    col_down, col_create = st.columns(2, gap="large")
+    
+    with col_down:
+        st.header("⬇️ Descargar Archivo WK")
+        st.info("Descarga una hoja individual con formato completo desde SharePoint.")
+        if available_weeks:
+            selected_wk = st.selectbox("Selecciona la semana a descargar:", options=available_weeks, format_func=lambda c: f"WK{c}")
+            
+            if st.button("Preparar Archivo XLSX", use_container_width=True):
+                with st.spinner(f"Conectando con SharePoint y preparando WK{selected_wk}..."):
+                    xlsx_bytes = get_sheet_xlsx(selected_wk)
+                if xlsx_bytes:
+                    st.success("✅ Archivo procesado y listo para descargar.")
+                    st.download_button(
+                        label=f"💾 Descargar WK{selected_wk}.xlsx",
+                        data=xlsx_bytes,
+                        file_name=f"WK{selected_wk}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="primary",
+                        use_container_width=True
+                    )
+                else:
+                    st.error(f"❌ No se encontró WK{selected_wk} en el servidor.")
+        else:
+            st.warning("No hay semanas disponibles para descargar.")
+            
+    with col_create:
+        st.header("➕ Nueva Hoja SharePoint")
+        st.info("Crea una hoja WK en blanco en el Excel principal, aplicando celdas, fórmulas y colores oficiales.")
         if _crear_disponible:
-            st.divider()
-            st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>✚ Nueva hoja SharePoint</p>", unsafe_allow_html=True)
-            nuevo_nombre = st.text_input(
-                "Nombre (Ej: WK2518)",
-                key="nuevo_wk_nombre",
-                placeholder="Ej: WK2518",
-                label_visibility="collapsed"
-            ).strip().upper()
-
-            if st.button("Crear Hoja", key="btn_crear_hoja", type="primary", use_container_width=True):
+            nuevo_nombre = st.text_input("Nombre de la nueva hoja (Ej: WK2518):", placeholder="Ej: WK2518").strip().upper()
+            
+            if st.button("🚀 Crear Hoja en SharePoint", type="primary", use_container_width=True):
                 if not nuevo_nombre:
                     st.warning("⚠️ Escribe el nombre de la hoja.")
                 elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
-                    st.warning("⚠️ El formato debe ser WK####.")
+                    st.warning("⚠️ El formato debe ser exactamente WK#### (Ej: WK2518).")
                 else:
                     try:
                         tenant_id     = st.secrets["sharepoint"]["tenant_id"]
                         client_id     = st.secrets["sharepoint"]["client_id"]
                         client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Creando {nuevo_nombre}…"):
+                        with st.spinner(f"Escribiendo {nuevo_nombre} vía Microsoft Graph API… (Esto toma unos segundos)"):
                             resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
                         if resultado.get("ok"):
-                            st.success(resultado["mensaje"])
+                            st.success(f"🎉 {resultado['mensaje']}")
                             st.cache_data.clear()
                         else:
                             st.error(f"❌ {resultado['error']}")
                     except KeyError as e:
-                        st.error(f"❌ Falta credencial {e}.")
+                        st.error(f"❌ Falta configurar la credencial en secrets.toml: {e}.")
+        else:
+            st.error("⚠️ La función de crear hojas no está disponible en data_extractor.py")
+
+    # ── SECCIÓN: Subir PR / ME / MP ───────────────────────────────────────────
+    st.divider()
+    st.header("🔼 Subir PR / ME / MP a SharePoint")
+    st.info(
+        "Sube los archivos Excel de PR, MP y/o ME para una semana y se crearán las hojas "
+        "correspondientes en el Excel de SharePoint automáticamente. "
+        "**ME** acepta 2 archivos que se fusionan en una sola hoja."
+    )
+
+    if not _subir_disponible:
+        st.error("⚠️ La función `insertar_hojas_pr_me_mp` no está disponible en data_extractor.py")
+    else:
+        # ── Selector de semana ────────────────────────────────────────────────
+        col_wk_sel, col_wk_man = st.columns([2, 1], gap="small")
+        with col_wk_sel:
+            if available_weeks:
+                semana_sel = st.selectbox(
+                    "Semana de referencia:",
+                    options=available_weeks,
+                    format_func=lambda c: f"WK{c}",
+                    key="upload_wk_sel",
+                )
+                semana_code_upload = semana_sel  # ej "2613"
+            else:
+                semana_code_upload = ""
+        with col_wk_man:
+            semana_manual = st.text_input(
+                "O escribe el código (ej: 2518):",
+                placeholder="2518",
+                max_chars=4,
+                key="upload_wk_manual",
+            ).strip()
+            if semana_manual:
+                if len(semana_manual) == 2 and semana_manual.isdigit():
+                    semana_manual = "26" + semana_manual
+                semana_code_upload = semana_manual
+
+        st.markdown("---")
+
+        # ── File uploaders ────────────────────────────────────────────────────
+        col_pr, col_mp = st.columns(2, gap="large")
+
+        with col_pr:
+            st.markdown("##### 📄 PR — Plaguicidas / Riego")
+            pr_uploaded = st.file_uploader(
+                f"Excel PR{'(' + semana_code_upload + ')' if semana_code_upload else ''}",
+                type=["xlsx", "xls"],
+                key="upload_pr",
+                help="Un archivo .xlsx con los datos de PR para la semana seleccionada.",
+            )
+            if pr_uploaded:
+                st.caption(f"✅ {pr_uploaded.name} ({round(pr_uploaded.size/1024,1)} KB)")
+
+        with col_mp:
+            st.markdown("##### 🔧 MP — Mantenimiento")
+            mp_uploaded = st.file_uploader(
+                f"Excel MP{'(' + semana_code_upload + ')' if semana_code_upload else ''}",
+                type=["xlsx", "xls"],
+                key="upload_mp",
+                help="Un archivo .xlsx con los datos de MP para la semana seleccionada.",
+            )
+            if mp_uploaded:
+                st.caption(f"✅ {mp_uploaded.name} ({round(mp_uploaded.size/1024,1)} KB)")
+
+        st.markdown("##### 📦 ME — Material de Empaque (2 archivos → 1 hoja fusionada)")
+        col_me1, col_me2 = st.columns(2, gap="medium")
+        with col_me1:
+            me1_uploaded = st.file_uploader(
+                "Excel ME — Archivo 1",
+                type=["xlsx", "xls"],
+                key="upload_me1",
+                help="Primer archivo Excel ME.",
+            )
+            if me1_uploaded:
+                st.caption(f"✅ {me1_uploaded.name} ({round(me1_uploaded.size/1024,1)} KB)")
+        with col_me2:
+            me2_uploaded = st.file_uploader(
+                "Excel ME — Archivo 2",
+                type=["xlsx", "xls"],
+                key="upload_me2",
+                help="Segundo archivo Excel ME (se fusiona con el primero en la misma hoja).",
+            )
+            if me2_uploaded:
+                st.caption(f"✅ {me2_uploaded.name} ({round(me2_uploaded.size/1024,1)} KB)")
+
+        st.markdown("---")
+
+        # ── Botón de subida ───────────────────────────────────────────────────
+        _hay_archivos   = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded])
+        _hay_semana     = bool(semana_code_upload)
+        _semana_valida  = semana_code_upload.isdigit() and len(semana_code_upload) == 4
+
+        if st.button(
+            f"🚀 Crear hojas en SharePoint {'— WK' + semana_code_upload if semana_code_upload else ''}",
+            type="primary",
+            use_container_width=True,
+            key="btn_subir_pr_me_mp",
+            disabled=not (_hay_archivos and _hay_semana),
+        ):
+            if not _semana_valida:
+                st.warning("⚠️ El código de semana debe ser exactamente 4 dígitos (ej: 2613).")
+            else:
+                try:
+                    tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                    client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                    client_secret = st.secrets["sharepoint"]["client_secret"]
+
+                    tipos_subidos = []
+                    if pr_uploaded:  tipos_subidos.append("PR")
+                    if mp_uploaded:  tipos_subidos.append("MP")
+                    if me1_uploaded or me2_uploaded: tipos_subidos.append("ME")
+
+                    with st.spinner(
+                        f"Conectando con SharePoint y creando hojas "
+                        f"{', '.join(tipos_subidos)} para WK{semana_code_upload}…"
+                    ):
+                        res = insertar_hojas_pr_me_mp(
+                            semana_code   = semana_code_upload,
+                            tenant_id     = tenant_id,
+                            client_id     = client_id_sp,
+                            client_secret = client_secret,
+                            pr_file       = pr_uploaded  if pr_uploaded  else None,
+                            mp_file       = mp_uploaded  if mp_uploaded  else None,
+                            me_file1      = me1_uploaded if me1_uploaded else None,
+                            me_file2      = me2_uploaded if me2_uploaded else None,
+                        )
+
+                    # ── Mostrar resultados ────────────────────────────────────
+                    hubo_error = False
+                    for tipo in ["PR", "MP", "ME"]:
+                        info = res.get(tipo, {})
+                        ok   = info.get("ok")
+                        msg  = info.get("msg", "")
+                        if ok is True:
+                            st.success(msg)
+                        elif ok is False:
+                            st.error(msg)
+                            hubo_error = True
+                        # ok is None → no se subió archivo, no mostrar nada
+
+                    if not hubo_error:
+                        st.cache_data.clear()
+                        st.info("💡 Recarga el dashboard para ver los nuevos datos.")
+                    else:
+                        st.warning("⚠️ Algunos archivos no se pudieron subir. Revisa los mensajes de error arriba.")
+
+                except KeyError as e:
+                    st.error(f"❌ Falta configurar la credencial en secrets.toml: {e}.")
+                except Exception as e:
+                    st.error(f"❌ Error inesperado: {e}")
+
+        if not _hay_semana:
+            st.caption("⬆️ Selecciona una semana para habilitar el botón.")
+        elif not _hay_archivos:
+            st.caption("⬆️ Sube al menos un archivo para habilitar el botón.")
+
