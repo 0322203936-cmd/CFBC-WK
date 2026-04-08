@@ -1412,56 +1412,44 @@ function showProdPanel(rowData, opts) {
   
   var panelHtml = '';
 
-  // ── Barra de métricas de siembra (siempre visible) ───────────────
-  var siembraBar = '';
-  if (DATA.siembra_data) {
-    var wkCodeShort = ((yr%100)*100) + wkStart;
-    var wkSrc = DATA.siembra_data[wkCodeShort] || DATA.siembra_data[String(wkCodeShort)] || null;
-    if (wkSrc) {
-      var sRow = ranchFilter ? (wkSrc[ranchFilter] || wkSrc['TOTAL'] || {}) : (wkSrc['TOTAL'] || {});
-      var sMetas = [
-        {k:'charolas', lbl:'N\u00ba CHAROLAS SEMBRADAS'},
-        {k:'esquejes', lbl:'N\u00ba ESQUEJES SEMBRADOS'},
-        {k:'metros',   lbl:'METROS DE SIEMBRA'},
-        {k:'hectareas',lbl:'HECT\u00c1REAS EN SIEMBRA'},
-      ];
-      siembraBar = '<div style="display:flex;gap:6px;padding:4px 6px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;flex-shrink:0;flex-wrap:wrap;">';
-      sMetas.forEach(function(m){
-        var v = (sRow[m.k]!==undefined && sRow[m.k]!=='') ? Number(sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
-        siembraBar += '<div style="flex:1;min-width:110px;text-align:center;padding:3px 6px;background:#fff;border:1px solid #bbf7d0;border-radius:3px;">' +
-          '<div style="font-size:8px;color:#16a34a;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;">' + m.lbl + '</div>' +
-          '<div style="font-size:13px;font-weight:700;color:#0f172a;">' + v + '</div>' +
-          '</div>';
-      });
-      siembraBar += '</div>';
-    }
-  }
-
-  // ── Zona 1: KPIs de siembra (tarjetas prominentes) ───────────────
+  // ── KPI de siembra ────────────────────────────────────────────────
   var kpiSection = '';
-  var sMetas = [
-    {k:'charolas', lbl:'CHAROLAS SEMBRADAS', icon:'🌱'},
-    {k:'esquejes', lbl:'ESQUEJES SEMBRADOS',  icon:'🌿'},
-    {k:'metros',   lbl:'METROS DE SIEMBRA',   icon:'📐'},
-    {k:'hectareas',lbl:'HECT\u00c1REAS EN SIEMBRA', icon:'🗺'},
+  var _allMetas = [
+    {k:'inv_inicial',  lbl:'INV. INICIAL'},
+    {k:'tallos_cos',   lbl:'TALLOS COSECHADOS'},
+    {k:'tallos_des',   lbl:'TALLOS DESECHADOS'},
+    {k:'tallos_des_sf',lbl:'TALLOS DESECHADOS SF'},
+    {k:'tallos_comp',  lbl:'TALLOS COMPRADOS'},
+    {k:'tallos_bouq',  lbl:'TALLOS BOUQUETS/PROC.'},
+    {k:'tallos_desp',  lbl:'TALLOS DESPACHADOS'},
+    {k:'libras_alb',   lbl:'LIBRAS ALBAHACA'},
+    {k:'tallos_mues',  lbl:'TALLOS MUESTRA'},
+    {k:'inv_final',    lbl:'INV. FINAL'},
+    {k:'tallos_proc',  lbl:'TALLOS PROC. TOTALES'},
+    {k:'charolas_288', lbl:'CHAROLAS *288'},
+    {k:'charolas',     lbl:'N\u00ba CHAROLAS'},
+    {k:'esquejes',     lbl:'N\u00ba ESQUEJES'},
+    {k:'metros',       lbl:'METROS SIEMBRA'},
+    {k:'hectareas',    lbl:'HECT\u00c1REAS'},
   ];
-  if (siembraBar !== '') {
-    // siembraBar tiene wkSrc/sRow ya calculados — recalcular para diseño nuevo
-    var wkCodeShort2 = ((yr%100)*100) + wkStart;
-    var wkSrc2 = (DATA.siembra_data||{})[wkCodeShort2] || (DATA.siembra_data||{})[String(wkCodeShort2)] || null;
-    var sRow2 = wkSrc2 ? (ranchFilter ? (wkSrc2[ranchFilter] || wkSrc2['TOTAL'] || {}) : (wkSrc2['TOTAL'] || {})) : {};
-    kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;gap:0;overflow:hidden;">';
-    sMetas.forEach(function(m, i){
-      var raw = sRow2[m.k];
-      var v = (raw !== undefined && raw !== '' && raw !== 0) ? Number(raw).toLocaleString('es-MX',{maximumFractionDigits:2}) : '\u2014';
-      if (i > 0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
-      kpiSection +=
-        '<div style="display:flex;align-items:baseline;gap:4px;white-space:nowrap;">' +
-          '<span style="font-size:9px;color:#44546A;text-transform:uppercase;letter-spacing:0.3px;">' + m.lbl + ':</span>' +
-          '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">' + v + '</span>' +
-        '</div>';
-    });
-    kpiSection += '</div>';
+  if (DATA.siembra_data) {
+    var _wkKey = ((yr%100)*100) + wkStart;
+    var _wkSrc = DATA.siembra_data[_wkKey] || DATA.siembra_data[String(_wkKey)] || null;
+    if (_wkSrc) {
+      var _sRow = ranchFilter ? (_wkSrc[ranchFilter] || _wkSrc['TOTAL'] || {}) : (_wkSrc['TOTAL'] || {});
+      var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
+      if (_activos.length > 0) {
+        kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;overflow-x:auto;scrollbar-width:none;">';
+        _activos.forEach(function(m,i){
+          if (i>0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
+          kpiSection += '<div style="display:flex;align-items:baseline;gap:4px;flex-shrink:0;white-space:nowrap;">'+
+            '<span style="font-size:9px;color:#44546A;text-transform:uppercase;">'+m.lbl+':</span>'+
+            '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</span>'+
+            '</div>';
+        });
+        kpiSection += '</div>';
+      }
+    }
   }
 
   // ── Zona 2: Tabla de productos ────────────────────────────────────
@@ -1593,8 +1581,10 @@ HTML = f'''<!DOCTYPE html>
 
 html_final = HTML.replace('__DATA_JSON__', data_json)
 
+# Renderizamos el iframe PRIMERO
+components.html(html_final, height=900, scrolling=False)
+
 # ─── POPUP EXCEL / SHAREPOINT ────────────────────────────────────────────────
-# Lo renderizamos ANTES del iframe usando float para que coexista en el scroll
 available_weeks = sorted(
     {str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2) for r in DATA.get("weekly_detail", [])},
     reverse=True
@@ -1608,46 +1598,7 @@ if available_weeks:
     except ImportError:
         _crear_disponible = False
 
-    st.markdown("""
-    <style>
-    /* El contenedor principal del popover que flota sobre la app */
-    div[data-testid="stPopover"] {
-        position: fixed !important;
-        top: 6px !important;
-        right: 125px !important; /* Ajustado justo a la izquierda del CSV */
-        z-index: 999999 !important;
-        width: 75px !important; /* Idéntico ancho aproximado al botón CSV */
-        height: 24px !important; max-height: 24px !important;
-        margin: 0 !important; padding: 0 !important;
-    }
-    /* Estilizar SOLO el botón principal que abre el panel para que luzca idéntico al .hdr-btn */
-    div[data-testid="stPopover"] button {
-        width: 100% !important;
-        padding: 0px 4px !important; font-size: 10px !important; font-weight: 700 !important; color: #ffffff !important;
-        background: rgba(255,255,255,0.35) !important; border: 1px solid rgba(255,255,255,0.35) !important;
-        border-radius: 3px !important; height: 24px !important; min-height: 24px !important; max-height: 24px !important;
-        display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;
-        margin: 0 !important;
-    }
-    /* Forzar que el texto de adentro del Popover no arrastre márgenes */
-    div[data-testid="stPopover"] button * {
-        font-size: 10px !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; color: #ffffff !important;
-        min-height: 0 !important; max-height: 24px !important;
-    }
-    div[data-testid="stPopover"] button p {
-        font-size: 10px !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; color: #ffffff !important;
-    }
-    div[data-testid="stPopover"] button:hover {
-        background: rgba(255,255,255,0.55) !important; border-color: rgba(255,255,255,0.55) !important;
-    }
-    div[data-testid="stPopoverBody"] {
-        width: 250px !important;
-        padding: 10px 15px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    with st.popover("⚙ EXCEL", use_container_width=True):
+    with st.expander("⚙ EXCEL / SHAREPOINT"):
         st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>⬇ Descargar Archivo WK</p>", unsafe_allow_html=True)
         selected_wk = st.selectbox(
             "Semana a descargar",
@@ -1669,7 +1620,7 @@ if available_weeks:
                 )
             else:
                 st.error(f"No se encontró WK{selected_wk}.")
-        
+
         if _crear_disponible:
             st.divider()
             st.markdown("<p style='font-size:12px; font-weight:bold; color:#1e3a5f; margin-bottom:5px;'>✚ Nueva hoja SharePoint</p>", unsafe_allow_html=True)
@@ -1679,7 +1630,7 @@ if available_weeks:
                 placeholder="Ej: WK2518",
                 label_visibility="collapsed"
             ).strip().upper()
-            
+
             if st.button("Crear Hoja", key="btn_crear_hoja", type="primary", use_container_width=True):
                 if not nuevo_nombre:
                     st.warning("⚠️ Escribe el nombre de la hoja.")
@@ -1699,6 +1650,3 @@ if available_weeks:
                             st.error(f"❌ {resultado['error']}")
                     except KeyError as e:
                         st.error(f"❌ Falta credencial {e}.")
-
-# Renderizamos el iframe DESPUÉS
-components.html(html_final, height=900, scrolling=False)
