@@ -237,17 +237,36 @@ def _parse_generic(rows: list) -> dict:
     UNIDADES_COL  = 7
     GASTO_COL     = 9
 
+    # Autodetectar columnas si existe fila de encabezado (soporte para formato limpio)
+    for i in range(min(15, len(rows))):
+        if not rows[i]: continue
+        r_str = [str(c).strip().upper() for c in rows[i]]
+        if "UBICACION" in r_str and ("GASTO" in r_str or "COSTO" in r_str):
+            UBICACION_COL = r_str.index("UBICACION")
+            if "GASTO" in r_str:
+                GASTO_COL = r_str.index("GASTO")
+            elif "COSTO" in r_str:
+                GASTO_COL = r_str.index("COSTO")
+                
+            if "PRODUCTO" in r_str: 
+                PRODUCTO_COL = r_str.index("PRODUCTO")
+            if "UNIDADES" in r_str: 
+                UNIDADES_COL = r_str.index("UNIDADES")
+            elif "CANTIDAD" in r_str:
+                UNIDADES_COL = r_str.index("CANTIDAD")
+            break
+
     result = {}
     accum  = {}   # (rancho, tipo, producto, ubicacion) → [u_total, g_total]
 
     for row in rows:
-        if not row or len(row) < 10:
+        if not row or len(row) <= max(UBICACION_COL, PRODUCTO_COL, UNIDADES_COL, GASTO_COL):
             continue
 
         ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
         ubicacion = re.sub(r'\s+', '', ubicacion)
 
-        if not ubicacion or len(ubicacion) < 6:
+        if not ubicacion or len(ubicacion) < 3:
             continue
         if not re.match(r'^[A-Z0-9]+$', ubicacion):
             continue
@@ -1841,68 +1860,148 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     session_id = sess_resp.json().get('id')
     hdrs = {**hdrs_json, "workbook-session-id": session_id}
+    success_msg = f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint."
 
     try:
         # ── 4. Verificar que la hoja no exista ────────────────────────────
         sheets_resp = requests.get(f'{wb_url}/worksheets', headers=hdrs, timeout=20)
         if sheets_resp.status_code != 200:
             return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
-        nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
-        if nombre_hoja.upper() in [n.upper() for n in nombres]:
+        sheets_data = sheets_resp.json().get('value', [])
+
+        def _norm_name(name: str | None) -> str:
+            if not name:
+                return ""
+            return re.sub(r'\s+', '', name).upper()
+
+        target_norm = _norm_name(nombre_hoja)
+        nombres = [h.get('name', '').strip() for h in sheets_data]
+        norm_names = [_norm_name(n) for n in nombres]
+        if target_norm in norm_names:
             return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
 
-        # ── 5. Crear la hoja nueva ────────────────────────────────────────
-        add_resp = requests.post(
-            f'{wb_url}/worksheets/add',
-            headers=hdrs,
-            json={"name": nombre_hoja},
-            timeout=20,
-        )
-        if add_resp.status_code not in (200, 201):
-            return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
+        prev_wk_name = None
+        prev_position = None
+        prev_sheet_id = None
+        m_prev = re.search(r'\d+', nombre_hoja)
+        if m_prev:
+            num = int(m_prev.group())
+            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
+            prev_norm = _norm_name(prev_wk_name)
+            for sheet in sheets_data:
+                sheet_name = sheet.get('name', '').strip()
+                if _norm_name(sheet_name) == prev_norm:
+                    prev_position = sheet.get('position')
+                    prev_sheet_id = sheet.get('id')
+                    break
 
-        # ── 6. Mover la hoja al inicio (posición 0) ───────────────────────
-        ws_id = add_resp.json().get('id', nombre_hoja)
-        # Graph API usa el nombre como id en la URL
-        move_resp = requests.patch(
-            f'{wb_url}/worksheets/{nombre_hoja}',
-            headers=hdrs,
-            json={"position": 0},
-            timeout=20,
-        )
-        # No es fatal si falla el reordenamiento
+        # ── 5. Crear o clonar la hoja nueva ───────────────────────────────
+        used_sheet_clone = False
+        ws_id = None
 
-        # ── 7. Escribir celdas en lotes (batchUpdate vía range) ───────────
-        #   Graph API permite escribir un rango completo de una vez con:
-        #   PATCH /workbook/worksheets/{id}/range(address='A1:Z200')
-        #   Body: { "values": [[row0col0, row0col1, ...], [row1col0, ...]] }
-        #
-        #   Construimos una matriz 175 x 19 (filas 1-175, cols A-S)
-        NROWS, NCOLS = 175, 19  # cols A(0)..S(18)
-        col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRS")}
-        matrix = [[""] * NCOLS for _ in range(NROWS)]
+        if prev_sheet_id:
+            copy_resp = requests.post(
+                f'{wb_url}/worksheets/{prev_sheet_id}/copy',
+                headers=hdrs,
+                json={"name": nombre_hoja},
+                timeout=60,
+            )
+            if copy_resp.status_code in (200, 201):
+                ws_id = copy_resp.json().get('id', nombre_hoja)
+                used_sheet_clone = True
 
-        for cell in _celdas_de_la_hoja(nombre_hoja):
-            addr = cell["address"]          # ej "B3"
-            val  = cell["value"]
-            # Parsear dirección
-            col_str = ''.join(ch for ch in addr if ch.isalpha())
-            row_str = ''.join(ch for ch in addr if ch.isdigit())
-            if col_str in col_idx and row_str:
-                r = int(row_str) - 1
-                col_c = col_idx[col_str]
-                if 0 <= r < NROWS and 0 <= col_c < NCOLS:
-                    matrix[r][col_c] = val if val is not None else ""
+        if not used_sheet_clone:
+            add_resp = requests.post(
+                f'{wb_url}/worksheets/add',
+                headers=hdrs,
+                json={"name": nombre_hoja},
+                timeout=20,
+            )
+            if add_resp.status_code not in (200, 201):
+                return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
+            ws_id = add_resp.json().get('id', nombre_hoja)
 
-        range_addr = f"A1:S{NROWS}"
-        patch_resp = requests.patch(
-            f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{range_addr}\')',
-            headers=hdrs,
-            json={"values": matrix},
-            timeout=60,
-        )
-        if patch_resp.status_code not in (200, 201):
-            return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
+        target_position = None
+        if prev_position is not None:
+            target_position = prev_position + 1
+
+        if target_position is not None:
+            requests.patch(
+                f'{wb_url}/worksheets/{nombre_hoja}',
+                headers=hdrs,
+                json={"position": target_position},
+                timeout=20,
+            )
+
+        if used_sheet_clone:
+            requests.patch(
+                f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
+                headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
+            )
+            clone_src = prev_wk_name or ""
+            print(f"✅ Hoja clonada desde {clone_src} → {nombre_hoja}")
+            return {"ok": True, "mensaje": success_msg}
+
+        # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
+        copied_data = None
+        if prev_wk_name and _norm_name(prev_wk_name) in norm_names:
+            # Traer fórmulas y formatos de número explícitamente de A1 hasta Z1500
+            try:
+                get_resp = requests.get(
+                    f"{wb_url}/worksheets/{prev_wk_name}/range(address='A1:Z1500')?$select=formulas,numberFormat",
+                    headers=hdrs, timeout=60
+                )
+                if get_resp.status_code == 200:
+                    copied_data = get_resp.json()
+            except:
+                pass
+
+        if copied_data and "formulas" in copied_data:
+            # Pegar el bloque de 1500 filas directo
+            patch_resp = requests.patch(
+                f"{wb_url}/worksheets/{nombre_hoja}/range(address='A1:Z1500')",
+                headers=hdrs, 
+                json={
+                    "formulas": copied_data["formulas"],
+                    "numberFormat": copied_data.get("numberFormat", [])
+                }, 
+                timeout=120
+            )
+            # Actualizar nombre de la semana en la celda B3 independientemente
+            requests.patch(
+                f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
+                headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
+            )
+            
+            # NOTE: Dejamos que el código continúe hacia el Paso 8 para "pintar" la plantilla (colores/bordes), 
+            # ya que leer puras fórmulas no copia los colores de fondo nativamente.
+
+        else:
+            # ── Alternativa: Escribir celdas desde cero (batchUpdate vía range) ───────────
+            NROWS, NCOLS = 250, 21  # cols A(0)..S(18)
+            col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTU")}
+            matrix = [[""] * NCOLS for _ in range(NROWS)]
+    
+            for cell in _celdas_de_la_hoja(nombre_hoja):
+                addr = cell["address"]
+                val  = cell["value"]
+                col_str = ''.join(ch for ch in addr if ch.isalpha())
+                row_str = ''.join(ch for ch in addr if ch.isdigit())
+                if col_str in col_idx and row_str:
+                    r = int(row_str) - 1
+                    col_c = col_idx[col_str]
+                    if 0 <= r < NROWS and 0 <= col_c < NCOLS:
+                        matrix[r][col_c] = val if val is not None else ""
+    
+            range_addr = f"A1:S{NROWS}"
+            patch_resp = requests.patch(
+                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{range_addr}\')',
+                headers=hdrs,
+                json={"values": matrix},
+                timeout=60,
+            )
+            if patch_resp.status_code not in (200, 201):
+                return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
 
         # ── 8. Aplicar formatos via Graph API ─────────────────────────────
         def fmt(rng, body):
@@ -1926,10 +2025,13 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
                 headers=hdrs, json=body, timeout=30,
             )
 
-        def border(rng, left=None, right=None, top=None, bottom=None):
+        def border(rng, left=None, right=None, top=None, bottom=None, inner_h=None, inner_v=None):
             style_map = {"thin": "Continuous", "medium": "Medium"}
             base = f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/borders'
-            for side_name, style in [("EdgeLeft",left),("EdgeRight",right),("EdgeTop",top),("EdgeBottom",bottom)]:
+            for side_name, style in [
+                ("EdgeLeft",left), ("EdgeRight",right), ("EdgeTop",top), ("EdgeBottom",bottom),
+                ("InsideHorizontal",inner_h), ("InsideVertical",inner_v)
+            ]:
                 if style:
                     requests.patch(
                         f'{base}/{side_name}',
@@ -1944,26 +2046,26 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
         # Verde claro (CCFFCC) — columnas USD L:S
         for rng in [
-            "L5:S9",
-            "L10:S21", "L22:S23", "L24:S60",
-            "L61:S62", "L63:S71", "L72:S74",
-            "L94:S100", "L102:S102", "L104:S104", "L107:S107",
+            "L5:U9",
+            "L10:U21", "L22:U23", "L24:U60",
+            "L61:U62", "L63:U71", "L72:U74",
+            "L94:U100", "L102:U102", "L104:U104", "L107:U107",
         ]:
             fill(rng, "CCFFCC")
 
         # Naranja (FFCC99) — subtotales
         fill("C22:J22",   "FFCC99")
-        fill("L22:S22",   "FFCC99")
+        fill("L22:U22",   "FFCC99")
         fill("C61:J61",   "FFCC99")
-        fill("L61:S61",   "FFCC99")
+        fill("L61:U61",   "FFCC99")
         fill("C72:J72",   "FFCC99")
-        fill("L72:S72",   "FFCC99")
+        fill("L72:U72",   "FFCC99")
         fill("B101:J101", "FFCC99")
-        fill("L101:S101", "FFCC99")
+        fill("L101:U101", "FFCC99")
 
         # Amarillo claro (FFFFCC) — producción y $/Ha
-        fill("L76:S92",   "FFFFCC")
-        fill("L110:S121", "FFFFCC")
+        fill("L76:U92",   "FFFFCC")
+        fill("L110:U121", "FFFFCC")
         # Amarillo vivo (FFFF00) — charolas/esquejes MXN
         fill("D89:J91",   "FFFF00")
 
@@ -1971,13 +2073,11 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
             fill(rng, "008000")
 
-        # Blanco explícito — sección KPI proyectos / logística (filas 126-172)
-        fill("B126:J172", "FFFFFF")
-        fill("L126:S172", "FFFFFF")
+        # Blanco explícito — sección KPI proyectos / logística (filas 126-250)
+        fill("B126:U250", "FFFFFF")
 
         # ── Color de texto navy (#333399) en todo el cuerpo + tamaño 10 ──
-        font("B1:J175",  bold=False, color="333399", size=10)
-        font("L1:S175",  bold=False, color="333399", size=10)
+        font("B1:U250",  bold=False, color="333399", size=10)
 
         # ── Negritas ──────────────────────────────────────────────────────
         font("B1:B3",    bold=True,  color="333399", size=10)
@@ -2001,10 +2101,10 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         font("B140",     bold=True,  color="333399", size=10)
         # Columna C subtotales / columna L subtotales USD
         for rng in ["C22:J22", "C61:J61", "C72:J72", "C74:J74",
-                    "L22:S22", "L61:S61", "L72:S72", "L74:S74",
+                    "L22:U22", "L61:U61", "L72:U72", "L74:U74",
                     "L76:L92", "L95:L121",
-                    "L101:S101", "L103:S103", "L105:S106", "L108:S108",
-                    "L111:N114", "L116:N119", "L121:S121"]:
+                    "L101:U101", "L103:U103", "L105:U106", "L108:U108",
+                    "L111:N114", "L116:N119", "L121:U121"]:
             font(rng, bold=True, size=10)
         # Columna C negrita en todas las filas de datos
         for rng in ["C10:C21", "C24:C60", "C63:C70",
@@ -2014,20 +2114,25 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
             font(rng, bold=True, color="FFFFFF", size=10)
         # Texto azul en valores KPI proyectos/logística
-        for rng in ["C126:C172", "L126:L172"]:
+        for rng in ["C126:C250", "L126:L250"]:
             font(rng, bold=False, color="0000FF", size=10)
 
         # ── Bordes — estrategia simplificada (pocas llamadas) ─────────────
+        
+        # GRILLAS INTERNAS (Lo que faltaba para no dejarlo a medias)
+        border("B5:U122", inner_h="thin", inner_v="thin")
+        border("B125:U250", inner_h="thin", inner_v="thin")
+
         # ESTRUCTURA PRINCIPAL: 3 columnas clave con rangos grandes
         # Left medio en B (toda el área de datos)
-        border("B2:B175",  left="medium")
+        border("B2:B250",  left="medium")
         # Right medio en J (toda el área de datos)
-        border("J2:J175",  right="medium")
+        border("J2:J250",  right="medium")
         # Right thin en C (separador columna TOTAL)
-        border("C5:C175",  right="thin")
+        border("C5:C250",  right="thin")
         # Left medio en L + right medio en S (todo el bloque USD)
-        border("L5:L175",  left="medium")
-        border("S5:S175",  right="medium")
+        border("L5:L250",  left="medium")
+        border("U5:U250",  right="medium")
         # Left medio en L para separar C de la zona MXN izquierda también
         border("C5:C9",    left="medium")
         border("C10:C21",  left="medium")
@@ -2049,31 +2154,31 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         border("B121:J121",bottom="medium")
 
         # FILAS ESPECIALES — separadores horizontales USD
-        border("L5:S5",    top="medium", bottom="thin")
-        border("L9:S9",    bottom="thin")
-        border("L10:S10",  top="thin")
-        border("L22:S22",  top="thin",   bottom="thin")
-        border("L61:S61",  top="thin",   bottom="thin")
-        border("L72:S72",  top="thin",   bottom="thin")
-        border("L74:S74",  top="thin",   bottom="medium")
-        border("L76:S76",  top="medium")
-        border("L92:S92",  bottom="medium")
-        border("L94:S94",  top="medium")
-        border("L97:S97",  bottom="thin")
-        border("L98:S98",  top="thin")
-        border("L100:S100",bottom="thin")
-        border("L101:S101",bottom="thin")
-        border("L103:S103",top="thin",   bottom="thin")
-        border("L105:S105",top="thin")
-        border("L106:S106",bottom="thin")
-        border("L108:S108",top="thin",   bottom="medium")
-        border("L110:S110",top="medium")
-        border("L113:S113",bottom="thin")
-        border("L114:S114",top="thin",   bottom="thin")
-        border("L116:S116",top="thin",   bottom="thin")
-        border("L118:S118",top="thin")
-        border("L119:S119",bottom="thin")
-        border("L121:S121",top="thin",   bottom="medium")
+        border("L5:U5",    top="medium", bottom="thin")
+        border("L9:U9",    bottom="thin")
+        border("L10:U10",  top="thin")
+        border("L22:U22",  top="thin",   bottom="thin")
+        border("L61:U61",  top="thin",   bottom="thin")
+        border("L72:U72",  top="thin",   bottom="thin")
+        border("L74:U74",  top="thin",   bottom="medium")
+        border("L76:U76",  top="medium")
+        border("L92:U92",  bottom="medium")
+        border("L94:U94",  top="medium")
+        border("L97:U97",  bottom="thin")
+        border("L98:U98",  top="thin")
+        border("L100:U100",bottom="thin")
+        border("L101:U101",bottom="thin")
+        border("L103:U103",top="thin",   bottom="thin")
+        border("L105:U105",top="thin")
+        border("L106:U106",bottom="thin")
+        border("L108:U108",top="thin",   bottom="medium")
+        border("L110:U110",top="medium")
+        border("L113:U113",bottom="thin")
+        border("L114:U114",top="thin",   bottom="thin")
+        border("L116:U116",top="thin",   bottom="thin")
+        border("L118:U118",top="thin")
+        border("L119:U119",bottom="thin")
+        border("L121:U121",top="thin",   bottom="medium")
 
         # KPI HEADERS borders
         border("B125",  left="thin", right="thin", top="thin")
@@ -2087,28 +2192,31 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         # PROYECTOS — outline
         border("B126:J139", left="thin",   right="thin")
         border("B139:J139", bottom="thin")
-        border("L126:S139", left="thin",   right="thin")
-        border("L139:S139", bottom="thin")
+        border("L126:U139", left="thin",   right="thin")
+        border("L139:U139", bottom="thin")
         border("B140",  left="thin", right="thin", top="thin", bottom="thin")
         border("L140",  left="thin", right="thin", bottom="thin")
 
-        # LOGÍSTICA — outline
-        border("B144:B150", left="thin")
-        border("J144:J150", right="thin")
-        border("L144:L150", left="thin")
-        border("N144:N150", right="thin")
-        border("S144:S150", right="thin")
+        # LOGÍSTICA — outline extendido
+        border("B144:B250", left="thin")
+        border("J144:J250", right="thin")
+        border("B250:J250", bottom="thin")
+        
+        border("L144:L250", left="thin")
+        border("N144:N250", right="thin")
+        border("U144:U250", right="thin")
+        border("L250:U250", bottom="thin")
 
         # ── Alineación ────────────────────────────────────────────────────
         fmt("B2",    {"horizontalAlignment": "Center"})
         fmt("B3",    {"horizontalAlignment": "Center"})
         fmt("B4",    {"horizontalAlignment": "Center"})
         fmt("C5:J5", {"horizontalAlignment": "Center"})
-        fmt("L5:S5", {"horizontalAlignment": "Center", "verticalAlignment": "Center"})
+        fmt("L5:U5", {"horizontalAlignment": "Center", "verticalAlignment": "Center"})
         fmt("B6",    {"horizontalAlignment": "Center", "verticalAlignment": "Top", "wrapText": True})
         fmt("B7",    {"horizontalAlignment": "Center", "verticalAlignment": "Top", "wrapText": True})
         fmt("C7:J7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
-        fmt("L7:S7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
+        fmt("L7:U7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
         fmt("C8",    {"horizontalAlignment": "Center"})
         fmt("L8",    {"horizontalAlignment": "Center"})
         fmt("B9",    {"horizontalAlignment": "Center"})
@@ -2124,8 +2232,8 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             "B": 69.4,
             "C": 14,
             "D": 11, "E": 11, "F": 11, "G": 11, "H": 11, "I": 11, "J": 11,
-            "K": 3,
-            "L": 11, "M": 11, "N": 11, "O": 11, "P": 11, "Q": 11, "R": 11, "S": 11,
+            "K": 11,
+            "L": 11, "M": 11, "N": 11, "O": 11, "P": 11, "Q": 11, "R": 11, "S": 11, "T": 11, "U": 11,
         }
         for col_letter, width in column_widths.items():
             try:
@@ -2165,14 +2273,14 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             # Subtotales MXN
             "C22:J22", "C61:J61", "C72:J72", "C74:J74",
             # Subtotales USD
-            "L22:S22", "L61:S61", "L72:S72", "L74:S74",
+            "L22:U22", "L61:U61", "L72:U72", "L74:U74",
             # Valores de datos MXN
             "C10:J21", "C24:J60", "C63:J70",
             # Valores de datos USD
-            "L10:S21", "L24:S60", "L63:S70",
+            "L10:U21", "L24:U60", "L63:U70",
             # Sección de producción y costos
-            "C76:J92", "L76:S92",
-            "C95:J121", "L95:S121",
+            "C76:J92", "L76:U92",
+            "C95:J121", "L95:U121",
         ]
         for rng in number_ranges:
             try:
@@ -2229,7 +2337,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     return {
         "ok": True,
-        "mensaje": f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint.",
+        "mensaje": success_msg,
     }
 
 
@@ -2293,3 +2401,348 @@ def get_sheet_xlsx(week_code: str) -> bytes | None:
     except Exception as e:
         print(f"⚠️  Error extrayendo hoja {sheet_name}: {e}")
         return None
+
+
+# ─── Subir hojas PR / ME / MP al Excel secundario de SharePoint ──────────────
+def insertar_hojas_pr_me_mp(
+    semana_code: str,
+    tenant_id: str,
+    client_id: str,
+    client_secret: str,
+    pr_file=None,
+    mp_file=None,
+    me_file1=None,
+    me_file2=None,
+) -> dict:
+    """
+    Inserta hojas PR####, MP#### y/o ME#### en el Excel secundario de SharePoint
+    usando Microsoft Graph API (misma técnica que crear_hoja_wk).
+
+    Args:
+        semana_code : código de 4 dígitos, ej "2613"
+        tenant_id   : Azure AD tenant ID
+        client_id   : App registration client ID
+        client_secret: App registration client secret
+        pr_file     : BytesIO o file-like del Excel PR (opcional)
+        mp_file     : BytesIO o file-like del Excel MP (opcional)
+        me_file1    : BytesIO o file-like del primer Excel ME (opcional)
+        me_file2    : BytesIO o file-like del segundo Excel ME (opcional)
+
+    Returns:
+        dict con claves "PR", "MP", "ME" → cada una con {"ok": bool, "msg": str}
+    """
+    import base64 as _b64
+    import time
+
+    code = semana_code.strip().upper()
+    # Aceptar "WK2613" o "2613"
+    if code.startswith("WK"):
+        code = code[2:]
+
+    resultado = {}
+
+    # ── Helper: leer Excel → matriz de valores ─────────────────────────────
+    def _read_matrix(f, max_rows=700, max_cols=20):
+        """Lee un archivo Excel y devuelve lista de listas de valores (str/num/None).
+        Acepta: Streamlit UploadedFile, BytesIO, o cualquier file-like object.
+        Soporta .xlsx (openpyxl) y .xls antiguo (xlrd).
+        """
+        from io import BytesIO as _BytesIO
+        try:
+            # Leer todos los bytes en memoria para garantizar compatibilidad
+            if hasattr(f, "read"):
+                raw = f.read()
+                if hasattr(f, "seek"):
+                    try:
+                        f.seek(0)
+                    except Exception:
+                        pass
+            elif isinstance(f, (bytes, bytearray)):
+                raw = bytes(f)
+            else:
+                raw = f.getvalue()
+
+            if not raw:
+                raise RuntimeError("El archivo está vacío o no se pudo leer.")
+
+            file_obj = _BytesIO(raw)
+
+            # Intentar openpyxl (.xlsx)
+            try:
+                wb = openpyxl.load_workbook(file_obj, read_only=True, data_only=True)
+                ws = wb.active
+                rows = []
+                for row in ws.iter_rows(max_row=max_rows, max_col=max_cols, values_only=True):
+                    rows.append([v if v is not None else "" for v in row])
+                wb.close()
+                return rows
+            except Exception as xlsx_err:
+                # Si falla openpyxl intentar con xlrd (.xls legacy)
+                file_obj.seek(0)
+                try:
+                    import xlrd
+                    wb_xls = xlrd.open_workbook(file_contents=file_obj.read())
+                    ws_xls = wb_xls.sheet_by_index(0)
+                    rows = []
+                    for ri in range(min(ws_xls.nrows, max_rows)):
+                        row = []
+                        for ci in range(min(ws_xls.ncols, max_cols)):
+                            cell = ws_xls.cell(ri, ci)
+                            row.append(cell.value if cell.value != "" else "")
+                        rows.append(row)
+                    return rows
+                except ImportError:
+                    raise RuntimeError(
+                        f"No se pudo leer el archivo. "
+                        f"Si es un archivo .xls antiguo, instala xlrd (pip install xlrd). "
+                        f"Error original: {xlsx_err}"
+                    )
+                except Exception as xls_err:
+                    raise RuntimeError(
+                        f"No se pudo leer como .xlsx ({xlsx_err}) ni como .xls ({xls_err}). "
+                        f"Asegúrate de que el archivo no esté corrupto o protegido con contraseña."
+                    )
+        except RuntimeError:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"Error leyendo Excel: {e}")
+
+
+
+    # ── Helper: obtener token OAuth2 ───────────────────────────────────────
+    def _get_token():
+        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        r = requests.post(token_url, data={
+            "grant_type":    "client_credentials",
+            "client_id":     client_id,
+            "client_secret": client_secret,
+            "scope":         "https://graph.microsoft.com/.default",
+        }, timeout=20)
+        if r.status_code != 200:
+            raise RuntimeError(f"Error obteniendo token: {r.text[:300]}")
+        return r.json()["access_token"]
+
+    # ── Helper: resolver driveId + itemId desde URL de SharePoint ──────────
+    def _resolver_item(token, url):
+        encoded = _b64.b64encode(url.encode()).decode().rstrip("=")
+        encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
+        hdrs = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        r = requests.get(
+            f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem",
+            headers=hdrs, timeout=20,
+        )
+        if r.status_code != 200:
+            raise RuntimeError(f"No se pudo resolver el archivo PR/ME/MP: {r.text[:300]}")
+        item     = r.json()
+        drive_id = item.get("parentReference", {}).get("driveId")
+        item_id  = item.get("id")
+        if not drive_id or not item_id:
+            raise RuntimeError("No se pudo obtener driveId o itemId del Excel secundario.")
+        return drive_id, item_id
+
+    # ── Helper: abrir sesión de workbook ────────────────────────────────────
+    def _abrir_sesion(wb_url, hdrs_json):
+        r = requests.post(
+            f"{wb_url}/createSession",
+            headers=hdrs_json,
+            json={"persistChanges": True},
+            timeout=30,
+        )
+        if r.status_code not in (200, 201):
+            raise RuntimeError(f"Error abriendo sesión: {r.text[:300]}")
+        return r.json()["id"]
+
+    # ── Helper: crear e insertar una hoja ───────────────────────────────────
+    def _crear_hoja(wb_url, hdrs, nombre_hoja, matrix):
+        """
+        1. Verifica que la hoja no exista.
+        2. Crea la hoja nueva.
+        3. Escribe la matriz de valores via PATCH range.
+        """
+        # Verificar existencia
+        sheets_r = requests.get(f"{wb_url}/worksheets", headers=hdrs, timeout=20)
+        if sheets_r.status_code != 200:
+            raise RuntimeError(f"Error listando hojas: {sheets_r.text[:300]}")
+        existentes = [h["name"].strip().upper() for h in sheets_r.json().get("value", [])]
+        if nombre_hoja.upper() in existentes:
+            raise RuntimeError(f"La hoja '{nombre_hoja}' ya existe en SharePoint.")
+
+        # Crear hoja
+        add_r = requests.post(
+            f"{wb_url}/worksheets/add",
+            headers=hdrs,
+            json={"name": nombre_hoja},
+            timeout=20,
+        )
+        if add_r.status_code not in (200, 201):
+            raise RuntimeError(f"Error creando hoja '{nombre_hoja}': {add_r.text[:300]}")
+
+        time.sleep(0.5)  # pequeña pausa para que SharePoint registre la hoja
+
+        # Preparar matriz (asegurar que todas las filas tienen el mismo número de cols)
+        if not matrix:
+            raise RuntimeError("Matriz vacía — el archivo parece estar vacío.")
+
+        max_cols = max(len(r) for r in matrix)
+        # Normalizar a max_cols columnas y serializar valores a strings seguros para JSON
+        def _safe(v):
+            if v is None or v == "":
+                return ""
+            if isinstance(v, float) and (v != v):  # NaN check
+                return ""
+            return v
+
+        padded = [
+            [_safe(v) for v in (row + [""] * (max_cols - len(row)))]
+            for row in matrix
+        ]
+        nrows = len(padded)
+        # Convertir número de columna a letra Excel (A, B, ..., Z, AA, ...)
+        def _col_letter(n):  # n = 1-indexed
+            s = ""
+            while n > 0:
+                n, r = divmod(n - 1, 26)
+                s = chr(65 + r) + s
+            return s
+
+        end_col = _col_letter(max_cols)
+        range_addr = f"A1:{end_col}{nrows}"
+
+        patch_r = requests.patch(
+            f"{wb_url}/worksheets/{nombre_hoja}/range(address='{range_addr}')",
+            headers=hdrs,
+            json={"values": padded},
+            timeout=120,
+        )
+        if patch_r.status_code not in (200, 201):
+            raise RuntimeError(
+                f"Error escribiendo datos en '{nombre_hoja}': {patch_r.text[:400]}"
+            )
+
+        return nrows
+
+    # ── Obtener token y resolver Excel secundario UNA sola vez ─────────────
+    # (reutilizamos para todas las hojas que se vayan a crear)
+    token = None
+    drive_id = None
+    item_id  = None
+    wb_url   = None
+    session_id = None
+    hdrs_json  = None
+    hdrs       = None
+
+    def _init_conexion():
+        nonlocal token, drive_id, item_id, wb_url, session_id, hdrs_json, hdrs
+        if wb_url is not None:
+            return  # ya inicializado
+        token     = _get_token()
+        hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        drive_id, item_id = _resolver_item(token, SHAREPOINT_URL_PR)
+        wb_url    = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
+        session_id = _abrir_sesion(wb_url, hdrs_json)
+        hdrs       = {**hdrs_json, "workbook-session-id": session_id}
+
+    # ── Helper: Limpiar archivos crudos de CONTPAQ ──────────────────────────
+    def _limpiar_matriz(matrix):
+        """Toma la matriz con basura y extrae exactamente las 5 columnas."""
+        import re
+        cleaned = [["FECHA", "UBICACION", "PRODUCTO", "UNIDADES", "GASTO"]]
+        for row in matrix:
+            # Asegurar que la fila tenga al menos 12 elementos rellenando con vacíos
+            r = list(row) + [""] * max(0, 12 - len(row))
+            
+            ubicacion = str(r[2]).strip().upper()
+            ubicacion_cln = re.sub(r'\s+', '', ubicacion)
+            
+            if not ubicacion_cln or len(ubicacion_cln) < 3:
+                continue
+            if not re.match(r'^[A-Z0-9]+$', ubicacion_cln):
+                continue
+                
+            fecha = r[0]
+            
+            # El dashboard originalmente usa la columna 5 para producto.
+            # Vamos a usar col 5. Si está vacía, intentamos col 6.
+            prod_c = str(r[5]).strip()
+            prod_n = str(r[6]).strip()
+            prod = prod_c if prod_c else prod_n
+            
+            # Unidades y Gasto
+            unid = str(r[7]).strip()
+            gasto = str(r[9]).strip()
+            
+            # Para evitar que filas 2 y 3 con "basura" pasen el filtro (metadatos de CONTPAQ), 
+            # aseguramos que unidades o gasto contengan un número real.
+            def is_num(v):
+                if not v: return False
+                try:
+                    float(v.replace(',', '').replace('$', '').strip())
+                    return True
+                except ValueError: return False
+                
+            if not is_num(unid) and not is_num(gasto):
+                continue
+            
+            cleaned.append([fecha, ubicacion_cln, prod, unid, gasto])
+            
+        print(f"   [Debug Clean] Matriz original tenía {len(matrix)} filas, la limpia tiene {len(cleaned)} filas")
+        return cleaned if len(cleaned) > 1 else matrix
+
+    # ── Procesar PR ─────────────────────────────────────────────────────────
+    if pr_file is not None:
+        nombre = f"PR{code}"
+        try:
+            _init_conexion()
+            matrix = _read_matrix(pr_file)
+            matrix = _limpiar_matriz(matrix)
+            filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
+            resultado["PR"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas limpias)"}
+            print(f"✅ {nombre} insertada con {filas} filas.")
+        except Exception as e:
+            resultado["PR"] = {"ok": False, "msg": f"❌ PR — {e}"}
+            print(f"❌ Error PR: {e}")
+    else:
+        resultado["PR"] = {"ok": None, "msg": "⏭️ PR — no se subió archivo"}
+
+    # ── Procesar MP ─────────────────────────────────────────────────────────
+    if mp_file is not None:
+        nombre = f"MP{code}"
+        try:
+            _init_conexion()
+            matrix = _read_matrix(mp_file)
+            matrix = _limpiar_matriz(matrix)
+            filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
+            resultado["MP"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas limpias)"}
+            print(f"✅ {nombre} insertada con {filas} filas.")
+        except Exception as e:
+            resultado["MP"] = {"ok": False, "msg": f"❌ MP — {e}"}
+            print(f"❌ Error MP: {e}")
+    else:
+        resultado["MP"] = {"ok": None, "msg": "⏭️ MP — no se subió archivo"}
+
+    # ── Procesar ME (fusión de hasta 2 archivos) ────────────────────────────
+    if me_file1 is not None or me_file2 is not None:
+        nombre = f"ME{code}"
+        try:
+            _init_conexion()
+            matrix = []
+            if me_file1 is not None:
+                matrix += _read_matrix(me_file1)
+            if me_file2 is not None:
+                matrix += _read_matrix(me_file2)
+                
+            matrix_limpia = _limpiar_matriz(matrix)
+            filas = _crear_hoja(wb_url, hdrs, nombre, matrix_limpia)
+            
+            resultado["ME"] = {
+                "ok":  True,
+                "msg": f"✅ {nombre} creada ({filas} filas limpias totales)",
+            }
+            print(f"✅ {nombre} insertada: {filas} filas.")
+        except Exception as e:
+            resultado["ME"] = {"ok": False, "msg": f"❌ ME — {e}"}
+            print(f"❌ Error ME: {e}")
+    else:
+        resultado["ME"] = {"ok": None, "msg": "⏭️ ME — no se subió archivo"}
+
+    return resultado
