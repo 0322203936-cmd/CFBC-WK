@@ -1763,6 +1763,7 @@ function showProdPanel(rowData, opts) {
   var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
   var ranchFilter=opts.ranch||null;
   if (!cat||!yr) return;
+  var hideProducts = cat==='MATERIAL VEGETAL';
 
   var isMant=cat==='MANTENIMIENTO', isMatEmp=cat==='MATERIAL DE EMPAQUE';
   var isMirfe=cat===CAT_MIRFE, isMipe=cat===CAT_MIPE;
@@ -1777,20 +1778,22 @@ function showProdPanel(rowData, opts) {
   if (wkStart>wkEnd){var tmp=wkStart;wkStart=wkEnd;wkEnd=tmp;}
 
   var rows=[];
-  for (var wk=wkStart;wk<=wkEnd;wk++){
-    var wkCodeShort=((yr%100)*100)+wk, wkCodeLong=(yr*100)+wk;
-    var weekD=ds[wkCodeShort]||ds[String(wkCodeShort)]||ds[wkCodeLong]||ds[String(wkCodeLong)];
-    if (!weekD) continue;
-    Object.keys(weekD).forEach(function(ranch){
-      if (ranchFilter&&ranch!==ranchFilter) return;
-      var byTipo=weekD[ranch];
-      Object.keys(byTipo).forEach(function(tipo){
-        if (tipoFilter&&tipo!==tipoFilter) return;
-        (byTipo[tipo]||[]).forEach(function(item){
-          rows.push({week_code:wkCodeShort,rancho:ranch,tipo:tipo,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0,ubicacion:item[3]||''});
+  if (!hideProducts) {
+    for (var wk=wkStart;wk<=wkEnd;wk++){
+      var wkCodeShort=((yr%100)*100)+wk, wkCodeLong=(yr*100)+wk;
+      var weekD=ds[wkCodeShort]||ds[String(wkCodeShort)]||ds[wkCodeLong]||ds[String(wkCodeLong)];
+      if (!weekD) continue;
+      Object.keys(weekD).forEach(function(ranch){
+        if (ranchFilter&&ranch!==ranchFilter) return;
+        var byTipo=weekD[ranch];
+        Object.keys(byTipo).forEach(function(tipo){
+          if (tipoFilter&&tipo!==tipoFilter) return;
+          (byTipo[tipo]||[]).forEach(function(item){
+            rows.push({week_code:wkCodeShort,rancho:ranch,tipo:tipo,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0,ubicacion:item[3]||''});
+          });
         });
       });
-    });
+    }
   }
 
   var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
@@ -1840,7 +1843,9 @@ function showProdPanel(rowData, opts) {
 
   // ── Zona 2: Tabla de productos ────────────────────────────────────
   var productSection = '';
-  if (rows.length === 0) {
+  if (hideProducts) {
+    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Detalle de productos no disponible para MATERIAL VEGETAL.</div>';
+  } else if (rows.length === 0) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
   } else {
     rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
@@ -2221,4 +2226,3 @@ else:
             st.caption("⬆️ Selecciona una semana para habilitar el botón.")
         elif not _hay_archivos:
             st.caption("⬆️ Sube al menos un archivo para habilitar el botón.")
-
