@@ -903,7 +903,6 @@ function resetRange() {
 // VIEW ROUTER
 // =======================================================
 function renderView() {
-  _prodViews = [];  // limpiar paneles viejos al re-renderizar
   document.getElementById('prodPanel').className='';
   if      (state.view==='anual')       renderAnual();
   else if (state.view==='comparativo') renderComparativo();
@@ -1881,11 +1880,15 @@ function showProdPanel(rowData, opts) {
       productSection +
     '</div>';
   
-  // Siempre reemplazar el panel (evitar que datos viejos bloqueen la vista)
-  _prodViews = [panelHtml];
+  if (_prodViews.indexOf(panelHtml) === -1) {
+    _prodViews.push(panelHtml);
+    if (_prodViews.length > 2) {
+      _prodViews.shift(); // keep max 2 side-by-side
+    }
+  }
   
   document.getElementById('prodPanel').className='show';
-  document.getElementById('prodTableWrap').innerHTML = panelHtml;
+  document.getElementById('prodTableWrap').innerHTML = _prodViews.join('');
   setTimeout(resizeTable,80);
 }
 function closeProdPanel() { _prodViews = []; document.getElementById('prodPanel').className=''; setTimeout(resizeTable,60); }
