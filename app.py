@@ -118,11 +118,12 @@ else:
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_data_conteo_v8():
+def load_data_conteo_v3():
     return get_datos()
 
+
 try:
-    DATA = load_data_conteo_v8()
+    DATA = load_data_conteo_v3()
 except Exception as e:
     st.error(f"❌ Error cargando datos: {e}")
     st.stop()
@@ -516,18 +517,8 @@ var _tableRows    = [];
 var _tableColDefs = [];
 
 // =======================================================
-// FORMATEO Y UTILIDADES
+// FORMATEO
 // =======================================================
-function reportHeight() {
-  if (window.parent) {
-    try {
-      var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
-      window.parent.postMessage({ type: 'setHeight', height: Math.max(h, 600) }, '*');
-    } catch(e) {}
-  }
-}
-setInterval(reportHeight, 200);
-
 function fmt(n) {
   if (n === null || n === undefined || n === 0 || isNaN(n)) return '';
   var neg = n < 0, s = Math.abs(n);
@@ -1806,13 +1797,6 @@ function showProdPanel(rowData, opts) {
   var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
   
   var panelHtml = '';
-  
-  var pp = document.getElementById('prodPanel');
-  pp.className = 'show';
-  setTimeout(function(){
-    pp.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-    reportHeight();
-  }, 100);
 
   // ── KPI de siembra ────────────────────────────────────────────────
   var kpiSection = '';
@@ -1997,12 +1981,6 @@ try:
 except ImportError:
     _crear_disponible = False
 
-try:
-    from data_extractor import insertar_hojas_pr_me_mp
-    _subir_disponible = True
-except ImportError:
-    _subir_disponible = False
-
 if not st.session_state.show_auto:
     # ==== MODO DASHBOARD ====
     # Header nativo de Streamlit — mismo color #4472C4, botones reales sin trucos de z-index
@@ -2017,11 +1995,6 @@ if not st.session_state.show_auto:
         st.button("⚙️ Auto", key="btn_auto", on_click=toggle_auto, help="Panel de Automatización")
 
     # iframe sin header propio (36px ya los ocupa el header nativo de arriba)
-    st.info("### 🕵️‍♂️ DEBUG INFO (Muéstrame esta caja por favor)")
-    st.json({
-        "ME_DEBUG": DATA.get("productos_me_debug", {}),
-        "MP_DEBUG": DATA.get("productos_mp_debug", {})
-    })
     components.html(html_final, height=864, scrolling=False)
 
 else:
@@ -2081,6 +2054,7 @@ else:
                             resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
                         if resultado.get("ok"):
                             st.success(f"🎉 {resultado['mensaje']}")
+                            st.balloons()
                             st.cache_data.clear()
                         else:
                             st.error(f"❌ {resultado['error']}")
@@ -2088,160 +2062,3 @@ else:
                         st.error(f"❌ Falta configurar la credencial en secrets.toml: {e}.")
         else:
             st.error("⚠️ La función de crear hojas no está disponible en data_extractor.py")
-
-    # ── SECCIÓN: Subir PR / ME / MP ───────────────────────────────────────────
-    st.divider()
-    st.header("🔼 Subir PR / ME / MP a SharePoint")
-    st.info(
-        "Sube los archivos Excel de PR, MP y/o ME para una semana y se crearán las hojas "
-        "correspondientes en el Excel de SharePoint automáticamente. "
-        "**ME** acepta 2 archivos que se fusionan en una sola hoja."
-    )
-
-    if not _subir_disponible:
-        st.error("⚠️ La función `insertar_hojas_pr_me_mp` no está disponible en data_extractor.py")
-    else:
-        # ── Selector de semana ────────────────────────────────────────────────
-        col_wk_sel, col_wk_man = st.columns([2, 1], gap="small")
-        with col_wk_sel:
-            if available_weeks:
-                semana_sel = st.selectbox(
-                    "Semana de referencia:",
-                    options=available_weeks,
-                    format_func=lambda c: f"WK{c}",
-                    key="upload_wk_sel",
-                )
-                semana_code_upload = semana_sel  # ej "2613"
-            else:
-                semana_code_upload = ""
-        with col_wk_man:
-            semana_manual = st.text_input(
-                "O escribe el código (ej: 2518):",
-                placeholder="2518",
-                max_chars=4,
-                key="upload_wk_manual",
-            ).strip()
-            if semana_manual:
-                if len(semana_manual) == 2 and semana_manual.isdigit():
-                    semana_manual = "26" + semana_manual
-                semana_code_upload = semana_manual
-
-        st.markdown("---")
-
-        # ── File uploaders ────────────────────────────────────────────────────
-        col_pr, col_mp = st.columns(2, gap="large")
-
-        with col_pr:
-            st.markdown("##### 📄 PR — Plaguicidas / Riego")
-            pr_uploaded = st.file_uploader(
-                f"Excel PR{'(' + semana_code_upload + ')' if semana_code_upload else ''}",
-                type=["xlsx", "xls"],
-                key="upload_pr",
-                help="Un archivo .xlsx con los datos de PR para la semana seleccionada.",
-            )
-            if pr_uploaded:
-                st.caption(f"✅ {pr_uploaded.name} ({round(pr_uploaded.size/1024,1)} KB)")
-
-        with col_mp:
-            st.markdown("##### 🔧 MP — Mantenimiento")
-            mp_uploaded = st.file_uploader(
-                f"Excel MP{'(' + semana_code_upload + ')' if semana_code_upload else ''}",
-                type=["xlsx", "xls"],
-                key="upload_mp",
-                help="Un archivo .xlsx con los datos de MP para la semana seleccionada.",
-            )
-            if mp_uploaded:
-                st.caption(f"✅ {mp_uploaded.name} ({round(mp_uploaded.size/1024,1)} KB)")
-
-        st.markdown("##### 📦 ME — Material de Empaque (2 archivos → 1 hoja fusionada)")
-        col_me1, col_me2 = st.columns(2, gap="medium")
-        with col_me1:
-            me1_uploaded = st.file_uploader(
-                "Excel ME — Archivo 1",
-                type=["xlsx", "xls"],
-                key="upload_me1",
-                help="Primer archivo Excel ME.",
-            )
-            if me1_uploaded:
-                st.caption(f"✅ {me1_uploaded.name} ({round(me1_uploaded.size/1024,1)} KB)")
-        with col_me2:
-            me2_uploaded = st.file_uploader(
-                "Excel ME — Archivo 2",
-                type=["xlsx", "xls"],
-                key="upload_me2",
-                help="Segundo archivo Excel ME (se fusiona con el primero en la misma hoja).",
-            )
-            if me2_uploaded:
-                st.caption(f"✅ {me2_uploaded.name} ({round(me2_uploaded.size/1024,1)} KB)")
-
-        st.markdown("---")
-
-        # ── Botón de subida ───────────────────────────────────────────────────
-        _hay_archivos   = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded])
-        _hay_semana     = bool(semana_code_upload)
-        _semana_valida  = semana_code_upload.isdigit() and len(semana_code_upload) == 4
-
-        if st.button(
-            f"🚀 Crear hojas en SharePoint {'— WK' + semana_code_upload if semana_code_upload else ''}",
-            type="primary",
-            use_container_width=True,
-            key="btn_subir_pr_me_mp",
-            disabled=not (_hay_archivos and _hay_semana),
-        ):
-            if not _semana_valida:
-                st.warning("⚠️ El código de semana debe ser exactamente 4 dígitos (ej: 2613).")
-            else:
-                try:
-                    tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                    client_id_sp  = st.secrets["sharepoint"]["client_id"]
-                    client_secret = st.secrets["sharepoint"]["client_secret"]
-
-                    tipos_subidos = []
-                    if pr_uploaded:  tipos_subidos.append("PR")
-                    if mp_uploaded:  tipos_subidos.append("MP")
-                    if me1_uploaded or me2_uploaded: tipos_subidos.append("ME")
-
-                    with st.spinner(
-                        f"Conectando con SharePoint y creando hojas "
-                        f"{', '.join(tipos_subidos)} para WK{semana_code_upload}…"
-                    ):
-                        res = insertar_hojas_pr_me_mp(
-                            semana_code   = semana_code_upload,
-                            tenant_id     = tenant_id,
-                            client_id     = client_id_sp,
-                            client_secret = client_secret,
-                            pr_file       = pr_uploaded  if pr_uploaded  else None,
-                            mp_file       = mp_uploaded  if mp_uploaded  else None,
-                            me_file1      = me1_uploaded if me1_uploaded else None,
-                            me_file2      = me2_uploaded if me2_uploaded else None,
-                        )
-
-                    # ── Mostrar resultados ────────────────────────────────────
-                    hubo_error = False
-                    for tipo in ["PR", "MP", "ME"]:
-                        info = res.get(tipo, {})
-                        ok   = info.get("ok")
-                        msg  = info.get("msg", "")
-                        if ok is True:
-                            st.success(msg)
-                        elif ok is False:
-                            st.error(msg)
-                            hubo_error = True
-                        # ok is None → no se subió archivo, no mostrar nada
-
-                    if not hubo_error:
-                        st.cache_data.clear()
-                        st.info("💡 Recarga el dashboard para ver los nuevos datos.")
-                    else:
-                        st.warning("⚠️ Algunos archivos no se pudieron subir. Revisa los mensajes de error arriba.")
-
-                except KeyError as e:
-                    st.error(f"❌ Falta configurar la credencial en secrets.toml: {e}.")
-                except Exception as e:
-                    st.error(f"❌ Error inesperado: {e}")
-
-        if not _hay_semana:
-            st.caption("⬆️ Selecciona una semana para habilitar el botón.")
-        elif not _hay_archivos:
-            st.caption("⬆️ Sube al menos un archivo para habilitar el botón.")
-
