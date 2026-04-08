@@ -1932,7 +1932,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
         else:
             # ── Alternativa: Escribir celdas desde cero (batchUpdate vía range) ───────────
-            NROWS, NCOLS = 175, 19  # cols A(0)..S(18)
+            NROWS, NCOLS = 250, 19  # cols A(0)..S(18)
             col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRS")}
             matrix = [[""] * NCOLS for _ in range(NROWS)]
     
@@ -2027,13 +2027,13 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
             fill(rng, "008000")
 
-        # Blanco explícito — sección KPI proyectos / logística (filas 126-172)
-        fill("B126:J172", "FFFFFF")
-        fill("L126:S172", "FFFFFF")
+        # Blanco explícito — sección KPI proyectos / logística (filas 126-250)
+        fill("B126:J250", "FFFFFF")
+        fill("L126:S250", "FFFFFF")
 
         # ── Color de texto navy (#333399) en todo el cuerpo + tamaño 10 ──
-        font("B1:J175",  bold=False, color="333399", size=10)
-        font("L1:S175",  bold=False, color="333399", size=10)
+        font("B1:J250",  bold=False, color="333399", size=10)
+        font("L1:S250",  bold=False, color="333399", size=10)
 
         # ── Negritas ──────────────────────────────────────────────────────
         font("B1:B3",    bold=True,  color="333399", size=10)
@@ -2070,7 +2070,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
             font(rng, bold=True, color="FFFFFF", size=10)
         # Texto azul en valores KPI proyectos/logística
-        for rng in ["C126:C172", "L126:L172"]:
+        for rng in ["C126:C250", "L126:L250"]:
             font(rng, bold=False, color="0000FF", size=10)
 
         # ── Bordes — estrategia simplificada (pocas llamadas) ─────────────
@@ -2078,19 +2078,19 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         # GRILLAS INTERNAS (Lo que faltaba para no dejarlo a medias)
         border("B5:J122", inner_h="thin", inner_v="thin")
         border("L5:S122", inner_h="thin", inner_v="thin")
-        border("B125:J175", inner_h="thin", inner_v="thin")
-        border("L125:S175", inner_h="thin", inner_v="thin")
+        border("B125:J250", inner_h="thin", inner_v="thin")
+        border("L125:S250", inner_h="thin", inner_v="thin")
 
         # ESTRUCTURA PRINCIPAL: 3 columnas clave con rangos grandes
         # Left medio en B (toda el área de datos)
-        border("B2:B175",  left="medium")
+        border("B2:B250",  left="medium")
         # Right medio en J (toda el área de datos)
-        border("J2:J175",  right="medium")
+        border("J2:J250",  right="medium")
         # Right thin en C (separador columna TOTAL)
-        border("C5:C175",  right="thin")
+        border("C5:C250",  right="thin")
         # Left medio en L + right medio en S (todo el bloque USD)
-        border("L5:L175",  left="medium")
-        border("S5:S175",  right="medium")
+        border("L5:L250",  left="medium")
+        border("S5:S250",  right="medium")
         # Left medio en L para separar C de la zona MXN izquierda también
         border("C5:C9",    left="medium")
         border("C10:C21",  left="medium")
@@ -2155,12 +2155,15 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         border("B140",  left="thin", right="thin", top="thin", bottom="thin")
         border("L140",  left="thin", right="thin", bottom="thin")
 
-        # LOGÍSTICA — outline
-        border("B144:B150", left="thin")
-        border("J144:J150", right="thin")
-        border("L144:L150", left="thin")
-        border("N144:N150", right="thin")
-        border("S144:S150", right="thin")
+        # LOGÍSTICA — outline extendido
+        border("B144:B250", left="thin")
+        border("J144:J250", right="thin")
+        border("B250:J250", bottom="thin")
+        
+        border("L144:L250", left="thin")
+        border("N144:N250", right="thin")
+        border("S144:S250", right="thin")
+        border("L250:S250", bottom="thin")
 
         # ── Alineación ────────────────────────────────────────────────────
         fmt("B2",    {"horizontalAlignment": "Center"})
