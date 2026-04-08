@@ -347,7 +347,7 @@ def _fetch_desde_sharepoint(prefix: str, parser_fn, label: str) -> tuple[dict, d
         return datos, debug
 
     hojas_encontradas = []
-    pat = re.compile(rf'^{prefix}\s*\d{{4}}$', re.IGNORECASE)
+    pat = re.compile(rf'^{prefix}\s*(\d{{2,4}})$', re.IGNORECASE)
 
     for sname in xls.sheet_names:
         sname = sname.strip()
@@ -355,6 +355,9 @@ def _fetch_desde_sharepoint(prefix: str, parser_fn, label: str) -> tuple[dict, d
             raw_code = re.sub(rf'{prefix}\s*', '', sname, flags=re.IGNORECASE).strip()
             try:
                 code = int(raw_code)
+                if code < 100:
+                    code = 2600 + code
+                    
                 year = 2000 + (code // 100)
                 if 2018 <= year <= 2030:
                     print(f"   ✅ {prefix}{code} encontrada en SharePoint: {sname}")
