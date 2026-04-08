@@ -2017,6 +2017,11 @@ if not st.session_state.show_auto:
         st.button("⚙️ Auto", key="btn_auto", on_click=toggle_auto, help="Panel de Automatización")
 
     # iframe sin header propio (36px ya los ocupa el header nativo de arriba)
+    st.info("### 🕵️‍♂️ DEBUG INFO (Muéstrame esta caja por favor)")
+    st.json({
+        "ME_DEBUG": DATA.get("productos_me_debug", {}),
+        "MP_DEBUG": DATA.get("productos_mp_debug", {})
+    })
     components.html(html_final, height=864, scrolling=False)
 
 else:
