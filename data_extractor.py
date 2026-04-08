@@ -1886,22 +1886,31 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
                     prev_sheet_id = sheet.get('id')
                     break
 
-        # ── 5. Crear la hoja nueva ────────────────────────────────────────
-        add_payload = {"name": nombre_hoja}
+        # ── 5. Crear o clonar la hoja nueva ───────────────────────────────
+        used_sheet_clone = False
+        ws_id = None
+
         if prev_sheet_id:
-            add_payload["sourceWorksheetId"] = prev_sheet_id
+            copy_resp = requests.post(
+                f'{wb_url}/worksheets/{prev_sheet_id}/copy',
+                headers=hdrs,
+                json={"name": nombre_hoja},
+                timeout=60,
+            )
+            if copy_resp.status_code in (200, 201):
+                ws_id = copy_resp.json().get('id', nombre_hoja)
+                used_sheet_clone = True
 
-        add_resp = requests.post(
-            f'{wb_url}/worksheets/add',
-            headers=hdrs,
-            json=add_payload,
-            timeout=20,
-        )
-        if add_resp.status_code not in (200, 201):
-            return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
-
-        ws_id = add_resp.json().get('id', nombre_hoja)
-        used_sheet_clone = bool(prev_sheet_id)
+        if not used_sheet_clone:
+            add_resp = requests.post(
+                f'{wb_url}/worksheets/add',
+                headers=hdrs,
+                json={"name": nombre_hoja},
+                timeout=20,
+            )
+            if add_resp.status_code not in (200, 201):
+                return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
+            ws_id = add_resp.json().get('id', nombre_hoja)
 
         target_position = None
         if prev_position is not None:
