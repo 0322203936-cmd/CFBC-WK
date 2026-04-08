@@ -1614,8 +1614,10 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
 # --- Crear nueva hoja WK en SharePoint via Microsoft Graph API (con sesión) ---
 def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
     """
-    Crea una nueva hoja WK#### usando el endpoint nativo de copiado de Graph API.
-    Clona íntegramente la hoja de la semana previa (bordes, formatos, valores completos).
+    Crea una nueva hoja WK#### usando 'range/copy' de Graph API.
+    1. Agrega una hoja en blanco.
+    2. Ejecuta range(A1:Z500)/copy para trazar idéntico valores, bordes, colores y fórmulas.
+    3. Ajusta de nuevo los anchos de columna, alto de fila y celdas combinadas.
     """
     import base64 as _b64
     import time
@@ -1667,7 +1669,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
     hdrs = {**hdrs_json, "workbook-session-id": session_id}
 
     try:
-        # ── 4. Verificar que la hoja no exista y buscar la previa ─────────
+        # ── 4. Verificar que la hoja no exista y deducir plantilla ─────────
         sheets_resp = requests.get(f'{wb_url}/worksheets', headers=hdrs, timeout=20)
         if sheets_resp.status_code != 200:
             return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
@@ -1678,61 +1680,88 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         if nombre_hoja.upper() in name_to_id:
             return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
 
-        # Deducir la semana anterior
         prev_wk_name = None
         m = re.search(r'\d+', nombre_hoja)
         if m:
             num = int(m.group())
             prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
             
-        prev_wk_id = None
-        if prev_wk_name and prev_wk_name.upper() in name_to_id:
-            prev_wk_id = name_to_id[prev_wk_name.upper()]
-        elif len(sheets_data) > 0:
-            # Usar la primera como emergencia si no existe la anterior
-            prev_wk_id = sheets_data[0]['id']
-            prev_wk_name = sheets_data[0]['name']
-        else:
-            return {"ok": False, "error": "No se encontró ninguna hoja previa para poder clonar."}
+        if not prev_wk_name or prev_wk_name.upper() not in name_to_id:
+            if len(sheets_data) > 0:
+                prev_wk_name = sheets_data[0]['name']
+            else:
+                return {"ok": False, "error": "No se encontró ninguna hoja previa para poder clonar."}
+                
+        prev_wk_id = name_to_id[prev_wk_name.upper()]
 
-        # ── 5. Clonar la hoja completa nativamente usando el ID ───────────
-        copy_resp = requests.post(
-            f'{wb_url}/worksheets/{prev_wk_id}/copy',
-            headers=hdrs,
-            json={
-                "name": nombre_hoja, 
-                "positionType": "Before", 
-                "targetWorksheet": prev_wk_id
-            },
-            timeout=120,
-        )
-        if copy_resp.status_code not in (200, 201):
-            return {"ok": False, "error": f"Error clonando la hoja completa: {copy_resp.text}"}
+        # ── 5. Crear la hoja nueva y mover al inicio ──────────────────────
+        add_resp = requests.post(f'{wb_url}/worksheets/add', headers=hdrs, json={"name": nombre_hoja}, timeout=20)
+        if add_resp.status_code not in (200, 201):
+            return {"ok": False, "error": f"Error creando la hoja en blanco: {add_resp.text}"}
 
-        new_sheet = copy_resp.json()
-        new_sheet_id = new_sheet.get('id', nombre_hoja)
+        new_sheet_id = add_resp.json().get('id')
 
-        # ── 6. Mover al inicio (posición 0) ───────────────────────
-        requests.patch(
-            f'{wb_url}/worksheets/{new_sheet_id}',
-            headers=hdrs,
-            json={"position": 0},
-            timeout=20,
-        )
+        requests.patch(f'{wb_url}/worksheets/{new_sheet_id}', headers=hdrs, json={"position": 0}, timeout=20)
 
-        # ── 7. Actualizar celda B3 con el nombre de la nueva semana ───────
+        # ── 6. Copiado de Fórmulas, Valores, Formato y Bordes usando range/copy 
+        range_copy_url = f"{wb_url}/worksheets/{prev_wk_id}/range(address='A1:T200')/copy"
+        copy_payload = {
+            "destinationRange": f"'{nombre_hoja}'!A1",
+            "copyType": "All",
+            "skipBlanks": False
+        }
+        r_copy = requests.post(range_copy_url, headers=hdrs, json=copy_payload, timeout=120)
+        if r_copy.status_code not in (200, 201):
+            return {"ok": False, "error": f"Error en range/copy: {r_copy.text}"}
+
+        # ── 7. Actualizar nombre de la semana en celda B3 ─────────────────
         requests.patch(
             f"{wb_url}/worksheets/{new_sheet_id}/range(address='B3')",
             headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
         )
 
+        # ── 8. Restaurar Estructura (Anchos, Altos, Merges) ───────────────
+        # range/copy no transfiere los anchos de columna ni alto de fila
+        
+        column_widths = {
+            "A": 3, "B": 69.4, "C": 14, "D": 11, "E": 11, "F": 11, "G": 11, "H": 11, "I": 11, "J": 11,
+            "K": 3, "L": 11, "M": 11, "N": 11, "O": 11, "P": 11, "Q": 11, "R": 11, "S": 11,
+        }
+        for col_letter, width in column_widths.items():
+            try:
+                requests.patch(
+                    f'{wb_url}/worksheets/{new_sheet_id}/range(address=\'{col_letter}:{col_letter}\')/format',
+                    headers=hdrs, json={"columnWidth": width * 7.5}, timeout=10,
+                )
+            except: pass
+
+        row_heights = {3: 15.0, 4: 15.0, 6: 26.4}
+        for row_num, height in row_heights.items():
+            try:
+                requests.patch(
+                    f'{wb_url}/worksheets/{new_sheet_id}/range(address=\'{row_num}:{row_num}\')/format',
+                    headers=hdrs, json={"rowHeight": height}, timeout=10,
+                )
+            except: pass
+
+        merges = [
+            "C5:J5", "L5:R5", "K1:L1", "K2:L2", "K4:L4", "K75:L75", "K93:L93", "K109:L109",
+            "K122:L122", "K123:L123", "K124:L124", "K141:L141", "K142:L142", "K164:L164", 
+            "K174:L174", "K175:L175", "A123:B123", "A141:B141", "A142:B142", "A164:B164", 
+            "A174:B174", "A175:B175", "C153:C154", "L153:L154", "C157:C158", "L157:L158", 
+            "C161:C162", "L161:L162", "C167:C168", "L167:L168", "C171:C172", "L171:L172"
+        ]
+        for m_addr in merges:
+            try:
+                requests.post(
+                    f'{wb_url}/worksheets/{new_sheet_id}/range(address=\'{m_addr}\')/merge',
+                    headers=hdrs, json={"across": False}, timeout=10,
+                )
+            except: pass
+
     finally:
-        # ── 8. Cerrar la sesión siempre ───────────────────────────────────
-        requests.post(
-            f'{wb_url}/closeSession',
-            headers=hdrs,
-            timeout=20,
-        )
+        # ── 9. Cerrar la sesión siempre ───────────────────────────────────
+        requests.post(f'{wb_url}/closeSession', headers=hdrs, timeout=20)
 
     return {
         "ok": True,
