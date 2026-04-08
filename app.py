@@ -30,9 +30,196 @@ if st.session_state.show_auto:
     st.markdown('''
     <style>
       #MainMenu, header, footer { display: none !important; }
-      .stApp { background: #f4f6f9; }
-      .block-container { padding: 3rem !important; max-width: 1200px !important; }
+      .stApp {
+        background:
+          radial-gradient(circle at top left, rgba(68,114,196,0.10), transparent 28%),
+          linear-gradient(180deg, #eef3f8 0%, #f7f9fc 100%);
+      }
+      .block-container {
+        padding: 1.35rem 1.35rem 1.75rem !important;
+        max-width: 1260px !important;
+      }
+      [data-testid="stVerticalBlock"] { gap: 0.75rem !important; }
       section[data-testid="stSidebar"] { display: none !important; }
+
+      .auto-eyebrow {
+        color: #4472C4;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .auto-title {
+        color: #163152;
+        font-size: 30px;
+        font-weight: 800;
+        line-height: 1.05;
+        margin: 0 0 8px 0;
+      }
+      .auto-subtitle {
+        color: #5f6f84;
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 0;
+      }
+      .auto-stat-label {
+        color: #7a8798;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .auto-stat-value {
+        color: #163152;
+        font-size: 22px;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 6px;
+      }
+      .auto-stat-note {
+        color: #6d7c90;
+        font-size: 11px;
+        line-height: 1.35;
+      }
+      .auto-card-kicker {
+        color: #4472C4;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .auto-card-title {
+        color: #163152;
+        font-size: 19px;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+      .auto-card-note {
+        color: #66768a;
+        font-size: 12px;
+        line-height: 1.45;
+        margin-bottom: 10px;
+      }
+      .auto-section-title {
+        color: #163152;
+        font-size: 22px;
+        font-weight: 800;
+        margin: 6px 0 2px 0;
+      }
+      .auto-section-note {
+        color: #66768a;
+        font-size: 12px;
+        line-height: 1.45;
+        margin: 0 0 10px 0;
+      }
+      .auto-mini-title {
+        color: #163152;
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 2px;
+      }
+      .auto-mini-note {
+        color: #6d7c90;
+        font-size: 11px;
+        margin-bottom: 8px;
+      }
+
+      div[data-testid="stHorizontalBlock"]:has(#auto-hero-left) {
+        align-items: stretch !important;
+        gap: 0.8rem !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-hero-left),
+      div[data-testid="stColumn"]:has(#auto-hero-right),
+      div[data-testid="stColumn"]:has(#auto-stat-1),
+      div[data-testid="stColumn"]:has(#auto-stat-2),
+      div[data-testid="stColumn"]:has(#auto-stat-3),
+      div[data-testid="stColumn"]:has(#auto-stat-4),
+      div[data-testid="stColumn"]:has(#auto-card-download),
+      div[data-testid="stColumn"]:has(#auto-card-create),
+      div[data-testid="stColumn"]:has(#auto-upload-pr),
+      div[data-testid="stColumn"]:has(#auto-upload-mp),
+      div[data-testid="stColumn"]:has(#auto-upload-me),
+      div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
+        background: rgba(255,255,255,0.96) !important;
+        border: 1px solid #dbe4ef !important;
+        border-radius: 18px !important;
+        box-shadow: 0 10px 28px rgba(20,40,70,0.06) !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-hero-left),
+      div[data-testid="stColumn"]:has(#auto-hero-right),
+      div[data-testid="stColumn"]:has(#auto-stat-1),
+      div[data-testid="stColumn"]:has(#auto-stat-2),
+      div[data-testid="stColumn"]:has(#auto-stat-3),
+      div[data-testid="stColumn"]:has(#auto-stat-4),
+      div[data-testid="stColumn"]:has(#auto-card-download),
+      div[data-testid="stColumn"]:has(#auto-card-create),
+      div[data-testid="stColumn"]:has(#auto-upload-pr),
+      div[data-testid="stColumn"]:has(#auto-upload-mp),
+      div[data-testid="stColumn"]:has(#auto-upload-me) {
+        padding: 1rem 1rem 0.9rem 1rem !important;
+      }
+      div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
+        padding: 1rem 1rem 0.95rem 1rem !important;
+        margin-top: 0.15rem !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-hero-right) {
+        display: flex !important;
+        align-items: stretch !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-hero-right) > div {
+        width: 100% !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-stat-1),
+      div[data-testid="stColumn"]:has(#auto-stat-2),
+      div[data-testid="stColumn"]:has(#auto-stat-3),
+      div[data-testid="stColumn"]:has(#auto-stat-4) {
+        min-height: 110px !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-upload-pr),
+      div[data-testid="stColumn"]:has(#auto-upload-mp),
+      div[data-testid="stColumn"]:has(#auto-upload-me) {
+        min-height: 100% !important;
+      }
+
+      div[data-testid="stButton"] button,
+      div[data-testid="stDownloadButton"] button {
+        border-radius: 12px !important;
+        min-height: 42px !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+      }
+      div[data-testid="stFileUploaderDropzone"] {
+        padding: 0.85rem 0.95rem !important;
+        border-radius: 14px !important;
+        background: #f8fbff !important;
+        border: 1px dashed #bfd0e4 !important;
+      }
+      div[data-testid="stFileUploaderDropzone"] * {
+        font-size: 12px !important;
+      }
+      div[data-testid="stSelectbox"] label,
+      div[data-testid="stTextInput"] label,
+      div[data-testid="stFileUploader"] label {
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #516173 !important;
+      }
+      div[data-testid="stSelectbox"] > div,
+      div[data-testid="stTextInput"] > div {
+        margin-top: 0.1rem !important;
+      }
+      div[data-testid="stAlert"] {
+        border-radius: 14px !important;
+        padding-top: 0.55rem !important;
+        padding-bottom: 0.55rem !important;
+      }
+      hr {
+        margin: 0.35rem 0 0.2rem 0 !important;
+        border-top: 1px solid #dbe4ef !important;
+      }
     </style>
     ''', unsafe_allow_html=True)
 else:
@@ -2049,219 +2236,295 @@ if not st.session_state.show_auto:
 
 else:
     # ==== MODO PANEL DE AUTOMATIZACIÓN ====
-    st.title("⚙️ Panel de Automatización y Sincronización")
-    st.markdown("Administra la creación y descarga de las hojas de SharePoint con el formato oficial CFBC.")
-    
-    if st.button("⬅️ Volver al Dashboard", type="secondary", on_click=toggle_auto):
-        pass
-        
-    st.divider()
-    
-    # Dividimos la pantalla en 2 tarjetas grandes
-    col_down, col_create = st.columns(2, gap="large")
-    
+    try:
+        _sp_cfg = st.secrets["sharepoint"]
+        _secrets_ok = all(k in _sp_cfg for k in ["tenant_id", "client_id", "client_secret"])
+    except Exception:
+        _secrets_ok = False
+
+    hero_left, hero_right = st.columns([7, 1.6], gap="small")
+    with hero_left:
+        st.markdown(
+            '''
+            <div id="auto-hero-left"></div>
+            <div class="auto-eyebrow">Centro Floricultor de Baja California</div>
+            <div class="auto-title">Panel Auto</div>
+            <div class="auto-subtitle">Operaciones de descarga, creación y carga de hojas SharePoint con una vista más compacta, clara y ejecutiva.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
+    with hero_right:
+        st.markdown('<div id="auto-hero-right"></div>', unsafe_allow_html=True)
+        st.button("⬅ Dashboard", type="secondary", on_click=toggle_auto, use_container_width=True)
+
+    stat_cols = st.columns(4, gap="small")
+    stat_values = [
+        ("auto-stat-1", str(len(available_weeks)), "Semanas detectadas", "Base disponible para operaciones WK."),
+        ("auto-stat-2", "Lista" if _crear_disponible else "Off", "Crear WK", "Plantilla oficial lista para alta manual."),
+        ("auto-stat-3", "Lista" if _subir_disponible else "Off", "Carga PR/MP/ME", "Inserción automática al libro principal."),
+        ("auto-stat-4", "OK" if _secrets_ok else "Pend.", "Credenciales", "Estado de acceso a SharePoint / Graph."),
+    ]
+    for col, (marker, value, label, note) in zip(stat_cols, stat_values):
+        with col:
+            st.markdown(
+                f'''<div id="{marker}"></div>
+                <div class="auto-stat-label">{label}</div>
+                <div class="auto-stat-value">{value}</div>
+                <div class="auto-stat-note">{note}</div>''',
+                unsafe_allow_html=True,
+            )
+
+    col_down, col_create = st.columns(2, gap="medium")
+
     with col_down:
-        st.header("⬇️ Descargar Archivo WK")
-        st.info("Descarga una hoja individual con formato completo desde SharePoint.")
+        st.markdown(
+            '''
+            <div id="auto-card-download"></div>
+            <div class="auto-card-kicker">Operación WK</div>
+            <div class="auto-card-title">Descargar hoja semanal</div>
+            <div class="auto-card-note">Prepara un archivo individual con el formato oficial para revisión o descarga inmediata.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
         if available_weeks:
-            selected_wk = st.selectbox("Selecciona la semana a descargar:", options=available_weeks, format_func=lambda c: f"WK{c}")
-            
-            if st.button("Preparar Archivo XLSX", use_container_width=True):
+            selected_wk = st.selectbox(
+                "Semana disponible",
+                options=available_weeks,
+                format_func=lambda c: f"WK{c}",
+                key="auto_download_wk",
+            )
+
+            if st.button("Preparar archivo XLSX", use_container_width=True, key="btn_prepare_wk"):
                 with st.spinner(f"Conectando con SharePoint y preparando WK{selected_wk}..."):
                     xlsx_bytes = get_sheet_xlsx(selected_wk)
                 if xlsx_bytes:
-                    st.success("✅ Archivo procesado y listo para descargar.")
+                    st.success("Archivo listo para descarga.")
                     st.download_button(
-                        label=f"💾 Descargar WK{selected_wk}.xlsx",
+                        label=f"Descargar WK{selected_wk}.xlsx",
                         data=xlsx_bytes,
                         file_name=f"WK{selected_wk}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         type="primary",
-                        use_container_width=True
+                        use_container_width=True,
                     )
                 else:
-                    st.error(f"❌ No se encontró WK{selected_wk} en el servidor.")
+                    st.error(f"No se encontró WK{selected_wk} en el servidor.")
         else:
             st.warning("No hay semanas disponibles para descargar.")
-            
+
     with col_create:
-        st.header("➕ Nueva Hoja SharePoint")
-        st.info("Crea una hoja WK en blanco en el Excel principal, aplicando celdas, fórmulas y colores oficiales.")
+        st.markdown(
+            '''
+            <div id="auto-card-create"></div>
+            <div class="auto-card-kicker">Alta manual</div>
+            <div class="auto-card-title">Crear nueva hoja WK</div>
+            <div class="auto-card-note">Genera una hoja en blanco con celdas, fórmulas y formato corporativo directamente en SharePoint.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
         if _crear_disponible:
-            nuevo_nombre = st.text_input("Nombre de la nueva hoja (Ej: WK2518):", placeholder="Ej: WK2518").strip().upper()
-            
-            if st.button("🚀 Crear Hoja en SharePoint", type="primary", use_container_width=True):
+            nuevo_nombre = st.text_input(
+                "Código de hoja",
+                placeholder="WK2518",
+                key="auto_new_wk_name",
+            ).strip().upper()
+
+            if st.button("Crear hoja en SharePoint", type="primary", use_container_width=True, key="btn_create_wk"):
                 if not nuevo_nombre:
-                    st.warning("⚠️ Escribe el nombre de la hoja.")
+                    st.warning("Escribe el nombre de la hoja.")
                 elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
-                    st.warning("⚠️ El formato debe ser exactamente WK#### (Ej: WK2518).")
+                    st.warning("El formato debe ser exactamente WK#### (ej: WK2518).")
                 else:
                     try:
                         tenant_id     = st.secrets["sharepoint"]["tenant_id"]
                         client_id     = st.secrets["sharepoint"]["client_id"]
                         client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Escribiendo {nuevo_nombre} vía Microsoft Graph API… (Esto toma unos segundos)"):
+                        with st.spinner(f"Escribiendo {nuevo_nombre} vía Microsoft Graph API..."):
                             resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
                         if resultado.get("ok"):
-                            st.success(f"🎉 {resultado['mensaje']}")
+                            st.success(resultado["mensaje"])
                             st.cache_data.clear()
                         else:
-                            st.error(f"❌ {resultado['error']}")
+                            st.error(resultado["error"])
                     except KeyError as e:
-                        st.error(f"❌ Falta configurar la credencial en secrets.toml: {e}.")
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
         else:
-            st.error("⚠️ La función de crear hojas no está disponible en data_extractor.py")
+            st.error("La función de crear hojas no está disponible en data_extractor.py")
 
-    # ── SECCIÓN: Subir PR / ME / MP ───────────────────────────────────────────
-    st.divider()
-    st.header("🔼 Subir PR / ME / MP a SharePoint")
-    st.info(
-        "Sube los archivos Excel de PR, MP y/o ME para una semana y se crearán las hojas "
-        "correspondientes en el Excel de SharePoint automáticamente. "
-        "**ME** acepta 2 archivos que se fusionan en una sola hoja."
-    )
+    with st.container():
+        st.markdown(
+            '''
+            <div id="auto-upload-shell"></div>
+            <div class="auto-card-kicker">Carga consolidada</div>
+            <div class="auto-section-title">Subir PR / MP / ME</div>
+            <div class="auto-section-note">Carga archivos fuente para una semana de trabajo y crea las hojas correspondientes dentro del Excel principal. ME admite 2 archivos fusionados.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
 
-    if not _subir_disponible:
-        st.error("⚠️ La función `insertar_hojas_pr_me_mp` no está disponible en data_extractor.py")
-    else:
-        # ── Selector de semana ────────────────────────────────────────────────
-        col_wk_sel, col_wk_man = st.columns([2, 1], gap="small")
-        with col_wk_sel:
-            if available_weeks:
-                semana_sel = st.selectbox(
-                    "Semana de referencia:",
-                    options=available_weeks,
-                    format_func=lambda c: f"WK{c}",
-                    key="upload_wk_sel",
+        if not _subir_disponible:
+            st.error("La función `insertar_hojas_pr_me_mp` no está disponible en data_extractor.py")
+        else:
+            ctrl_sel, ctrl_manual, ctrl_state = st.columns([1.8, 1.1, 0.9], gap="small")
+            with ctrl_sel:
+                if available_weeks:
+                    semana_sel = st.selectbox(
+                        "Semana base",
+                        options=available_weeks,
+                        format_func=lambda c: f"WK{c}",
+                        key="upload_wk_sel",
+                    )
+                    semana_code_upload = semana_sel
+                else:
+                    semana_code_upload = ""
+            with ctrl_manual:
+                semana_manual = st.text_input(
+                    "O captura el código",
+                    placeholder="2518",
+                    max_chars=4,
+                    key="upload_wk_manual",
+                ).strip()
+                if semana_manual:
+                    semana_code_upload = semana_manual
+            with ctrl_state:
+                wk_label = f"WK{semana_code_upload}" if semana_code_upload else "Sin WK"
+                st.markdown(
+                    f'''<div class="auto-card-kicker">Destino</div>
+                    <div class="auto-card-title">{wk_label}</div>
+                    <div class="auto-card-note">Semana objetivo para la inserción.</div>''',
+                    unsafe_allow_html=True,
                 )
-                semana_code_upload = semana_sel  # ej "2613"
-            else:
-                semana_code_upload = ""
-        with col_wk_man:
-            semana_manual = st.text_input(
-                "O escribe el código (ej: 2518):",
-                placeholder="2518",
-                max_chars=4,
-                key="upload_wk_manual",
-            ).strip()
-            if semana_manual:
-                semana_code_upload = semana_manual
 
-        st.markdown("---")
+            upload_pr_col, upload_mp_col, upload_me_col = st.columns([1, 1, 1.15], gap="medium")
 
-        # ── File uploaders ────────────────────────────────────────────────────
-        col_pr, col_mp = st.columns(2, gap="large")
+            with upload_pr_col:
+                st.markdown(
+                    '''
+                    <div id="auto-upload-pr"></div>
+                    <div class="auto-mini-title">PR</div>
+                    <div class="auto-mini-note">Plaguicidas / riego</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                pr_uploaded = st.file_uploader(
+                    f"Archivo PR{' · WK' + semana_code_upload if semana_code_upload else ''}",
+                    type=["xlsx", "xls"],
+                    key="upload_pr",
+                    help="Un archivo Excel con los datos PR de la semana seleccionada.",
+                )
+                if pr_uploaded:
+                    st.caption(f"OK · {pr_uploaded.name} ({round(pr_uploaded.size/1024,1)} KB)")
 
-        with col_pr:
-            st.markdown("##### 📄 PR — Plaguicidas / Riego")
-            pr_uploaded = st.file_uploader(
-                f"Excel PR{'(' + semana_code_upload + ')' if semana_code_upload else ''}",
-                type=["xlsx", "xls"],
-                key="upload_pr",
-                help="Un archivo .xlsx con los datos de PR para la semana seleccionada.",
-            )
-            if pr_uploaded:
-                st.caption(f"✅ {pr_uploaded.name} ({round(pr_uploaded.size/1024,1)} KB)")
+            with upload_mp_col:
+                st.markdown(
+                    '''
+                    <div id="auto-upload-mp"></div>
+                    <div class="auto-mini-title">MP</div>
+                    <div class="auto-mini-note">Mantenimiento</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                mp_uploaded = st.file_uploader(
+                    f"Archivo MP{' · WK' + semana_code_upload if semana_code_upload else ''}",
+                    type=["xlsx", "xls"],
+                    key="upload_mp",
+                    help="Un archivo Excel con los datos MP de la semana seleccionada.",
+                )
+                if mp_uploaded:
+                    st.caption(f"OK · {mp_uploaded.name} ({round(mp_uploaded.size/1024,1)} KB)")
 
-        with col_mp:
-            st.markdown("##### 🔧 MP — Mantenimiento")
-            mp_uploaded = st.file_uploader(
-                f"Excel MP{'(' + semana_code_upload + ')' if semana_code_upload else ''}",
-                type=["xlsx", "xls"],
-                key="upload_mp",
-                help="Un archivo .xlsx con los datos de MP para la semana seleccionada.",
-            )
-            if mp_uploaded:
-                st.caption(f"✅ {mp_uploaded.name} ({round(mp_uploaded.size/1024,1)} KB)")
+            with upload_me_col:
+                st.markdown(
+                    '''
+                    <div id="auto-upload-me"></div>
+                    <div class="auto-mini-title">ME</div>
+                    <div class="auto-mini-note">Material de empaque · 2 archivos opcionales</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                me1_uploaded = st.file_uploader(
+                    "Archivo ME 1",
+                    type=["xlsx", "xls"],
+                    key="upload_me1",
+                    help="Primer archivo Excel ME.",
+                )
+                if me1_uploaded:
+                    st.caption(f"OK · {me1_uploaded.name} ({round(me1_uploaded.size/1024,1)} KB)")
+                me2_uploaded = st.file_uploader(
+                    "Archivo ME 2",
+                    type=["xlsx", "xls"],
+                    key="upload_me2",
+                    help="Segundo archivo Excel ME; se fusiona con el primero en la misma hoja.",
+                )
+                if me2_uploaded:
+                    st.caption(f"OK · {me2_uploaded.name} ({round(me2_uploaded.size/1024,1)} KB)")
 
-        st.markdown("##### 📦 ME — Material de Empaque (2 archivos → 1 hoja fusionada)")
-        col_me1, col_me2 = st.columns(2, gap="medium")
-        with col_me1:
-            me1_uploaded = st.file_uploader(
-                "Excel ME — Archivo 1",
-                type=["xlsx", "xls"],
-                key="upload_me1",
-                help="Primer archivo Excel ME.",
-            )
-            if me1_uploaded:
-                st.caption(f"✅ {me1_uploaded.name} ({round(me1_uploaded.size/1024,1)} KB)")
-        with col_me2:
-            me2_uploaded = st.file_uploader(
-                "Excel ME — Archivo 2",
-                type=["xlsx", "xls"],
-                key="upload_me2",
-                help="Segundo archivo Excel ME (se fusiona con el primero en la misma hoja).",
-            )
-            if me2_uploaded:
-                st.caption(f"✅ {me2_uploaded.name} ({round(me2_uploaded.size/1024,1)} KB)")
+            st.markdown("---")
 
-        st.markdown("---")
+            _hay_archivos  = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded])
+            _hay_semana    = bool(semana_code_upload)
+            _semana_valida = semana_code_upload.isdigit() and len(semana_code_upload) == 4
 
-        # ── Botón de subida ───────────────────────────────────────────────────
-        _hay_archivos   = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded])
-        _hay_semana     = bool(semana_code_upload)
-        _semana_valida  = semana_code_upload.isdigit() and len(semana_code_upload) == 4
+            if st.button(
+                f"Crear hojas en SharePoint {'— WK' + semana_code_upload if semana_code_upload else ''}",
+                type="primary",
+                use_container_width=True,
+                key="btn_subir_pr_me_mp",
+                disabled=not (_hay_archivos and _hay_semana),
+            ):
+                if not _semana_valida:
+                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2613).")
+                else:
+                    try:
+                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                        client_secret = st.secrets["sharepoint"]["client_secret"]
 
-        if st.button(
-            f"🚀 Crear hojas en SharePoint {'— WK' + semana_code_upload if semana_code_upload else ''}",
-            type="primary",
-            use_container_width=True,
-            key="btn_subir_pr_me_mp",
-            disabled=not (_hay_archivos and _hay_semana),
-        ):
-            if not _semana_valida:
-                st.warning("⚠️ El código de semana debe ser exactamente 4 dígitos (ej: 2613).")
-            else:
-                try:
-                    tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                    client_id_sp  = st.secrets["sharepoint"]["client_id"]
-                    client_secret = st.secrets["sharepoint"]["client_secret"]
+                        tipos_subidos = []
+                        if pr_uploaded:
+                            tipos_subidos.append("PR")
+                        if mp_uploaded:
+                            tipos_subidos.append("MP")
+                        if me1_uploaded or me2_uploaded:
+                            tipos_subidos.append("ME")
 
-                    tipos_subidos = []
-                    if pr_uploaded:  tipos_subidos.append("PR")
-                    if mp_uploaded:  tipos_subidos.append("MP")
-                    if me1_uploaded or me2_uploaded: tipos_subidos.append("ME")
+                        with st.spinner(
+                            f"Conectando con SharePoint y creando hojas {', '.join(tipos_subidos)} para WK{semana_code_upload}..."
+                        ):
+                            res = insertar_hojas_pr_me_mp(
+                                semana_code   = semana_code_upload,
+                                tenant_id     = tenant_id,
+                                client_id     = client_id_sp,
+                                client_secret = client_secret,
+                                pr_file       = pr_uploaded  if pr_uploaded  else None,
+                                mp_file       = mp_uploaded  if mp_uploaded  else None,
+                                me_file1      = me1_uploaded if me1_uploaded else None,
+                                me_file2      = me2_uploaded if me2_uploaded else None,
+                            )
 
-                    with st.spinner(
-                        f"Conectando con SharePoint y creando hojas "
-                        f"{', '.join(tipos_subidos)} para WK{semana_code_upload}…"
-                    ):
-                        res = insertar_hojas_pr_me_mp(
-                            semana_code   = semana_code_upload,
-                            tenant_id     = tenant_id,
-                            client_id     = client_id_sp,
-                            client_secret = client_secret,
-                            pr_file       = pr_uploaded  if pr_uploaded  else None,
-                            mp_file       = mp_uploaded  if mp_uploaded  else None,
-                            me_file1      = me1_uploaded if me1_uploaded else None,
-                            me_file2      = me2_uploaded if me2_uploaded else None,
-                        )
+                        hubo_error = False
+                        for tipo in ["PR", "MP", "ME"]:
+                            info = res.get(tipo, {})
+                            ok   = info.get("ok")
+                            msg  = info.get("msg", "")
+                            if ok is True:
+                                st.success(msg)
+                            elif ok is False:
+                                st.error(msg)
+                                hubo_error = True
 
-                    # ── Mostrar resultados ────────────────────────────────────
-                    hubo_error = False
-                    for tipo in ["PR", "MP", "ME"]:
-                        info = res.get(tipo, {})
-                        ok   = info.get("ok")
-                        msg  = info.get("msg", "")
-                        if ok is True:
-                            st.success(msg)
-                        elif ok is False:
-                            st.error(msg)
-                            hubo_error = True
-                        # ok is None → no se subió archivo, no mostrar nada
+                        if not hubo_error:
+                            st.cache_data.clear()
+                            st.info("Recarga el dashboard para reflejar los nuevos datos.")
+                        else:
+                            st.warning("Algunos archivos no se pudieron subir. Revisa los mensajes mostrados.")
 
-                    if not hubo_error:
-                        st.cache_data.clear()
-                        st.info("💡 Recarga el dashboard para ver los nuevos datos.")
-                    else:
-                        st.warning("⚠️ Algunos archivos no se pudieron subir. Revisa los mensajes de error arriba.")
+                    except KeyError as e:
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                    except Exception as e:
+                        st.error(f"Error inesperado: {e}")
 
-                except KeyError as e:
-                    st.error(f"❌ Falta configurar la credencial en secrets.toml: {e}.")
-                except Exception as e:
-                    st.error(f"❌ Error inesperado: {e}")
-
-        if not _hay_semana:
-            st.caption("⬆️ Selecciona una semana para habilitar el botón.")
-        elif not _hay_archivos:
-            st.caption("⬆️ Sube al menos un archivo para habilitar el botón.")
+            if not _hay_semana:
+                st.caption("Selecciona o captura una semana para habilitar la carga.")
+            elif not _hay_archivos:
+                st.caption("Sube al menos un archivo para habilitar la creación de hojas.")
