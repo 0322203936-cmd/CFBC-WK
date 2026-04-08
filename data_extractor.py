@@ -422,7 +422,7 @@ def _sumar_gasto_por_rancho(parsed: dict, tipo: str | None = None) -> tuple[dict
         for tipo_name in tipos:
             for item in (by_tipo or {}).get(tipo_name, []):
                 try:
-                    subtotal += float(str(item[2]).replace(",", ""))
+                    subtotal += abs(float(str(item[2]).replace(",", "")))
                 except Exception:
                     continue
         subtotal = round(subtotal, 2)
@@ -2479,6 +2479,19 @@ def autorrellenar_materiales_wk(week_code: str, tenant_id: str, client_id: str, 
                     "ok": False,
                     "error": f"No se pudo escribir {categoria} en {target_sheet}: {patch_resp.text[:300]}",
                 }
+
+            requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='D{row}:J{row}')/format",
+                headers=hdrs,
+                json={"numberFormat": "#,##0"},
+                timeout=20,
+            )
+            requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='D{row}:J{row}')/format/font",
+                headers=hdrs,
+                json={"color": "#C00000", "bold": True, "name": "Arial"},
+                timeout=20,
+            )
 
     finally:
         requests.post(f"{wb_url}/closeSession", headers=hdrs, timeout=20)
