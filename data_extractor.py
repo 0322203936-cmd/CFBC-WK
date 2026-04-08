@@ -1866,9 +1866,22 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         sheets_resp = requests.get(f'{wb_url}/worksheets', headers=hdrs, timeout=20)
         if sheets_resp.status_code != 200:
             return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
-        nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
+        sheets_data = sheets_resp.json().get('value', [])
+        nombres = [h['name'].strip() for h in sheets_data]
         if nombre_hoja.upper() in [n.upper() for n in nombres]:
             return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
+
+        prev_wk_name = None
+        prev_position = None
+        m_prev = re.search(r'\d+', nombre_hoja)
+        if m_prev:
+            num = int(m_prev.group())
+            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
+            for sheet in sheets_data:
+                sheet_name = sheet.get('name', '').strip()
+                if sheet_name.upper() == prev_wk_name.upper():
+                    prev_position = sheet.get('position')
+                    break
 
         # ── 5. Crear la hoja nueva ────────────────────────────────────────
         add_resp = requests.post(
@@ -1881,22 +1894,20 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
 
         ws_id = add_resp.json().get('id', nombre_hoja)
-        # ── 6. Mover al inicio (posición 0) ───────────────────────
-        requests.patch(
-            f'{wb_url}/worksheets/{nombre_hoja}',
-            headers=hdrs,
-            json={"position": 0},
-            timeout=20,
-        )
+
+        target_position = None
+        if prev_position is not None:
+            target_position = prev_position + 1
+
+        if target_position is not None:
+            requests.patch(
+                f'{wb_url}/worksheets/{nombre_hoja}',
+                headers=hdrs,
+                json={"position": target_position},
+                timeout=20,
+            )
 
         # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
-        import re
-        prev_wk_name = None
-        m = re.search(r'\d+', nombre_hoja)
-        if m:
-            num = int(m.group())
-            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
-
         copied_data = None
         if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
             # Traer fórmulas y formatos de número explícitamente de A1 hasta Z1500
