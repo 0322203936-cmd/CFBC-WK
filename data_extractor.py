@@ -1868,8 +1868,16 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         if sheets_resp.status_code != 200:
             return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
         sheets_data = sheets_resp.json().get('value', [])
-        nombres = [h['name'].strip() for h in sheets_data]
-        if nombre_hoja.upper() in [n.upper() for n in nombres]:
+
+        def _norm_name(name: str | None) -> str:
+            if not name:
+                return ""
+            return re.sub(r'\s+', '', name).upper()
+
+        target_norm = _norm_name(nombre_hoja)
+        nombres = [h.get('name', '').strip() for h in sheets_data]
+        norm_names = [_norm_name(n) for n in nombres]
+        if target_norm in norm_names:
             return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
 
         prev_wk_name = None
@@ -1879,9 +1887,10 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         if m_prev:
             num = int(m_prev.group())
             prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
+            prev_norm = _norm_name(prev_wk_name)
             for sheet in sheets_data:
                 sheet_name = sheet.get('name', '').strip()
-                if sheet_name.upper() == prev_wk_name.upper():
+                if _norm_name(sheet_name) == prev_norm:
                     prev_position = sheet.get('position')
                     prev_sheet_id = sheet.get('id')
                     break
@@ -1935,7 +1944,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
         # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
         copied_data = None
-        if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
+        if prev_wk_name and _norm_name(prev_wk_name) in norm_names:
             # Traer fórmulas y formatos de número explícitamente de A1 hasta Z1500
             try:
                 get_resp = requests.get(
