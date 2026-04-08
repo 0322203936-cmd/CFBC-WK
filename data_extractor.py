@@ -237,11 +237,30 @@ def _parse_generic(rows: list) -> dict:
     UNIDADES_COL  = 7
     GASTO_COL     = 9
 
+    # Autodetectar columnas si existe fila de encabezado (soporte para formato limpio)
+    for i in range(min(15, len(rows))):
+        if not rows[i]: continue
+        r_str = [str(c).strip().upper() for c in rows[i]]
+        if "UBICACION" in r_str and ("GASTO" in r_str or "COSTO" in r_str):
+            UBICACION_COL = r_str.index("UBICACION")
+            if "GASTO" in r_str:
+                GASTO_COL = r_str.index("GASTO")
+            elif "COSTO" in r_str:
+                GASTO_COL = r_str.index("COSTO")
+                
+            if "PRODUCTO" in r_str: 
+                PRODUCTO_COL = r_str.index("PRODUCTO")
+            if "UNIDADES" in r_str: 
+                UNIDADES_COL = r_str.index("UNIDADES")
+            elif "CANTIDAD" in r_str:
+                UNIDADES_COL = r_str.index("CANTIDAD")
+            break
+
     result = {}
     accum  = {}   # (rancho, tipo, producto, ubicacion) → [u_total, g_total]
 
     for row in rows:
-        if not row or len(row) < 10:
+        if not row or len(row) <= max(UBICACION_COL, PRODUCTO_COL, UNIDADES_COL, GASTO_COL):
             continue
 
         ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
@@ -2534,14 +2553,61 @@ def insertar_hojas_pr_me_mp(
         session_id = _abrir_sesion(wb_url, hdrs_json)
         hdrs       = {**hdrs_json, "workbook-session-id": session_id}
 
+    # ── Helper: Limpiar archivos crudos de CONTPAQ ──────────────────────────
+    def _limpiar_matriz(matrix):
+        """Toma la matriz con basura y extrae exactamente las 5 columnas."""
+        import re
+        cleaned = [["FECHA", "UBICACION", "PRODUCTO", "UNIDADES", "GASTO"]]
+        for row in matrix:
+            # Asegurar que la fila tenga al menos 12 elementos rellenando con vacíos
+            r = list(row) + [""] * max(0, 12 - len(row))
+            
+            ubicacion = str(r[2]).strip().upper()
+            ubicacion_cln = re.sub(r'\s+', '', ubicacion)
+            
+            if not ubicacion_cln or len(ubicacion_cln) < 5:
+                continue
+            if not re.match(r'^[A-Z0-9]+$', ubicacion_cln):
+                continue
+                
+            fecha = r[0]
+            
+            # El dashboard originalmente usa la columna 5 para producto.
+            # Vamos a usar col 5. Si está vacía, intentamos col 6.
+            prod_c = str(r[5]).strip()
+            prod_n = str(r[6]).strip()
+            prod = prod_c if prod_c else prod_n
+            
+            # Unidades y Gasto
+            unid = str(r[7]).strip()
+            gasto = str(r[9]).strip()
+            
+            # Para evitar que filas 2 y 3 con "basura" pasen el filtro (metadatos de CONTPAQ), 
+            # aseguramos que unidades o gasto contengan un número real.
+            def is_num(v):
+                if not v: return False
+                try:
+                    float(v.replace(',', '').replace('$', '').strip())
+                    return True
+                except ValueError: return False
+                
+            if not is_num(unid) and not is_num(gasto):
+                continue
+            
+            cleaned.append([fecha, ubicacion_cln, prod, unid, gasto])
+            
+        print(f"   [Debug Clean] Matriz original tenía {len(matrix)} filas, la limpia tiene {len(cleaned)} filas")
+        return cleaned if len(cleaned) > 1 else matrix
+
     # ── Procesar PR ─────────────────────────────────────────────────────────
     if pr_file is not None:
         nombre = f"PR{code}"
         try:
             _init_conexion()
             matrix = _read_matrix(pr_file)
+            matrix = _limpiar_matriz(matrix)
             filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
-            resultado["PR"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas)"}
+            resultado["PR"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas limpias)"}
             print(f"✅ {nombre} insertada con {filas} filas.")
         except Exception as e:
             resultado["PR"] = {"ok": False, "msg": f"❌ PR — {e}"}
@@ -2555,8 +2621,9 @@ def insertar_hojas_pr_me_mp(
         try:
             _init_conexion()
             matrix = _read_matrix(mp_file)
+            matrix = _limpiar_matriz(matrix)
             filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
-            resultado["MP"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas)"}
+            resultado["MP"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas limpias)"}
             print(f"✅ {nombre} insertada con {filas} filas.")
         except Exception as e:
             resultado["MP"] = {"ok": False, "msg": f"❌ MP — {e}"}
@@ -2570,22 +2637,19 @@ def insertar_hojas_pr_me_mp(
         try:
             _init_conexion()
             matrix = []
-            conteo = []
             if me_file1 is not None:
-                m1     = _read_matrix(me_file1)
-                matrix += m1
-                conteo.append(f"{len(m1)} filas (archivo 1)")
+                matrix += _read_matrix(me_file1)
             if me_file2 is not None:
-                m2     = _read_matrix(me_file2)
-                matrix += m2
-                conteo.append(f"{len(m2)} filas (archivo 2)")
-            detalle = " + ".join(conteo)
-            filas   = _crear_hoja(wb_url, hdrs, nombre, matrix)
+                matrix += _read_matrix(me_file2)
+                
+            matrix_limpia = _limpiar_matriz(matrix)
+            filas = _crear_hoja(wb_url, hdrs, nombre, matrix_limpia)
+            
             resultado["ME"] = {
                 "ok":  True,
-                "msg": f"✅ {nombre} creada ({detalle} → {filas} filas totales)",
+                "msg": f"✅ {nombre} creada ({filas} filas limpias totales)",
             }
-            print(f"✅ {nombre} insertada: {detalle} → {filas} filas.")
+            print(f"✅ {nombre} insertada: {filas} filas.")
         except Exception as e:
             resultado["ME"] = {"ok": False, "msg": f"❌ ME — {e}"}
             print(f"❌ Error ME: {e}")
