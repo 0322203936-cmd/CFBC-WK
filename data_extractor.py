@@ -1672,8 +1672,10 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
         if sheets_resp.status_code != 200:
             return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
         
-        nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
-        if nombre_hoja.upper() in [n.upper() for n in nombres]:
+        sheets_data = sheets_resp.json().get('value', [])
+        name_to_id = {h['name'].strip().upper(): h['id'] for h in sheets_data}
+        
+        if nombre_hoja.upper() in name_to_id:
             return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
 
         # Deducir la semana anterior
@@ -1683,30 +1685,36 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             num = int(m.group())
             prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
             
-        if not prev_wk_name or prev_wk_name.upper() not in [n.upper() for n in nombres]:
-            # Si por alguna razón no existe la semana anterior, usar la primera hoja de emergencia
-            if len(nombres) > 0:
-                prev_wk_name = nombres[0] 
-            else:
-                return {"ok": False, "error": f"No se encontró ninguna hoja previa para poder clonar."}
+        prev_wk_id = None
+        if prev_wk_name and prev_wk_name.upper() in name_to_id:
+            prev_wk_id = name_to_id[prev_wk_name.upper()]
+        elif len(sheets_data) > 0:
+            # Usar la primera como emergencia si no existe la anterior
+            prev_wk_id = sheets_data[0]['id']
+            prev_wk_name = sheets_data[0]['name']
+        else:
+            return {"ok": False, "error": "No se encontró ninguna hoja previa para poder clonar."}
 
-        # ── 5. Clonar la hoja completa nativamente ────────────────────────
+        # ── 5. Clonar la hoja completa nativamente usando el ID ───────────
         copy_resp = requests.post(
-            f'{wb_url}/worksheets/{prev_wk_name}/copy',
+            f'{wb_url}/worksheets/{prev_wk_id}/copy',
             headers=hdrs,
             json={
                 "name": nombre_hoja, 
                 "positionType": "Before", 
-                "targetWorksheet": prev_wk_name
+                "targetWorksheet": prev_wk_id
             },
             timeout=120,
         )
         if copy_resp.status_code not in (200, 201):
             return {"ok": False, "error": f"Error clonando la hoja completa: {copy_resp.text}"}
 
+        new_sheet = copy_resp.json()
+        new_sheet_id = new_sheet.get('id', nombre_hoja)
+
         # ── 6. Mover al inicio (posición 0) ───────────────────────
         requests.patch(
-            f'{wb_url}/worksheets/{nombre_hoja}',
+            f'{wb_url}/worksheets/{new_sheet_id}',
             headers=hdrs,
             json={"position": 0},
             timeout=20,
@@ -1714,7 +1722,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
         # ── 7. Actualizar celda B3 con el nombre de la nueva semana ───────
         requests.patch(
-            f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
+            f"{wb_url}/worksheets/{new_sheet_id}/range(address='B3')",
             headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
         )
 
