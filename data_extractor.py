@@ -266,7 +266,7 @@ def _parse_generic(rows: list) -> dict:
         ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
         ubicacion = re.sub(r'\s+', '', ubicacion)
 
-        if not ubicacion or len(ubicacion) < 6:
+        if not ubicacion or len(ubicacion) < 3:
             continue
         if not re.match(r'^[A-Z0-9]+$', ubicacion):
             continue
