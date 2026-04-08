@@ -1931,6 +1931,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             )
             clone_src = prev_wk_name or ""
             print(f"✅ Hoja clonada desde {clone_src} → {nombre_hoja}")
+            return {"ok": True, "mensaje": success_msg}
 
         # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
         copied_data = None
