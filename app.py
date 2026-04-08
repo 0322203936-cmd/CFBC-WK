@@ -121,7 +121,6 @@ else:
 def load_data_conteo_v5():
     return get_datos()
 
-
 try:
     DATA = load_data_conteo_v5()
 except Exception as e:
@@ -517,8 +516,18 @@ var _tableRows    = [];
 var _tableColDefs = [];
 
 // =======================================================
-// FORMATEO
+// FORMATEO Y UTILIDADES
 // =======================================================
+function reportHeight() {
+  if (window.parent) {
+    try {
+      var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'setHeight', height: Math.max(h, 600) }, '*');
+    } catch(e) {}
+  }
+}
+setInterval(reportHeight, 200);
+
 function fmt(n) {
   if (n === null || n === undefined || n === 0 || isNaN(n)) return '';
   var neg = n < 0, s = Math.abs(n);
@@ -903,7 +912,6 @@ function resetRange() {
 // VIEW ROUTER
 // =======================================================
 function renderView() {
-  _prodViews = [];  // limpiar paneles viejos al re-renderizar
   document.getElementById('prodPanel').className='';
   if      (state.view==='anual')       renderAnual();
   else if (state.view==='comparativo') renderComparativo();
@@ -1759,154 +1767,145 @@ function onMainCellClick(evt) {
 var _prodViews = [];
 
 function showProdPanel(rowData, opts) {
-  try {
-    opts=opts||{};
-    var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
-    var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
-    var ranchFilter=opts.ranch||null;
-    if (!cat||!yr) {
-      document.getElementById('prodPanel').className='show';
-      document.getElementById('prodTableWrap').innerHTML = '<div style="padding:10px;color:red;">Error: Faltan _cat o _year en rowData.</div>';
-      return;
-    }
+  opts=opts||{};
+  var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
+  var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
+  var ranchFilter=opts.ranch||null;
+  if (!cat||!yr) return;
 
-    var isMant=cat==='MANTENIMIENTO', isMatEmp=cat==='MATERIAL DE EMPAQUE';
-    var isMirfe=cat===CAT_MIRFE, isMipe=cat===CAT_MIPE;
-    var src=isMant?'mp':(isMatEmp?'me':'pr');
-    var tipoFilter=null;
-    if (src==='pr'){ if(isMirfe)tipoFilter='MIRFE'; else if(isMipe)tipoFilter='MIPE'; }
-    var dsMap={pr:DATA.productos,mp:DATA.productos_mp,me:DATA.productos_me};
-    var ds=dsMap[src]||{};
+  var isMant=cat==='MANTENIMIENTO', isMatEmp=cat==='MATERIAL DE EMPAQUE';
+  var isMirfe=cat===CAT_MIRFE, isMipe=cat===CAT_MIPE;
+  var src=isMant?'mp':(isMatEmp?'me':'pr');
+  var tipoFilter=null;
+  if (src==='pr'){ if(isMirfe)tipoFilter='MIRFE'; else if(isMipe)tipoFilter='MIPE'; }
+  var dsMap={pr:DATA.productos,mp:DATA.productos_mp,me:DATA.productos_me};
+  var ds=dsMap[src]||{};
 
-    var wkStart=parseInt(fromW||wn||0), wkEnd=parseInt(toW||wn||0);
-    if (!wkStart||!wkEnd) return;
-    if (wkStart>wkEnd){var tmp=wkStart;wkStart=wkEnd;wkEnd=tmp;}
+  var wkStart=parseInt(fromW||wn||0), wkEnd=parseInt(toW||wn||0);
+  if (!wkStart||!wkEnd) return;
+  if (wkStart>wkEnd){var tmp=wkStart;wkStart=wkEnd;wkEnd=tmp;}
 
-    var rows=[];
-    for (var wk=wkStart;wk<=wkEnd;wk++){
-      var wkCodeShort=((yr%100)*100)+wk, wkCodeLong=(yr*100)+wk;
-      var weekD=ds[wkCodeShort]||ds[String(wkCodeShort)]||ds[wkCodeLong]||ds[String(wkCodeLong)];
-      if (!weekD) continue;
-      Object.keys(weekD).forEach(function(ranch){
-        if (ranchFilter&&ranch!==ranchFilter) return;
-        var byTipo=weekD[ranch];
-        Object.keys(byTipo).forEach(function(tipo){
-          if (tipoFilter&&tipo!==tipoFilter) return;
-          (byTipo[tipo]||[]).forEach(function(item){
-            rows.push({week_code:wkCodeShort,rancho:ranch,tipo:tipo,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0,ubicacion:item[3]||''});
-          });
+  var rows=[];
+  for (var wk=wkStart;wk<=wkEnd;wk++){
+    var wkCodeShort=((yr%100)*100)+wk, wkCodeLong=(yr*100)+wk;
+    var weekD=ds[wkCodeShort]||ds[String(wkCodeShort)]||ds[wkCodeLong]||ds[String(wkCodeLong)];
+    if (!weekD) continue;
+    Object.keys(weekD).forEach(function(ranch){
+      if (ranchFilter&&ranch!==ranchFilter) return;
+      var byTipo=weekD[ranch];
+      Object.keys(byTipo).forEach(function(tipo){
+        if (tipoFilter&&tipo!==tipoFilter) return;
+        (byTipo[tipo]||[]).forEach(function(item){
+          rows.push({week_code:wkCodeShort,rancho:ranch,tipo:tipo,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0,ubicacion:item[3]||''});
         });
       });
-    }
+    });
+  }
 
-    var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
-    var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
-    
-    var panelHtml = '';
+  var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
+  var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
+  
+  var panelHtml = '';
+  
+  var pp = document.getElementById('prodPanel');
+  pp.className = 'show';
+  setTimeout(function(){
+    pp.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    reportHeight();
+  }, 100);
 
-    // ── KPI de siembra ────────────────────────────────────────────────
-    var kpiSection = '';
-    var _allMetas = [
-      {k:'inv_inicial',  lbl:'INV. INICIAL'},
-      {k:'tallos_cos',   lbl:'TALLOS COSECHADOS'},
-      {k:'tallos_des',   lbl:'TALLOS DESECHADOS'},
-      {k:'tallos_des_sf',lbl:'TALLOS DESECHADOS SF'},
-      {k:'tallos_comp',  lbl:'TALLOS COMPRADOS'},
-      {k:'tallos_bouq',  lbl:'TALLOS BOUQUETS/PROC.'},
-      {k:'tallos_desp',  lbl:'TALLOS DESPACHADOS'},
-      {k:'libras_alb',   lbl:'LIBRAS ALBAHACA'},
-      {k:'tallos_mues',  lbl:'TALLOS MUESTRA'},
-      {k:'inv_final',    lbl:'INV. FINAL'},
-      {k:'tallos_proc',  lbl:'TALLOS PROC. TOTALES'},
-      {k:'charolas_288', lbl:'CHAROLAS *288'},
-      {k:'charolas',     lbl:'N\u00ba CHAROLAS'},
-      {k:'esquejes',     lbl:'N\u00ba ESQUEJES'},
-      {k:'metros',       lbl:'METROS SIEMBRA'},
-      {k:'hectareas',    lbl:'HECT\u00c1REAS'},
-    ];
-    if (DATA.siembra_data) {
-      var _wkKey = ((yr%100)*100) + wkStart;
-      var _wkSrc = DATA.siembra_data[_wkKey] || DATA.siembra_data[String(_wkKey)] || null;
-      if (_wkSrc) {
-        var _sRow = ranchFilter ? (_wkSrc[ranchFilter] || _wkSrc['TOTAL'] || {}) : (_wkSrc['TOTAL'] || {});
-        var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
-        if (_activos.length > 0) {
-          kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;overflow-x:auto;scrollbar-width:none;">';
-          _activos.forEach(function(m,i){
-            if (i>0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
-            kpiSection += '<div style="display:flex;align-items:baseline;gap:4px;flex-shrink:0;white-space:nowrap;">'+
-              '<span style="font-size:9px;color:#44546A;text-transform:uppercase;">'+m.lbl+':</span>'+
-              '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</span>'+
-              '</div>';
-          });
-          kpiSection += '</div>';
-        }
+  // ── KPI de siembra ────────────────────────────────────────────────
+  var kpiSection = '';
+  var _allMetas = [
+    {k:'inv_inicial',  lbl:'INV. INICIAL'},
+    {k:'tallos_cos',   lbl:'TALLOS COSECHADOS'},
+    {k:'tallos_des',   lbl:'TALLOS DESECHADOS'},
+    {k:'tallos_des_sf',lbl:'TALLOS DESECHADOS SF'},
+    {k:'tallos_comp',  lbl:'TALLOS COMPRADOS'},
+    {k:'tallos_bouq',  lbl:'TALLOS BOUQUETS/PROC.'},
+    {k:'tallos_desp',  lbl:'TALLOS DESPACHADOS'},
+    {k:'libras_alb',   lbl:'LIBRAS ALBAHACA'},
+    {k:'tallos_mues',  lbl:'TALLOS MUESTRA'},
+    {k:'inv_final',    lbl:'INV. FINAL'},
+    {k:'tallos_proc',  lbl:'TALLOS PROC. TOTALES'},
+    {k:'charolas_288', lbl:'CHAROLAS *288'},
+    {k:'charolas',     lbl:'N\u00ba CHAROLAS'},
+    {k:'esquejes',     lbl:'N\u00ba ESQUEJES'},
+    {k:'metros',       lbl:'METROS SIEMBRA'},
+    {k:'hectareas',    lbl:'HECT\u00c1REAS'},
+  ];
+  if (DATA.siembra_data) {
+    var _wkKey = ((yr%100)*100) + wkStart;
+    var _wkSrc = DATA.siembra_data[_wkKey] || DATA.siembra_data[String(_wkKey)] || null;
+    if (_wkSrc) {
+      var _sRow = ranchFilter ? (_wkSrc[ranchFilter] || _wkSrc['TOTAL'] || {}) : (_wkSrc['TOTAL'] || {});
+      var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
+      if (_activos.length > 0) {
+        kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;overflow-x:auto;scrollbar-width:none;">';
+        _activos.forEach(function(m,i){
+          if (i>0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
+          kpiSection += '<div style="display:flex;align-items:baseline;gap:4px;flex-shrink:0;white-space:nowrap;">'+
+            '<span style="font-size:9px;color:#44546A;text-transform:uppercase;">'+m.lbl+':</span>'+
+            '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</span>'+
+            '</div>';
+        });
+        kpiSection += '</div>';
       }
     }
-
-    // ── Zona 2: Tabla de productos ────────────────────────────────────
-    var productSection = '';
-    if (rows.length === 0) {
-      var dInfo = "<b>[DEBUG]</b> Buscando cat: " + cat + " | yr: " + yr + " | wks: " + wkStart + " a " + wkEnd + " | ranch: " + (ranchFilter||"ALL") + "<br>";
-      dInfo += "wkCode: " + (((yr%100)*100)+wkStart) + " | ds keys: " + Object.keys(ds).slice(0, 8).join(', ');
-      if (Object.keys(ds).length === 0) dInfo += " (<b>ds ESTÁ VACÍO</b>, no hay datos de prod de SharePoint).";
-      productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">' +
-        'Sin registros de producto para este período.<br><br><span style="text-align:left;display:inline-block;background:#fffbe0;border:1px solid #ffe082;padding:6px;color:#b45309;">' + dInfo + '</span></div>';
-    } else {
-      rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
-      var total=rows.reduce(function(s,r){return s+r.gasto;},0);
-      var panelMeta = 'Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>';
-      productSection =
-        '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">' +
-          '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
-          '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
-        '</div>' +
-        '<div style="overflow-x:auto; overflow-y:auto; flex:1; scrollbar-width:thin;">' +
-          '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
-            '<thead><tr style="position:sticky;top:0;z-index:1;">' +
-              '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
-              '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
-              '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
-              '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO</th>' +
-            '</tr></thead><tbody>';
-      rows.forEach(function(r,i){
-        var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
-        productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
-          '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
-          '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
-          '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
-          '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+fmt(r.gasto)+'</td>' +
-          '</tr>';
-      });
-      productSection += '</tbody></table></div>';
-    }
-
-    panelHtml =
-      '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #4472C4; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
-        '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
-          '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
-        '</div>' +
-        kpiSection +
-        productSection +
-      '</div>';
-    
-    // Siempre reemplazar el panel (evitar que datos viejos bloqueen la vista)
-    _prodViews = [panelHtml];
-    
-    var pp = document.getElementById('prodPanel');
-    pp.className='show';
-    document.getElementById('prodTableWrap').innerHTML = panelHtml;
-    
-    // Forzar el tamaño y hacer scroll hacia el panel para que no quede oculto abajo:
-    setTimeout(function() {
-      resizeTable();
-      pp.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-    }, 150);
-
-  } catch(err) {
-    document.getElementById('prodPanel').className='show';
-    document.getElementById('prodTableWrap').innerHTML = '<div style="padding:15px; color:red; font-family:monospace; background:#fff0f0; border:1px solid red; word-break:break-all;"><b>CRITICAL JS ERROR in showProdPanel:</b><br>' + err.message + '<br><br>' + err.stack + '</div>';
   }
+
+  // ── Zona 2: Tabla de productos ────────────────────────────────────
+  var productSection = '';
+  if (rows.length === 0) {
+    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
+  } else {
+    rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
+    var total=rows.reduce(function(s,r){return s+r.gasto;},0);
+    var panelMeta = 'Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>';
+    productSection =
+      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">' +
+        '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
+        '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
+      '</div>' +
+      '<div style="overflow-x:auto; overflow-y:auto; flex:1; scrollbar-width:thin;">' +
+        '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
+          '<thead><tr style="position:sticky;top:0;z-index:1;">' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
+            '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO</th>' +
+          '</tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
+      productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
+        '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
+        '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
+        '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
+        '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+fmt(r.gasto)+'</td>' +
+        '</tr>';
+    });
+    productSection += '</tbody></table></div>';
+  }
+
+  panelHtml =
+    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #4472C4; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
+      '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
+        '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
+      '</div>' +
+      kpiSection +
+      productSection +
+    '</div>';
+  
+  if (_prodViews.indexOf(panelHtml) === -1) {
+    _prodViews.push(panelHtml);
+    if (_prodViews.length > 2) {
+      _prodViews.shift(); // keep max 2 side-by-side
+    }
+  }
+  
+  document.getElementById('prodPanel').className='show';
+  document.getElementById('prodTableWrap').innerHTML = _prodViews.join('');
+  setTimeout(resizeTable,80);
 }
 function closeProdPanel() { _prodViews = []; document.getElementById('prodPanel').className=''; setTimeout(resizeTable,60); }
 function showProdFromCmp(yr,wk,ranch) { showProdPanel({_cat:state.cat,_year:yr,_week:wk,_fromWeek:wk,_toWeek:wk},{ranch:ranch||null}); }
@@ -1923,10 +1922,8 @@ window.addEventListener('resize', resizeTable);
 // HEIGHT REPORTING
 // =======================================================
 function reportHeight() {
-  // Use scrollHeight to allow expanding when prodPanel appears
-  var h = document.documentElement.scrollHeight || document.body.scrollHeight || 700;
-  // Añadimos un pequeño margen por si el panel añade boxShadow u overflow
-  window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h + 20, 700)},'*');
+  var h = window.innerHeight || document.documentElement.clientHeight || 700;
+  window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h,700)},'*');
 }
 var ro=new ResizeObserver(reportHeight);
 ro.observe(document.getElementById('app')||document.body);
@@ -2120,6 +2117,8 @@ else:
                 key="upload_wk_manual",
             ).strip()
             if semana_manual:
+                if len(semana_manual) == 2 and semana_manual.isdigit():
+                    semana_manual = "26" + semana_manual
                 semana_code_upload = semana_manual
 
         st.markdown("---")
