@@ -1929,7 +1929,8 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
                 f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
                 headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
             )
-            return {"ok": True, "mensaje": success_msg}
+            clone_src = prev_wk_name or ""
+            print(f"✅ Hoja clonada desde {clone_src} → {nombre_hoja}")
 
         # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
         copied_data = None
