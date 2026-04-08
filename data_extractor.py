@@ -1860,6 +1860,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     session_id = sess_resp.json().get('id')
     hdrs = {**hdrs_json, "workbook-session-id": session_id}
+    success_msg = f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint."
 
     try:
         # ── 4. Verificar que la hoja no exista ────────────────────────────
@@ -1873,6 +1874,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
         prev_wk_name = None
         prev_position = None
+        prev_sheet_id = None
         m_prev = re.search(r'\d+', nombre_hoja)
         if m_prev:
             num = int(m_prev.group())
@@ -1881,19 +1883,25 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
                 sheet_name = sheet.get('name', '').strip()
                 if sheet_name.upper() == prev_wk_name.upper():
                     prev_position = sheet.get('position')
+                    prev_sheet_id = sheet.get('id')
                     break
 
         # ── 5. Crear la hoja nueva ────────────────────────────────────────
+        add_payload = {"name": nombre_hoja}
+        if prev_sheet_id:
+            add_payload["sourceWorksheetId"] = prev_sheet_id
+
         add_resp = requests.post(
             f'{wb_url}/worksheets/add',
             headers=hdrs,
-            json={"name": nombre_hoja},
+            json=add_payload,
             timeout=20,
         )
         if add_resp.status_code not in (200, 201):
             return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
 
         ws_id = add_resp.json().get('id', nombre_hoja)
+        used_sheet_clone = bool(prev_sheet_id)
 
         target_position = None
         if prev_position is not None:
@@ -1906,6 +1914,13 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
                 json={"position": target_position},
                 timeout=20,
             )
+
+        if used_sheet_clone:
+            requests.patch(
+                f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
+                headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
+            )
+            return {"ok": True, "mensaje": success_msg}
 
         # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
         copied_data = None
@@ -2302,7 +2317,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     return {
         "ok": True,
-        "mensaje": f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint.",
+        "mensaje": success_msg,
     }
 
 
