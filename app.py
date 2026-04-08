@@ -139,6 +139,7 @@ if st.session_state.show_auto:
       div[data-testid="stColumn"]:has(#auto-stat-4),
       div[data-testid="stColumn"]:has(#auto-card-download),
       div[data-testid="stColumn"]:has(#auto-card-create),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell),
       div[data-testid="stColumn"]:has(#auto-upload-pr),
       div[data-testid="stColumn"]:has(#auto-upload-mp),
       div[data-testid="stColumn"]:has(#auto-upload-me),
@@ -156,6 +157,7 @@ if st.session_state.show_auto:
       div[data-testid="stColumn"]:has(#auto-stat-4),
       div[data-testid="stColumn"]:has(#auto-card-download),
       div[data-testid="stColumn"]:has(#auto-card-create),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell),
       div[data-testid="stColumn"]:has(#auto-upload-pr),
       div[data-testid="stColumn"]:has(#auto-upload-mp),
       div[data-testid="stColumn"]:has(#auto-upload-me) {
@@ -164,6 +166,10 @@ if st.session_state.show_auto:
       div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
         padding: 1rem 1rem 0.95rem 1rem !important;
         margin-top: 0.15rem !important;
+      }
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell) {
+        padding: 1rem 1rem 0.95rem 1rem !important;
+        margin-top: 0.05rem !important;
       }
       div[data-testid="stColumn"]:has(#auto-hero-right) {
         display: flex !important;
@@ -2218,6 +2224,12 @@ try:
 except ImportError:
     _subir_disponible = False
 
+try:
+    from data_extractor import autorrellenar_materiales_wk
+    _autofill_disponible = True
+except ImportError:
+    _autofill_disponible = False
+
 if not st.session_state.show_auto:
     # ==== MODO DASHBOARD ====
     # Header nativo de Streamlit — mismo color #4472C4, botones reales sin trucos de z-index
@@ -2350,6 +2362,81 @@ else:
                         st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
         else:
             st.error("La función de crear hojas no está disponible en data_extractor.py")
+
+    with st.container():
+        st.markdown(
+            '''
+            <div id="auto-card-fill-shell"></div>
+            <div class="auto-card-kicker">Post-creación</div>
+            <div class="auto-section-title">Autorrellenar materiales MN</div>
+            <div class="auto-section-note">Llena por rancho las filas de FERTILIZANTES, DESINFECCION / PLAGUICIDAS, MANTENIMIENTO y MATERIAL DE EMPAQUE usando PR / MP / ME de la misma semana. Los totales y USD siguen por fórmula.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
+
+        if not _autofill_disponible:
+            st.error("La función `autorrellenar_materiales_wk` no está disponible en data_extractor.py")
+        else:
+            fill_sel_col, fill_manual_col, fill_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+            with fill_sel_col:
+                if available_weeks:
+                    fill_wk_sel = st.selectbox(
+                        "WK disponible",
+                        options=available_weeks,
+                        format_func=lambda c: f"WK{c}",
+                        key="autofill_wk_sel",
+                    )
+                    fill_week_code = fill_wk_sel
+                else:
+                    fill_week_code = ""
+            with fill_manual_col:
+                fill_week_manual = st.text_input(
+                    "O captura WK",
+                    placeholder="2614",
+                    max_chars=4,
+                    key="autofill_wk_manual",
+                ).strip()
+                if fill_week_manual:
+                    fill_week_code = fill_week_manual
+            with fill_info_col:
+                fill_label = f"WK{fill_week_code}" if fill_week_code else "Sin WK"
+                st.markdown(
+                    f'''<div class="auto-card-kicker">Acción</div>
+                    <div class="auto-card-title">{fill_label}</div>
+                    <div class="auto-card-note">Usa este paso después de crear y revisar la hoja.</div>''',
+                    unsafe_allow_html=True,
+                )
+
+            if st.button(
+                f"Autorrellenar materiales {'— WK' + fill_week_code if fill_week_code else ''}",
+                type="primary",
+                use_container_width=True,
+                key="btn_autofill_materials",
+                disabled=not bool(fill_week_code),
+            ):
+                if not (fill_week_code.isdigit() and len(fill_week_code) == 4):
+                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2614).")
+                else:
+                    try:
+                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                        client_secret = st.secrets["sharepoint"]["client_secret"]
+                        with st.spinner(f"Autorrellenando materiales en WK{fill_week_code}..."):
+                            res_fill = autorrellenar_materiales_wk(
+                                week_code=fill_week_code,
+                                tenant_id=tenant_id,
+                                client_id=client_id_sp,
+                                client_secret=client_secret,
+                            )
+                        if res_fill.get("ok"):
+                            st.success(res_fill.get("mensaje", "Materiales autorrellenados correctamente."))
+                            st.cache_data.clear()
+                        else:
+                            st.error(res_fill.get("error", "No se pudo autorrellenar la WK."))
+                    except KeyError as e:
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                    except Exception as e:
+                        st.error(f"Error inesperado: {e}")
 
     with st.container():
         st.markdown(
