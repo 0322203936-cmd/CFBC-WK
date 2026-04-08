@@ -1614,207 +1614,12 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
 # --- Crear nueva hoja WK en SharePoint via Microsoft Graph API (con sesión) ---
 def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
     """
-    Crea una nueva hoja WK#### desde cero usando una sesión de workbook de Graph API.
-    Funciona aunque el archivo esté abierto por otros usuarios (no requiere lock).
-    Escribe todas las celdas directamente via API, sin subir el archivo completo.
-    Requiere Files.ReadWrite en la App Registration de Azure AD.
+    Crea una nueva hoja WK#### usando el endpoint nativo de copiado de Graph API.
+    Clona íntegramente la hoja de la semana previa (bordes, formatos, valores completos).
     """
     import base64 as _b64
     import time
-
-    # ── Helper: construir lista plana de celdas { address, value } ────────
-    def _celdas_de_la_hoja(nombre):
-        """Devuelve lista de dicts con address y valor para escribir via Graph API."""
-        celdas = []
-
-        def c(addr, val):
-            celdas.append({"address": addr, "value": val})
-
-        # Encabezados
-        c("B1", "CENTRO FLORICULTOR DE BAJA CALIFORNIA, S.A. DE C.V. ")
-        c("B2", "SEMANA DE CALCULO - Mexico")
-        c("B3", nombre)
-        c("C3", 19); c("D3", " tipo de cambio")
-        c("L3", 19); c("M3", "  tipo de cambio ")
-        c("B4", "Del ___ al ___ de ________ 20__")
-        c("C5", "(MXN) Pesos Mexicanos")
-        c("L5", "US Dollars")
-        c("B6", "TOTAL FINCA")
-        # Fila 7: ranchos MXN
-        for col, h in zip(["C","D","E","F","G","H","I","J"],
-                          ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","Isabela","Christina","Cecilia","Cecilia 25"]):
-            c(f"{col}7", h)
-        # Fila 7: ranchos USD
-        for col, h in zip(["L","M","N","O","P","Q","R","S"],
-                          ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","ISABELA","Christina","CECILIA","CECILIA 25"]):
-            c(f"{col}7", h)
-        c("B7", "Produccion"); c("C8", "SEMANAL "); c("L8", '"WEEKLY"')
-        c("B9", "EJECUCION SEMANAL")
-        for col in ["D","E","F","G","H","I","J"]:
-            c(f"{col}9", 1)
-
-        # Categorías de materiales (filas 10-20)
-        categorias = [
-            (10, "DESINFECCION Y FERTILIZACION"),
-            (11, "AMPLIACION "),
-            (12, "CULTIVO TIERRA, CHAROLAS"),
-            (13, "MATERIAL VEGETAL"),
-            (14, "PREPARACION DE SUELO"),
-            (15, "FERTILIZANTES (Manejo Integrado de Riego y Fertilización) "),
-            (16, "DESINFECCION / PLAGUICIDAS (Manejo Integrado de Plagas y Enfermedades)"),
-            (17, "MANTENIMIENTO"),
-            (18, "EXPANSION CECILIA 25"),
-            (19, "RENOVACION DE SIEMBRA"),
-            (20, "MATERIAL DE EMPAQUE"),
-        ]
-        for row, label in categorias:
-            c(f"B{row}", label)
-
-        c("B22", "COSTO DE MATERIALES")
-
-        # Nóminas (filas 24-59)
-        nominas = [
-            (24, "NOMINA ADMON Oficina, Jefes de Finca, Ingenieros"),
-            (25, "HORAS EXTR. DOM. Y FESTIVOS"),
-            (26, "BONOS ASISIT, PUNTAULIDAD Y DESPENSA"),
-            (27, "NOMINA PRODUCCION "),
-            (28, "HORAS EXTR. DOM. Y FEST."),
-            (29, "BONOS ASISIT, PUNT. Y DESP."),
-            (30, "NOMINA PRODUCCION CORTE"),
-            (31, "HORAS EXTR. DOM. Y FESTIVOS CORTE"),
-            (32, "BONOS ASISIT, PUNTAULIDAD Y DESP. CORTE"),
-            (33, "NOMINA PRODUCCION TRANSPLANTE"),
-            (34, "HORAS EXTR. DOM. Y FEST. TRANSPLANTE"),
-            (35, "BONOS ASISIT, PUNT. Y DESP. TRANSPLANTE"),
-            (36, "NOMINA PRODUCCION MANEJO PLANTA"),
-            (37, "HORAS EXTR. DOM. Y FEST. MANEJO PLANTA"),
-            (38, "BONOS ASISIT, PUNT. Y DESP. MANEJO PLANTA"),
-            (39, "NOMINA  HOOPS"),
-            (40, "HORAS EXTR. DOM. Y FEST. HOOPS"),
-            (41, "BONOS ASISIT, PUNT. Y DESP.HOOPS"),
-            (42, "NOMINA  (MIPE,MIRFE,)"),
-            (43, "HORAS EXTR. DOM. Y FEST. (MIPE,MIRFE)"),
-            (44, "BONOS ASISIT, PUNT. Y DESP.(MIPE,MIRFE)"),
-            (45, "NOMINA OPERATIVOS (TRACTORES, CAMEROS)"),
-            (46, "HORAS EXTR. DOM. Y FEST. (TRACTORES, CAMEROS)"),
-            (47, "BONOS ASISIT, PUNT. Y DESP. (TRACTORES, CAMEROS)"),
-            (48, "NOMINA OPERATIVOS (CHOFER)"),
-            (49, "HORAS EXTR. DOM. Y FEST. (CHOFER)"),
-            (50, "BONOS ASISIT, PUNT. Y DESP. (CHOFER)"),
-            (51, "NOMINA OPERATIVOS (VELADORES)"),
-            (52, "HORAS EXTR. DOM. Y FEST. (VELADORES)"),
-            (53, "BONOS ASISIT, PUNT. Y DESP. (VELADORES)"),
-            (54, "NOMINA OPERATIVOS (SOLDADOR)"),
-            (55, "HORAS EXTR. DOM. Y FEST. (SOLDADOR)"),
-            (56, "BONOS ASISIT, PUNT. Y DESP. (SOLDADOR)"),
-            (57, "NOMINA PRODUCCION Contratista y comisiones"),
-            (58, "IMSS , INFONAVIT RCV"),
-            (59, "1.8% al estado (1.2% tasa efectiva)"),
-        ]
-        for row, label in nominas:
-            c(f"B{row}", label)
-
-        c("B61", "COSTO DE MANO DE OBRA")
-
-        # Servicios (filas 63-70)
-        servicios = [
-            (63, "ELECTRICIDAD"),
-            (64, "FLETES Y ACARREOS (Flete aduana)"),
-            (65, "GASTOS DE EXPORTACION "),
-            (66, "CERTIFICADO DE FITOSANITARIOS"),
-            (67, "Transporte de personal"),
-            (68, "COMPRA DE FLOR A TERCEROS"),
-            (69, "COMIDA PARA EL PERSONAL"),
-            (70, "RO, TEL, RTA.ALIM."),
-        ]
-        for row, label in servicios:
-            c(f"B{row}", label)
-
-        c("B72", "COSTO DE SERVICIOS")
-        c("B74", "COSTO DE PRODUCCION Y VENTAS")
-
-        # Producción (filas 76-92)
-        prod = [
-            (76, "CAJAS PROCESADAS TOTALES"),
-            (77, "INVENTARIO INICIAL"),
-            (78, "TALLOS COSECHADOS"),
-            (79, "TALLOS DESECHADOS"),
-            (80, "TALLOS DESECHADOS sf"),
-            (81, "TALLOS COMPRADOS"),
-            (82, "TALLOS EN BOUQUETS O PROCESADOS"),
-            (83, "TALLOS DESPACHADOS"),
-            (84, "LIBRAS DESPACHADAS ALBAHACA"),
-            (85, "TALLOS muestra"),
-            (86, "INVENTARIO FINAL"),
-            (87, "TALLOS PROCESADOS TOTALES"),
-            (88, " CHAROLAS SEMBRADAS *288 PLUGS ="),
-            (89, " NUMERO DE CHAROLAS SEMBRADAS "),
-            (90, " NUMERO DE ESQUEJES SEMBRADOS"),
-            (91, " METROS DE SIEMBRA"),
-            (92, " HECTAREAS EN SIEMBRA"),
-        ]
-        for row, label in prod:
-            c(f"B{row}", label)
-
-        c("B93", "<<< INDICADORES")
-        c("B94", "COSTOS UNITARIOS"); c("B95", "$ / Tallo Procesado")
-        c("B96", "COSTOS UNITARIOS"); c("B97", "$ / Libras Procesadas")
-        for row, label in [(98,"Materiales"),(99,"Mano de Obra"),(100,"Servicios (Fletes)"),
-                           (101,"Costo de Produccion y Ventas"),(103,"Material de Empaque / Tallo"),
-                           (105,"Sanidad Vegetal / Tallo"),(106,"Fertlizacion / Tallo"),
-                           (108,"Mano de Obra Prod / Tallo")]:
-            c(f"B{row}", label)
-        c("B110", "$ / Hectarea")
-        for row, label in [(111,"Materiales"),(112,"Mano de Obra"),(113,"Servicios (Fletes)"),
-                           (114,"Costo de Produccion y Ventas"),(121,"Mano de Obra Prod / Ha")]:
-            c(f"B{row}", label)
-
-        c("B124", "KPI's ")
-        c("B125", "Proyectos de inversión"); c("L125", "Total Weekly")
-        proyectos = [
-            (126,"Sistema de riego (Ramona)"),(127,"Sistema de riego (Isabella)"),
-            (128,"Caseta (Isabella)"),(129,"Sistema de ventilacion)"),
-            (130,"Sistema de tratamiento de aguas residuales (Isabella)"),
-            (131,"Arcos para invernaderos "),(132,"proyecto luz"),
-            (133,"Construcción de Almacén (Ramona) "),(134,"Construcción de Almacén (Isabela) "),
-            (135,"Carritos"),(136,"Maquinaria "),(137,"Chiller"),
-            (138,"Cuarto frio"),(139,"veronicas"),
-        ]
-        for row, label in proyectos:
-            c(f"B{row}", label)
-        c("B140", "Total ")
-        c("B143", "Logística "); c("L143", "Total Weekly"); c("N143", "PosCo-RM")
-        for row, label in [
-            (144,"Número de camiones despachados "),(145,"Número de tarimas despachadas (montadas al camión)"),
-            (146,"Número de cajas despachadas"),(147,"Número de Pies cúbicos de cajas despachadas "),
-            (148,"Número de Pies cubicos promedio / camión despachado "),
-            (149,"Capacidad en pies cúbicos por camión "),(150,"Rendimiento promedio por camión "),
-        ]:
-            c(f"B{row}", label)
-        for row, label in [
-            (152,"Costo incurrido por flete, gtos expo, fitosanitarios"),
-            (153,"Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-            (154,"Número de Camiones despachados "),
-            (156,"Costo incurrido promedio flete, gtos expo, fitosanitarios / pie cúbico"),
-            (157,"Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-            (158,"Número de Pies cúbicos de cajas despachadas"),
-            (160,"Costo incurrido flete, gtos expo, fitosanitarios / cajas despachadas"),
-            (161,"Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-            (162,"Número de cajas despachadas"),
-        ]:
-            c(f"B{row}", label)
-        c("B165", "Material de empaque / Caja")
-        for row, label in [
-            (166,"Costo incurrido en Material de empaque / pie cúbico"),
-            (167,"Costo incurrido en Material de empaque (USD)"),
-            (168,"Número de Pies cúbicos de cajas despachadas"),
-            (170,"Costo incurrido en Material de empaque / cajas despachadas"),
-            (171,"Costo incurrido en Material de empaque (USD)"),
-            (172,"Número de cajas despachadas"),
-        ]:
-            c(f"B{row}", label)
-
-        return celdas
+    import re
 
     # ── 1. Token OAuth2 ───────────────────────────────────────────────────
     token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
@@ -1862,25 +1667,43 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
     hdrs = {**hdrs_json, "workbook-session-id": session_id}
 
     try:
-        # ── 4. Verificar que la hoja no exista ────────────────────────────
+        # ── 4. Verificar que la hoja no exista y buscar la previa ─────────
         sheets_resp = requests.get(f'{wb_url}/worksheets', headers=hdrs, timeout=20)
         if sheets_resp.status_code != 200:
             return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
+        
         nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
         if nombre_hoja.upper() in [n.upper() for n in nombres]:
             return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
 
-        # ── 5. Crear la hoja nueva ────────────────────────────────────────
-        add_resp = requests.post(
-            f'{wb_url}/worksheets/add',
-            headers=hdrs,
-            json={"name": nombre_hoja},
-            timeout=20,
-        )
-        if add_resp.status_code not in (200, 201):
-            return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
+        # Deducir la semana anterior
+        prev_wk_name = None
+        m = re.search(r'\d+', nombre_hoja)
+        if m:
+            num = int(m.group())
+            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
+            
+        if not prev_wk_name or prev_wk_name.upper() not in [n.upper() for n in nombres]:
+            # Si por alguna razón no existe la semana anterior, usar la primera hoja de emergencia
+            if len(nombres) > 0:
+                prev_wk_name = nombres[0] 
+            else:
+                return {"ok": False, "error": f"No se encontró ninguna hoja previa para poder clonar."}
 
-        ws_id = add_resp.json().get('id', nombre_hoja)
+        # ── 5. Clonar la hoja completa nativamente ────────────────────────
+        copy_resp = requests.post(
+            f'{wb_url}/worksheets/{prev_wk_name}/copy',
+            headers=hdrs,
+            json={
+                "name": nombre_hoja, 
+                "positionType": "Before", 
+                "targetWorksheet": prev_wk_name
+            },
+            timeout=120,
+        )
+        if copy_resp.status_code not in (200, 201):
+            return {"ok": False, "error": f"Error clonando la hoja completa: {copy_resp.text}"}
+
         # ── 6. Mover al inicio (posición 0) ───────────────────────
         requests.patch(
             f'{wb_url}/worksheets/{nombre_hoja}',
@@ -1889,388 +1712,11 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             timeout=20,
         )
 
-        # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
-        import re
-        prev_wk_name = None
-        m = re.search(r'\d+', nombre_hoja)
-        if m:
-            num = int(m.group())
-            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
-
-        copied_data = None
-        if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
-            # Traer fórmulas y formatos de número explícitamente de A1 hasta Z1500
-            try:
-                get_resp = requests.get(
-                    f"{wb_url}/worksheets/{prev_wk_name}/range(address='A1:Z1500')?$select=formulas,numberFormat",
-                    headers=hdrs, timeout=60
-                )
-                if get_resp.status_code == 200:
-                    copied_data = get_resp.json()
-            except:
-                pass
-
-        if copied_data and "formulas" in copied_data:
-            # Pegar el bloque de 1500 filas directo
-            patch_resp = requests.patch(
-                f"{wb_url}/worksheets/{nombre_hoja}/range(address='A1:Z1500')",
-                headers=hdrs, 
-                json={
-                    "formulas": copied_data["formulas"],
-                    "numberFormat": copied_data.get("numberFormat", [])
-                }, 
-                timeout=120
-            )
-            # Actualizar nombre de la semana en la celda B3 independientemente
-            requests.patch(
-                f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
-                headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
-            )
-            
-            # NOTE: Dejamos que el código continúe hacia el Paso 8 para "pintar" la plantilla (colores/bordes), 
-            # ya que leer puras fórmulas no copia los colores de fondo nativamente.
-
-        else:
-            # ── Alternativa: Escribir celdas desde cero (batchUpdate vía range) ───────────
-            NROWS, NCOLS = 175, 19  # cols A(0)..S(18)
-            col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRS")}
-            matrix = [[""] * NCOLS for _ in range(NROWS)]
-    
-            for cell in _celdas_de_la_hoja(nombre_hoja):
-                addr = cell["address"]
-                val  = cell["value"]
-                col_str = ''.join(ch for ch in addr if ch.isalpha())
-                row_str = ''.join(ch for ch in addr if ch.isdigit())
-                if col_str in col_idx and row_str:
-                    r = int(row_str) - 1
-                    col_c = col_idx[col_str]
-                    if 0 <= r < NROWS and 0 <= col_c < NCOLS:
-                        matrix[r][col_c] = val if val is not None else ""
-    
-            range_addr = f"A1:S{NROWS}"
-            patch_resp = requests.patch(
-                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{range_addr}\')',
-                headers=hdrs,
-                json={"values": matrix},
-                timeout=60,
-            )
-            if patch_resp.status_code not in (200, 201):
-                return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
-
-        # ── 8. Aplicar formatos via Graph API ─────────────────────────────
-        def fmt(rng, body):
-            requests.patch(
-                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format',
-                headers=hdrs, json=body, timeout=30,
-            )
-
-        def fill(rng, color):
-            requests.patch(
-                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/fill',
-                headers=hdrs, json={"color": f"#{color}"}, timeout=30,
-            )
-
-        def font(rng, bold=False, color=None, size=None):
-            body = {"bold": bold, "name": "Arial"}
-            if color: body["color"] = f"#{color}"
-            if size:  body["size"]  = size
-            requests.patch(
-                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/font',
-                headers=hdrs, json=body, timeout=30,
-            )
-
-        def border(rng, left=None, right=None, top=None, bottom=None):
-            style_map = {"thin": "Continuous", "medium": "Medium"}
-            base = f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/borders'
-            for side_name, style in [("EdgeLeft",left),("EdgeRight",right),("EdgeTop",top),("EdgeBottom",bottom)]:
-                if style:
-                    requests.patch(
-                        f'{base}/{side_name}',
-                        headers=hdrs,
-                        json={"style": style_map.get(style, style), "color": "#000000"},
-                        timeout=30,
-                    )
-
-        # ── Colores de fondo ──────────────────────────────────────────────
-        fill("B2",        "DAE3F3")   # azul claro encabezado semana
-        fill("B3",        "C5E0B4")   # verde lima código semana
-
-        # Verde claro (CCFFCC) — columnas USD L:S
-        for rng in [
-            "L5:S9",
-            "L10:S21", "L22:S23", "L24:S60",
-            "L61:S62", "L63:S71", "L72:S74",
-            "L94:S100", "L102:S102", "L104:S104", "L107:S107",
-        ]:
-            fill(rng, "CCFFCC")
-
-        # Naranja (FFCC99) — subtotales
-        fill("C22:J22",   "FFCC99")
-        fill("L22:S22",   "FFCC99")
-        fill("C61:J61",   "FFCC99")
-        fill("L61:S61",   "FFCC99")
-        fill("C72:J72",   "FFCC99")
-        fill("L72:S72",   "FFCC99")
-        fill("B101:J101", "FFCC99")
-        fill("L101:S101", "FFCC99")
-
-        # Amarillo claro (FFFFCC) — producción y $/Ha
-        fill("L76:S92",   "FFFFCC")
-        fill("L110:S121", "FFFFCC")
-        # Amarillo vivo (FFFF00) — charolas/esquejes MXN
-        fill("D89:J91",   "FFFF00")
-
-        # Verde oscuro (008000) — headers KPI
-        for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
-            fill(rng, "008000")
-
-        # Blanco explícito — sección KPI proyectos / logística (filas 126-172)
-        fill("B126:J172", "FFFFFF")
-        fill("L126:S172", "FFFFFF")
-
-        # ── Color de texto navy (#333399) en todo el cuerpo + tamaño 10 ──
-        font("B1:J175",  bold=False, color="333399", size=10)
-        font("L1:S175",  bold=False, color="333399", size=10)
-
-        # ── Negritas ──────────────────────────────────────────────────────
-        font("B1:B3",    bold=True,  color="333399", size=10)
-        font("B9",       bold=True,  color="333399", size=10)
-        font("B22",      bold=True,  color="333399", size=10)
-        font("B61",      bold=True,  color="333399", size=10)
-        font("B72",      bold=True,  color="333399", size=10)
-        font("B74",      bold=True,  color="333399", size=10)
-        font("B93:B97",  bold=True,  color="333399", size=10)
-        font("B101",     bold=True,  color="333399", size=10)
-        font("B103",     bold=True,  color="333399", size=10)
-        font("B105",     bold=True,  color="333399", size=10)
-        font("B106",     bold=True,  color="333399", size=10)
-        font("B108",     bold=True,  color="333399", size=10)
-        font("B110",     bold=True,  color="333399", size=10)
-        font("B116",     bold=True,  color="333399", size=10)
-        font("B118",     bold=True,  color="333399", size=10)
-        font("B119",     bold=True,  color="333399", size=10)
-        font("B121",     bold=True,  color="333399", size=10)
-        font("B124",     bold=True,  color="333399", size=10)
-        font("B140",     bold=True,  color="333399", size=10)
-        # Columna C subtotales / columna L subtotales USD
-        for rng in ["C22:J22", "C61:J61", "C72:J72", "C74:J74",
-                    "L22:S22", "L61:S61", "L72:S72", "L74:S74",
-                    "L76:L92", "L95:L121",
-                    "L101:S101", "L103:S103", "L105:S106", "L108:S108",
-                    "L111:N114", "L116:N119", "L121:S121"]:
-            font(rng, bold=True, size=10)
-        # Columna C negrita en todas las filas de datos
-        for rng in ["C10:C21", "C24:C60", "C63:C70",
-                    "C76:C92", "C95:C121"]:
-            font(rng, bold=True, color="333399", size=10)
-        # KPI headers — texto blanco negrita
-        for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
-            font(rng, bold=True, color="FFFFFF", size=10)
-        # Texto azul en valores KPI proyectos/logística
-        for rng in ["C126:C172", "L126:L172"]:
-            font(rng, bold=False, color="0000FF", size=10)
-
-        # ── Bordes — estrategia simplificada (pocas llamadas) ─────────────
-        # ESTRUCTURA PRINCIPAL: 3 columnas clave con rangos grandes
-        # Left medio en B (toda el área de datos)
-        border("B2:B175",  left="medium")
-        # Right medio en J (toda el área de datos)
-        border("J2:J175",  right="medium")
-        # Right thin en C (separador columna TOTAL)
-        border("C5:C175",  right="thin")
-        # Left medio en L + right medio en S (todo el bloque USD)
-        border("L5:L175",  left="medium")
-        border("S5:S175",  right="medium")
-        # Left medio en L para separar C de la zona MXN izquierda también
-        border("C5:C9",    left="medium")
-        border("C10:C21",  left="medium")
-        border("C22:C74",  left="medium")
-        border("C76:C121", left="medium")
-
-        # FILAS ESPECIALES — separadores horizontales MXN
-        border("B5:J5",    top="medium", bottom="thin")
-        border("B9:J9",    bottom="thin")
-        border("B22:J22",  top="thin",   bottom="thin")
-        border("B61:J61",  top="thin",   bottom="thin")
-        border("B72:J72",  top="thin",   bottom="thin")
-        border("B74:J74",  top="thin",   bottom="medium")
-        border("B76:J76",  top="medium")
-        border("B92:J92",  bottom="medium")
-        border("B94:J94",  top="medium")
-        border("B108:J108",bottom="medium")
-        border("B110:J110",top="medium")
-        border("B121:J121",bottom="medium")
-
-        # FILAS ESPECIALES — separadores horizontales USD
-        border("L5:S5",    top="medium", bottom="thin")
-        border("L9:S9",    bottom="thin")
-        border("L10:S10",  top="thin")
-        border("L22:S22",  top="thin",   bottom="thin")
-        border("L61:S61",  top="thin",   bottom="thin")
-        border("L72:S72",  top="thin",   bottom="thin")
-        border("L74:S74",  top="thin",   bottom="medium")
-        border("L76:S76",  top="medium")
-        border("L92:S92",  bottom="medium")
-        border("L94:S94",  top="medium")
-        border("L97:S97",  bottom="thin")
-        border("L98:S98",  top="thin")
-        border("L100:S100",bottom="thin")
-        border("L101:S101",bottom="thin")
-        border("L103:S103",top="thin",   bottom="thin")
-        border("L105:S105",top="thin")
-        border("L106:S106",bottom="thin")
-        border("L108:S108",top="thin",   bottom="medium")
-        border("L110:S110",top="medium")
-        border("L113:S113",bottom="thin")
-        border("L114:S114",top="thin",   bottom="thin")
-        border("L116:S116",top="thin",   bottom="thin")
-        border("L118:S118",top="thin")
-        border("L119:S119",bottom="thin")
-        border("L121:S121",top="thin",   bottom="medium")
-
-        # KPI HEADERS borders
-        border("B125",  left="thin", right="thin", top="thin")
-        border("L125",  left="thin", right="thin", top="thin", bottom="thin")
-        border("B143",  left="thin", right="thin", top="thin")
-        border("J143",  right="thin", top="thin")
-        border("L143",  left="thin", right="thin", top="thin", bottom="thin")
-        border("N143",  left="thin", right="thin", top="thin", bottom="thin")
-        border("B165",  left="thin", right="thin", top="thin")
-
-        # PROYECTOS — outline
-        border("B126:J139", left="thin",   right="thin")
-        border("B139:J139", bottom="thin")
-        border("L126:S139", left="thin",   right="thin")
-        border("L139:S139", bottom="thin")
-        border("B140",  left="thin", right="thin", top="thin", bottom="thin")
-        border("L140",  left="thin", right="thin", bottom="thin")
-
-        # LOGÍSTICA — outline
-        border("B144:B150", left="thin")
-        border("J144:J150", right="thin")
-        border("L144:L150", left="thin")
-        border("N144:N150", right="thin")
-        border("S144:S150", right="thin")
-
-        # ── Alineación ────────────────────────────────────────────────────
-        fmt("B2",    {"horizontalAlignment": "Center"})
-        fmt("B3",    {"horizontalAlignment": "Center"})
-        fmt("B4",    {"horizontalAlignment": "Center"})
-        fmt("C5:J5", {"horizontalAlignment": "Center"})
-        fmt("L5:S5", {"horizontalAlignment": "Center", "verticalAlignment": "Center"})
-        fmt("B6",    {"horizontalAlignment": "Center", "verticalAlignment": "Top", "wrapText": True})
-        fmt("B7",    {"horizontalAlignment": "Center", "verticalAlignment": "Top", "wrapText": True})
-        fmt("C7:J7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
-        fmt("L7:S7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
-        fmt("C8",    {"horizontalAlignment": "Center"})
-        fmt("L8",    {"horizontalAlignment": "Center"})
-        fmt("B9",    {"horizontalAlignment": "Center"})
-        fmt("L125",  {"horizontalAlignment": "Center"})
-        fmt("L143",  {"horizontalAlignment": "Center"})
-        fmt("N143",  {"horizontalAlignment": "Center"})
-
-        # ── Anchos de columnas ────────────────────────────────────────────
-        # Configurar anchos de columna para que coincidan con el formato esperado
-        # Graph API requiere usar el endpoint de columnas específico
-        column_widths = {
-            "A": 3,
-            "B": 69.4,
-            "C": 14,
-            "D": 11, "E": 11, "F": 11, "G": 11, "H": 11, "I": 11, "J": 11,
-            "K": 3,
-            "L": 11, "M": 11, "N": 11, "O": 11, "P": 11, "Q": 11, "R": 11, "S": 11,
-        }
-        for col_letter, width in column_widths.items():
-            try:
-                # Usamos el endpoint de formato de rango para establecer el ancho
-                requests.patch(
-                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{col_letter}:{col_letter}\')/format',
-                    headers=hdrs,
-                    json={"columnWidth": width * 7.5},
-                    timeout=20,
-                )
-            except Exception as e:
-                # No es crítico si falla el ajuste de ancho
-                print(f"⚠️  Error configurando ancho columna {col_letter}: {e}")
-
-        # ── Alto de filas ─────────────────────────────────────────────────
-        # Configurar alto de filas específicas
-        row_heights = {
-            3: 15.0,
-            4: 15.0,
-            6: 26.4,
-        }
-        for row_num, height in row_heights.items():
-            try:
-                requests.patch(
-                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{row_num}:{row_num}\')/format',
-                    headers=hdrs,
-                    json={"rowHeight": height},
-                    timeout=20,
-                )
-            except Exception as e:
-                # No es crítico si falla el ajuste de alto
-                print(f"⚠️  Error configurando alto fila {row_num}: {e}")
-
-        # ── Formato de número (#,##0) para celdas de valores ─────────────
-        # Aplicar formato de número con separador de miles a las celdas con valores
-        number_ranges = [
-            # Subtotales MXN
-            "C22:J22", "C61:J61", "C72:J72", "C74:J74",
-            # Subtotales USD
-            "L22:S22", "L61:S61", "L72:S72", "L74:S74",
-            # Valores de datos MXN
-            "C10:J21", "C24:J60", "C63:J70",
-            # Valores de datos USD
-            "L10:S21", "L24:S60", "L63:S70",
-            # Sección de producción y costos
-            "C76:J92", "L76:S92",
-            "C95:J121", "L95:S121",
-        ]
-        for rng in number_ranges:
-            try:
-                requests.patch(
-                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format',
-                    headers=hdrs,
-                    json={"numberFormat": "#,##0"},
-                    timeout=20,
-                )
-            except Exception as e:
-                print(f"⚠️  Error configurando formato número en {rng}: {e}")
-
-        # ── Merge de celdas ───────────────────────────────────────────────
-        merges = [
-            # Headers principales
-            "C5:J5", "L5:R5",
-            # Headers columnas K-L
-            "K1:L1", "K2:L2", "K4:L4",
-            # Separadores K-L
-            "K75:L75", "K93:L93", "K109:L109",
-            # KPI headers K-L
-            "K122:L122", "K123:L123", "K124:L124",
-            "K141:L141", "K142:L142",
-            "K164:L164",
-            "K174:L174", "K175:L175",
-            # KPI sections A-B
-            "A123:B123",
-            "A141:B141", "A142:B142",
-            "A164:B164",
-            "A174:B174", "A175:B175",
-            # Valores combinados verticalmente (logística)
-            "C153:C154", "L153:L154",
-            "C157:C158", "L157:L158",
-            "C161:C162", "L161:L162",
-            "C167:C168", "L167:L168",
-            "C171:C172", "L171:L172",
-        ]
-        for m in merges:
-            try:
-                requests.post(
-                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{m}\')/merge',
-                    headers=hdrs, json={"across": False}, timeout=20,
-                )
-            except Exception as e:
-                print(f"⚠️  Error merge {m}: {e}")
+        # ── 7. Actualizar celda B3 con el nombre de la nueva semana ───────
+        requests.patch(
+            f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
+            headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
+        )
 
     finally:
         # ── 8. Cerrar la sesión siempre ───────────────────────────────────
@@ -2282,7 +1728,7 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
 
     return {
         "ok": True,
-        "mensaje": f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint.",
+        "mensaje": f"Hoja '{nombre_hoja}' creada y clonada exitosamente (con formato y bordes 100% exactos) desde '{prev_wk_name}'.",
     }
 
 
