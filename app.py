@@ -36,43 +36,80 @@ if st.session_state.show_auto:
     </style>
     ''', unsafe_allow_html=True)
 else:
-    # CSS para el Dashboard (Full screen, sin márgenes)
+    # CSS para el Dashboard — header nativo de Streamlit, sin trucos de iframe
     st.markdown('''
     <style>
       #MainMenu, header, footer { display: none !important; }
       .stApp { background: #f0f0f0; }
-      .block-container { position: relative; padding: 0 !important; max-width: 100% !important; margin-top: -1rem !important; }
-      .stMainBlockContainer { padding-top: 0 !important; }
+      /* Eliminar TODO espacio blanco sobre el header */
+      .block-container          { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+      .stMainBlockContainer     { padding: 0 !important; margin: 0 !important; }
+      [data-testid="stAppViewContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
+      [data-testid="stAppViewBlockContainer"] { padding: 0 !important; }
+      section.main              { padding-top: 0 !important; }
+      /* Primer bloque vertical (donde vive nuestro header de columnas) */
+      [data-testid="stVerticalBlock"] { gap: 0 !important; padding: 0 !important; }
       section[data-testid="stSidebar"] { display: none !important; }
-      
-      /* MAGIA SENIOR: Posicionar el botón nativo de Python SOBRE la barra azul del iframe */
-      div[data-testid="stButton"] {
-          position: absolute !important;
-          top: 6px !important;
-          right: 50px !important; /* Posición exacta antes del botón de refresco */
-          z-index: 999999 !important;
-          width: 32px !important;
+
+      /* ── HEADER NATIVO: columnas de Streamlit que contienen #cfbc-brand ── */
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) {
+          background: #4472C4 !important;
+          border-bottom: 3px solid #16a34a !important;
+          min-height: 36px !important;
+          max-height: 36px !important;
+          padding: 0 10px !important;
+          align-items: center !important;
+          overflow: hidden !important;
+          gap: 4px !important;
+          margin: 0 !important;
       }
-      div[data-testid="stButton"] button {
-          background-color: rgba(255,255,255,0.35) !important;
-          color: white !important;
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) > [data-testid="stColumn"] {
+          padding: 0 2px !important;
+          display: flex !important;
+          align-items: center !important;
+      }
+      /* Texto de marca */
+      #cfbc-brand {
+          color: #ffffff;
+          font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          white-space: nowrap;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) p {
+          margin: 0 !important; padding: 0 !important; line-height: 36px !important;
+      }
+      /* Botones dentro del header nativo */
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] {
+          width: 100% !important;
+          display: flex !important;
+          justify-content: flex-end !important;
+          align-items: center !important;
+          padding: 0 !important;
+          margin: 0 !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button {
+          background: rgba(255,255,255,0.2) !important;
+          color: #ffffff !important;
           border: 1px solid rgba(255,255,255,0.35) !important;
           border-radius: 3px !important;
           height: 24px !important;
           min-height: 24px !important;
-          padding: 0 !important;
-          width: 32px !important;
-          display: flex !important;
-          justify-content: center !important;
-          align-items: center !important;
+          padding: 0 10px !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          white-space: nowrap !important;
+          cursor: pointer !important;
+          width: auto !important;
       }
-      div[data-testid="stButton"] button:hover {
-          background-color: rgba(255,255,255,0.55) !important;
-          border-color: transparent !important;
-          color: white !important;
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button:hover {
+          background: rgba(255,255,255,0.38) !important;
       }
-      div[data-testid="stButton"] button p {
-          font-size: 14px !important;
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button p {
+          color: #ffffff !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
           margin: 0 !important;
           line-height: 1 !important;
       }
@@ -81,12 +118,12 @@ else:
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_data_conteo_v3():
+def load_data_conteo_v4():
     return get_datos()
 
 
 try:
-    DATA = load_data_conteo_v3()
+    DATA = load_data_conteo_v4()
 except Exception as e:
     st.error(f"❌ Error cargando datos: {e}")
     st.stop()
@@ -156,30 +193,7 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .load-txt { font-size: 12px; color: #666; letter-spacing: 0.5px; }
 
-/* ── HEADER ─────────────────────────────────── */
-.app-hdr {
-  background: #4472C4;
-  border-bottom: 3px solid var(--green);
-  padding: 5px 10px;
-  display: flex; align-items: center; gap: 0;
-  height: 36px; overflow: hidden;
-}
-.hdr-brand {
-  color: #ffffff; font-size: 12px; font-weight: 700;
-  letter-spacing: 1px; white-space: nowrap;
-  padding-right: 12px; border-right: 1px solid rgba(255,255,255,0.3);
-  flex-shrink: 0;
-}
-.hdr-btn {
-  margin-left: auto; flex-shrink: 0;
-  font-size: 10px; font-weight: 700;
-  background: rgba(255,255,255,0.35);
-  border: 1px solid rgba(255,255,255,0.35);
-  border-radius: 3px; padding: 3px 10px; cursor: pointer;
-  color: #ffffff; height: 24px;
-  transition: background 0.1s; white-space: nowrap;
-}
-.hdr-btn:hover { background: rgba(255,255,255,0.55); }
+/* ── HEADER: ahora es nativo de Streamlit, no del iframe ─────────────── */
 
 /* ── TOOLBAR ─────────────────────────────────── */
 .toolbar {
@@ -255,8 +269,8 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .pt-table-wrap {
   overflow: auto;
   width: 100%;
-  /* 36px header + 28px toolbar + 26px range-bar + 28px view-tabs = 118px aprox */
-  max-height: calc(100vh - 118px);
+  /* 28px toolbar + 28px view-tabs + 26px range-bar = 82px (header movido a Streamlit) */
+  max-height: calc(100vh - 82px);
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
@@ -391,14 +405,6 @@ APP_HTML_BODY = """
 <!-- APP -->
 <div id="app" style="display:none">
 
-  <!-- HEADER -->
-  <div class="app-hdr">
-    <div class="hdr-brand">CFBC &#9656; CONTROL SEMANAL</div>
-    <button class="hdr-btn" onclick="exportCSV()" style="margin-left:auto">&#11015; CSV</button>
-    <!-- Agujero invisible donde aterrizará nuestro botón flotante de Python -->
-    <div style="width: 32px; height: 24px; margin-left:4px;"></div>
-    <button class="hdr-btn" onclick="recargar()" style="margin-left:4px">&#8635;</button>
-  </div>
 
   <!-- TOOLBAR -->
   <div class="toolbar">
@@ -897,6 +903,7 @@ function resetRange() {
 // VIEW ROUTER
 // =======================================================
 function renderView() {
+  _prodViews = [];  // limpiar paneles viejos al re-renderizar
   document.getElementById('prodPanel').className='';
   if      (state.view==='anual')       renderAnual();
   else if (state.view==='comparativo') renderComparativo();
@@ -1752,138 +1759,154 @@ function onMainCellClick(evt) {
 var _prodViews = [];
 
 function showProdPanel(rowData, opts) {
-  opts=opts||{};
-  var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
-  var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
-  var ranchFilter=opts.ranch||null;
-  if (!cat||!yr) return;
+  try {
+    opts=opts||{};
+    var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
+    var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
+    var ranchFilter=opts.ranch||null;
+    if (!cat||!yr) {
+      document.getElementById('prodPanel').className='show';
+      document.getElementById('prodTableWrap').innerHTML = '<div style="padding:10px;color:red;">Error: Faltan _cat o _year en rowData.</div>';
+      return;
+    }
 
-  var isMant=cat==='MANTENIMIENTO', isMatEmp=cat==='MATERIAL DE EMPAQUE';
-  var isMirfe=cat===CAT_MIRFE, isMipe=cat===CAT_MIPE;
-  var src=isMant?'mp':(isMatEmp?'me':'pr');
-  var tipoFilter=null;
-  if (src==='pr'){ if(isMirfe)tipoFilter='MIRFE'; else if(isMipe)tipoFilter='MIPE'; }
-  var dsMap={pr:DATA.productos,mp:DATA.productos_mp,me:DATA.productos_me};
-  var ds=dsMap[src]||{};
+    var isMant=cat==='MANTENIMIENTO', isMatEmp=cat==='MATERIAL DE EMPAQUE';
+    var isMirfe=cat===CAT_MIRFE, isMipe=cat===CAT_MIPE;
+    var src=isMant?'mp':(isMatEmp?'me':'pr');
+    var tipoFilter=null;
+    if (src==='pr'){ if(isMirfe)tipoFilter='MIRFE'; else if(isMipe)tipoFilter='MIPE'; }
+    var dsMap={pr:DATA.productos,mp:DATA.productos_mp,me:DATA.productos_me};
+    var ds=dsMap[src]||{};
 
-  var wkStart=parseInt(fromW||wn||0), wkEnd=parseInt(toW||wn||0);
-  if (!wkStart||!wkEnd) return;
-  if (wkStart>wkEnd){var tmp=wkStart;wkStart=wkEnd;wkEnd=tmp;}
+    var wkStart=parseInt(fromW||wn||0), wkEnd=parseInt(toW||wn||0);
+    if (!wkStart||!wkEnd) return;
+    if (wkStart>wkEnd){var tmp=wkStart;wkStart=wkEnd;wkEnd=tmp;}
 
-  var rows=[];
-  for (var wk=wkStart;wk<=wkEnd;wk++){
-    var wkCodeShort=((yr%100)*100)+wk, wkCodeLong=(yr*100)+wk;
-    var weekD=ds[wkCodeShort]||ds[String(wkCodeShort)]||ds[wkCodeLong]||ds[String(wkCodeLong)];
-    if (!weekD) continue;
-    Object.keys(weekD).forEach(function(ranch){
-      if (ranchFilter&&ranch!==ranchFilter) return;
-      var byTipo=weekD[ranch];
-      Object.keys(byTipo).forEach(function(tipo){
-        if (tipoFilter&&tipo!==tipoFilter) return;
-        (byTipo[tipo]||[]).forEach(function(item){
-          rows.push({week_code:wkCodeShort,rancho:ranch,tipo:tipo,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0,ubicacion:item[3]||''});
+    var rows=[];
+    for (var wk=wkStart;wk<=wkEnd;wk++){
+      var wkCodeShort=((yr%100)*100)+wk, wkCodeLong=(yr*100)+wk;
+      var weekD=ds[wkCodeShort]||ds[String(wkCodeShort)]||ds[wkCodeLong]||ds[String(wkCodeLong)];
+      if (!weekD) continue;
+      Object.keys(weekD).forEach(function(ranch){
+        if (ranchFilter&&ranch!==ranchFilter) return;
+        var byTipo=weekD[ranch];
+        Object.keys(byTipo).forEach(function(tipo){
+          if (tipoFilter&&tipo!==tipoFilter) return;
+          (byTipo[tipo]||[]).forEach(function(item){
+            rows.push({week_code:wkCodeShort,rancho:ranch,tipo:tipo,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0,ubicacion:item[3]||''});
+          });
         });
       });
-    });
-  }
+    }
 
-  var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
-  var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
-  
-  var panelHtml = '';
+    var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
+    var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
+    
+    var panelHtml = '';
 
-  // ── KPI de siembra ────────────────────────────────────────────────
-  var kpiSection = '';
-  var _allMetas = [
-    {k:'inv_inicial',  lbl:'INV. INICIAL'},
-    {k:'tallos_cos',   lbl:'TALLOS COSECHADOS'},
-    {k:'tallos_des',   lbl:'TALLOS DESECHADOS'},
-    {k:'tallos_des_sf',lbl:'TALLOS DESECHADOS SF'},
-    {k:'tallos_comp',  lbl:'TALLOS COMPRADOS'},
-    {k:'tallos_bouq',  lbl:'TALLOS BOUQUETS/PROC.'},
-    {k:'tallos_desp',  lbl:'TALLOS DESPACHADOS'},
-    {k:'libras_alb',   lbl:'LIBRAS ALBAHACA'},
-    {k:'tallos_mues',  lbl:'TALLOS MUESTRA'},
-    {k:'inv_final',    lbl:'INV. FINAL'},
-    {k:'tallos_proc',  lbl:'TALLOS PROC. TOTALES'},
-    {k:'charolas_288', lbl:'CHAROLAS *288'},
-    {k:'charolas',     lbl:'N\u00ba CHAROLAS'},
-    {k:'esquejes',     lbl:'N\u00ba ESQUEJES'},
-    {k:'metros',       lbl:'METROS SIEMBRA'},
-    {k:'hectareas',    lbl:'HECT\u00c1REAS'},
-  ];
-  if (DATA.siembra_data) {
-    var _wkKey = ((yr%100)*100) + wkStart;
-    var _wkSrc = DATA.siembra_data[_wkKey] || DATA.siembra_data[String(_wkKey)] || null;
-    if (_wkSrc) {
-      var _sRow = ranchFilter ? (_wkSrc[ranchFilter] || _wkSrc['TOTAL'] || {}) : (_wkSrc['TOTAL'] || {});
-      var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
-      if (_activos.length > 0) {
-        kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;overflow-x:auto;scrollbar-width:none;">';
-        _activos.forEach(function(m,i){
-          if (i>0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
-          kpiSection += '<div style="display:flex;align-items:baseline;gap:4px;flex-shrink:0;white-space:nowrap;">'+
-            '<span style="font-size:9px;color:#44546A;text-transform:uppercase;">'+m.lbl+':</span>'+
-            '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</span>'+
-            '</div>';
-        });
-        kpiSection += '</div>';
+    // ── KPI de siembra ────────────────────────────────────────────────
+    var kpiSection = '';
+    var _allMetas = [
+      {k:'inv_inicial',  lbl:'INV. INICIAL'},
+      {k:'tallos_cos',   lbl:'TALLOS COSECHADOS'},
+      {k:'tallos_des',   lbl:'TALLOS DESECHADOS'},
+      {k:'tallos_des_sf',lbl:'TALLOS DESECHADOS SF'},
+      {k:'tallos_comp',  lbl:'TALLOS COMPRADOS'},
+      {k:'tallos_bouq',  lbl:'TALLOS BOUQUETS/PROC.'},
+      {k:'tallos_desp',  lbl:'TALLOS DESPACHADOS'},
+      {k:'libras_alb',   lbl:'LIBRAS ALBAHACA'},
+      {k:'tallos_mues',  lbl:'TALLOS MUESTRA'},
+      {k:'inv_final',    lbl:'INV. FINAL'},
+      {k:'tallos_proc',  lbl:'TALLOS PROC. TOTALES'},
+      {k:'charolas_288', lbl:'CHAROLAS *288'},
+      {k:'charolas',     lbl:'N\u00ba CHAROLAS'},
+      {k:'esquejes',     lbl:'N\u00ba ESQUEJES'},
+      {k:'metros',       lbl:'METROS SIEMBRA'},
+      {k:'hectareas',    lbl:'HECT\u00c1REAS'},
+    ];
+    if (DATA.siembra_data) {
+      var _wkKey = ((yr%100)*100) + wkStart;
+      var _wkSrc = DATA.siembra_data[_wkKey] || DATA.siembra_data[String(_wkKey)] || null;
+      if (_wkSrc) {
+        var _sRow = ranchFilter ? (_wkSrc[ranchFilter] || _wkSrc['TOTAL'] || {}) : (_wkSrc['TOTAL'] || {});
+        var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
+        if (_activos.length > 0) {
+          kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;overflow-x:auto;scrollbar-width:none;">';
+          _activos.forEach(function(m,i){
+            if (i>0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
+            kpiSection += '<div style="display:flex;align-items:baseline;gap:4px;flex-shrink:0;white-space:nowrap;">'+
+              '<span style="font-size:9px;color:#44546A;text-transform:uppercase;">'+m.lbl+':</span>'+
+              '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</span>'+
+              '</div>';
+          });
+          kpiSection += '</div>';
+        }
       }
     }
-  }
 
-  // ── Zona 2: Tabla de productos ────────────────────────────────────
-  var productSection = '';
-  if (rows.length === 0) {
-    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
-  } else {
-    rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
-    var total=rows.reduce(function(s,r){return s+r.gasto;},0);
-    var panelMeta = 'Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>';
-    productSection =
-      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">' +
-        '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
-        '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
-      '</div>' +
-      '<div style="overflow-x:auto; overflow-y:auto; flex:1; scrollbar-width:thin;">' +
-        '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
-          '<thead><tr style="position:sticky;top:0;z-index:1;">' +
-            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
-            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
-            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
-            '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO</th>' +
-          '</tr></thead><tbody>';
-    rows.forEach(function(r,i){
-      var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
-      productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
-        '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
-        '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
-        '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
-        '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+fmt(r.gasto)+'</td>' +
-        '</tr>';
-    });
-    productSection += '</tbody></table></div>';
-  }
-
-  panelHtml =
-    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #4472C4; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
-      '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
-        '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
-      '</div>' +
-      kpiSection +
-      productSection +
-    '</div>';
-  
-  if (_prodViews.indexOf(panelHtml) === -1) {
-    _prodViews.push(panelHtml);
-    if (_prodViews.length > 2) {
-      _prodViews.shift(); // keep max 2 side-by-side
+    // ── Zona 2: Tabla de productos ────────────────────────────────────
+    var productSection = '';
+    if (rows.length === 0) {
+      var dInfo = "<b>[DEBUG]</b> Buscando cat: " + cat + " | yr: " + yr + " | wks: " + wkStart + " a " + wkEnd + " | ranch: " + (ranchFilter||"ALL") + "<br>";
+      dInfo += "wkCode: " + (((yr%100)*100)+wkStart) + " | ds keys: " + Object.keys(ds).slice(0, 8).join(', ');
+      if (Object.keys(ds).length === 0) dInfo += " (<b>ds ESTÁ VACÍO</b>, no hay datos de prod de SharePoint).";
+      productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">' +
+        'Sin registros de producto para este período.<br><br><span style="text-align:left;display:inline-block;background:#fffbe0;border:1px solid #ffe082;padding:6px;color:#b45309;">' + dInfo + '</span></div>';
+    } else {
+      rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
+      var total=rows.reduce(function(s,r){return s+r.gasto;},0);
+      var panelMeta = 'Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>';
+      productSection =
+        '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">' +
+          '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
+          '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
+        '</div>' +
+        '<div style="overflow-x:auto; overflow-y:auto; flex:1; scrollbar-width:thin;">' +
+          '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
+            '<thead><tr style="position:sticky;top:0;z-index:1;">' +
+              '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
+              '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
+              '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
+              '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO</th>' +
+            '</tr></thead><tbody>';
+      rows.forEach(function(r,i){
+        var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
+        productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
+          '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
+          '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
+          '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
+          '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+fmt(r.gasto)+'</td>' +
+          '</tr>';
+      });
+      productSection += '</tbody></table></div>';
     }
+
+    panelHtml =
+      '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #4472C4; display:flex; flex-direction:column; background:#fff; overflow:hidden;">' +
+        '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
+          '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
+        '</div>' +
+        kpiSection +
+        productSection +
+      '</div>';
+    
+    // Siempre reemplazar el panel (evitar que datos viejos bloqueen la vista)
+    _prodViews = [panelHtml];
+    
+    var pp = document.getElementById('prodPanel');
+    pp.className='show';
+    document.getElementById('prodTableWrap').innerHTML = panelHtml;
+    
+    // Forzar el tamaño y hacer scroll hacia el panel para que no quede oculto abajo:
+    setTimeout(function() {
+      resizeTable();
+      pp.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }, 150);
+
+  } catch(err) {
+    document.getElementById('prodPanel').className='show';
+    document.getElementById('prodTableWrap').innerHTML = '<div style="padding:15px; color:red; font-family:monospace; background:#fff0f0; border:1px solid red; word-break:break-all;"><b>CRITICAL JS ERROR in showProdPanel:</b><br>' + err.message + '<br><br>' + err.stack + '</div>';
   }
-  
-  document.getElementById('prodPanel').className='show';
-  document.getElementById('prodTableWrap').innerHTML = _prodViews.join('');
-  setTimeout(resizeTable,80);
 }
 function closeProdPanel() { _prodViews = []; document.getElementById('prodPanel').className=''; setTimeout(resizeTable,60); }
 function showProdFromCmp(yr,wk,ranch) { showProdPanel({_cat:state.cat,_year:yr,_week:wk,_fromWeek:wk,_toWeek:wk},{ranch:ranch||null}); }
@@ -1900,8 +1923,10 @@ window.addEventListener('resize', resizeTable);
 // HEIGHT REPORTING
 // =======================================================
 function reportHeight() {
-  var h = window.innerHeight || document.documentElement.clientHeight || 700;
-  window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h,700)},'*');
+  // Use scrollHeight to allow expanding when prodPanel appears
+  var h = document.documentElement.scrollHeight || document.body.scrollHeight || 700;
+  // Añadimos un pequeño margen por si el panel añade boxShadow u overflow
+  window.parent.postMessage({type:'streamlit:setFrameHeight',height:Math.max(h + 20, 700)},'*');
 }
 var ro=new ResizeObserver(reportHeight);
 ro.observe(document.getElementById('app')||document.body);
@@ -1975,13 +2000,27 @@ try:
 except ImportError:
     _crear_disponible = False
 
+try:
+    from data_extractor import insertar_hojas_pr_me_mp
+    _subir_disponible = True
+except ImportError:
+    _subir_disponible = False
+
 if not st.session_state.show_auto:
     # ==== MODO DASHBOARD ====
-    # Este botón quedará invisiblemente anclado a la barra azul gracias al CSS Overlay
-    st.button("⚙️", on_click=toggle_auto, help="Abrir Panel de Automatización")
-        
-    # Renderizamos el iframe
-    components.html(html_final, height=900, scrolling=False)
+    # Header nativo de Streamlit — mismo color #4472C4, botones reales sin trucos de z-index
+    col_brand, col_reload, col_auto = st.columns([10, 1, 1])
+    with col_brand:
+        st.markdown('<span id="cfbc-brand">CFBC &#9656; CONTROL SEMANAL</span>', unsafe_allow_html=True)
+    with col_reload:
+        if st.button("⟳ Recargar", key="btn_reload", help="Recargar datos desde SharePoint"):
+            st.cache_data.clear()
+            st.rerun()
+    with col_auto:
+        st.button("⚙️ Auto", key="btn_auto", on_click=toggle_auto, help="Panel de Automatización")
+
+    # iframe sin header propio (36px ya los ocupa el header nativo de arriba)
+    components.html(html_final, height=864, scrolling=False)
 
 else:
     # ==== MODO PANEL DE AUTOMATIZACIÓN ====
@@ -2040,7 +2079,6 @@ else:
                             resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
                         if resultado.get("ok"):
                             st.success(f"🎉 {resultado['mensaje']}")
-                            st.balloons()
                             st.cache_data.clear()
                         else:
                             st.error(f"❌ {resultado['error']}")
@@ -2048,3 +2086,158 @@ else:
                         st.error(f"❌ Falta configurar la credencial en secrets.toml: {e}.")
         else:
             st.error("⚠️ La función de crear hojas no está disponible en data_extractor.py")
+
+    # ── SECCIÓN: Subir PR / ME / MP ───────────────────────────────────────────
+    st.divider()
+    st.header("🔼 Subir PR / ME / MP a SharePoint")
+    st.info(
+        "Sube los archivos Excel de PR, MP y/o ME para una semana y se crearán las hojas "
+        "correspondientes en el Excel de SharePoint automáticamente. "
+        "**ME** acepta 2 archivos que se fusionan en una sola hoja."
+    )
+
+    if not _subir_disponible:
+        st.error("⚠️ La función `insertar_hojas_pr_me_mp` no está disponible en data_extractor.py")
+    else:
+        # ── Selector de semana ────────────────────────────────────────────────
+        col_wk_sel, col_wk_man = st.columns([2, 1], gap="small")
+        with col_wk_sel:
+            if available_weeks:
+                semana_sel = st.selectbox(
+                    "Semana de referencia:",
+                    options=available_weeks,
+                    format_func=lambda c: f"WK{c}",
+                    key="upload_wk_sel",
+                )
+                semana_code_upload = semana_sel  # ej "2613"
+            else:
+                semana_code_upload = ""
+        with col_wk_man:
+            semana_manual = st.text_input(
+                "O escribe el código (ej: 2518):",
+                placeholder="2518",
+                max_chars=4,
+                key="upload_wk_manual",
+            ).strip()
+            if semana_manual:
+                semana_code_upload = semana_manual
+
+        st.markdown("---")
+
+        # ── File uploaders ────────────────────────────────────────────────────
+        col_pr, col_mp = st.columns(2, gap="large")
+
+        with col_pr:
+            st.markdown("##### 📄 PR — Plaguicidas / Riego")
+            pr_uploaded = st.file_uploader(
+                f"Excel PR{'(' + semana_code_upload + ')' if semana_code_upload else ''}",
+                type=["xlsx", "xls"],
+                key="upload_pr",
+                help="Un archivo .xlsx con los datos de PR para la semana seleccionada.",
+            )
+            if pr_uploaded:
+                st.caption(f"✅ {pr_uploaded.name} ({round(pr_uploaded.size/1024,1)} KB)")
+
+        with col_mp:
+            st.markdown("##### 🔧 MP — Mantenimiento")
+            mp_uploaded = st.file_uploader(
+                f"Excel MP{'(' + semana_code_upload + ')' if semana_code_upload else ''}",
+                type=["xlsx", "xls"],
+                key="upload_mp",
+                help="Un archivo .xlsx con los datos de MP para la semana seleccionada.",
+            )
+            if mp_uploaded:
+                st.caption(f"✅ {mp_uploaded.name} ({round(mp_uploaded.size/1024,1)} KB)")
+
+        st.markdown("##### 📦 ME — Material de Empaque (2 archivos → 1 hoja fusionada)")
+        col_me1, col_me2 = st.columns(2, gap="medium")
+        with col_me1:
+            me1_uploaded = st.file_uploader(
+                "Excel ME — Archivo 1",
+                type=["xlsx", "xls"],
+                key="upload_me1",
+                help="Primer archivo Excel ME.",
+            )
+            if me1_uploaded:
+                st.caption(f"✅ {me1_uploaded.name} ({round(me1_uploaded.size/1024,1)} KB)")
+        with col_me2:
+            me2_uploaded = st.file_uploader(
+                "Excel ME — Archivo 2",
+                type=["xlsx", "xls"],
+                key="upload_me2",
+                help="Segundo archivo Excel ME (se fusiona con el primero en la misma hoja).",
+            )
+            if me2_uploaded:
+                st.caption(f"✅ {me2_uploaded.name} ({round(me2_uploaded.size/1024,1)} KB)")
+
+        st.markdown("---")
+
+        # ── Botón de subida ───────────────────────────────────────────────────
+        _hay_archivos   = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded])
+        _hay_semana     = bool(semana_code_upload)
+        _semana_valida  = semana_code_upload.isdigit() and len(semana_code_upload) == 4
+
+        if st.button(
+            f"🚀 Crear hojas en SharePoint {'— WK' + semana_code_upload if semana_code_upload else ''}",
+            type="primary",
+            use_container_width=True,
+            key="btn_subir_pr_me_mp",
+            disabled=not (_hay_archivos and _hay_semana),
+        ):
+            if not _semana_valida:
+                st.warning("⚠️ El código de semana debe ser exactamente 4 dígitos (ej: 2613).")
+            else:
+                try:
+                    tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                    client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                    client_secret = st.secrets["sharepoint"]["client_secret"]
+
+                    tipos_subidos = []
+                    if pr_uploaded:  tipos_subidos.append("PR")
+                    if mp_uploaded:  tipos_subidos.append("MP")
+                    if me1_uploaded or me2_uploaded: tipos_subidos.append("ME")
+
+                    with st.spinner(
+                        f"Conectando con SharePoint y creando hojas "
+                        f"{', '.join(tipos_subidos)} para WK{semana_code_upload}…"
+                    ):
+                        res = insertar_hojas_pr_me_mp(
+                            semana_code   = semana_code_upload,
+                            tenant_id     = tenant_id,
+                            client_id     = client_id_sp,
+                            client_secret = client_secret,
+                            pr_file       = pr_uploaded  if pr_uploaded  else None,
+                            mp_file       = mp_uploaded  if mp_uploaded  else None,
+                            me_file1      = me1_uploaded if me1_uploaded else None,
+                            me_file2      = me2_uploaded if me2_uploaded else None,
+                        )
+
+                    # ── Mostrar resultados ────────────────────────────────────
+                    hubo_error = False
+                    for tipo in ["PR", "MP", "ME"]:
+                        info = res.get(tipo, {})
+                        ok   = info.get("ok")
+                        msg  = info.get("msg", "")
+                        if ok is True:
+                            st.success(msg)
+                        elif ok is False:
+                            st.error(msg)
+                            hubo_error = True
+                        # ok is None → no se subió archivo, no mostrar nada
+
+                    if not hubo_error:
+                        st.cache_data.clear()
+                        st.info("💡 Recarga el dashboard para ver los nuevos datos.")
+                    else:
+                        st.warning("⚠️ Algunos archivos no se pudieron subir. Revisa los mensajes de error arriba.")
+
+                except KeyError as e:
+                    st.error(f"❌ Falta configurar la credencial en secrets.toml: {e}.")
+                except Exception as e:
+                    st.error(f"❌ Error inesperado: {e}")
+
+        if not _hay_semana:
+            st.caption("⬆️ Selecciona una semana para habilitar el botón.")
+        elif not _hay_archivos:
+            st.caption("⬆️ Sube al menos un archivo para habilitar el botón.")
+
