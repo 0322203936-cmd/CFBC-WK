@@ -73,13 +73,13 @@ CATEGORIAS_ORDEN = [
 ]
 
 WK_MXN_RANCH_COLS = {
-    "Prop-RM": "D",
-    "PosCo-RM": "E",
-    "Campo-RM": "F",
-    "Isabela": "G",
-    "Christina": "H",
-    "Cecilia": "I",
-    "Cecilia 25": "J",
+    "Prop-RM": "E",
+    "PosCo-RM": "F",
+    "Campo-RM": "G",
+    "Isabela": "H",
+    "Christina": "I",
+    "Cecilia": "J",
+    "Cecilia 25": "K",
 }
 
 WK_MATERIAL_AUTOFILL = {
@@ -2469,7 +2469,7 @@ def autorrellenar_materiales_wk(week_code: str, tenant_id: str, client_id: str, 
             row = info["row"]
             values = [[info["totales"].get(rn, 0.0) for rn in WK_MXN_RANCH_COLS]]
             patch_resp = requests.patch(
-                f"{wb_url}/worksheets/{target_sheet}/range(address='D{row}:J{row}')",
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E{row}:K{row}')",
                 headers=hdrs,
                 json={"values": values},
                 timeout=30,
@@ -2481,13 +2481,13 @@ def autorrellenar_materiales_wk(week_code: str, tenant_id: str, client_id: str, 
                 }
 
             requests.patch(
-                f"{wb_url}/worksheets/{target_sheet}/range(address='D{row}:J{row}')/format",
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E{row}:K{row}')/format",
                 headers=hdrs,
                 json={"numberFormat": "#,##0"},
                 timeout=20,
             )
             requests.patch(
-                f"{wb_url}/worksheets/{target_sheet}/range(address='D{row}:J{row}')/format/font",
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E{row}:K{row}')/format/font",
                 headers=hdrs,
                 json={"color": "#C00000", "bold": True, "name": "Arial"},
                 timeout=20,
