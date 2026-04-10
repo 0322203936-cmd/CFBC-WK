@@ -1333,50 +1333,12 @@ function renderRancho() {
   var f=state.fromWeek, t=state.toWeek;
   var cur=state.currency;
 
-  // ── Columnas: CATEGORÍA fija + un rancho por columna + TOTAL ────────────
-  var cols=[
-    { field:'cat_label', headerName:'CATEGORÍA', width:240, pinned:'left',
-      cellRenderer:function(p){
-        var d=p.data||{};
-        if(d._isGroup) return '<span style="color:#fff;font-weight:700">'+p.value+'</span>';
-        var color=d._isTotal?'#1e3a5f':'#333';
-        return '<span style="color:'+color+';font-weight:700">'+p.value+'</span>';
-      }
-    }
-  ];
-  RANCH_ORDER.forEach(function(rn){
-    var col=RANCH_COLORS[rn]||'#888';
-    cols.push({
-      field:ranchFieldName(rn), headerName:rn, width:110, type:'numericColumn',
-      cellRenderer:(function(c){ return function(p){
-        var v=p.value;
-        if(v===null||v===undefined||isNaN(v)||v===0) return '';
-        if(p.data&&p.data._isDif){
-          var cl=v>0?'cell-pos':'cell-neg';
-          return '<span class="'+cl+'">'+(v>0?'+':'')+fmt(v)+'</span>';
-        }
-        return '<span style="color:'+c+';font-weight:600">'+fmt(v)+'</span>';
-      };})(col)
-    });
-  });
-  cols.push({
-    field:'total', headerName:'TOTAL '+sym, width:130, type:'numericColumn',
-    cellRenderer:function(p){
-      var v=p.value; if(v===null||v===undefined||isNaN(v)||v===0) return '';
-      if(p.data&&p.data._isDif){
-        var cl=v>0?'cell-pos':'cell-neg';
-        return '<span class="'+cl+'">'+(v>0?'+':'')+fmt(v)+'</span>';
-      }
-      return '<span class="cell-navy">'+fmt(v)+'</span>';
-    }
-  });
-
-  // ── Sumar ranchos para un año dentro del rango de semanas ─────────────────
+  // ── Sumar ranchos para un año en el rango ────────────────────────────────
   function sumForYear(records, yr){
     var out={total:0};
     RANCH_ORDER.forEach(function(rn){ out[rn]=0; });
     records.forEach(function(r){
-      if(r.year!==yr || r.week<f || r.week>t) return;
+      if(r.year!==yr||r.week<f||r.week>t) return;
       var ranches=cur==='usd'?r.usd_ranches:r.mxn_ranches;
       var tot    =cur==='usd'?r.usd_total  :r.mxn_total;
       out.total+=tot||0;
@@ -1387,31 +1349,6 @@ function renderRancho() {
     return out;
   }
 
-  function difAgg(a,b){
-    var out={total:Math.round((b.total-a.total)*100)/100};
-    RANCH_ORDER.forEach(function(rn){ out[rn]=Math.round(((b[rn]||0)-(a[rn]||0))*100)/100; });
-    return out;
-  }
-
-  function cpvOf(mat,mo,sv){
-    var out={total:mat.total+mo.total+sv.total};
-    RANCH_ORDER.forEach(function(rn){ out[rn]=(mat[rn]||0)+(mo[rn]||0)+(sv[rn]||0); });
-    return out;
-  }
-
-  function makeRow(label,agg,flags){
-    var row={cat_label:label, total:Math.round((agg.total||0)*100)/100};
-    if(flags) Object.keys(flags).forEach(function(k){ row[k]=flags[k]; });
-    RANCH_ORDER.forEach(function(rn){ row[ranchFieldName(rn)]=Math.round((agg[rn]||0)*100)/100; });
-    return row;
-  }
-
-  function makeGroupRow(label, totalVal){
-    var row={cat_label:label, _isGroup:true, total:Math.round((totalVal||0)*100)/100};
-    RANCH_ORDER.forEach(function(rn){ row[ranchFieldName(rn)]=null; });
-    return row;
-  }
-
   var matCats=DATA.categories.filter(function(c){
     return c!=='COSTO SERVICIOS'&&c!=='COSTO MANO DE OBRA';
   });
@@ -1419,40 +1356,113 @@ function renderRancho() {
   var moRecs=DATA.mano_obra_data||[];
   var svRecs=DATA.servicios_data||[];
 
-  var rows=[];
-  var yrResults=[];
-  var rangeLabel=f===t?'S'+String(f).padStart(2,'0'):'S'+String(f).padStart(2,'0')+'–S'+String(t).padStart(2,'0');
-
-  // ── Un bloque por año activo ──────────────────────────────────────────────
+  // yrData[yr] = {mat, mo, sv, cpv}
+  var yrData={};
   yrs.forEach(function(yr){
-    var mat=sumForYear(matRecs, yr);
-    var mo =sumForYear(moRecs,  yr);
-    var sv =sumForYear(svRecs,  yr);
-    var tot=cpvOf(mat,mo,sv);
-    rows.push(makeGroupRow(String(yr)+'  ('+rangeLabel+')', tot.total));
-    rows.push(makeRow('COSTO DE MATERIALES',          mat, {}));
-    rows.push(makeRow('COSTO DE MANO DE OBRA',        mo,  {}));
-    rows.push(makeRow('COSTO DE SERVICIOS',           sv,  {}));
-    rows.push(makeRow('Costo de Producción y Ventas', tot, {_isTotal:true}));
-    yrResults.push({yr:yr, mat:mat, mo:mo, sv:sv, tot:tot});
+    var mat=sumForYear(matRecs,yr);
+    var mo =sumForYear(moRecs, yr);
+    var sv =sumForYear(svRecs, yr);
+    var cpv={total:mat.total+mo.total+sv.total};
+    RANCH_ORDER.forEach(function(rn){ cpv[rn]=(mat[rn]||0)+(mo[rn]||0)+(sv[rn]||0); });
+    yrData[yr]={mat:mat,mo:mo,sv:sv,cpv:cpv};
   });
 
-  // ── DIF entre el último y el primer año activo ────────────────────────────
-  if(yrResults.length>=2){
-    var first=yrResults[0], last=yrResults[yrResults.length-1];
-    var difMat=difAgg(first.mat, last.mat);
-    var difMo =difAgg(first.mo,  last.mo);
-    var difSv =difAgg(first.sv,  last.sv);
-    var difTot=difAgg(first.tot, last.tot);
-    var difLabel='DIF  ('+String(last.yr)+' − '+String(first.yr)+')';
-    rows.push(makeGroupRow(difLabel, difTot.total));
-    rows.push(makeRow('COSTO DE MATERIALES',          difMat, {_isDif:true}));
-    rows.push(makeRow('COSTO DE MANO DE OBRA',        difMo,  {_isDif:true}));
-    rows.push(makeRow('COSTO DE SERVICIOS',           difSv,  {_isDif:true}));
-    rows.push(makeRow('Costo de Producción y Ventas', difTot, {_isTotal:true,_isDif:true}));
+  var CATS=[
+    {key:'mat', label:'COSTO DE MATERIALES'},
+    {key:'mo',  label:'COSTO DE MANO DE OBRA'},
+    {key:'sv',  label:'COSTO DE SERVICIOS'},
+    {key:'cpv', label:'Costo de Producción y Ventas'},
+  ];
+
+  var nYrs=yrs.length;
+  var nCols=nYrs>=2?nYrs+1:nYrs; // años + DIF
+
+  var thB='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid #ddd;white-space:nowrap;position:sticky;top:0;z-index:3;';
+  var thPin=thB+'left:0;z-index:4;';
+
+  // ── Fila de header 1: CATEGORÍA | rancho (colspan) | TOTAL (colspan) ─────
+  var h1='<tr>';
+  h1+='<th rowspan="2" style="'+thPin+'min-width:220px;text-align:left">CATEGORÍA</th>';
+  RANCH_ORDER.forEach(function(rn){
+    var col=RANCH_COLORS[rn]||'#888';
+    h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
+  });
+  h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #4472C4;background:#9DC3E6">TOTAL '+sym+'</th>';
+  h1+='</tr>';
+
+  // ── Fila de header 2: años + DIF bajo cada grupo ──────────────────────────
+  function yrSubHeaders(){
+    var s='';
+    yrs.forEach(function(yr){
+      var col=YEAR_COLORS[yr]||'#888';
+      s+='<th style="'+thB+'font-size:9px;color:'+col+';min-width:80px;text-align:right;border-left:1px solid var(--pt-hdr-border)">'+yr+'</th>';
+    });
+    if(nYrs>=2){
+      s+='<th style="'+thB+'font-size:9px;min-width:70px;text-align:right;border-left:1px solid #aaa;background:#BDD7EE">DIF</th>';
+    }
+    return s;
+  }
+  var h2='<tr>';
+  RANCH_ORDER.forEach(function(){ h2+=yrSubHeaders(); });
+  h2+=yrSubHeaders(); // columna TOTAL
+  h2+='</tr>';
+
+  // ── Celdas ────────────────────────────────────────────────────────────────
+  function cell(v, isDif, bold, leftBorder){
+    var s='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
+    if(leftBorder) s+='border-left:'+leftBorder+';';
+    if(bold) s+='font-weight:700;';
+    if(v===null||v===undefined||isNaN(v)||v===0){
+      return '<td style="'+s+'color:#ccc">—</td>';
+    }
+    if(isDif){
+      var cl=v>0?'#16a34a':'#dc2626';
+      return '<td style="'+s+'color:'+cl+'">'+(v>0?'+':'')+fmt(v)+'</td>';
+    }
+    return '<td style="'+s+'color:#1e3a5f">'+fmt(v)+'</td>';
   }
 
-  renderPivotTable(cols, rows);
+  // ── Cuerpo ────────────────────────────────────────────────────────────────
+  var bodyHtml='';
+  CATS.forEach(function(cat,ci){
+    var isCpv=cat.key==='cpv';
+    var bgRow=isCpv?'var(--pt-tot-bg)':(ci%2===0?'#fff':'#F7FBFF');
+    var catColor=isCpv?'#1e3a5f':'#333';
+    var catFw=isCpv?'800':'700';
+    bodyHtml+='<tr style="background:'+bgRow+'">';
+    bodyHtml+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:'+catColor+';font-weight:'+catFw+'">'+cat.label+'</span></td>';
+
+    // Columnas por rancho
+    RANCH_ORDER.forEach(function(rn, ri){
+      var leftB=ri===0?'':'2px solid #e0e0e0';
+      yrs.forEach(function(yr,yi){
+        var lb=yi===0&&ri>0?'2px solid #ddd':'1px solid #eee';
+        bodyHtml+=cell(yrData[yr][cat.key][rn]||0, false, isCpv, yi===0?lb:'');
+      });
+      if(nYrs>=2){
+        var dif=(yrData[yrs[nYrs-1]][cat.key][rn]||0)-(yrData[yrs[0]][cat.key][rn]||0);
+        bodyHtml+=cell(dif, true, isCpv, '1px solid #aaa');
+      }
+    });
+
+    // Columna TOTAL
+    yrs.forEach(function(yr,yi){
+      var lb=yi===0?'3px solid #4472C4':'';
+      bodyHtml+=cell(yrData[yr][cat.key].total||0, false, true, lb);
+    });
+    if(nYrs>=2){
+      var difTot=(yrData[yrs[nYrs-1]][cat.key].total||0)-(yrData[yrs[0]][cat.key].total||0);
+      bodyHtml+=cell(difTot, true, true, '1px solid #aaa');
+    }
+    bodyHtml+='</tr>';
+  });
+
+  // ── Inyectar en DOM ───────────────────────────────────────────────────────
+  var html='<div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var gw=document.getElementById('gridWrap');
+  gw.style.display='';
+  gw.innerHTML=html;
+  document.getElementById('comparativoWrap').className='';
 }
 
 // =======================================================
