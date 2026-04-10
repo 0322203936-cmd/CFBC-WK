@@ -1395,7 +1395,9 @@ function renderRancho() {
     var s='';
     yrs.forEach(function(yr){
       var col=YEAR_COLORS[yr]||'#888';
-      s+='<th style="'+thB+'font-size:9px;color:'+col+';min-width:80px;text-align:right;border-left:1px solid var(--pt-hdr-border)">'+yr+'</th>';
+      var yy=String(yr).slice(2);
+      var lbl=f===t ? yy+String(f).padStart(2,'0') : yy+String(f).padStart(2,'0')+'–'+yy+String(t).padStart(2,'0');
+      s+='<th style="'+thB+'font-size:9px;color:'+col+';min-width:80px;text-align:right;border-left:1px solid var(--pt-hdr-border)">'+lbl+'</th>';
     });
     if(nYrs>=2){
       s+='<th style="'+thB+'font-size:9px;min-width:70px;text-align:right;border-left:1px solid #aaa;background:#BDD7EE">DIF</th>';
