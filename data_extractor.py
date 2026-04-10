@@ -176,6 +176,7 @@ def norm_cat(s: str):
     if "RENOVACION" in s:                         return "RENOVACION DE SIEMBRA"
     if "MATERIAL DE EMP" in s:                    return "MATERIAL DE EMPAQUE"
     if "COSTO DE MAT" in s:                       return "COSTO_STOP"
+    if "COSTO DE MANO DE OBRA" in s:              return "COSTO MANO DE OBRA"
     if "COSTO DE SERV" in s:                      return "COSTO SERVICIOS"
     if s.startswith("ELECTRICIDAD"):                        return "SV:Electricidad"
     if s.startswith("FLETES Y ACARREOS"):                   return "SV:Fletes y Acarreos"
@@ -508,6 +509,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
 
     # 3. Procesar cada hoja WK
     siembra_data: dict = {}  # {wk_code: {ranch: {charolas,esquejes,metros,hectareas}}}
+    unit_costs_data: dict = {}
     SIEMBRA_LABELS = [
         ("inv_inicial",     "INVENTARIO INICIAL"),
         ("tallos_cos",      "TALLOS COSECHADOS"),
@@ -665,6 +667,44 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         if wk_siembra:
             siembra_data[code] = wk_siembra
 
+        # ── Extraer Indicadores y Costos Unitarios ────────────
+        wk_unit_costs = {}
+        curr_section = None
+        for i_r, row in enumerate(data):
+            cell_text = " ".join(str(row[c]).strip().upper() for c in range(min(5, len(row))))
+            if not cell_text.strip(): continue
+            
+            if "$ / TALLO" in cell_text or "$ / LIBRAS" in cell_text or "COSTOS UNITARIOS" in cell_text:
+                curr_section = "tallo"
+            elif "$ / HECTAREA" in cell_text or "$ / HECTÁREA" in cell_text:
+                curr_section = "ha"
+            elif "<<< INDICADORES" in cell_text or "KPI'S" in cell_text or "PROYECTOS" in cell_text:
+                curr_section = None
+                
+            label = str(row[1]).strip().upper() if len(row) > 1 else ""
+            if not label:
+                label = str(row[0]).strip().upper() if len(row) > 0 else ""
+                
+            key = None
+            if curr_section == "tallo":
+                if "COSTO DE PRODUCCION Y VENTAS" in label or "COSTO DE PRODUCCIÓN Y VENTAS" in label:
+                    key = "cpv_tallo"
+            elif curr_section == "ha":
+                if "COSTO DE PRODUCCION Y VENTAS" in label or "COSTO DE PRODUCCIÓN Y VENTAS" in label:
+                    key = "cpv_ha"
+                    
+            if key:
+                if wk_unit_costs.get("TOTAL", {}).get(key) is not None:
+                    continue
+                total_val = sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0
+                wk_unit_costs.setdefault("TOTAL", {})[key] = total_val
+                for j, rn in mxn_ranch_cols.items():
+                    if j < len(row):
+                        wk_unit_costs.setdefault(rn, {})[key] = sv(row[j])
+                        
+        if wk_unit_costs:
+            unit_costs_data[code] = wk_unit_costs
+
     print(f"\n✅ servicios_data: {len(servicios_data)} registros encontrados")
     if servicios_data:
         print(f"   subcats: {list({r['subcat'] for r in servicios_data})}")
@@ -722,6 +762,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         "servicios_data":   servicios_data,
         "mano_obra_data":   mano_obra_data,
         "siembra_data":     siembra_data,
+        "unit_costs_data":  unit_costs_data,
     }
 
 
