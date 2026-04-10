@@ -1339,8 +1339,7 @@ function renderRancho() {
       cellRenderer:function(p){
         var d=p.data||{};
         if(d._isGroup) return '<span style="color:#fff;font-weight:700">'+p.value+'</span>';
-        var isTot=d._isTotal, isDif=d._isDif;
-        var color=isTot?'#1e3a5f':'#333';
+        var color=d._isTotal?'#1e3a5f':'#333';
         return '<span style="color:'+color+';font-weight:700">'+p.value+'</span>';
       }
     }
@@ -1352,8 +1351,7 @@ function renderRancho() {
       cellRenderer:(function(c){ return function(p){
         var v=p.value;
         if(v===null||v===undefined||isNaN(v)||v===0) return '';
-        var d=p.data||{};
-        if(d._isDif){
+        if(p.data&&p.data._isDif){
           var cl=v>0?'cell-pos':'cell-neg';
           return '<span class="'+cl+'">'+(v>0?'+':'')+fmt(v)+'</span>';
         }
@@ -1364,9 +1362,8 @@ function renderRancho() {
   cols.push({
     field:'total', headerName:'TOTAL '+sym, width:130, type:'numericColumn',
     cellRenderer:function(p){
-      var v=p.value; if(!v||isNaN(v)||v===0) return '';
-      var d=p.data||{};
-      if(d._isDif){
+      var v=p.value; if(v===null||v===undefined||isNaN(v)||v===0) return '';
+      if(p.data&&p.data._isDif){
         var cl=v>0?'cell-pos':'cell-neg';
         return '<span class="'+cl+'">'+(v>0?'+':'')+fmt(v)+'</span>';
       }
@@ -1374,14 +1371,14 @@ function renderRancho() {
     }
   });
 
-  // ── Sumar ranchos para UNA semana específica ──────────────────────────────
-  function sumForWeek(records, wk){
+  // ── Sumar ranchos para un año dentro del rango de semanas ─────────────────
+  function sumForYear(records, yr){
     var out={total:0};
     RANCH_ORDER.forEach(function(rn){ out[rn]=0; });
     records.forEach(function(r){
-      if(yrs.indexOf(r.year)<0 || r.week!==wk) return;
+      if(r.year!==yr || r.week<f || r.week>t) return;
       var ranches=cur==='usd'?r.usd_ranches:r.mxn_ranches;
-      var tot=cur==='usd'?r.usd_total:r.mxn_total;
+      var tot    =cur==='usd'?r.usd_total  :r.mxn_total;
       out.total+=tot||0;
       Object.keys(ranches||{}).forEach(function(rn){
         if(out[rn]!==undefined) out[rn]+=(ranches[rn]||0);
@@ -1396,7 +1393,7 @@ function renderRancho() {
     return out;
   }
 
-  function cpv(mat,mo,sv){
+  function cpvOf(mat,mo,sv){
     var out={total:mat.total+mo.total+sv.total};
     RANCH_ORDER.forEach(function(rn){ out[rn]=(mat[rn]||0)+(mo[rn]||0)+(sv[rn]||0); });
     return out;
@@ -1422,35 +1419,32 @@ function renderRancho() {
   var moRecs=DATA.mano_obra_data||[];
   var svRecs=DATA.servicios_data||[];
 
-  // ── Semanas del rango que tienen datos ───────────────────────────────────
-  var rangeWeeks=allWeeks.filter(function(w){ return w>=f&&w<=t; });
   var rows=[];
-  var weekResults=[];
+  var yrResults=[];
+  var rangeLabel=f===t?'S'+String(f).padStart(2,'0'):'S'+String(f).padStart(2,'0')+'–S'+String(t).padStart(2,'0');
 
-  rangeWeeks.forEach(function(wk){
-    var mat=sumForWeek(matRecs, wk);
-    var mo =sumForWeek(moRecs,  wk);
-    var sv =sumForWeek(svRecs,  wk);
-    var tot=cpv(mat,mo,sv);
-    if(tot.total===0) return; // semana sin datos, saltar
-
-    var wkLabel='SEMANA '+String(wk).padStart(2,'0');
-    rows.push(makeGroupRow(wkLabel, tot.total));
+  // ── Un bloque por año activo ──────────────────────────────────────────────
+  yrs.forEach(function(yr){
+    var mat=sumForYear(matRecs, yr);
+    var mo =sumForYear(moRecs,  yr);
+    var sv =sumForYear(svRecs,  yr);
+    var tot=cpvOf(mat,mo,sv);
+    rows.push(makeGroupRow(String(yr)+'  ('+rangeLabel+')', tot.total));
     rows.push(makeRow('COSTO DE MATERIALES',          mat, {}));
     rows.push(makeRow('COSTO DE MANO DE OBRA',        mo,  {}));
     rows.push(makeRow('COSTO DE SERVICIOS',           sv,  {}));
     rows.push(makeRow('Costo de Producción y Ventas', tot, {_isTotal:true}));
-    weekResults.push({wk:wk, mat:mat, mo:mo, sv:sv, tot:tot});
+    yrResults.push({yr:yr, mat:mat, mo:mo, sv:sv, tot:tot});
   });
 
-  // ── Sección DIF si hay 2+ semanas ────────────────────────────────────────
-  if(weekResults.length>=2){
-    var first=weekResults[0], last=weekResults[weekResults.length-1];
+  // ── DIF entre el último y el primer año activo ────────────────────────────
+  if(yrResults.length>=2){
+    var first=yrResults[0], last=yrResults[yrResults.length-1];
     var difMat=difAgg(first.mat, last.mat);
     var difMo =difAgg(first.mo,  last.mo);
     var difSv =difAgg(first.sv,  last.sv);
     var difTot=difAgg(first.tot, last.tot);
-    var difLabel='DIF  (S'+String(last.wk).padStart(2,'0')+' − S'+String(first.wk).padStart(2,'0')+')';
+    var difLabel='DIF  ('+String(last.yr)+' − '+String(first.yr)+')';
     rows.push(makeGroupRow(difLabel, difTot.total));
     rows.push(makeRow('COSTO DE MATERIALES',          difMat, {_isDif:true}));
     rows.push(makeRow('COSTO DE MANO DE OBRA',        difMo,  {_isDif:true}));
