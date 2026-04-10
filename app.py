@@ -1479,8 +1479,57 @@ function renderRancho() {
     bodyHtml+='</tr>';
   });
 
-  // ── Inyectar en DOM ───────────────────────────────────────────────────────
+  // ── Función para construir tabla de costos unitarios ─────────────────────
+  function buildUnitTable(titulo, rows2){
+    var t='';
+    // Título separador
+    t+='<div style="margin-top:24px;margin-bottom:4px;padding:6px 10px;background:var(--pt-hdr-bg);border-left:4px solid #4472C4;font-size:11px;font-weight:800;color:#1e3a5f;letter-spacing:.5px">'+titulo+'</div>';
+    t+='<div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>';
+    rows2.forEach(function(r,ri){
+      var isBold=r.bold, isTotal=r.total, isPlaceholder=r.placeholder;
+      var bgRow=isTotal?'var(--pt-tot-bg)':(ri%2===0?'#fff':'#F7FBFF');
+      var color=isTotal?'#1e3a5f':'#555';
+      var fw=isBold||isTotal?'700':'500';
+      t+='<tr style="background:'+bgRow+'">';
+      t+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:'+color+';font-weight:'+fw+'">'+r.label+'</span></td>';
+      // celdas vacías por cada columna de datos
+      var totalCols=nCols*(RANCH_ORDER.length+1);
+      for(var c=0;c<totalCols;c++){
+        t+='<td style="padding:3px 5px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#bbb">—</td>';
+      }
+      t+='</tr>';
+    });
+    t+='</tbody></table></div>';
+    return t;
+  }
+
+  var rowsTallo=[
+    {label:'Materiales',                    bold:true},
+    {label:'Mano de Obra',                  bold:true},
+    {label:'Servicios (Fletes)',             bold:true},
+    {label:'Costo de Producción y Ventas',  bold:true, total:true},
+    {label:'Material de Empaque / Tallo',   bold:false},
+    {label:'Sanidad Vegetal / Tallo',       bold:false},
+    {label:'Fertilización / Tallo',         bold:false},
+    {label:'Mano de Obra Prod / Tallo',     bold:false},
+  ];
+
+  var rowsHa=[
+    {label:'Materiales',                    bold:true},
+    {label:'Mano de Obra',                  bold:true},
+    {label:'Servicios (Fletes)',             bold:true},
+    {label:'Costo de Producción y Ventas',  bold:true, total:true},
+    {label:'Material de Empaque / Caja',    bold:false},
+    {label:'Sanidad Vegetal / Ha',          bold:false},
+    {label:'Fertilización / Ha',            bold:false},
+    {label:'Mano de Obra Prod / Ha',        bold:false},
+  ];
+
   var html='<div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  html+=buildUnitTable('COSTOS UNITARIOS  ·  $ / TALLO PROCESADO', rowsTallo);
+  html+=buildUnitTable('COSTOS UNITARIOS  ·  $ / HECTÁREA',        rowsHa);
+
+  // ── Inyectar en DOM ───────────────────────────────────────────────────────
   var gw=document.getElementById('gridWrap');
   gw.style.display='';
   gw.innerHTML=html;
