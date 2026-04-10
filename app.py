@@ -579,12 +579,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 #prodTableWrap { overflow: visible; }
 
 /* ── STATUS BAR ──────────────────────────────── */
-.statusbar {
-  background: #ebebeb; border-top: 1px solid #ccc;
-  padding: 2px 10px; font-size: 10px; color: #666;
-  display: flex; gap: 14px; align-items: center;
-  height: 22px; overflow: hidden;
-}
+.statusbar { display: none !important; }
 .statusbar b { color: #333; }
 </style>"""
 
