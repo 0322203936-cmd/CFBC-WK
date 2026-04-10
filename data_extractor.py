@@ -437,6 +437,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
     all_data       = []
     servicios_data = []
     mano_obra_data = []
+    unit_cost_data = []  # $ / Tallo y $ / Hectárea por semana/rancho
 
     hojas_validas = []
     pr_hojas      = []
@@ -654,16 +655,69 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             for row in data:
                 cell_text = " ".join(str(row[c]).strip().upper() for c in range(min(5, len(row))))
                 if field_label in cell_text:
-                    # Total MXN (columna total)
                     total_val = sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0
                     wk_siembra.setdefault("TOTAL", {})[field_key] = total_val
-                    # Por rancho
                     for j, rn in mxn_ranch_cols.items():
                         if j < len(row):
                             wk_siembra.setdefault(rn, {})[field_key] = sv(row[j])
                     break
         if wk_siembra:
             siembra_data[code] = wk_siembra
+
+        # ── Extraer costos totales directos y unitarios ($/Tallo, $/Ha) ──────────────
+        UC_SECTIONS = {
+            "TALLO":    ["$ / TALLO", "$/TALLO", "TALLO PROCESADO"],
+            "LIBRAS":   ["$ / LIBRAS", "$/LIBRAS"],
+            "HECTAREA": ["$ / HECTAREA", "$/HECTAREA", "$ / HA", "$/HA"],
+        }
+        current_uc_section = "TOTAL"
+        for row in data:
+            if not row:
+                continue
+            # Texto combinado de las primeras columnas para buscar la sección
+            cell_text_full = " ".join(str(c).strip().upper() for c in row[:5] if c)
+            
+            # Revisar si cambió la sección actual
+            for sec_key, patterns in UC_SECTIONS.items():
+                if any(p in cell_text_full for p in patterns):
+                    current_uc_section = sec_key
+                    break
+            
+            # Buscar el inicio exacto para no confundir con "Mano de Obra Prod / Tallo" etc.
+            # Tomamos la primera celda que tenga texto
+            first_text = ""
+            for c in row[:5]:
+                v = str(c).strip().upper()
+                if v:
+                    first_text = v
+                    break
+            
+            uc_field = None
+            if first_text.startswith("MATERIALES"): 
+                uc_field = "mat"
+            elif first_text.startswith("MANO DE OBRA") and "PROD" not in first_text and "TALLO" not in first_text and "CAJA" not in first_text:
+                uc_field = "mo"
+            elif first_text.startswith("SERVICIOS"):
+                uc_field = "sv"
+            elif first_text.startswith("COSTO DE PROD"):
+                uc_field = "cpv"
+
+            if not uc_field:
+                continue
+
+            mxn_total_v = sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0
+            if mxn_total_v == 0:
+                continue  # fila vacía, saltar
+            rec = {
+                "semana":    code,
+                "year":      year,
+                "week":      ww,
+                "section":   current_uc_section,
+                "field":     uc_field,
+                "mxn_total": round(mxn_total_v, 2),
+                "mxn_ranches": {rn: sv(row[j]) for j, rn in mxn_ranch_cols.items() if j < len(row)},
+            }
+            unit_cost_data.append(rec)
 
     print(f"\n✅ servicios_data: {len(servicios_data)} registros encontrados")
     if servicios_data:
@@ -722,6 +776,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
         "servicios_data":   servicios_data,
         "mano_obra_data":   mano_obra_data,
         "siembra_data":     siembra_data,
+        "unit_cost_data":   unit_cost_data,
     }
 
 
