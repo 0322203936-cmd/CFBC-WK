@@ -1379,7 +1379,7 @@ function renderRancho() {
     {key:'mat', label:'COSTO DE MATERIALES'},
     {key:'mo',  label:'COSTO DE MANO DE OBRA'},
     {key:'sv',  label:'COSTO DE SERVICIOS'},
-    {key:'cpv', label:'Costo de Producción y Ventas'},
+    {key:'cpv', label:'GASTO POR SEMANA'},
   ];
 
   // Columnas por grupo de rancho/total:
