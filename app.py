@@ -1337,7 +1337,7 @@ function renderRancho() {
     return c!=='COSTO SERVICIOS'&&c!=='COSTO MANO DE OBRA';
   });
   var matRecs=(DATA.weekly_detail||[]).filter(function(r){ return matCats.indexOf(r.categoria)>-1; });
-  var moRecs=DATA.mano_obra_data||[];
+  var moRecs=(DATA.weekly_detail||[]).filter(function(r){ return r.categoria==='COSTO MANO DE OBRA'; });
   var svRecs=DATA.servicios_data||[];
 
   // Semanas en el rango que tienen datos en algún año activo
@@ -1371,15 +1371,31 @@ function renderRancho() {
       var sv =sumForYW(svRecs, yr,wk);
       var cpv={total:mat.total+mo.total+sv.total};
       RANCH_ORDER.forEach(function(rn){ cpv[rn]=(mat[rn]||0)+(mo[rn]||0)+(sv[rn]||0); });
-      ywData[yr][wk]={mat:mat,mo:mo,sv:sv,cpv:cpv};
+      var cpv_tallo = {total: 0}, cpv_ha = {total: 0};
+      RANCH_ORDER.forEach(function(rn){ cpv_tallo[rn] = 0; cpv_ha[rn] = 0; });
+      if (DATA.unit_costs_data) {
+        var yyk = (yr % 100) * 100 + wk;
+        var uc = DATA.unit_costs_data[yyk] || DATA.unit_costs_data[String(yyk)];
+        if (uc) {
+          cpv_tallo.total = (uc['TOTAL'] && uc['TOTAL'].cpv_tallo) ? uc['TOTAL'].cpv_tallo : 0;
+          cpv_ha.total = (uc['TOTAL'] && uc['TOTAL'].cpv_ha) ? uc['TOTAL'].cpv_ha : 0;
+          RANCH_ORDER.forEach(function(rn){
+            cpv_tallo[rn] = (uc[rn] && uc[rn].cpv_tallo) ? uc[rn].cpv_tallo : 0;
+            cpv_ha[rn] = (uc[rn] && uc[rn].cpv_ha) ? uc[rn].cpv_ha : 0;
+          });
+        }
+      }
+      ywData[yr][wk]={mat:mat,mo:mo,sv:sv,cpv:cpv, cpv_tallo:cpv_tallo, cpv_ha:cpv_ha};
     });
   });
 
   var CATS=[
-    {key:'mat', label:'COSTO DE MATERIALES'},
-    {key:'mo',  label:'COSTO DE MANO DE OBRA'},
-    {key:'sv',  label:'COSTO DE SERVICIOS'},
-    {key:'cpv', label:'GASTO POR SEMANA'},
+    {key:'mat', label:'COSTO DE MATERIALES', fmt:fmt},
+    {key:'mo',  label:'COSTO DE MANO DE OBRA', fmt:fmt},
+    {key:'sv',  label:'COSTO DE SERVICIOS', fmt:fmt},
+    {key:'cpv', label:'TOTAL CPV', fmt:fmt},
+    {key:'cpv_tallo', label:'$ / TALLO PROCESADO', fmt:fmtFull},
+    {key:'cpv_ha', label:'$ / HECTÁREA', fmt:fmt},
   ];
 
   // Columnas por grupo de rancho/total:
@@ -1428,16 +1444,18 @@ function renderRancho() {
   h2+='</tr>';
 
   // ── Celda ─────────────────────────────────────────────────────────────────
-  function cell(v, isDif, bold, lb){
+  function cell(v, isDif, bold, lb, fmtFn){
+    var format = fmtFn || fmt;
     var s='padding:3px 5px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
     if(lb) s+='border-left:'+lb+';';
     if(bold) s+='font-weight:700;';
     if(v===null||v===undefined||isNaN(v)||v===0) return '<td style="'+s+'color:#ccc">—</td>';
+    var text = format(v);
     if(isDif){
       var cl=v>0?'#16a34a':'#dc2626';
-      return '<td style="'+s+'color:'+cl+'">'+(v>0?'+':'')+fmt(v)+'</td>';
+      return '<td style="'+s+'color:'+cl+'">'+(v>0?'+':'')+text+'</td>';
     }
-    return '<td style="'+s+'color:#1e3a5f">'+fmt(v)+'</td>';
+    return '<td style="'+s+'color:#1e3a5f">'+text+'</td>';
   }
 
   // ── Generar celdas para un rancho o TOTAL (rnKey=null) ────────────────────
@@ -1448,18 +1466,18 @@ function renderRancho() {
       rangeWeeks.forEach(function(wk,wi){
         var v=rnKey!==null ? (ywData[yr][wk][cat.key][rnKey]||0) : (ywData[yr][wk][cat.key].total||0);
         var lb=wi===0?'2px solid '+col:'';
-        s+=cell(v, false, isCpv, lb);
+        s+=cell(v, false, isCpv, lb, cat.fmt);
       });
       if(nWk>=2){
         var first=rnKey!==null?(ywData[yr][rangeWeeks[0]][cat.key][rnKey]||0):(ywData[yr][rangeWeeks[0]][cat.key].total||0);
         var last =rnKey!==null?(ywData[yr][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yr][rangeWeeks[nWk-1]][cat.key].total||0);
-        s+=cell(last-first, true, isCpv, '1px solid #aaa');
+        s+=cell(last-first, true, isCpv, '1px solid #aaa', cat.fmt);
       }
     });
     if(nYrs>=2){
       var v0=rnKey!==null?(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key].total||0);
       var vn=rnKey!==null?(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key].total||0);
-      s+=cell(vn-v0, true, true, '2px solid #4472C4');
+      s+=cell(vn-v0, true, true, '2px solid #4472C4', cat.fmt);
     }
     return s;
   }
