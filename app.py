@@ -1479,55 +1479,129 @@ function renderRancho() {
     bodyHtml+='</tr>';
   });
 
-  // ── Función para construir tabla de costos unitarios ─────────────────────
-  function buildUnitTable(titulo, rows2){
+  // ── Sumar unidades de siembra (tallos_proc o hectareas) en el rango ────────
+  function sumUnitsForYW(field, yr, wk){
+    var sd=DATA.siembra_data||{};
+    var total=0;
+    var byRanch={};
+    RANCH_ORDER.forEach(function(rn){ byRanch[rn]=0; });
+    // siembra_data keyed by semana code (yyWW) e.g. 2612
+    var code=((yr-2000)*100)+wk;
+    var entry=sd[code]||{};
+    // entry = {TOTAL:{field:val}, Rancho:{field:val}, ...}
+    Object.keys(entry).forEach(function(key){
+      var v=(entry[key][field])||0;
+      if(key==='TOTAL') total+=v;
+      else if(byRanch[key]!==undefined) byRanch[key]+=v;
+    });
+    // Si no hay total, sumar ranchos
+    if(total===0) RANCH_ORDER.forEach(function(rn){ total+=byRanch[rn]; });
+    return {total:total, ranches:byRanch};
+  }
+
+  // ── Calcular $ / unidad para un grupo de costos ──────────────────────────
+  function calcUnitCosts(costKey, unitField){
+    // costKey: 'mat','mo','sv','cpv'
+    // unitField: 'tallos_proc' or 'hectareas'
+    // Returns per-(yr,wk): {total:$/unit, ranches:{rn:$/unit}}
+    var result={};
+    yrs.forEach(function(yr){
+      result[yr]={};
+      rangeWeeks.forEach(function(wk){
+        var costs=ywData[yr][wk][costKey];
+        var units=sumUnitsForYW(unitField, yr, wk);
+        var perTotal=units.total>0 ? Math.round((costs.total/units.total)*100)/100 : 0;
+        var perRanch={};
+        RANCH_ORDER.forEach(function(rn){
+          var u=units.ranches[rn]||0;
+          perRanch[rn]=u>0 ? Math.round(((costs[rn]||0)/u)*100)/100 : 0;
+        });
+        result[yr][wk]={total:perTotal, ranches:perRanch};
+      });
+    });
+    return result;
+  }
+
+  // ── Construir tabla de costos unitarios con datos reales ──────────────────
+  function buildUnitTable(titulo, unitField, extraRows){
+    // Pre-calcular por cada costKey
+    var unitData={
+      mat: calcUnitCosts('mat', unitField),
+      mo:  calcUnitCosts('mo',  unitField),
+      sv:  calcUnitCosts('sv',  unitField),
+      cpv: calcUnitCosts('cpv', unitField),
+    };
+
+    function groupCellsUnit(rnKey, costKey){
+      var s='';
+      yrs.forEach(function(yr,yi){
+        var col=YEAR_COLORS[yr]||'#888';
+        rangeWeeks.forEach(function(wk,wi){
+          var d=unitData[costKey][yr][wk];
+          var v=rnKey!==null?(d.ranches[rnKey]||0):(d.total||0);
+          var lb=wi===0?'2px solid '+col:'';
+          s+=cell(v, false, costKey==='cpv', lb);
+        });
+        if(nWk>=2){
+          var firstD=unitData[costKey][yr][rangeWeeks[0]];
+          var lastD =unitData[costKey][yr][rangeWeeks[nWk-1]];
+          var fv=rnKey!==null?(firstD.ranches[rnKey]||0):(firstD.total||0);
+          var lv=rnKey!==null?(lastD.ranches[rnKey]||0):(lastD.total||0);
+          s+=cell(Math.round((lv-fv)*100)/100, true, costKey==='cpv', '1px solid #aaa');
+        }
+      });
+      if(nYrs>=2){
+        var d0=unitData[costKey][yrs[0]][rangeWeeks[nWk-1]];
+        var dn=unitData[costKey][yrs[nYrs-1]][rangeWeeks[nWk-1]];
+        var v0=rnKey!==null?(d0.ranches[rnKey]||0):(d0.total||0);
+        var vn=rnKey!==null?(dn.ranches[rnKey]||0):(dn.total||0);
+        s+=cell(Math.round((vn-v0)*100)/100, true, true, '2px solid #4472C4');
+      }
+      return s;
+    }
+
+    var costsRows=[
+      {key:'mat', label:'Materiales',               isTotal:false},
+      {key:'mo',  label:'Mano de Obra',             isTotal:false},
+      {key:'sv',  label:'Servicios (Fletes)',        isTotal:false},
+      {key:'cpv', label:'Costo de Producción / Un.',isTotal:true},
+    ];
+
     var t='';
-    // Título separador
     t+='<div style="margin-top:24px;margin-bottom:4px;padding:6px 10px;background:var(--pt-hdr-bg);border-left:4px solid #4472C4;font-size:11px;font-weight:800;color:#1e3a5f;letter-spacing:.5px">'+titulo+'</div>';
     t+='<div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>';
-    rows2.forEach(function(r,ri){
-      var isBold=r.bold, isTotal=r.total, isPlaceholder=r.placeholder;
-      var bgRow=isTotal?'var(--pt-tot-bg)':(ri%2===0?'#fff':'#F7FBFF');
-      var color=isTotal?'#1e3a5f':'#555';
-      var fw=isBold||isTotal?'700':'500';
+
+    var totalCols=nCols*(RANCH_ORDER.length+1);
+
+    costsRows.forEach(function(cr,ri){
+      var bgRow=cr.isTotal?'var(--pt-tot-bg)':(ri%2===0?'#fff':'#F7FBFF');
+      var color=cr.isTotal?'#1e3a5f':'#333';
       t+='<tr style="background:'+bgRow+'">';
-      t+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:'+color+';font-weight:'+fw+'">'+r.label+'</span></td>';
-      // celdas vacías por cada columna de datos
-      var totalCols=nCols*(RANCH_ORDER.length+1);
-      for(var c=0;c<totalCols;c++){
-        t+='<td style="padding:3px 5px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#bbb">—</td>';
-      }
+      t+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:'+color+';font-weight:700">'+cr.label+'</span></td>';
+      RANCH_ORDER.forEach(function(rn){ t+=groupCellsUnit(rn, cr.key); });
+      t+=groupCellsUnit(null, cr.key);
       t+='</tr>';
     });
+
+    // Filas extra (Empaque/Tallo, Sanidad, etc.) — placeholder
+    (extraRows||[]).forEach(function(r,ri){
+      var bg=(ri%2===0)?'#fff':'#F7FBFF';
+      t+='<tr style="background:'+bg+'">';
+      t+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bg+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap;color:#555;font-weight:500">'+r+'</td>';
+      for(var c=0;c<totalCols;c++){ t+='<td style="padding:3px 5px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#bbb">—</td>'; }
+      t+='</tr>';
+    });
+
     t+='</tbody></table></div>';
     return t;
   }
 
-  var rowsTallo=[
-    {label:'Materiales',                    bold:true},
-    {label:'Mano de Obra',                  bold:true},
-    {label:'Servicios (Fletes)',             bold:true},
-    {label:'Costo de Producción y Ventas',  bold:true, total:true},
-    {label:'Material de Empaque / Tallo',   bold:false},
-    {label:'Sanidad Vegetal / Tallo',       bold:false},
-    {label:'Fertilización / Tallo',         bold:false},
-    {label:'Mano de Obra Prod / Tallo',     bold:false},
-  ];
-
-  var rowsHa=[
-    {label:'Materiales',                    bold:true},
-    {label:'Mano de Obra',                  bold:true},
-    {label:'Servicios (Fletes)',             bold:true},
-    {label:'Costo de Producción y Ventas',  bold:true, total:true},
-    {label:'Material de Empaque / Caja',    bold:false},
-    {label:'Sanidad Vegetal / Ha',          bold:false},
-    {label:'Fertilización / Ha',            bold:false},
-    {label:'Mano de Obra Prod / Ha',        bold:false},
-  ];
+  var extraTallo=['Material de Empaque / Tallo','Sanidad Vegetal / Tallo','Fertilización / Tallo','Mano de Obra Prod / Tallo'];
+  var extraHa   =['Material de Empaque / Caja', 'Sanidad Vegetal / Ha',   'Fertilización / Ha',   'Mano de Obra Prod / Ha'];
 
   var html='<div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
-  html+=buildUnitTable('COSTOS UNITARIOS  ·  $ / TALLO PROCESADO', rowsTallo);
-  html+=buildUnitTable('COSTOS UNITARIOS  ·  $ / HECTÁREA',        rowsHa);
+  html+=buildUnitTable('COSTOS UNITARIOS  ·  $ / TALLO PROCESADO', 'tallos_proc', extraTallo);
+  html+=buildUnitTable('COSTOS UNITARIOS  ·  $ / HECTÁREA',        'hectareas',   extraHa);
 
   // ── Inyectar en DOM ───────────────────────────────────────────────────────
   var gw=document.getElementById('gridWrap');
