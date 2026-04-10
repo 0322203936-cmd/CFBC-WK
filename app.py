@@ -1163,32 +1163,64 @@ function renderSemana() {
 // =======================================================
 function renderAnual() {
   var yrs=getActiveYears(), sym=state.currency.toUpperCase();
-  var cols=[
-    { field:'year', headerName:'AÑO', width:70, type:'numericColumn', pinned:'left',
-      cellRenderer:function(p){ var c=YEAR_COLORS[p.value]||'#888'; return '<span style="color:'+c+';font-weight:700">'+p.value+'</span>'; }},
-    { field:'cat_label', headerName:'CATEGORÍA', width:170, pinned:'left', cellRenderer:catRenderer },
-    { field:'total',    headerName:'TOTAL '+sym, width:110, type:'numericColumn', cellRenderer:moneyRenderer },
-    { field:'deltaAmt', headerName:'Δ $',        width:90,  type:'numericColumn', cellRenderer:deltaAmtRenderer },
-    { field:'deltaPct', headerName:'Δ %',        width:72,  type:'numericColumn', cellRenderer:deltaRenderer },
-  ];
-  RANCH_ORDER.forEach(function(r){ cols.push({field:ranchFieldName(r),headerName:r,width:100,type:'numericColumn',cellRenderer:ranchRenderer(r)}); });
 
-  var getYrAgg=function(cat,yr){
-    var d=(DATA.summary[cat]||{})[yr]||{usd:0,mxn:0,ranches:{},ranches_mxn:{}};
-    return {total:state.currency==='usd'?d.usd:d.mxn, ranches:state.currency==='usd'?d.ranches:d.ranches_mxn};
-  };
-  var rows=[]; var grandTotal=0;
-  yrs.forEach(function(yr,i){
-    var prevYr=i>0?yrs[i-1]:null;
-    var agg=getYrAgg(state.cat,yr);
-    var row={year:yr,cat_label:state.cat,_cat:state.cat,_year:yr};
-    row.total=agg.total;
-    if (prevYr){ var aggP=getYrAgg(state.cat,prevYr); row.deltaAmt=agg.total-aggP.total; row.deltaPct=aggP.total>0?(agg.total-aggP.total)/aggP.total*100:null; }
-    RANCH_ORDER.forEach(function(r){ row[ranchFieldName(r)]=agg.ranches[r]||0; });
-    rows.push(row);
-    if (yr===yrs[yrs.length-1]) grandTotal+=agg.total;
+  // Columnas: CATEGORÍA fija + una columna de total por año
+  var cols=[
+    { field:'cat_label', headerName:'CATEGORÍA', width:220, pinned:'left', cellRenderer:catRenderer },
+  ];
+  yrs.forEach(function(yr){
+    var col=YEAR_COLORS[yr]||'#888';
+    cols.push({
+      field:'v'+yr, headerName:String(yr)+' '+sym, width:130, type:'numericColumn',
+      cellRenderer:(function(c){ return function(p){
+        var v=p.value; if(!v||isNaN(v)||v===0) return '';
+        return '<span style="color:#1e3a5f;font-weight:600">'+fmt(v)+'</span>';
+      };})(col)
+    });
   });
-  renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym+' · AÑO '+yrs[yrs.length-1]);
+  if(yrs.length>=2){
+    cols.push({field:'deltaPct',headerName:'Δ %',width:72,type:'numericColumn',cellRenderer:deltaRenderer});
+  }
+
+  var getYrTotal=function(cat,yr){
+    var d=(DATA.summary[cat]||{})[yr]||{usd:0,mxn:0,ranches:{},ranches_mxn:{}};
+    return state.currency==='usd'?d.usd:d.mxn;
+  };
+
+  var cats=DATA.categories;
+  var rows=[];
+  var grandByYr={};
+  yrs.forEach(function(yr){ grandByYr[yr]=0; });
+
+  cats.forEach(function(cat){
+    var row={cat_label:cat,_cat:cat};
+    var hasAny=false;
+    yrs.forEach(function(yr){
+      var v=getYrTotal(cat,yr);
+      row['v'+yr]=v;
+      grandByYr[yr]+=v;
+      if(v) hasAny=true;
+    });
+    if(!hasAny) return;
+    if(yrs.length>=2){
+      var cur=getYrTotal(cat,yrs[yrs.length-1]);
+      var prev=getYrTotal(cat,yrs[yrs.length-2]);
+      row.deltaPct=prev>0?(cur-prev)/prev*100:null;
+    }
+    rows.push(row);
+  });
+
+  // Fila TOTAL GENERAL
+  var totRow={cat_label:'TOTAL GENERAL',_isTotal:true};
+  yrs.forEach(function(yr){ totRow['v'+yr]=grandByYr[yr]; });
+  if(yrs.length>=2){
+    var tCur=grandByYr[yrs[yrs.length-1]];
+    var tPrev=grandByYr[yrs[yrs.length-2]];
+    totRow.deltaPct=tPrev>0?(tCur-tPrev)/tPrev*100:null;
+  }
+  rows.push(totRow);
+
+  renderPivotTable(cols, rows);
 }
 
 // =======================================================
