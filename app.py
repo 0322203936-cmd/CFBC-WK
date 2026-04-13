@@ -936,19 +936,19 @@ function inicializar() {
   }
   allWeeks = Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
 
-  // Semanas del año más reciente (considerar también mano_obra_data)
-  var wksLatest = DATA.weekly_detail
+  // Semanas del año más reciente — fusionar weekly_detail + mano_obra_data
+  // para que semanas WK≥14 (que sólo existen en mano_obra_data) queden incluidas
+  // en state.toWeek y no sean filtradas por renderManoObra.
+  var _wkLatestSet = {};
+  DATA.weekly_detail
     .filter(function(r){return r.year===latestYr;})
-    .map(function(r){return r.week;})
-    .filter(function(v,i,a){return a.indexOf(v)===i;})
-    .sort(function(a,b){return a-b;});
-  if (!wksLatest.length && Array.isArray(DATA.mano_obra_data)) {
-    wksLatest = DATA.mano_obra_data
+    .forEach(function(r){_wkLatestSet[r.week]=1;});
+  if (Array.isArray(DATA.mano_obra_data)) {
+    DATA.mano_obra_data
       .filter(function(r){return r.year===latestYr;})
-      .map(function(r){return r.week;})
-      .filter(function(v,i,a){return a.indexOf(v)===i;})
-      .sort(function(a,b){return a-b;});
+      .forEach(function(r){_wkLatestSet[r.week]=1;});
   }
+  var wksLatest = Object.keys(_wkLatestSet).map(Number).sort(function(a,b){return a-b;});
   var curWeek = wksLatest[wksLatest.length-1] || allWeeks[allWeeks.length-1];
   var idx = allWeeks.indexOf(curWeek);
   state.weekIdx = idx>=0 ? idx : allWeeks.length-1;
@@ -2172,29 +2172,48 @@ function renderManoObra() {
     });
   });
 
+  // MO_GROUPS: cada grupo incluye subcats del conteo.xlsx (semanas 1-13)
+  // Y los subcats equivalentes que produce norm_cat al parsear el Excel WK (semanas 14+).
+  // Esto es necesario porque el fallback WK usa nombres como 'Nómina Prod. Corte',
+  // 'H.Extra Corte', 'Bonos Corte', etc., que deben sumarse al grupo CORTE.
   var MO_GROUPS=[
-    {label:'ING. Y ADMON.',      subcats:['Ing. Y Admon.']},
+    {label:'ING. Y ADMON.',      subcats:['Ing. Y Admon.',
+        'Nómina Admon',
+        'H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)']},
     {label:'SUPERVISORES',       subcats:['Supervisores']},
-    {label:'CORTE',              subcats:['Corte']},
-    {label:'TRASPLANTE',         subcats:['Trasplante']},
-    {label:'MANEJO PLANTA',      subcats:['Manejo P.']},
+    {label:'CORTE',              subcats:['Corte',
+        'Nómina Prod. Corte','H.Extra Corte','Bonos Corte']},
+    {label:'TRASPLANTE',         subcats:['Trasplante',
+        'Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante']},
+    {label:'MANEJO PLANTA',      subcats:['Manejo P.',
+        'Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta']},
     {label:'CONSOLIDACIÓN',      subcats:['Consolidacion']},
     {label:'SIEMBRA',            subcats:['Siembra']},
     {label:'MOV. CHAROLAS',      subcats:['Mov. Charolas']},
     {label:'RIEGO',              subcats:['Riego']},
     {label:'PHLOX',              subcats:['Phlox']},
-    {label:'HOOPS',              subcats:['Hoops']},
-    {label:'MIPE / MIRFE',       subcats:['MIPE Y MIRFE']},
-    {label:'TRACTORES/CAMEROS',  subcats:['Tract. Y Cameros']},
-    {label:'VELADORES',          subcats:['Veladores']},
-    {label:'SOLDADORES',         subcats:['Soldadores']},
-    {label:'TRANSPORTE',         subcats:['Transporte']},
+    {label:'HOOPS',              subcats:['Hoops',
+        'Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS']},
+    {label:'MIPE / MIRFE',       subcats:['MIPE Y MIRFE',
+        'Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE']},
+    {label:'TRACTORES/CAMEROS',  subcats:['Tract. Y Cameros',
+        'Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros']},
+    {label:'VELADORES',          subcats:['Veladores',
+        'Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores']},
+    {label:'SOLDADORES',         subcats:['Soldadores',
+        'Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador']},
+    {label:'TRANSPORTE',         subcats:['Transporte',
+        'Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer']},
     {label:'ADMON POSCO',        subcats:['Admon Posco']},
     {label:'ALM. UPC Y EMPAQUE', subcats:['Alm.upc y empaq']},
-    {label:'CONTRATISTA',        subcats:['Contratista y com.']},
-    {label:'PROD. PÁTINA Y REC', subcats:['Prod. Patina y rec']},
-    {label:'IMSS/INFO/RCV',      subcats:['IMSS,INFO Y RCV']},
-    {label:'IMP. 1.8%',          subcats:['Imp. 1.8%']},
+    {label:'CONTRATISTA',        subcats:['Contratista y com.',
+        'Nómina Prod. Contratista','Bonos Contratista']},
+    {label:'PROD. PÁTINA Y REC', subcats:['Prod. Patina y rec',
+        'Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)']},
+    {label:'IMSS/INFO/RCV',      subcats:['IMSS,INFO Y RCV',
+        'IMSS/INFONAVIT RCV']},
+    {label:'IMP. 1.8%',          subcats:['Imp. 1.8%',
+        '1.8% Estado']},
   ];
 
   // Semanas con datos — directamente del weekMap (orden año-semana)
