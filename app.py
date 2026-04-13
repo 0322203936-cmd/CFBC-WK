@@ -726,7 +726,8 @@ function fmtHa(n) {
   var neg = n < 0, s = Math.abs(n);
   return (neg ? '-' : '') + s.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4});
 }
-
+function fmtHc(n) {
+  if (!n || isNaN(n) || n === 0) return '';
   return Math.round(n).toLocaleString('en-US');
 }
 function fmtHcDiff(n) {
