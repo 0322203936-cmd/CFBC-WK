@@ -1561,37 +1561,41 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols) {
   }
 
   // Función para generar celdas por rancho
+  // Lee de DATA.unit_costs_data (estructura: { code: { ranch|"TOTAL": { key: val } } })
   function groupCells(rnKey, cat){
     var s='';
+    var ucData = DATA.unit_costs_data || {};
     yrs.forEach(function(yr,yi){
       var col=YEAR_COLORS[yr]||'#888';
       rangeWeeks.forEach(function(wk,wi){
-        var v=0;
-        if(ywData[yr] && ywData[yr][wk] && ywData[yr][wk][cat.key]){
-          v=rnKey!==null ? (ywData[yr][wk][cat.key][rnKey]||0) : (ywData[yr][wk][cat.key].total||0);
-        }
+        var code = (yr - 2000) * 100 + wk;
+        var wkUC = ucData[code] || ucData[String(code)] || {};
+        var rData = rnKey !== null ? (wkUC[rnKey]||{}) : (wkUC['TOTAL']||{});
+        var v = rData[cat.key] || 0;
         var lb=wi===0?'2px solid '+col:'';
         s+=cell(v, false, lb, cat.fmt);
       });
       if(nWk>=2){
-        var first=0, last=0;
-        if(ywData[yr] && ywData[yr][rangeWeeks[0]] && ywData[yr][rangeWeeks[0]][cat.key]){
-          first=rnKey!==null?(ywData[yr][rangeWeeks[0]][cat.key][rnKey]||0):(ywData[yr][rangeWeeks[0]][cat.key].total||0);
-        }
-        if(ywData[yr] && ywData[yr][rangeWeeks[nWk-1]] && ywData[yr][rangeWeeks[nWk-1]][cat.key]){
-          last=rnKey!==null?(ywData[yr][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yr][rangeWeeks[nWk-1]][cat.key].total||0);
-        }
+        var code0 = (yr-2000)*100 + rangeWeeks[0];
+        var codeN = (yr-2000)*100 + rangeWeeks[nWk-1];
+        var uc0 = ucData[code0] || ucData[String(code0)] || {};
+        var ucN = ucData[codeN] || ucData[String(codeN)] || {};
+        var r0 = rnKey!==null ? (uc0[rnKey]||{}) : (uc0['TOTAL']||{});
+        var rN = rnKey!==null ? (ucN[rnKey]||{}) : (ucN['TOTAL']||{});
+        var first = r0[cat.key]||0;
+        var last  = rN[cat.key]||0;
         s+=cell(last-first, true, '1px solid #aaa', cat.fmt);
       }
     });
     if(nYrs>=2){
-      var v0=0, vn=0;
-      if(ywData[yrs[0]] && ywData[yrs[0]][rangeWeeks[nWk-1]] && ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key]){
-        v0=rnKey!==null?(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key].total||0);
-      }
-      if(ywData[yrs[nYrs-1]] && ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]] && ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key]){
-        vn=rnKey!==null?(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key].total||0);
-      }
+      var c0yr = (yrs[0]-2000)*100 + rangeWeeks[nWk-1];
+      var cNyr = (yrs[nYrs-1]-2000)*100 + rangeWeeks[nWk-1];
+      var uc0yr = ucData[c0yr] || ucData[String(c0yr)] || {};
+      var ucNyr = ucData[cNyr] || ucData[String(cNyr)] || {};
+      var r0yr = rnKey!==null ? (uc0yr[rnKey]||{}) : (uc0yr['TOTAL']||{});
+      var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
+      var v0 = r0yr[cat.key]||0;
+      var vn = rNyr[cat.key]||0;
       s+=cell(vn-v0, true, '2px solid #4472C4', cat.fmt);
     }
     return s;
@@ -1682,37 +1686,41 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols) {
   }
 
   // Función para generar celdas por rancho
+  // Lee de DATA.unit_costs_data (estructura: { code: { ranch|"TOTAL": { key: val } } })
   function groupCells(rnKey, cat){
     var s='';
+    var ucData = DATA.unit_costs_data || {};
     yrs.forEach(function(yr,yi){
       var col=YEAR_COLORS[yr]||'#888';
       rangeWeeks.forEach(function(wk,wi){
-        var v=0;
-        if(ywData[yr] && ywData[yr][wk] && ywData[yr][wk][cat.key]){
-          v=rnKey!==null ? (ywData[yr][wk][cat.key][rnKey]||0) : (ywData[yr][wk][cat.key].total||0);
-        }
+        var code = (yr - 2000) * 100 + wk;
+        var wkUC = ucData[code] || ucData[String(code)] || {};
+        var rData = rnKey !== null ? (wkUC[rnKey]||{}) : (wkUC['TOTAL']||{});
+        var v = rData[cat.key] || 0;
         var lb=wi===0?'2px solid '+col:'';
         s+=cell(v, false, lb, cat.fmt);
       });
       if(nWk>=2){
-        var first=0, last=0;
-        if(ywData[yr] && ywData[yr][rangeWeeks[0]] && ywData[yr][rangeWeeks[0]][cat.key]){
-          first=rnKey!==null?(ywData[yr][rangeWeeks[0]][cat.key][rnKey]||0):(ywData[yr][rangeWeeks[0]][cat.key].total||0);
-        }
-        if(ywData[yr] && ywData[yr][rangeWeeks[nWk-1]] && ywData[yr][rangeWeeks[nWk-1]][cat.key]){
-          last=rnKey!==null?(ywData[yr][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yr][rangeWeeks[nWk-1]][cat.key].total||0);
-        }
+        var code0 = (yr-2000)*100 + rangeWeeks[0];
+        var codeN = (yr-2000)*100 + rangeWeeks[nWk-1];
+        var uc0 = ucData[code0] || ucData[String(code0)] || {};
+        var ucN = ucData[codeN] || ucData[String(codeN)] || {};
+        var r0 = rnKey!==null ? (uc0[rnKey]||{}) : (uc0['TOTAL']||{});
+        var rN = rnKey!==null ? (ucN[rnKey]||{}) : (ucN['TOTAL']||{});
+        var first = r0[cat.key]||0;
+        var last  = rN[cat.key]||0;
         s+=cell(last-first, true, '1px solid #aaa', cat.fmt);
       }
     });
     if(nYrs>=2){
-      var v0=0, vn=0;
-      if(ywData[yrs[0]] && ywData[yrs[0]][rangeWeeks[nWk-1]] && ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key]){
-        v0=rnKey!==null?(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key].total||0);
-      }
-      if(ywData[yrs[nYrs-1]] && ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]] && ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key]){
-        vn=rnKey!==null?(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key].total||0);
-      }
+      var c0yr = (yrs[0]-2000)*100 + rangeWeeks[nWk-1];
+      var cNyr = (yrs[nYrs-1]-2000)*100 + rangeWeeks[nWk-1];
+      var uc0yr = ucData[c0yr] || ucData[String(c0yr)] || {};
+      var ucNyr = ucData[cNyr] || ucData[String(cNyr)] || {};
+      var r0yr = rnKey!==null ? (uc0yr[rnKey]||{}) : (uc0yr['TOTAL']||{});
+      var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
+      var v0 = r0yr[cat.key]||0;
+      var vn = rNyr[cat.key]||0;
       s+=cell(vn-v0, true, '2px solid #4472C4', cat.fmt);
     }
     return s;
