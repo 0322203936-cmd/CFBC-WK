@@ -938,11 +938,25 @@ def get_datos() -> dict:
             "ranch_colors": {k: v["color"] for k, v in RANCH_CONFIG.items() if k not in HIDDEN_RANCHES}
         }
 
-        # 5. Reemplazar mano_obra_data con datos del conteo de personal
+        # 5. Reemplazar mano_obra_data con datos del conteo de personal (Inteligente)
         print("\n" + "=" * 60)
         print("🔍 LEYENDO CONTEO DE PERSONAL (MANO DE OBRA)")
         print("=" * 60)
-        resultado["mano_obra_data"] = _extraer_mano_obra_conteo()
+        
+        conteo_data = _extraer_mano_obra_conteo()
+        conteo_keys = {(r["year"], r["week"]) for r in conteo_data}
+        
+        wk_mano_obra = resultado.get("mano_obra_data", [])
+        
+        merged_mano_obra = list(conteo_data)
+        wk_added_count = 0
+        for r in wk_mano_obra:
+            if (r["year"], r["week"]) not in conteo_keys:
+                merged_mano_obra.append(r)
+                wk_added_count += 1
+                
+        resultado["mano_obra_data"] = merged_mano_obra
+        print(f"✅ Merge: {len(conteo_data)} registros de Conteo + {wk_added_count} registros de WK Excel (Fallback)")
 
     return resultado
 
