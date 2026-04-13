@@ -2161,14 +2161,22 @@ function renderManoObra() {
       if(weekMap[key][k]>0) ranchesEnDatos[rn]=true;
     });
   });
-  // Ordenar: primero los del orden preferido, luego cualquier otro
-  var allowedRanches=state.ranch==='Todos'?MO_RANCH_ORDER:[state.ranch];
-  var activeRanches=allowedRanches.filter(function(rn){ return ranchesEnDatos[rn]; });
+  // Mapeo de ranchos para Mano de Obra
+  var moMap = {
+    'Isabela': ['Isabela'],
+    'Cecilia': ['Cecilia'],
+    'Cecilia 25': ['Cecilia 25'],
+    'Prop-RM': ['Propagacion'],
+    'Campo-RM': ['Ramona'],
+    'Poscosecha': ['Poscosecha']
+  };
+  var allowedRanches = state.ranch === 'Todos' ? MO_RANCH_ORDER : (moMap[state.ranch] || [state.ranch]);
+  var activeRanches = allowedRanches.filter(function(rn){ return ranchesEnDatos[rn]; });
   Object.keys(ranchesEnDatos).forEach(function(rn){
-    if(state.ranch!=='Todos'&&rn!==state.ranch) return;
-    if(activeRanches.indexOf(rn)<0) activeRanches.push(rn);
+    if (state.ranch !== 'Todos' && allowedRanches.indexOf(rn) < 0) return;
+    if (activeRanches.indexOf(rn) < 0) activeRanches.push(rn);
   });
-  var showTotal = state.ranch==='Todos';
+  var showTotal = state.ranch === 'Todos';
 
   function shortLabel(sc){
     return sc.replace('Nómina Prod. ','').replace('Nómina Op. ','')
