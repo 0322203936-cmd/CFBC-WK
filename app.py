@@ -2251,7 +2251,7 @@ function renderManoObra() {
     if (state.activeRanches.indexOf('Todos')<0 && allowedRanches.indexOf(rn) < 0) return;
     if (activeRanches.indexOf(rn) < 0) activeRanches.push(rn);
   });
-  var showTotal = state.ranch === 'Todos';
+  var showTotal = state.activeRanches.indexOf('Todos') > -1;
 
   function shortLabel(sc){
     return sc.replace('Nómina Prod. ','').replace('Nómina Op. ','')
