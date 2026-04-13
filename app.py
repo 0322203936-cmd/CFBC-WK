@@ -721,8 +721,12 @@ function fmtPct(n) {
   var sign = n > 0 ? '+' : '';
   return sign + n.toFixed(1) + '%';
 }
-function fmtHc(n) {
-  if (!n || isNaN(n) || n === 0) return '';
+function fmtHa(n) {
+  if (n === null || n === undefined || n === 0 || isNaN(n)) return '';
+  var neg = n < 0, s = Math.abs(n);
+  return (neg ? '-' : '') + s.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4});
+}
+
   return Math.round(n).toLocaleString('en-US');
 }
 function fmtHcDiff(n) {
@@ -1622,7 +1626,7 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols) {
 // =======================================================
 function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols) {
   var HA_CATS=[
-    {key:'hectareas_ha',     label:'$ / Hectárea (Ha totales)'},
+    {key:'hectareas_ha',     label:'$ / Hectárea (Ha totales)', fmt:fmtHa},
     {key:'materiales_ha',    label:'Materiales'},
     {key:'mano_obra_ha',     label:'Mano de Obra'},
     {key:'servicios_ha',     label:'Servicios (Fletes)'},
