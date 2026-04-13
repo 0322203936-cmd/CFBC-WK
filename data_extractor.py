@@ -961,6 +961,27 @@ def get_datos() -> dict:
         resultado["mano_obra_data"] = merged_mano_obra
         print(f"✅ Merge: {len(conteo_data)} registros reales de Conteo + {wk_added_count} registros de WK Excel (Fallback)")
 
+        # CRITICAL: If Week 14 only exists in mano_obra_data, we must inject it into the global lists
+        # so the JavaScript frontend (`allWeeks` / `rangeWeeks`) knows this week exists!
+        for r in merged_mano_obra:
+            yr = r["year"]
+            wk = r["week"]
+            if yr not in resultado["years"]:
+                resultado["years"].append(yr)
+                resultado["years"].sort()
+            
+            w_per_year = resultado.get("weeks_per_year", {})
+            if yr not in w_per_year:
+                w_per_year[yr] = []
+            if wk not in w_per_year[yr]:
+                w_per_year[yr].append(wk)
+                w_per_year[yr].sort()
+            resultado["weeks_per_year"] = w_per_year
+            
+            key = f"{yr}-{wk}"
+            if key not in resultado["week_date_ranges"]:
+                resultado["week_date_ranges"][key] = r.get("date_range", f"W{wk:02d}")
+
     return resultado
 
 
