@@ -712,7 +712,9 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             # Misma lógica: labels simples, curr_section identifica la sección.
             # Bug anterior: precedencia `and` > `or` causaba matches incorrectos.
             elif curr_section == "ha":
-                if "MANO DE OBRA PROD" in label:
+                if "$ / HECTAREA" in label or "$ / HECTÁREA" in label:
+                    key = "hectareas_ha"   # fila-encabezado con los totales de Ha por rancho
+                elif "MANO DE OBRA PROD" in label:
                     key = "mano_obra_prod_ha"
                 elif "MATERIAL DE EMPAQUE" in label or "EMPAQUE" in label:
                     key = "empaque_ha"
