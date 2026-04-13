@@ -600,7 +600,7 @@ APP_HTML_BODY = """
     <select class="tb-sel" id="catSel" onchange="onCatChange(this.value)" style="max-width:200px"></select>
     <div class="tb-sep"></div>
     <span class="tb-label">Rancho</span>
-    <div id="ranchCheckboxes" style="display:flex;gap:6px;align-items:center;"></div>
+    <select class="tb-sel" id="ranchSel" onchange="onRanchChange(this.value)" style="max-width:140px"></select>
     <div class="tb-sep"></div>
     <div class="tb-grp">
       <button class="tb-btn"        id="btnUSD" onclick="setCurrency('usd')">USD</button>
@@ -697,8 +697,7 @@ var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 // =======================================================
 // ESTADO
 // =======================================================
-var state = { cat:'', activeRanches:['Todos'], currency:'mxn', activeYears:{}, view:'comparativo', weekIdx:0, fromWeek:1, toWeek:52 };
-function getActiveRanches() { return state.activeRanches.indexOf('Todos') > -1 ? RANCH_ORDER : state.activeRanches; }
+var state = { cat:'', ranch:'Todos', currency:'mxn', activeYears:{}, view:'comparativo', weekIdx:0, fromWeek:1, toWeek:52 };
 var allWeeks = [];
 
 // =======================================================
@@ -956,7 +955,7 @@ function inicializar() {
   state.fromWeek = wksLatest[wksLatest.length-2] || wksLatest[0] || state.toWeek;
 
   buildCatSelect();
-  buildRanchCheckboxes();
+  buildRanchSelect();
   buildYearChips();
   updateWeekControls();
   updateRangeSliders();
@@ -983,13 +982,12 @@ function buildCatSelect() {
   }).join('');
   el.style.color = categoryHasData(state.cat) ? '#222' : '#dc2626';
 }
-function buildRanchCheckboxes() {
-  var el = document.getElementById('ranchCheckboxes');
+function buildRanchSelect() {
+  var el = document.getElementById('ranchSel');
   if(!el) return;
   var ranches = ['Todos'].concat(RANCH_ORDER);
   el.innerHTML = ranches.map(function(r){
-    var checked = state.activeRanches.indexOf(r) > -1 ? 'checked' : '';
-    return '<label style="font-size:11px; cursor:pointer; display:flex; align-items:center; gap:2px; margin:0;"><input type="checkbox" value="'+r+'" '+checked+' onchange="toggleRanch(this)" style="margin:0;">'+r+'</label>';
+    return '<option value="'+r.replace(/"/g,'&quot;')+'"'+(r===state.ranch?' selected':'')+'>'+r+'</option>';
   }).join('');
 }
 function buildYearChips() {
@@ -1029,7 +1027,7 @@ function categoryHasData(cat) {
 // =======================================================
 function onRanchChange(val) {
   state.ranch = val;
-  buildRanchCheckboxes();
+  buildRanchSelect();
   if (state.view !== 'semana') renderView();
 }
 function onCatChange(val) {
@@ -1296,7 +1294,7 @@ function renderComparativo() {
   var f=state.fromWeek,t=state.toWeek,yrs=getActiveYears(),sym=state.currency.toUpperCase();
   var byYear=getRangeByYear(state.cat,f,t);
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
-  var ranchCols=getActiveRanches();
+  var ranchCols=state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
   document.getElementById('cmpStats').innerHTML='';
 
   var weekData={};
@@ -1316,7 +1314,8 @@ function renderComparativo() {
       var d=weekData[yr][w];
       var val=0;
       if(d){
-        if(state.activeRanches.indexOf('Todos')>-1) { val=state.currency==='usd'?d.usd:d.mxn; } else { val=0; var srcA=state.currency==='usd'?d.ranches:d.ranches_mxn; getActiveRanches().forEach(function(rn){ val += (srcA[rn]||0); }); }
+        if(state.ranch==='Todos') val=state.currency==='usd'?d.usd:d.mxn;
+        else val=(state.currency==='usd'?d.ranches:d.ranches_mxn)[state.ranch]||0;
       }
       var dCell=deltaCellHtml(val,prevWkVal);
       if (val>0) prevWkVal=val;
@@ -1342,7 +1341,8 @@ function renderComparativo() {
   var grandTotal=yrs.reduce(function(s,yr){
     var d=byYear[yr];
     if(!d) return s;
-    if(state.activeRanches.indexOf('Todos')>-1) { return s+(state.currency==='usd'?d.usd:d.mxn); } var stot=0; var srcB=state.currency==='usd'?d.ranches:d.ranches_mxn; getActiveRanches().forEach(function(rn){ stot += (srcB[rn]||0); }); return s+stot;
+    if(state.ranch==='Todos') return s+(state.currency==='usd'?d.usd:d.mxn);
+    return s+((state.currency==='usd'?d.ranches:d.ranches_mxn)[state.ranch]||0);
   },0);
   document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
 }
@@ -1361,8 +1361,8 @@ function renderRancho() {
   var yrs=getActiveYears(), sym=state.currency.toUpperCase();
   var f=state.fromWeek, t=state.toWeek;
   var cur=state.currency;
-  var activeRanches = getActiveRanches();
-  var showTotal = state.activeRanches.indexOf('Todos')>-1;
+  var activeRanches = state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
+  var showTotal = state.ranch==='Todos';
 
   var matCats=DATA.categories.filter(function(c){
     return c!=='COSTO SERVICIOS'&&c!=='COSTO MANO DE OBRA';
@@ -1779,7 +1779,7 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRan
 }
 function renderDetalle() {
   var sym=state.currency.toUpperCase();
-  var activeRanches = getActiveRanches();
+  var activeRanches = state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
   var cols=[
     { field:'year',      headerName:'AÑO',      width:60,  type:'numericColumn', pinned:'left' },
     { field:'week',      headerName:'SEM',       width:55,  type:'numericColumn', pinned:'left', cellRenderer:function(p){return wFmt(p.value);} },
@@ -1904,13 +1904,13 @@ function renderServicios() {
   Object.keys(subcatsSet).forEach(function(sc){if(orderedSubcats.indexOf(sc)===-1)orderedSubcats.push(sc);});
 
   // ── Ranchos activos ───────────────────────────────────
-  var allowedRanches=getActiveRanches();
+  var allowedRanches=state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
   var activeRanches=allowedRanches.filter(function(rn){
     return weekKeys.some(function(key){
       return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
     });
   });
-  var showTotal = state.activeRanches.indexOf('Todos')>-1;
+  var showTotal = state.ranch==='Todos';
 
   // ── Sin datos ─────────────────────────────────────────
   if (!weekKeys.length || !orderedSubcats.length) {
@@ -2170,10 +2170,10 @@ function renderManoObra() {
     'Campo-RM': ['Ramona'],
     'PosCo-RM': ['Poscosecha']
   };
-  var _ar=getActiveRanches(); var allowedRanches=[]; if(state.activeRanches.indexOf('Todos')>-1){allowedRanches=MO_RANCH_ORDER;}else{_ar.forEach(function(rn){var m=moMap[rn]||[rn]; m.forEach(function(nx){if(allowedRanches.indexOf(nx)<0)allowedRanches.push(nx);});});}
+  var allowedRanches = state.ranch === 'Todos' ? MO_RANCH_ORDER : (moMap[state.ranch] || [state.ranch]);
   var activeRanches = allowedRanches.filter(function(rn){ return ranchesEnDatos[rn]; });
   Object.keys(ranchesEnDatos).forEach(function(rn){
-    if (state.activeRanches.indexOf('Todos')<0 && allowedRanches.indexOf(rn) < 0) return;
+    if (state.ranch !== 'Todos' && allowedRanches.indexOf(rn) < 0) return;
     if (activeRanches.indexOf(rn) < 0) activeRanches.push(rn);
   });
   var showTotal = state.ranch === 'Todos';
@@ -2456,7 +2456,7 @@ function showProdPanel(rowData, opts) {
   var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
   var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
   var ranchFilter=opts.ranch||null;
-  if (!ranchFilter && state.activeRanches.indexOf('Todos')<0) ranchFilter = state.activeRanches[0];
+  if (!ranchFilter && state.ranch !== 'Todos') ranchFilter = state.ranch;
   if (!cat||!yr) return;
   var hideProducts = cat==='MATERIAL VEGETAL';
 
