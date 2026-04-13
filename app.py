@@ -2168,7 +2168,7 @@ function renderManoObra() {
     'Cecilia 25': ['Cecilia 25'],
     'Prop-RM': ['Propagacion'],
     'Campo-RM': ['Ramona'],
-    'Poscosecha': ['Poscosecha']
+    'PosCo-RM': ['Poscosecha']
   };
   var allowedRanches = state.ranch === 'Todos' ? MO_RANCH_ORDER : (moMap[state.ranch] || [state.ranch]);
   var activeRanches = allowedRanches.filter(function(rn){ return ranchesEnDatos[rn]; });
