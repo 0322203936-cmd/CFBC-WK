@@ -1622,6 +1622,7 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols) {
 // =======================================================
 function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols) {
   var HA_CATS=[
+    {key:'hectareas_ha',     label:'$ / Hectárea (Ha totales)'},
     {key:'materiales_ha',    label:'Materiales'},
     {key:'mano_obra_ha',     label:'Mano de Obra'},
     {key:'servicios_ha',     label:'Servicios (Fletes)'},
