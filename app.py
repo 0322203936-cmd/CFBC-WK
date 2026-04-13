@@ -2172,48 +2172,32 @@ function renderManoObra() {
     });
   });
 
-  // MO_GROUPS: cada grupo incluye subcats del conteo.xlsx (semanas 1-13)
-  // Y los subcats equivalentes que produce norm_cat al parsear el Excel WK (semanas 14+).
-  // Esto es necesario porque el fallback WK usa nombres como 'Nómina Prod. Corte',
-  // 'H.Extra Corte', 'Bonos Corte', etc., que deben sumarse al grupo CORTE.
+  // MO_GROUPS: un subcat por grupo — igual tanto en conteo.xlsx (sem 1-13)
+  // como en el WK Excel (sem 14+), ya que norm_cat() ahora colapsa
+  // Nómina + H.Extra + Bonos al mismo nombre unificado del BD CONTEO.
   var MO_GROUPS=[
-    {label:'ING. Y ADMON.',      subcats:['Ing. Y Admon.',
-        'Nómina Admon',
-        'H.Extra Dom. y Festivos (Admon)','Bonos Asist./Puntualidad (Admon)']},
+    {label:'ING. Y ADMON.',      subcats:['Ing. Y Admon.']},
     {label:'SUPERVISORES',       subcats:['Supervisores']},
-    {label:'CORTE',              subcats:['Corte',
-        'Nómina Prod. Corte','H.Extra Corte','Bonos Corte']},
-    {label:'TRASPLANTE',         subcats:['Trasplante',
-        'Nómina Prod. Transplante','H.Extra Transplante','Bonos Transplante']},
-    {label:'MANEJO PLANTA',      subcats:['Manejo P.',
-        'Nómina Prod. Manejo Planta','H.Extra Manejo Planta','Bonos Manejo Planta']},
+    {label:'CORTE',              subcats:['Corte']},
+    {label:'TRASPLANTE',         subcats:['Trasplante']},
+    {label:'MANEJO PLANTA',      subcats:['Manejo P.']},
     {label:'CONSOLIDACIÓN',      subcats:['Consolidacion']},
     {label:'SIEMBRA',            subcats:['Siembra']},
     {label:'MOV. CHAROLAS',      subcats:['Mov. Charolas']},
     {label:'RIEGO',              subcats:['Riego']},
     {label:'PHLOX',              subcats:['Phlox']},
-    {label:'HOOPS',              subcats:['Hoops',
-        'Nómina HOOPS','H.Extra HOOPS','Bonos HOOPS']},
-    {label:'MIPE / MIRFE',       subcats:['MIPE Y MIRFE',
-        'Nómina MIPE/MIRFE','H.Extra MIPE/MIRFE','Bonos MIPE/MIRFE']},
-    {label:'TRACTORES/CAMEROS',  subcats:['Tract. Y Cameros',
-        'Nómina Op. Tractores/Cameros','H.Extra Tractores/Cameros','Bonos Tractores/Cameros']},
-    {label:'VELADORES',          subcats:['Veladores',
-        'Nómina Op. Veladores','H.Extra Veladores','Bonos Veladores']},
-    {label:'SOLDADORES',         subcats:['Soldadores',
-        'Nómina Op. Soldador','H.Extra Soldador','Bonos Soldador']},
-    {label:'TRANSPORTE',         subcats:['Transporte',
-        'Nómina Op. Chofer','H.Extra Chofer','Bonos Chofer']},
+    {label:'HOOPS',              subcats:['Hoops']},
+    {label:'MIPE / MIRFE',       subcats:['MIPE Y MIRFE']},
+    {label:'TRACTORES/CAMEROS',  subcats:['Tract. Y Cameros']},
+    {label:'VELADORES',          subcats:['Veladores']},
+    {label:'SOLDADORES',         subcats:['Soldadores']},
+    {label:'TRANSPORTE',         subcats:['Transporte']},
     {label:'ADMON POSCO',        subcats:['Admon Posco']},
     {label:'ALM. UPC Y EMPAQUE', subcats:['Alm.upc y empaq']},
-    {label:'CONTRATISTA',        subcats:['Contratista y com.',
-        'Nómina Prod. Contratista','Bonos Contratista']},
-    {label:'PROD. PÁTINA Y REC', subcats:['Prod. Patina y rec',
-        'Nómina Producción','H.Extra Dom. y Fest. (Prod.)','Bonos Asist./Puntualidad (Prod.)']},
-    {label:'IMSS/INFO/RCV',      subcats:['IMSS,INFO Y RCV',
-        'IMSS/INFONAVIT RCV']},
-    {label:'IMP. 1.8%',          subcats:['Imp. 1.8%',
-        '1.8% Estado']},
+    {label:'CONTRATISTA',        subcats:['Contratista y com.']},
+    {label:'PROD. PÁTINA Y REC', subcats:['Prod. Patina y rec']},
+    {label:'IMSS/INFO/RCV',      subcats:['IMSS,INFO Y RCV']},
+    {label:'IMP. 1.8%',          subcats:['Imp. 1.8%']},
   ];
 
   // Semanas con datos — directamente del weekMap (orden año-semana)
