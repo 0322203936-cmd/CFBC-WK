@@ -187,45 +187,40 @@ def norm_cat(s: str):
     if s.startswith("COMIDA PARA EL PERSONAL"):             return "SV:Comida para el Personal"
     if s.startswith("RO, TEL") or s.startswith("RO , TEL"): return "SV:RO, TEL, RTA.Alim"
     # ── MANO DE OBRA ──────────────────────────────────────────────────────────
-    if "NOMINA" in s or "NÓMINA" in s:
-        if "ADMON" in s:                               return "MO:Nómina Admon"
-        if "CONTRATISTA" in s:                         return "MO:Nómina Prod. Contratista"
-        if "CORTE" in s:                               return "MO:Nómina Prod. Corte"
-        if "TRANSPLANTE" in s:                         return "MO:Nómina Prod. Transplante"
-        if "MANEJO PLANTA" in s:                       return "MO:Nómina Prod. Manejo Planta"
-        if "HOOPS" in s:                               return "MO:Nómina HOOPS"
-        if "MIPE" in s or "MIRFE" in s:                return "MO:Nómina MIPE/MIRFE"
-        if "TRACTORES" in s or "CAMEROS" in s:         return "MO:Nómina Op. Tractores/Cameros"
-        if "CHOFER" in s:                              return "MO:Nómina Op. Chofer"
-        if "VELADOR" in s:                             return "MO:Nómina Op. Veladores"
-        if "SOLDADOR" in s:                            return "MO:Nómina Op. Soldador"
-        if "PRODUCCION" in s or "PRODUCCIÓN" in s:     return "MO:Nómina Producción"
-    if "HORAS EXTR" in s:
-        if "CORTE" in s:                               return "MO:H.Extra Corte"
-        if "TRANSPLANTE" in s:                         return "MO:H.Extra Transplante"
-        if "MANEJO PLANTA" in s:                       return "MO:H.Extra Manejo Planta"
-        if "HOOPS" in s:                               return "MO:H.Extra HOOPS"
-        if "MIPE" in s or "MIRFE" in s:                return "MO:H.Extra MIPE/MIRFE"
-        if "TRACTORES" in s or "CAMEROS" in s:         return "MO:H.Extra Tractores/Cameros"
-        if "CHOFER" in s:                              return "MO:H.Extra Chofer"
-        if "VELADOR" in s:                             return "MO:H.Extra Veladores"
-        if "SOLDADOR" in s:                            return "MO:H.Extra Soldador"
-        if "FESTIVOS" in s and "FEST." not in s:       return "MO:H.Extra Dom. y Festivos (Admon)"
-        return                                                "MO:H.Extra Dom. y Fest. (Prod.)"
-    if "BONOS ASISIT" in s:
-        if "CORTE" in s:                               return "MO:Bonos Corte"
-        if "TRANSPLANTE" in s:                         return "MO:Bonos Transplante"
-        if "MANEJO PLANTA" in s:                       return "MO:Bonos Manejo Planta"
-        if "HOOPS" in s:                               return "MO:Bonos HOOPS"
-        if "MIPE" in s or "MIRFE" in s:                return "MO:Bonos MIPE/MIRFE"
-        if "TRACTORES" in s or "CAMEROS" in s:         return "MO:Bonos Tractores/Cameros"
-        if "CHOFER" in s:                              return "MO:Bonos Chofer"
-        if "VELADOR" in s:                             return "MO:Bonos Veladores"
-        if "SOLDADOR" in s:                            return "MO:Bonos Soldador"
-        if "DESPENSA" in s:                            return "MO:Bonos Asist./Puntualidad (Admon)"
-        return                                                "MO:Bonos Asist./Puntualidad (Prod.)"
-    if "IMSS" in s or "INFONAVIT" in s:                return "MO:IMSS/INFONAVIT RCV"
-    if "1.8%" in s or "TASA EFECTIVA" in s:            return "MO:1.8% Estado"
+    # Nómina + H.Extra + Bonos se colapsan al mismo subcat que BD CONTEO
+    # para que semanas 1-13 (conteo.xlsx) y 14+ (WK Excel) sean consistentes.
+    _is_nomina = "NOMINA" in s or "NÓMINA" in s
+    _is_hextra = "HORAS EXTR" in s
+    _is_bonos  = "BONOS ASISIT" in s
+
+    if _is_nomina or _is_hextra or _is_bonos:
+        # Admon Posco antes de Admon genérico (contiene "ADMON")
+        if "ADMON" in s and ("POSCO" in s or "POSCOSECHA" in s):
+            return "MO:Admon Posco"
+        # Administración: Nómina/H.Extra dom.festivos/Bonos despensa
+        if "ADMON" in s or ("FESTIVOS" in s and "FEST." not in s) or "DESPENSA" in s:
+            return "MO:Ing. Y Admon."
+        if "SUPERVISOR" in s:                              return "MO:Supervisores"
+        if "CORTE" in s:                                   return "MO:Corte"
+        if "TRANSPLANTE" in s:                             return "MO:Trasplante"
+        if "MANEJO" in s and "PLANTA" in s:                return "MO:Manejo P."
+        if "CONSOLIDAC" in s:                              return "MO:Consolidacion"
+        if "SIEMBRA" in s:                                 return "MO:Siembra"
+        if "MOV" in s and "CHAROLA" in s:                  return "MO:Mov. Charolas"
+        if "RIEGO" in s:                                   return "MO:Riego"
+        if "PHLOX" in s:                                   return "MO:Phlox"
+        if "HOOPS" in s:                                   return "MO:Hoops"
+        if "MIPE" in s or "MIRFE" in s:                    return "MO:MIPE Y MIRFE"
+        if "TRACTORES" in s or "CAMEROS" in s:             return "MO:Tract. Y Cameros"
+        if "VELADOR" in s:                                 return "MO:Veladores"
+        if "SOLDADOR" in s:                                return "MO:Soldadores"
+        if "CHOFER" in s:                                  return "MO:Transporte"
+        if "CONTRATISTA" in s:                             return "MO:Contratista y com."
+        if "ALM" in s and ("UPC" in s or "EMPAQ" in s):   return "MO:Alm.upc y empaq"
+        # Producción general, Dom y Fest. Prod., Nómina Producción → Prod. Patina y rec
+        return "MO:Prod. Patina y rec"
+    if "IMSS" in s or "INFONAVIT" in s:                    return "MO:IMSS,INFO Y RCV"
+    if "1.8%" in s or "TASA EFECTIVA" in s:                return "MO:Imp. 1.8%"
     return None
 
 
