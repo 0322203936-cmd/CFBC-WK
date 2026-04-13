@@ -599,8 +599,8 @@ APP_HTML_BODY = """
     <span class="tb-label">Cat</span>
     <select class="tb-sel" id="catSel" onchange="onCatChange(this.value)" style="max-width:200px"></select>
     <div class="tb-sep"></div>
-    <span class="tb-label">Ranchos</span>
-    <div id="ranchChips" style="display:flex;gap:3px;flex-wrap:wrap"></div>
+    <span class="tb-label">Rancho</span>
+    <select class="tb-sel" id="ranchSel" onchange="onRanchChange(this.value)" style="max-width:140px"></select>
     <div class="tb-sep"></div>
     <div class="tb-grp">
       <button class="tb-btn"        id="btnUSD" onclick="setCurrency('usd')">USD</button>
@@ -697,7 +697,7 @@ var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 // =======================================================
 // ESTADO
 // =======================================================
-var state = { cat:'', activeRanches:{'Todos':true}, currency:'mxn', activeYears:{}, view:'comparativo', weekIdx:0, fromWeek:1, toWeek:52 };
+var state = { cat:'', ranch:'Todos', currency:'mxn', activeYears:{}, view:'comparativo', weekIdx:0, fromWeek:1, toWeek:52 };
 var allWeeks = [];
 
 // =======================================================
@@ -955,7 +955,7 @@ function inicializar() {
   state.fromWeek = wksLatest[wksLatest.length-2] || wksLatest[0] || state.toWeek;
 
   buildCatSelect();
-  buildRanchChips();
+  buildRanchSelect();
   buildYearChips();
   updateWeekControls();
   updateRangeSliders();
@@ -982,18 +982,12 @@ function buildCatSelect() {
   }).join('');
   el.style.color = categoryHasData(state.cat) ? '#222' : '#dc2626';
 }
-function buildRanchChips() {
-  var el = document.getElementById('ranchChips');
+function buildRanchSelect() {
+  var el = document.getElementById('ranchSel');
   if(!el) return;
   var ranches = ['Todos'].concat(RANCH_ORDER);
   el.innerHTML = ranches.map(function(r){
-    var col = RANCH_COLORS[r] || '#4472c4';
-    if(r==='Todos') col='#4472c4';
-    var on = state.activeRanches[r] ? ' on' : '';
-    var bg = state.activeRanches[r] ? col+'20' : 'transparent';
-    var border = state.activeRanches[r] ? col : 'transparent';
-    var tc = state.activeRanches[r] ? col : '#888';
-    return '<button class="yr-chip'+on+'" style="color:'+tc+';border-color:'+border+';background:'+bg+'" onclick="toggleRanch(\''+r+'\')">'+r+'</button>';
+    return '<option value="'+r.replace(/"/g,'&quot;')+'"'+(r===state.ranch?' selected':'')+'>'+r+'</option>';
   }).join('');
 }
 function buildYearChips() {
@@ -1031,19 +1025,9 @@ function categoryHasData(cat) {
 // =======================================================
 // EVENTS
 // =======================================================
-function toggleRanch(r) {
-  if (r === 'Todos') {
-    state.activeRanches = {'Todos':true};
-  } else {
-    delete state.activeRanches['Todos'];
-    if (state.activeRanches[r]) {
-      delete state.activeRanches[r];
-      if (Object.keys(state.activeRanches).length === 0) state.activeRanches['Todos'] = true;
-    } else {
-      state.activeRanches[r] = true;
-    }
-  }
-  buildRanchChips();
+function onRanchChange(val) {
+  state.ranch = val;
+  buildRanchSelect();
   if (state.view !== 'semana') renderView();
 }
 function onCatChange(val) {
@@ -1310,8 +1294,7 @@ function renderComparativo() {
   var f=state.fromWeek,t=state.toWeek,yrs=getActiveYears(),sym=state.currency.toUpperCase();
   var byYear=getRangeByYear(state.cat,f,t);
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
-  var activeRNames = Object.keys(state.activeRanches);
-  var ranchCols=state.activeRanches['Todos']?RANCH_ORDER:activeRNames;
+  var ranchCols=state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
   document.getElementById('cmpStats').innerHTML='';
 
   var weekData={};
@@ -1331,12 +1314,8 @@ function renderComparativo() {
       var d=weekData[yr][w];
       var val=0;
       if(d){
-        if(state.activeRanches['Todos']) {
-          val=state.currency==='usd'?d.usd:d.mxn;
-        } else {
-          var srcA=state.currency==='usd'?d.ranches:d.ranches_mxn;
-          val = 0; activeRNames.forEach(function(rr){val += srcA[rr]||0;});
-        }
+        if(state.ranch==='Todos') val=state.currency==='usd'?d.usd:d.mxn;
+        else val=(state.currency==='usd'?d.ranches:d.ranches_mxn)[state.ranch]||0;
       }
       var dCell=deltaCellHtml(val,prevWkVal);
       if (val>0) prevWkVal=val;
@@ -1362,10 +1341,8 @@ function renderComparativo() {
   var grandTotal=yrs.reduce(function(s,yr){
     var d=byYear[yr];
     if(!d) return s;
-    if(state.activeRanches['Todos']) return s+(state.currency==='usd'?d.usd:d.mxn);
-    var srcB=state.currency==='usd'?d.ranches:d.ranches_mxn;
-    var stot=0; activeRNames.forEach(function(rr){stot+=srcB[rr]||0;});
-    return s+stot;
+    if(state.ranch==='Todos') return s+(state.currency==='usd'?d.usd:d.mxn);
+    return s+((state.currency==='usd'?d.ranches:d.ranches_mxn)[state.ranch]||0);
   },0);
   document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
 }
@@ -1384,9 +1361,8 @@ function renderRancho() {
   var yrs=getActiveYears(), sym=state.currency.toUpperCase();
   var f=state.fromWeek, t=state.toWeek;
   var cur=state.currency;
-  var _rnames = Object.keys(state.activeRanches);
-  var activeRanches = state.activeRanches['Todos']?RANCH_ORDER:_rnames;
-  var showTotal = state.activeRanches['Todos'];
+  var activeRanches = state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
+  var showTotal = state.ranch==='Todos';
 
   var matCats=DATA.categories.filter(function(c){
     return c!=='COSTO SERVICIOS'&&c!=='COSTO MANO DE OBRA';
@@ -1803,8 +1779,7 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRan
 }
 function renderDetalle() {
   var sym=state.currency.toUpperCase();
-  var _rnames = Object.keys(state.activeRanches);
-  var activeRanches = state.activeRanches['Todos']?RANCH_ORDER:_rnames;
+  var activeRanches = state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
   var cols=[
     { field:'year',      headerName:'AÑO',      width:60,  type:'numericColumn', pinned:'left' },
     { field:'week',      headerName:'SEM',       width:55,  type:'numericColumn', pinned:'left', cellRenderer:function(p){return wFmt(p.value);} },
@@ -1929,14 +1904,13 @@ function renderServicios() {
   Object.keys(subcatsSet).forEach(function(sc){if(orderedSubcats.indexOf(sc)===-1)orderedSubcats.push(sc);});
 
   // ── Ranchos activos ───────────────────────────────────
-  var _rnames = Object.keys(state.activeRanches);
-  var allowedRanches = state.activeRanches['Todos']?RANCH_ORDER:_rnames;
+  var allowedRanches=state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
   var activeRanches=allowedRanches.filter(function(rn){
     return weekKeys.some(function(key){
       return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
     });
   });
-  var showTotal = state.activeRanches['Todos'];
+  var showTotal = state.ranch==='Todos';
 
   // ── Sin datos ─────────────────────────────────────────
   if (!weekKeys.length || !orderedSubcats.length) {
@@ -2196,20 +2170,13 @@ function renderManoObra() {
     'Campo-RM': ['Ramona'],
     'PosCo-RM': ['Poscosecha']
   };
-  var _rnames = Object.keys(state.activeRanches);
-  var allowedRanches = state.activeRanches['Todos'] ? MO_RANCH_ORDER : [];
-  if (!state.activeRanches['Todos']) {
-    _rnames.forEach(function(r){
-      var m = moMap[r] || [r];
-      m.forEach(function(mrr) { if(allowedRanches.indexOf(mrr)<0) allowedRanches.push(mrr); });
-    });
-  }
+  var allowedRanches = state.ranch === 'Todos' ? MO_RANCH_ORDER : (moMap[state.ranch] || [state.ranch]);
   var activeRanches = allowedRanches.filter(function(rn){ return ranchesEnDatos[rn]; });
   Object.keys(ranchesEnDatos).forEach(function(rn){
-    if (!state.activeRanches['Todos'] && allowedRanches.indexOf(rn) < 0) return;
+    if (state.ranch !== 'Todos' && allowedRanches.indexOf(rn) < 0) return;
     if (activeRanches.indexOf(rn) < 0) activeRanches.push(rn);
   });
-  var showTotal = state.activeRanches['Todos'];
+  var showTotal = state.ranch === 'Todos';
 
   function shortLabel(sc){
     return sc.replace('Nómina Prod. ','').replace('Nómina Op. ','')
