@@ -943,7 +943,10 @@ def get_datos() -> dict:
         print("🔍 LEYENDO CONTEO DE PERSONAL (MANO DE OBRA)")
         print("=" * 60)
         
-        conteo_data = _extraer_mano_obra_conteo()
+        conteo_data_raw = _extraer_mano_obra_conteo()
+        
+        # Filtrar registros vacíos (plantillas en el Excel de conteo sin dinero ni personal)
+        conteo_data = [r for r in conteo_data_raw if r.get("mxn_total", 0) > 0 or r.get("usd_total", 0) > 0 or r.get("hc_total", 0) > 0]
         conteo_keys = {(r["year"], r["week"]) for r in conteo_data}
         
         wk_mano_obra = resultado.get("mano_obra_data", [])
@@ -956,7 +959,7 @@ def get_datos() -> dict:
                 wk_added_count += 1
                 
         resultado["mano_obra_data"] = merged_mano_obra
-        print(f"✅ Merge: {len(conteo_data)} registros de Conteo + {wk_added_count} registros de WK Excel (Fallback)")
+        print(f"✅ Merge: {len(conteo_data)} registros reales de Conteo + {wk_added_count} registros de WK Excel (Fallback)")
 
     return resultado
 
