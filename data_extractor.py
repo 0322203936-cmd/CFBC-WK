@@ -687,42 +687,46 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                 
             key = None
             # ── COSTOS UNITARIOS $ / TALLO PROCESADO ──────────────────────
+            # Los labels en el Excel son simples: "Materiales", "Mano de Obra", etc.
+            # curr_section ya identifica la sección; NO requieren "TALLO" en el label.
             if curr_section == "tallo":
-                if "MATERIALES" in label and "TALLO" in label:
-                    key = "materiales_tallo"
-                elif "MANO DE OBRA" in label and "TALLO" in label and "PROD" not in label:
+                if "MANO DE OBRA PROD" in label:
+                    key = "mano_obra_prod_tallo"
+                elif "MATERIAL DE EMPAQUE" in label or "EMPAQUE" in label:
+                    key = "empaque_tallo"
+                elif "SANIDAD VEGETAL" in label or "SANIDAD" in label:
+                    key = "sanidad_tallo"
+                elif "FERTILIZ" in label or "FERTLIZ" in label:
+                    key = "fertilizacion_tallo"
+                elif "MANO DE OBRA" in label:
                     key = "mano_obra_tallo"
-                elif "SERVICIOS" in label and "TALLO" in label:
+                elif "MATERIALES" in label or (label == "MATERIALES"):
+                    key = "materiales_tallo"
+                elif "SERVICIOS" in label or "FLETES" in label:
                     key = "servicios_tallo"
                 elif "COSTO DE PRODUCCION" in label or "COSTO DE PRODUCCIÓN" in label:
                     if "VENTAS" in label:
                         key = "cpv_tallo"
-                elif "MATERIAL DE EMPAQUE" in label and "TALLO" in label:
-                    key = "empaque_tallo"
-                elif "SANIDAD VEGETAL" in label and "TALLO" in label:
-                    key = "sanidad_tallo"
-                elif "FERTILIZACION" in label and "TALLO" in label:
-                    key = "fertilizacion_tallo"
-                elif "MANO DE OBRA PROD" in label and "TALLO" in label:
-                    key = "mano_obra_prod_tallo"
-                    
+
             # ── COSTOS UNITARIOS $ / HECTÁREA ────────────────────────────
+            # Misma lógica: labels simples, curr_section identifica la sección.
+            # Bug anterior: precedencia `and` > `or` causaba matches incorrectos.
             elif curr_section == "ha":
-                if "MATERIALES" in label and "HECTAREA" in label or "HECTÁREA" in label:
-                    key = "materiales_ha"
-                elif "MANO DE OBRA" in label and "HECTAREA" in label or "HECTÁREA" in label and "PROD" not in label:
+                if "MANO DE OBRA PROD" in label:
+                    key = "mano_obra_prod_ha"
+                elif "MATERIAL DE EMPAQUE" in label or "EMPAQUE" in label:
+                    key = "empaque_ha"
+                elif "FERTILIZ" in label or "FERTLIZ" in label:
+                    key = "fertilizacion_ha"
+                elif "MANO DE OBRA" in label:
                     key = "mano_obra_ha"
-                elif "SERVICIOS" in label and "HECTAREA" in label or "HECTÁREA" in label:
+                elif "MATERIALES" in label or (label == "MATERIALES"):
+                    key = "materiales_ha"
+                elif "SERVICIOS" in label or "FLETES" in label:
                     key = "servicios_ha"
                 elif "COSTO DE PRODUCCION" in label or "COSTO DE PRODUCCIÓN" in label:
                     if "VENTAS" in label:
                         key = "cpv_ha"
-                elif "MATERIAL DE EMPAQUE" in label and "HECTAREA" in label or "HECTÁREA" in label:
-                    key = "empaque_ha"
-                elif "FERTILIZACION" in label and "HECTAREA" in label or "HECTÁREA" in label:
-                    key = "fertilizacion_ha"
-                elif "MANO DE OBRA PROD" in label and "HECTAREA" in label or "HECTÁREA" in label:
-                    key = "mano_obra_prod_ha"
                     
             if key:
                 if wk_unit_costs.get("TOTAL", {}).get(key) is not None:
