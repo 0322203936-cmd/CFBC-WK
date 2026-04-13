@@ -686,12 +686,43 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                 label = str(row[0]).strip().upper() if len(row) > 0 else ""
                 
             key = None
+            # ── COSTOS UNITARIOS $ / TALLO PROCESADO ──────────────────────
             if curr_section == "tallo":
-                if "COSTO DE PRODUCCION Y VENTAS" in label or "COSTO DE PRODUCCIÓN Y VENTAS" in label:
-                    key = "cpv_tallo"
+                if "MATERIALES" in label and "TALLO" in label:
+                    key = "materiales_tallo"
+                elif "MANO DE OBRA" in label and "TALLO" in label and "PROD" not in label:
+                    key = "mano_obra_tallo"
+                elif "SERVICIOS" in label and "TALLO" in label:
+                    key = "servicios_tallo"
+                elif "COSTO DE PRODUCCION" in label or "COSTO DE PRODUCCIÓN" in label:
+                    if "VENTAS" in label:
+                        key = "cpv_tallo"
+                elif "MATERIAL DE EMPAQUE" in label and "TALLO" in label:
+                    key = "empaque_tallo"
+                elif "SANIDAD VEGETAL" in label and "TALLO" in label:
+                    key = "sanidad_tallo"
+                elif "FERTILIZACION" in label and "TALLO" in label:
+                    key = "fertilizacion_tallo"
+                elif "MANO DE OBRA PROD" in label and "TALLO" in label:
+                    key = "mano_obra_prod_tallo"
+                    
+            # ── COSTOS UNITARIOS $ / HECTÁREA ────────────────────────────
             elif curr_section == "ha":
-                if "COSTO DE PRODUCCION Y VENTAS" in label or "COSTO DE PRODUCCIÓN Y VENTAS" in label:
-                    key = "cpv_ha"
+                if "MATERIALES" in label and "HECTAREA" in label or "HECTÁREA" in label:
+                    key = "materiales_ha"
+                elif "MANO DE OBRA" in label and "HECTAREA" in label or "HECTÁREA" in label and "PROD" not in label:
+                    key = "mano_obra_ha"
+                elif "SERVICIOS" in label and "HECTAREA" in label or "HECTÁREA" in label:
+                    key = "servicios_ha"
+                elif "COSTO DE PRODUCCION" in label or "COSTO DE PRODUCCIÓN" in label:
+                    if "VENTAS" in label:
+                        key = "cpv_ha"
+                elif "MATERIAL DE EMPAQUE" in label and "HECTAREA" in label or "HECTÁREA" in label:
+                    key = "empaque_ha"
+                elif "FERTILIZACION" in label and "HECTAREA" in label or "HECTÁREA" in label:
+                    key = "fertilizacion_ha"
+                elif "MANO DE OBRA PROD" in label and "HECTAREA" in label or "HECTÁREA" in label:
+                    key = "mano_obra_prod_ha"
                     
             if key:
                 if wk_unit_costs.get("TOTAL", {}).get(key) is not None:
