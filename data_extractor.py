@@ -858,8 +858,7 @@ def _extraer_mano_obra_conteo() -> list:
         mxn_ranches, usd_ranches, hc_ranches = {}, {}, {}
         mxn_total = usd_total = hc_total = 0.0
         for _, row in grp.iterrows():
-            raw_rancho = str(row.get("Rancho", "")).strip()
-            rancho     = norm_ranch(raw_rancho) or raw_rancho
+            rancho     = str(row.get("Rancho", "")).strip()
             costo_mn   = _sv(row.get("Costo MN",   0))
             costo_dlls = _sv(row.get("Costo DLLS", 0))
             conteo_val = _sv(row.get("Conteo", 0))
