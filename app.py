@@ -600,7 +600,10 @@ APP_HTML_BODY = """
     <select class="tb-sel" id="catSel" onchange="onCatChange(this.value)" style="max-width:200px"></select>
     <div class="tb-sep"></div>
     <span class="tb-label">Rancho</span>
-    <div id="ranchCheckboxes" style="display:flex;gap:6px;align-items:center;"></div>
+    <div style="position:relative;flex-shrink:0;" id="ranchDropdownWrap">
+      <button class="tb-btn" id="ranchDropdownBtn" onclick="toggleRanchDropdown()" style="min-width:90px;max-width:180px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Todos ▾</button>
+      <div id="ranchDropdownPanel" style="display:none;position:absolute;top:26px;left:0;z-index:999;background:#fff;border:1px solid #bbb;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.12);min-width:150px;max-height:220px;overflow-y:auto;padding:4px 0;"></div>
+    </div>
     <div class="tb-sep"></div>
     <div class="tb-grp">
       <button class="tb-btn"        id="btnUSD" onclick="setCurrency('usd')">USD</button>
@@ -984,14 +987,35 @@ function buildCatSelect() {
   el.style.color = categoryHasData(state.cat) ? '#222' : '#dc2626';
 }
 function buildRanchCheckboxes() {
-  var el = document.getElementById('ranchCheckboxes');
-  if(!el) return;
+  var panel = document.getElementById('ranchDropdownPanel');
+  if (!panel) return;
   var ranches = ['Todos'].concat(RANCH_ORDER);
-  el.innerHTML = ranches.map(function(r){
+  panel.innerHTML = ranches.map(function(r) {
     var checked = state.activeRanches.indexOf(r) > -1 ? 'checked' : '';
-    return '<label style="font-size:11px; cursor:pointer; display:flex; align-items:center; gap:2px; margin:0;"><input type="checkbox" value="'+r+'" '+checked+' onchange="toggleRanch(this)" style="margin:0;">'+r+'</label>';
+    var sep = (r === RANCH_ORDER[0]) ? 'border-top:1px solid #eee;margin-top:2px;padding-top:4px;' : '';
+    return '<label style="display:flex;align-items:center;gap:6px;padding:4px 10px;cursor:pointer;font-size:11px;white-space:nowrap;' + sep + '">'
+      + '<input type="checkbox" value="' + r + '" ' + checked + ' onchange="toggleRanch(this)" style="margin:0;cursor:pointer;">'
+      + r + '</label>';
   }).join('');
+  var btn = document.getElementById('ranchDropdownBtn');
+  if (btn) {
+    var sel = state.activeRanches;
+    var label = sel.indexOf('Todos') > -1 ? 'Todos' : (sel.length === 1 ? sel[0] : sel.length + ' ranchos');
+    btn.textContent = label + ' \u25BE';
+  }
 }
+function toggleRanchDropdown() {
+  var panel = document.getElementById('ranchDropdownPanel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('ranchDropdownWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    var panel = document.getElementById('ranchDropdownPanel');
+    if (panel) panel.style.display = 'none';
+  }
+});
 function buildYearChips() {
   var el = document.getElementById('yearChips');
   el.innerHTML = DATA.years.map(function(y){
