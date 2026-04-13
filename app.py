@@ -418,16 +418,6 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .week-ctr { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .week-ctr span { font-size: 11px; font-weight: 700; color: var(--navy); min-width: 62px; text-align: center; }
 .tb-slider  { width: 100px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
-/* ── MULTI-SELECT RANCHO ─────────────────────────────── */
-.tb-multisel-wrap { position: relative; flex-shrink: 0; }
-.tb-multisel-btn  { font-size: 11px; font-family: inherit; background: #fff; border: 1px solid #bbb; border-radius: 3px; padding: 2px 8px 2px 6px; color: #222; cursor: pointer; height: 22px; white-space: nowrap; min-width: 72px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; text-align: left; }
-.tb-multisel-btn:focus { outline: 2px solid var(--green); outline-offset: -1px; }
-.tb-multisel-panel { display: none; position: absolute; top: 25px; left: 0; background: #fff; border: 1px solid #bbb; border-radius: 3px; box-shadow: 0 4px 14px rgba(0,0,0,0.18); z-index: 9999; min-width: 160px; max-height: 250px; overflow-y: auto; padding: 4px 0; }
-.tb-multisel-panel.open { display: block; }
-.tb-multisel-item { display: flex; align-items: center; gap: 7px; padding: 4px 12px; font-size: 11px; cursor: pointer; white-space: nowrap; color: #222; user-select: none; }
-.tb-multisel-item:hover { background: #e8f0fe; }
-.tb-multisel-item.todos-item { border-bottom: 1px solid #e0e0e0; font-weight: 700; margin-bottom: 2px; }
-.tb-multisel-item input[type=checkbox] { accent-color: var(--green); cursor: pointer; margin: 0; width: 13px; height: 13px; flex-shrink: 0; }
 .yr-chip {
   font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 3px;
   cursor: pointer; border: 1px solid transparent; background: transparent;
@@ -610,10 +600,7 @@ APP_HTML_BODY = """
     <select class="tb-sel" id="catSel" onchange="onCatChange(this.value)" style="max-width:200px"></select>
     <div class="tb-sep"></div>
     <span class="tb-label">Rancho</span>
-    <div class="tb-multisel-wrap" id="ranchSelWrap">
-      <button class="tb-sel tb-multisel-btn" id="ranchSelBtn" onclick="toggleRanchDropdown(event)">Todos &#9662;</button>
-      <div class="tb-multisel-panel" id="ranchSelPanel"></div>
-    </div>
+    <select class="tb-sel" id="ranchSel" onchange="onRanchChange(this.value)" style="max-width:140px"></select>
     <div class="tb-sep"></div>
     <div class="tb-grp">
       <button class="tb-btn"        id="btnUSD" onclick="setCurrency('usd')">USD</button>
@@ -710,7 +697,7 @@ var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 // =======================================================
 // ESTADO
 // =======================================================
-var state = { cat:'', ranch:[], currency:'mxn', activeYears:{}, view:'comparativo', weekIdx:0, fromWeek:1, toWeek:52 };
+var state = { cat:'', ranch:'Todos', currency:'mxn', activeYears:{}, view:'comparativo', weekIdx:0, fromWeek:1, toWeek:52 };
 var allWeeks = [];
 
 // =======================================================
@@ -995,52 +982,13 @@ function buildCatSelect() {
   }).join('');
   el.style.color = categoryHasData(state.cat) ? '#222' : '#dc2626';
 }
-// ── RANCH MULTI-SELECT HELPERS ──────────────────────────
-function isAllRanches() { return state.ranch.length === 0; }
-function activeRanchList() {
-  if (isAllRanches()) return RANCH_ORDER;
-  return state.ranch.filter(function(r){ return RANCH_ORDER.indexOf(r) > -1; });
-}
 function buildRanchSelect() {
-  var panel = document.getElementById('ranchSelPanel');
-  var btn   = document.getElementById('ranchSelBtn');
-  if (!panel || !btn) return;
-  var allChecked = isAllRanches();
-  var items = [{ val: '__todos__', label: 'Todos', cls: 'todos-item', checked: allChecked }];
-  RANCH_ORDER.forEach(function(r){
-    items.push({ val: r, label: r, cls: '', checked: !allChecked && state.ranch.indexOf(r) > -1 });
-  });
-  panel.innerHTML = items.map(function(item){
-    var safe = item.val.replace(/"/g,'&quot;');
-    return '<label class="tb-multisel-item '+item.cls+'">'
-      + '<input type="checkbox" data-val="'+safe+'" '+(item.checked?'checked':'')+' onchange="onRanchChkChange(this)">'
-      + item.label + '</label>';
+  var el = document.getElementById('ranchSel');
+  if(!el) return;
+  var ranches = ['Todos'].concat(RANCH_ORDER);
+  el.innerHTML = ranches.map(function(r){
+    return '<option value="'+r.replace(/"/g,'&quot;')+'"'+(r===state.ranch?' selected':'')+'>'+r+'</option>';
   }).join('');
-  if (allChecked) {
-    btn.textContent = 'Todos \u25be';
-  } else if (state.ranch.length === 1) {
-    btn.textContent = state.ranch[0] + ' \u25be';
-  } else {
-    btn.textContent = state.ranch.length + ' ranchos \u25be';
-  }
-}
-function toggleRanchDropdown(e) {
-  e.stopPropagation();
-  document.getElementById('ranchSelPanel').classList.toggle('open');
-}
-function onRanchChkChange(cb) {
-  var val = cb.dataset.val;
-  if (val === '__todos__') {
-    state.ranch = [];
-  } else {
-    if (cb.checked) {
-      if (state.ranch.indexOf(val) < 0) state.ranch.push(val);
-    } else {
-      state.ranch = state.ranch.filter(function(r){ return r !== val; });
-    }
-  }
-  buildRanchSelect();
-  if (state.view !== 'semana') renderView();
 }
 function buildYearChips() {
   var el = document.getElementById('yearChips');
@@ -1077,6 +1025,11 @@ function categoryHasData(cat) {
 // =======================================================
 // EVENTS
 // =======================================================
+function onRanchChange(val) {
+  state.ranch = val;
+  buildRanchSelect();
+  if (state.view !== 'semana') renderView();
+}
 function onCatChange(val) {
   state.cat = val;
   buildCatSelect();
@@ -1341,7 +1294,7 @@ function renderComparativo() {
   var f=state.fromWeek,t=state.toWeek,yrs=getActiveYears(),sym=state.currency.toUpperCase();
   var byYear=getRangeByYear(state.cat,f,t);
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
-  var ranchCols=activeRanchList();
+  var ranchCols=state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
   document.getElementById('cmpStats').innerHTML='';
 
   var weekData={};
@@ -1361,8 +1314,8 @@ function renderComparativo() {
       var d=weekData[yr][w];
       var val=0;
       if(d){
-        if(isAllRanches()) val=state.currency==='usd'?d.usd:d.mxn;
-        else { var _src=state.currency==='usd'?d.ranches:d.ranches_mxn; activeRanchList().forEach(function(r){val+=(_src[r]||0);}); }
+        if(state.ranch==='Todos') val=state.currency==='usd'?d.usd:d.mxn;
+        else val=(state.currency==='usd'?d.ranches:d.ranches_mxn)[state.ranch]||0;
       }
       var dCell=deltaCellHtml(val,prevWkVal);
       if (val>0) prevWkVal=val;
@@ -1388,21 +1341,14 @@ function renderComparativo() {
   var grandTotal=yrs.reduce(function(s,yr){
     var d=byYear[yr];
     if(!d) return s;
-    if(isAllRanches()) return s+(state.currency==='usd'?d.usd:d.mxn);
-    var _src=state.currency==='usd'?d.ranches:d.ranches_mxn;
-    return s+activeRanchList().reduce(function(a,r){return a+(_src[r]||0);},0);
+    if(state.ranch==='Todos') return s+(state.currency==='usd'?d.usd:d.mxn);
+    return s+((state.currency==='usd'?d.ranches:d.ranches_mxn)[state.ranch]||0);
   },0);
   document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
 }
 
 // Delegated click para comparativo clickeable
 document.addEventListener('click', function(e){
-  // Cerrar dropdown de rancho si se hace clic fuera
-  var wrap = document.getElementById('ranchSelWrap');
-  if (wrap && !wrap.contains(e.target)) {
-    var panel = document.getElementById('ranchSelPanel');
-    if (panel) panel.classList.remove('open');
-  }
   var td=e.target.closest('td.cmp-clickable');
   if (!td) return;
   showProdFromCmp(parseInt(td.dataset.yr), parseInt(td.dataset.wk), td.dataset.ranch||null);
@@ -1415,8 +1361,8 @@ function renderRancho() {
   var yrs=getActiveYears(), sym=state.currency.toUpperCase();
   var f=state.fromWeek, t=state.toWeek;
   var cur=state.currency;
-  var activeRanches = activeRanchList();
-  var showTotal = isAllRanches();
+  var activeRanches = state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
+  var showTotal = state.ranch==='Todos';
 
   var matCats=DATA.categories.filter(function(c){
     return c!=='COSTO SERVICIOS'&&c!=='COSTO MANO DE OBRA';
@@ -1833,7 +1779,7 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRan
 }
 function renderDetalle() {
   var sym=state.currency.toUpperCase();
-  var activeRanches = activeRanchList();
+  var activeRanches = state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
   var cols=[
     { field:'year',      headerName:'AÑO',      width:60,  type:'numericColumn', pinned:'left' },
     { field:'week',      headerName:'SEM',       width:55,  type:'numericColumn', pinned:'left', cellRenderer:function(p){return wFmt(p.value);} },
@@ -1958,13 +1904,13 @@ function renderServicios() {
   Object.keys(subcatsSet).forEach(function(sc){if(orderedSubcats.indexOf(sc)===-1)orderedSubcats.push(sc);});
 
   // ── Ranchos activos ───────────────────────────────────
-  var allowedRanches=activeRanchList();
+  var allowedRanches=state.ranch==='Todos'?RANCH_ORDER:[state.ranch];
   var activeRanches=allowedRanches.filter(function(rn){
     return weekKeys.some(function(key){
       return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
     });
   });
-  var showTotal = isAllRanches();
+  var showTotal = state.ranch==='Todos';
 
   // ── Sin datos ─────────────────────────────────────────
   if (!weekKeys.length || !orderedSubcats.length) {
@@ -2224,20 +2170,13 @@ function renderManoObra() {
     'Campo-RM': ['Ramona'],
     'PosCo-RM': ['Poscosecha']
   };
-  var allowedRanches = isAllRanches() ? MO_RANCH_ORDER : (function(){
-    var result = [];
-    activeRanchList().forEach(function(r){
-      var mapped = moMap[r] || [r];
-      mapped.forEach(function(m){ if(result.indexOf(m)<0) result.push(m); });
-    });
-    return result;
-  })();
+  var allowedRanches = state.ranch === 'Todos' ? MO_RANCH_ORDER : (moMap[state.ranch] || [state.ranch]);
   var activeRanches = allowedRanches.filter(function(rn){ return ranchesEnDatos[rn]; });
   Object.keys(ranchesEnDatos).forEach(function(rn){
-    if (!isAllRanches() && allowedRanches.indexOf(rn) < 0) return;
+    if (state.ranch !== 'Todos' && allowedRanches.indexOf(rn) < 0) return;
     if (activeRanches.indexOf(rn) < 0) activeRanches.push(rn);
   });
-  var showTotal = isAllRanches();
+  var showTotal = state.ranch === 'Todos';
 
   function shortLabel(sc){
     return sc.replace('Nómina Prod. ','').replace('Nómina Op. ','')
@@ -2517,7 +2456,7 @@ function showProdPanel(rowData, opts) {
   var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
   var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
   var ranchFilter=opts.ranch||null;
-  var ranchFilterList = ranchFilter ? [ranchFilter] : (!isAllRanches() ? activeRanchList() : null);
+  if (!ranchFilter && state.ranch !== 'Todos') ranchFilter = state.ranch;
   if (!cat||!yr) return;
   var hideProducts = cat==='MATERIAL VEGETAL';
 
@@ -2540,7 +2479,7 @@ function showProdPanel(rowData, opts) {
       var weekD=ds[wkCodeShort]||ds[String(wkCodeShort)]||ds[wkCodeLong]||ds[String(wkCodeLong)];
       if (!weekD) continue;
       Object.keys(weekD).forEach(function(ranch){
-        if (ranchFilterList&&ranchFilterList.indexOf(ranch)<0) return;
+        if (ranchFilter&&ranch!==ranchFilter) return;
         var byTipo=weekD[ranch];
         Object.keys(byTipo).forEach(function(tipo){
           if (tipoFilter&&tipo!==tipoFilter) return;
@@ -2553,7 +2492,7 @@ function showProdPanel(rowData, opts) {
   }
 
   var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
-  var panelTitle = cat+' &#9656; '+rangeText+(ranchFilterList&&ranchFilterList.length===1?' · '+ranchFilterList[0]:ranchFilterList&&ranchFilterList.length>1?' · '+ranchFilterList.length+' ranchos':'');
+  var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
   
   var panelHtml = '';
 
