@@ -1369,21 +1369,7 @@ function renderRancho() {
       var sv =sumForYW(svRecs, yr,wk);
       var cpv={total:mat.total+mo.total+sv.total};
       RANCH_ORDER.forEach(function(rn){ cpv[rn]=(mat[rn]||0)+(mo[rn]||0)+(sv[rn]||0); });
-      var cpv_tallo = {total: 0}, cpv_ha = {total: 0};
-      RANCH_ORDER.forEach(function(rn){ cpv_tallo[rn] = 0; cpv_ha[rn] = 0; });
-      if (DATA.unit_costs_data) {
-        var yyk = (yr % 100) * 100 + wk;
-        var uc = DATA.unit_costs_data[yyk] || DATA.unit_costs_data[String(yyk)];
-        if (uc) {
-          cpv_tallo.total = (uc['TOTAL'] && uc['TOTAL'].cpv_tallo) ? uc['TOTAL'].cpv_tallo : 0;
-          cpv_ha.total = (uc['TOTAL'] && uc['TOTAL'].cpv_ha) ? uc['TOTAL'].cpv_ha : 0;
-          RANCH_ORDER.forEach(function(rn){
-            cpv_tallo[rn] = (uc[rn] && uc[rn].cpv_tallo) ? uc[rn].cpv_tallo : 0;
-            cpv_ha[rn] = (uc[rn] && uc[rn].cpv_ha) ? uc[rn].cpv_ha : 0;
-          });
-        }
-      }
-      ywData[yr][wk]={mat:mat,mo:mo,sv:sv,cpv:cpv, cpv_tallo:cpv_tallo, cpv_ha:cpv_ha};
+      ywData[yr][wk]={mat:mat,mo:mo,sv:sv,cpv:cpv};
     });
   });
 
@@ -1392,8 +1378,6 @@ function renderRancho() {
     {key:'mo',  label:'COSTO DE MANO DE OBRA', fmt:fmt},
     {key:'sv',  label:'COSTO DE SERVICIOS', fmt:fmt},
     {key:'cpv', label:'TOTAL CPV', fmt:fmt},
-    {key:'cpv_tallo', label:'$ / TALLO PROCESADO', fmt:fmtFull},
-    {key:'cpv_ha', label:'$ / HECTÁREA', fmt:fmt},
   ];
 
   // Columnas por grupo de rancho/total:
