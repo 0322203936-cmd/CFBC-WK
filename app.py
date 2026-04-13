@@ -1577,8 +1577,8 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
     return s;
   }
   var h2='<tr>';
-  RANCH_ORDER.forEach(function(){ h2+=subHeaders(); });
-  h2+=subHeaders();
+  activeRanches.forEach(function(){ h2+=subHeaders(); });
+  if(showTotal) h2+=subHeaders();
   h2+='</tr>';
 
   // Función celda
@@ -1703,8 +1703,8 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRan
     return s;
   }
   var h2='<tr>';
-  RANCH_ORDER.forEach(function(){ h2+=subHeaders(); });
-  h2+=subHeaders();
+  activeRanches.forEach(function(){ h2+=subHeaders(); });
+  if(showTotal) h2+=subHeaders();
   h2+='</tr>';
 
   // Función celda
@@ -2448,6 +2448,7 @@ function showProdPanel(rowData, opts) {
   var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
   var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
   var ranchFilter=opts.ranch||null;
+  if (!ranchFilter && state.ranch !== 'Todos') ranchFilter = state.ranch;
   if (!cat||!yr) return;
   var hideProducts = cat==='MATERIAL VEGETAL';
 
