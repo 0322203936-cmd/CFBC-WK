@@ -3023,8 +3023,10 @@ def insertar_hojas_pr_me_mp(
         hdrs       = {**hdrs_json, "workbook-session-id": session_id}
 
     # ── Helper: Limpiar archivos crudos de CONTPAQ ──────────────────────────
-    def _limpiar_matriz(matrix):
-        """Toma la matriz con basura y extrae exactamente las 5 columnas."""
+    def _limpiar_matriz(matrix, mv_mode=False):
+        """Toma la matriz con basura y extrae exactamente las 5 columnas.
+        mv_mode=True: detecta producto desde col 6 primero, si vacía usa col 5.
+        """
         import re
         cleaned = [["FECHA", "UBICACION", "PRODUCTO", "UNIDADES", "GASTO"]]
         for row in matrix:
@@ -3041,11 +3043,14 @@ def insertar_hojas_pr_me_mp(
                 
             fecha = r[0]
             
-            # El dashboard originalmente usa la columna 5 para producto.
-            # Vamos a usar col 5. Si está vacía, intentamos col 6.
+            # MV: col 6 tiene prioridad; si vacía usa col 5.
+            # Resto: col 5 tiene prioridad; si vacía usa col 6.
             prod_c = str(r[5]).strip()
             prod_n = str(r[6]).strip()
-            prod = prod_c if prod_c else prod_n
+            if mv_mode:
+                prod = prod_n if prod_n else prod_c
+            else:
+                prod = prod_c if prod_c else prod_n
             
             # Unidades y Gasto
             unid = str(r[7]).strip()
@@ -3131,7 +3136,7 @@ def insertar_hojas_pr_me_mp(
         try:
             _init_conexion()
             matrix = _read_matrix(mv_file)
-            matrix = _limpiar_matriz(matrix)
+            matrix = _limpiar_matriz(matrix, mv_mode=True)
             filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
             resultado["MV"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas limpias)"}
             print(f"✅ {nombre} insertada con {filas} filas.")
