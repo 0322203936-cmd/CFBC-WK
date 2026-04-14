@@ -301,6 +301,7 @@ def _ranch_from_ubicacion_mv(ubicacion: str):
       - Empieza con 'CRISTINA'  → Christina
       - Empieza con 'CECILIA25' → Cecilia 25  (con o sin espacio, cualquier capitalización)
       - Empieza con 'CECILIA'   → Cecilia
+      - Empieza con 'RAMONA'    → Campo-RM
     Si no coincide ninguno, retorna None y se intenta el mapa de 3 letras normal.
     """
     u = ubicacion.upper().replace(' ', '')  # elimina espacios para cubrir "Cecilia 25" y "Cecilia25"
@@ -308,6 +309,7 @@ def _ranch_from_ubicacion_mv(ubicacion: str):
     if u.startswith('CRISTINA'):  return 'Christina'
     if u.startswith('CECILIA25'): return 'Cecilia 25'  # debe ir ANTES que 'CECILIA'
     if u.startswith('CECILIA'):   return 'Cecilia'
+    if u.startswith('RAMONA'):    return 'Campo-RM'
     return None
 
 
