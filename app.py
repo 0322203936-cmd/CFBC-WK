@@ -2610,16 +2610,16 @@ function showProdPanel(rowData, opts) {
       var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
       if (_activos.length > 0) {
         _activos.forEach(function(m, i){
-          var bg = (i % 2 === 0) ? '#fff9e8' : '#fff3d9';
+          var bg = (i % 2 === 0) ? '#FFF3BF' : '#FFF8D6';
           siembraRowsHtml +=
-            '<tr style="background:'+bg+';border-bottom:1px solid #f3e0b6;">' +
+            '<tr style="background:'+bg+';border-bottom:1px solid #E9D98F;">' +
               '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#9a6a20;font-weight:700;">SIEMBRA</td>' +
               '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;">'+m.lbl+'</td>' +
               '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
             '</tr>';
         });
         siembraRowsHtml +=
-          '<tr style="background:#ffffff;border-bottom:1px solid #f2e6cc;">' +
+          '<tr style="background:#ffffff;border-bottom:1px solid #EEE3B8;">' +
             '<td colspan="4" style="padding:2px 0;"></td>' +
           '</tr>';
       }
