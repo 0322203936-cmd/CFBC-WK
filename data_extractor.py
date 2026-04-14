@@ -223,6 +223,30 @@ def norm_cat(s: str):
         return "MO:Prod. Patina y rec"
     if "IMSS" in s or "INFONAVIT" in s:                    return "MO:IMSS,INFO Y RCV"
     if "1.8%" in s or "TASA EFECTIVA" in s:                return "MO:Imp. 1.8%"
+
+    # ── Detección secundaria MO (sin prefijo NOMINA) ───────────────────────────
+    # Filas del Excel WK que representan sub-totales o resúmenes de Mano de Obra
+    # sin llevar "NOMINA" en el label. Se usan KEYWORDS muy específicos para
+    # evitar falsos positivos con otras categorías.
+    if "COSTO MANO DE OBRA" in s or "COSTO DE MANO" in s:  return "COSTO MANO DE OBRA"
+    if "ADMON" in s and ("POSCO" in s or "POSCOSECHA" in s): return "MO:Admon Posco"
+    if "ADMON" in s and ("FLORES" in s or "PERSONAL" in s or "ADMINISTR" in s): return "MO:Ing. Y Admon."
+    if "SUPERVISOR" in s and ("CORTE" in s or "SIEMBRA" in s or "PRODUCCION" in s or "PRODUCCIÓN" in s): return "MO:Supervisores"
+    if "CONSOLIDAC" in s:                                   return "MO:Consolidacion"
+    if "MOV" in s and "CHAROLA" in s:                       return "MO:Mov. Charolas"
+    if "MOVIMIENTO" in s and "CHAROLA" in s:                return "MO:Mov. Charolas"
+    if "RIEGO" in s and "FERTILIZ" not in s:                return "MO:Riego"
+    if "TRASPLANTE" in s or "TRANSPLANTE" in s:             return "MO:Trasplante"
+    if "MANEJO" in s and "PLANTA" in s:                     return "MO:Manejo P."
+    if "SIEMBRA" in s and "PREP" not in s and "MATERIAL" not in s: return "MO:Siembra"
+    if "VELADOR" in s:                                      return "MO:Veladores"
+    if "SOLDADOR" in s:                                     return "MO:Soldadores"
+    if "TRACTORES" in s or "CAMEROS" in s:                  return "MO:Tract. Y Cameros"
+    if "CONTRATISTA" in s:                                  return "MO:Contratista y com."
+    if "ALM" in s and ("UPC" in s or "EMPAQ" in s):         return "MO:Alm.upc y empaq"
+    if "PHLOX" in s and "MANO" in s:                        return "MO:Phlox"
+    if "HOOPS" in s and "MANO" in s:                        return "MO:Hoops"
+    if "CORTE" in s and "COSTO" in s and "FLOR" not in s:  return "MO:Corte"
     return None
 
 
