@@ -291,14 +291,33 @@ def sv(v) -> float:
         return 0.0
 
 
+# ─── Detección de rancho por palabras clave (exclusivo para MV) ──────────────
+def _ranch_from_ubicacion_mv(ubicacion: str):
+    """
+    Para hojas MV (Material Vegetal), detecta el rancho usando palabras clave
+    en el campo UBICACION, sin importar mayúsculas/minúsculas.
+    Cubre errores tipográficos comunes (ej: 'Prop', 'propaga', 'Cristina').
+      - Empieza con 'PROPAGA'  → Prop-RM
+      - Empieza con 'CRISTINA' → Christina
+      - Empieza con 'CECILIA'  → Cecilia
+    Si no coincide ninguno, retorna None y se intenta el mapa de 3 letras normal.
+    """
+    u = ubicacion.upper()
+    if u.startswith('PROPAGA'):  return 'Prop-RM'
+    if u.startswith('CRISTINA'): return 'Christina'
+    if u.startswith('CECILIA'):  return 'Cecilia'
+    return None
+
+
 # ─── Parser genérico compartido (PR / MP / ME tienen el mismo formato) ────────
-def _parse_generic(rows: list) -> dict:
+def _parse_generic(rows: list, mv_mode: bool = False) -> dict:
     """
     Formato común a PR####, MP####, ME####:
       Col 2: UBICACION  (ej: RAMMIPRNN, CECMIPSNF)
       Col 5: PRODUCTO
       Col 7: UNIDADES
       Col 9: GASTO
+    mv_mode=True: detección de rancho por palabras clave para MV (Material Vegetal).
     Retorna: { rancho: { tipo: [[producto, unidades, gasto, ubicacion], ...] } }
     """
     UBICACION_COL = 2
@@ -340,8 +359,16 @@ def _parse_generic(rows: list) -> dict:
         if not re.match(r'^[A-Z0-9]+$', ubicacion):
             continue
 
-        ranch_code = ubicacion[:3]
-        rancho = RANCH_CODE_MAP.get(ranch_code)
+        # MV: primero intentar detección por palabras clave (cubre errores tipográficos)
+        if mv_mode:
+            rancho = _ranch_from_ubicacion_mv(ubicacion)
+        else:
+            rancho = None
+
+        # Fallback al mapa de 3 letras (aplica siempre si no se resolvió arriba)
+        if not rancho:
+            ranch_code = ubicacion[:3]
+            rancho = RANCH_CODE_MAP.get(ranch_code)
 
         if not rancho and ubicacion.startswith('VIV'):
             rancho = 'Prop-RM'
@@ -1020,7 +1047,7 @@ def get_datos() -> dict:
         print("\n" + "=" * 60)
         print("🔍 LEYENDO HOJAS MV DESDE SHAREPOINT (MATERIAL VEGETAL)")
         print("=" * 60)
-        productos_mv, productos_mv_debug = _fetch_desde_sharepoint("MV", _parse_generic, "MV")
+        productos_mv, productos_mv_debug = _fetch_desde_sharepoint("MV", lambda rows: _parse_generic(rows, mv_mode=True), "MV")
         resultado["productos_mv"]       = productos_mv
         resultado["productos_mv_debug"] = productos_mv_debug
 
