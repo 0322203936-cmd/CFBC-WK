@@ -2582,8 +2582,8 @@ function showProdPanel(rowData, opts) {
   
   var panelHtml = '';
 
-  // ── KPI de siembra ────────────────────────────────────────────────
-  var kpiSection = '';
+  // ── Resumen de siembra (se integra dentro de la tabla) ───────────
+  var siembraRowsHtml = '';
   var _allMetas = [
     {k:'inv_inicial',  lbl:'INV. INICIAL'},
     {k:'tallos_cos',   lbl:'TALLOS COSECHADOS'},
@@ -2609,29 +2609,39 @@ function showProdPanel(rowData, opts) {
       var _sRow = ranchFilter ? (_wkSrc[ranchFilter] || _wkSrc['TOTAL'] || {}) : (_wkSrc['TOTAL'] || {});
       var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
       if (_activos.length > 0) {
-        kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;overflow-x:auto;scrollbar-width:none;">';
-        _activos.forEach(function(m,i){
-          if (i>0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
-          kpiSection += '<div style="display:flex;align-items:baseline;gap:4px;flex-shrink:0;white-space:nowrap;">'+
-            '<span style="font-size:9px;color:#44546A;text-transform:uppercase;">'+m.lbl+':</span>'+
-            '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</span>'+
-            '</div>';
+        siembraRowsHtml +=
+          '<tr style="background:#e8f0fb;border-bottom:1px solid #c7d6eb;">' +
+            '<td colspan="4" style="padding:5px 6px;font-size:9px;font-weight:800;letter-spacing:0.8px;color:#1e3a5f;text-transform:uppercase;">Resumen de siembra</td>' +
+          '</tr>';
+        _activos.forEach(function(m, i){
+          var bg = (i % 2 === 0) ? '#f9fbfe' : '#f3f7fc';
+          siembraRowsHtml +=
+            '<tr style="background:'+bg+';border-bottom:1px solid #e6edf7;">' +
+              '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#64748b;font-weight:700;">SIEMBRA</td>' +
+              '<td colspan="2" style="padding:3px 6px;color:#1e3a5f;font-weight:600;">'+m.lbl+'</td>' +
+              '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+            '</tr>';
         });
-        kpiSection += '</div>';
+        siembraRowsHtml +=
+          '<tr style="background:#ffffff;border-bottom:1px solid #e2e8f0;">' +
+            '<td colspan="4" style="padding:2px 0;"></td>' +
+          '</tr>';
       }
     }
   }
 
   // ── Zona 2: Tabla de productos ────────────────────────────────────
   var productSection = '';
-  if (hideProducts) {
+  if (hideProducts && !siembraRowsHtml) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Detalle de productos no disponible para MATERIAL VEGETAL.</div>';
-  } else if (rows.length === 0) {
+  } else if (rows.length === 0 && !siembraRowsHtml) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
   } else {
-    rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
-    var total=rows.reduce(function(s,r){return s+r.gasto;},0);
-    var panelMeta = 'Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>';
+    if (!hideProducts) rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
+    var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
+    var panelMeta = hideProducts
+      ? 'Solo resumen de siembra'
+      : ('Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>');
     productSection =
       '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">' +
         '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
@@ -2644,16 +2654,24 @@ function showProdPanel(rowData, opts) {
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
             '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO</th>' +
-          '</tr></thead><tbody>';
-    rows.forEach(function(r,i){
-      var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
-      productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
-        '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
-        '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
-        '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
-        '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+fmt(r.gasto)+'</td>' +
+          '</tr></thead><tbody>' +
+          siembraRowsHtml;
+    if (!hideProducts && rows.length > 0) {
+      rows.forEach(function(r,i){
+        var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
+        productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
+          '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
+          '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
+          '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
+          '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+fmt(r.gasto)+'</td>' +
+          '</tr>';
+      });
+    } else {
+      productSection +=
+        '<tr style="background:#ffffff;border-bottom:1px solid #f1f5f9;">' +
+          '<td colspan="4" style="padding:8px 6px;color:#94a3b8;font-size:10px;text-align:center;">Sin registros de producto para este período.</td>' +
         '</tr>';
-    });
+    }
     productSection += '</tbody></table></div>';
   }
 
@@ -2662,7 +2680,6 @@ function showProdPanel(rowData, opts) {
       '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
         '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
       '</div>' +
-      kpiSection +
       productSection +
     '</div>';
   
