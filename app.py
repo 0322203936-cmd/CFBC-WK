@@ -843,6 +843,7 @@ function renderPivotTable(colDefs, rows, statusText) {
 
   // Body
   var bodyHtml = '';
+  var expandedRow = typeof window._expandedRow === 'number' ? window._expandedRow : null;
   rows.forEach(function(row, ri) {
     var rowCls = 'pt-row';
     if      (row._isGroup) rowCls = 'pt-row-group';
@@ -869,6 +870,12 @@ function renderPivotTable(colDefs, rows, statusText) {
       bodyHtml += '<td class="'+pinnedCls+'" style="'+align+leftStyle+'" data-ci="'+ci+'">'+html+'</td>';
     });
     bodyHtml += '</tr>';
+
+    // Si esta fila está expandida, insertar subfila con detalles
+    if (expandedRow === ri) {
+      var detailHtml = renderRowDetail(row);
+      bodyHtml += '<tr class="pt-row-detail"><td colspan="'+colDefs.length+'">'+detailHtml+'</td></tr>';
+    }
   });
 
   var wrap = document.getElementById('tableWrap');
@@ -877,19 +884,36 @@ function renderPivotTable(colDefs, rows, statusText) {
   if (statusText !== undefined) document.getElementById('stTotal').textContent = statusText;
 }
 
-// Delegated click sobre tableWrap
+// Delegated click sobre tableWrap para expansión de fila
 document.addEventListener('click', function(e) {
   var td = e.target.closest('#tableWrap td');
   if (!td) return;
   var tr = td.closest('tr');
   var ri = parseInt(tr.dataset.ri);
-  var ci = parseInt(td.dataset.ci);
-  if (isNaN(ri)||isNaN(ci)) return;
-  var row = _tableRows[ri];
-  var col = _tableColDefs[ci];
-  if (!row||!col) return;
-  onMainCellClick({data:row, colDef:col});
+  if (isNaN(ri)) return;
+  // Alternar expansión
+  if (window._expandedRow === ri) {
+    window._expandedRow = null;
+  } else {
+    window._expandedRow = ri;
+  }
+  renderPivotTable(_tableColDefs, _tableRows);
 });
+
+// Renderiza los detalles de la fila expandida (charolas, metros, etc.)
+function renderRowDetail(row) {
+  // Aquí puedes personalizar los detalles a mostrar
+  var html = '<div style="padding:10px 18px 10px 18px; background:#f8fafc; border-left:4px solid #2563eb; font-size:13px; color:#222;">';
+  html += '<b>Detalles:</b><br>';
+  if (row.charolas_sembradas !== undefined) html += 'Charolas sembradas: <b>' + row.charolas_sembradas + '</b><br>';
+  if (row.metros !== undefined) html += 'Metros: <b>' + row.metros + '</b><br>';
+  // Agrega aquí más campos según tu modelo de datos
+  // Ejemplo:
+  if (row.costo_mano_obra !== undefined) html += 'Costo Mano de Obra: <b>' + fmt(row.costo_mano_obra) + '</b><br>';
+  if (row.costo_servicios !== undefined) html += 'Costo Servicios: <b>' + fmt(row.costo_servicios) + '</b><br>';
+  html += '</div>';
+  return html;
+}
 
 // =======================================================
 // INICIALIZAR
