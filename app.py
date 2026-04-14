@@ -2805,6 +2805,12 @@ try:
 except ImportError:
     _autofill_disponible = False
 
+try:
+    from data_extractor import autorrellenar_material_vegetal_wk
+    _autofill_mv_disponible = True
+except ImportError:
+    _autofill_mv_disponible = False
+
 if not st.session_state.show_auto:
     # ==== MODO DASHBOARD ====
     # Header nativo de Streamlit — mismo color #4472C4, botones reales sin trucos de z-index
@@ -3008,6 +3014,81 @@ else:
                             st.cache_data.clear()
                         else:
                             st.error(res_fill.get("error", "No se pudo autorrellenar la WK."))
+                    except KeyError as e:
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                    except Exception as e:
+                        st.error(f"Error inesperado: {e}")
+
+    with st.container():
+        st.markdown(
+            '''
+            <div id="auto-card-fill-mv-shell"></div>
+            <div class="auto-card-kicker">Post-creación · MV</div>
+            <div class="auto-section-title">Autorrellenar material vegetal</div>
+            <div class="auto-section-note">Llena la fila de MATERIAL VEGETAL (fila 14) por rancho usando la hoja MV#### del Excel fuente. Requiere que ya hayas subido el archivo MV de la semana.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
+
+        if not _autofill_mv_disponible:
+            st.error("La función `autorrellenar_material_vegetal_wk` no está disponible en data_extractor.py")
+        else:
+            mv_fill_sel_col, mv_fill_manual_col, mv_fill_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+            with mv_fill_sel_col:
+                if available_weeks:
+                    mv_fill_wk_sel = st.selectbox(
+                        "WK disponible",
+                        options=available_weeks,
+                        format_func=lambda c: f"WK{c}",
+                        key="autofill_mv_wk_sel",
+                    )
+                    mv_fill_week_code = mv_fill_wk_sel
+                else:
+                    mv_fill_week_code = ""
+            with mv_fill_manual_col:
+                mv_fill_week_manual = st.text_input(
+                    "O captura WK",
+                    placeholder="2614",
+                    max_chars=4,
+                    key="autofill_mv_wk_manual",
+                ).strip()
+                if mv_fill_week_manual:
+                    mv_fill_week_code = mv_fill_week_manual
+            with mv_fill_info_col:
+                mv_fill_label = f"WK{mv_fill_week_code}" if mv_fill_week_code else "Sin WK"
+                st.markdown(
+                    f'''<div class="auto-card-kicker">Acción</div>
+                    <div class="auto-card-title">{mv_fill_label}</div>
+                    <div class="auto-card-note">Fila 14 · Columnas E→K por rancho.</div>''',
+                    unsafe_allow_html=True,
+                )
+
+            if st.button(
+                f"Autorrellenar material vegetal {'— WK' + mv_fill_week_code if mv_fill_week_code else ''}",
+                type="primary",
+                use_container_width=True,
+                key="btn_autofill_mv",
+                disabled=not bool(mv_fill_week_code),
+            ):
+                if not (mv_fill_week_code.isdigit() and len(mv_fill_week_code) == 4):
+                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2614).")
+                else:
+                    try:
+                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                        client_secret = st.secrets["sharepoint"]["client_secret"]
+                        with st.spinner(f"Autorrellenando Material Vegetal en WK{mv_fill_week_code}..."):
+                            res_mv = autorrellenar_material_vegetal_wk(
+                                week_code=mv_fill_week_code,
+                                tenant_id=tenant_id,
+                                client_id=client_id_sp,
+                                client_secret=client_secret,
+                            )
+                        if res_mv.get("ok"):
+                            st.success(res_mv.get("mensaje", "Material Vegetal autorrellenado correctamente."))
+                            st.cache_data.clear()
+                        else:
+                            st.error(res_mv.get("error", "No se pudo autorrellenar Material Vegetal."))
                     except KeyError as e:
                         st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
                     except Exception as e:
