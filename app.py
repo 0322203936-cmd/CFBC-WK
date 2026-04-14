@@ -2573,7 +2573,7 @@ function showProdPanel(rowData, opts) {
     {k:'inv_final',    lbl:'INV. FINAL'},
     {k:'tallos_proc',  lbl:'TALLOS PROC. TOTALES'},
     {k:'charolas_288', lbl:'CHAROLAS *288'},
-    {k:'charolas',     lbl:'N\u00ba CHAROLAS'},
+    {k:'charolas',     lbl:'NUMERO DE CHAROLAS SEMBRADAS'},
     {k:'esquejes',     lbl:'N\u00ba ESQUEJES'},
     {k:'metros',       lbl:'METROS SIEMBRA'},
     {k:'hectareas',    lbl:'HECT\u00c1REAS'},
