@@ -226,6 +226,64 @@ def norm_cat(s: str):
     return None
 
 
+def _area_from_concepto_rancho(label: str, ranch: str) -> str:
+    """
+    Dado el label (Concepto) de una fila del WK y el nombre del rancho,
+    retorna el Área equivalente al BD para que semanas 1-13 (BD/Conteo)
+    y 14+ (WK Excel) sean consistentes en mano_obra_data.
+
+    Rancho viene de norm_ranch() → "Prop-RM", "PosCo-RM", "Campo-RM", etc.
+    """
+    s = str(label).upper().strip()
+    r = str(ranch).upper().strip() if ranch else ""
+
+    _is_nomina = "NOMINA" in s or "NÓMINA" in s
+    _is_hextra = "HORAS EXTR" in s
+    _is_bonos  = "BONOS ASISIT" in s
+
+    _is_prop  = "PROP" in r          # Prop-RM  → Propagacion
+    _is_posco = "POSCO" in r         # PosCo-RM → Poscosecha
+
+    if not (_is_nomina or _is_hextra or _is_bonos):
+        if "IMSS" in s or "INFONAVIT" in s:        return "IMSS,INFO Y RCV"
+        if "1.8%" in s or "TASA EFECTIVA" in s:    return "Imp. 1.8%"
+        return None
+
+    # ── Administración Poscosecha (antes de Admon genérico) ──────────────────
+    if "ADMON" in s and ("POSCO" in s or "POSCOSECHA" in s):
+        return "Admon Posco"
+
+    # ── Ingeniería y Administración ──────────────────────────────────────────
+    if "ADMON" in s or ("FESTIVOS" in s and "FEST." not in s) or "DESPENSA" in s:
+        return "Ing. Y Admon."
+
+    # ── Actividades con keyword explícito ────────────────────────────────────
+    if "SUPERVISOR" in s:                           return "Supervisores"
+    if "CORTE" in s:
+        return "Phlox" if _is_prop else "Corte"
+    if "TRANSPLANTE" in s or "TRASPLANTE" in s:     return "Siembra"
+    if "MANEJO" in s and "PLANTA" in s:             return "Consolidacion"
+    if "CONSOLIDAC" in s:                           return "Consolidacion"
+    if "SIEMBRA" in s:                              return "Siembra"
+    if "HOOPS" in s:                                return "Mov. Charolas"
+    if "MOV" in s and "CHAROLA" in s:               return "Mov. Charolas"
+    if "MIPE" in s or "MIRFE" in s:                 return "Riego"
+    if "RIEGO" in s:                                return "Riego"
+    if "PHLOX" in s:                                return "Phlox"
+    if "TRACTORES" in s or "CAMEROS" in s:          return "Tract. Y Cameros"
+    if "VELADOR" in s:                              return "Veladores"
+    if "SOLDADOR" in s:                             return "Soldadores"
+    if "CHOFER" in s:                               return "Transporte"
+    if "CONTRATISTA" in s:                          return "Contratista y com."
+    if "ALM" in s and ("UPC" in s or "EMPAQ" in s): return "Alm.upc y empaq"
+
+    # ── NOMINA PRODUCCION genérica (sin actividad específica) ────────────────
+    # Propagacion → Supervisores, Poscosecha → Admon Posco, resto → Supervisores
+    if _is_posco:
+        return "Admon Posco"
+    return "Supervisores"
+
+
 def sv(v) -> float:
     try:
         if isinstance(v, str):
@@ -623,17 +681,43 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                     "usd_ranches": usd_ranches,
                 })
             elif cat.startswith("MO:"):
-                mano_obra_data.append({
-                    "semana":      code,
-                    "year":        year,
-                    "week":        ww,
-                    "date_range":  date_range,
-                    "subcat":      cat[3:],
-                    "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
-                    "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
-                    "mxn_ranches": mxn_ranches,
-                    "usd_ranches": usd_ranches,
-                })
+                # ── Agrupar ranchos por su Área correcta ─────────────────────
+                # Un mismo Concepto puede tener distinto Área según el rancho
+                # (ej: NOMINA PRODUCCION → Supervisores para Prop, Admon Posco para PosCo)
+                area_groups: dict = {}  # {area: {mxn_ranches, usd_ranches, mxn_t, usd_t}}
+                for rn, mxn_val in mxn_ranches.items():
+                    area = _area_from_concepto_rancho(label, rn) or cat[3:]
+                    ag = area_groups.setdefault(area, {
+                        "mxn_ranches": {}, "usd_ranches": {},
+                        "mxn_t": 0.0, "usd_t": 0.0,
+                    })
+                    ag["mxn_ranches"][rn] = mxn_val
+                    ag["mxn_t"] = round(ag["mxn_t"] + mxn_val, 2)
+                    usd_val = usd_ranches.get(rn, 0.0)
+                    ag["usd_ranches"][rn] = usd_val
+                    ag["usd_t"] = round(ag["usd_t"] + usd_val, 2)
+
+                # Si no hubo ranchos, crear un registro con totales de la fila
+                if not area_groups:
+                    area = _area_from_concepto_rancho(label, "") or cat[3:]
+                    area_groups[area] = {
+                        "mxn_ranches": {}, "usd_ranches": {},
+                        "mxn_t": round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
+                        "usd_t": round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
+                    }
+
+                for area, ag in area_groups.items():
+                    mano_obra_data.append({
+                        "semana":      code,
+                        "year":        year,
+                        "week":        ww,
+                        "date_range":  date_range,
+                        "subcat":      area,
+                        "mxn_total":   ag["mxn_t"],
+                        "usd_total":   ag["usd_t"],
+                        "mxn_ranches": ag["mxn_ranches"],
+                        "usd_ranches": ag["usd_ranches"],
+                    })
             else:
                 all_data.append({
                     "semana":      code,
