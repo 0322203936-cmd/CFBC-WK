@@ -2610,20 +2610,20 @@ function showProdPanel(rowData, opts) {
       var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
       if (_activos.length > 0) {
         siembraRowsHtml +=
-          '<tr style="background:#e8f0fb;border-bottom:1px solid #c7d6eb;">' +
-            '<td colspan="4" style="padding:5px 6px;font-size:9px;font-weight:800;letter-spacing:0.8px;color:#1e3a5f;text-transform:uppercase;">Resumen de siembra</td>' +
+          '<tr style="background:#fff4d6;border-bottom:1px solid #f2d59c;">' +
+            '<td colspan="4" style="padding:5px 6px;font-size:9px;font-weight:800;letter-spacing:0.8px;color:#8a4b08;text-transform:uppercase;">Resumen de siembra</td>' +
           '</tr>';
         _activos.forEach(function(m, i){
-          var bg = (i % 2 === 0) ? '#f9fbfe' : '#f3f7fc';
+          var bg = (i % 2 === 0) ? '#fff9e8' : '#fff3d9';
           siembraRowsHtml +=
-            '<tr style="background:'+bg+';border-bottom:1px solid #e6edf7;">' +
-              '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#64748b;font-weight:700;">SIEMBRA</td>' +
-              '<td colspan="2" style="padding:3px 6px;color:#1e3a5f;font-weight:600;">'+m.lbl+'</td>' +
+            '<tr style="background:'+bg+';border-bottom:1px solid #f3e0b6;">' +
+              '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#9a6a20;font-weight:700;">SIEMBRA</td>' +
+              '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;">'+m.lbl+'</td>' +
               '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
             '</tr>';
         });
         siembraRowsHtml +=
-          '<tr style="background:#ffffff;border-bottom:1px solid #e2e8f0;">' +
+          '<tr style="background:#ffffff;border-bottom:1px solid #f2e6cc;">' +
             '<td colspan="4" style="padding:2px 0;"></td>' +
           '</tr>';
       }
