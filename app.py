@@ -2609,10 +2609,6 @@ function showProdPanel(rowData, opts) {
       var _sRow = ranchFilter ? (_wkSrc[ranchFilter] || _wkSrc['TOTAL'] || {}) : (_wkSrc['TOTAL'] || {});
       var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
       if (_activos.length > 0) {
-        siembraRowsHtml +=
-          '<tr style="background:#fff4d6;border-bottom:1px solid #f2d59c;">' +
-            '<td colspan="4" style="padding:5px 6px;font-size:9px;font-weight:800;letter-spacing:0.8px;color:#8a4b08;text-transform:uppercase;">Resumen de siembra</td>' +
-          '</tr>';
         _activos.forEach(function(m, i){
           var bg = (i % 2 === 0) ? '#fff9e8' : '#fff3d9';
           siembraRowsHtml +=
