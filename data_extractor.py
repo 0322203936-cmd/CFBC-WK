@@ -1,3029 +1,3176 @@
 """
-data_extractor.py
+app.py
 Centro Floricultor de Baja California
-- Hojas WK  → Excel en SharePoint/OneDrive (pandas + requests)
-- Hojas PR  → Excel separado en SharePoint  (pandas + requests)
-- Hojas MP  → Excel separado en SharePoint  (MANTENIMIENTO)
-- Hojas ME  → Excel separado en SharePoint  (MATERIAL DE EMPAQUE)
+Streamlit — tablas HTML estilo tabla dinámica Excel, sin AG Grid
 """
 
-import re
-import requests
-import pandas as pd
-import openpyxl
-from copy import copy
-from io import BytesIO
+import json
+import base64
+import os
+import streamlit as st
+import streamlit.components.v1 as components
 
-# ─── URLs de SharePoint ───────────────────────────────────────────────────────
-# Archivo principal: hojas WK####
-SHAREPOINT_URL_WK = (
-    "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "anahi_mora_cfbc_co/IQAQCb79SzHtRrTQR71pSNQcASOWqFXyeGGzEhUcT9FRRJ4?e=J9gsiA"
-)
-# Archivo secundario: hojas PR####, MP####, ME####
-SHAREPOINT_URL_PR = (
-    "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "jesus_sandoval_cfbc_co/IQCecMwUnigFQa1m-0AYEw-rAcDdYtnvXcPBELJi4oSstRc?e=9vbjA7"
+from data_extractor import get_datos
+
+st.set_page_config(
+    page_title="CFBC WK",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
-# Conteo de personal (Mano de Obra)
-SHAREPOINT_URL_CONTEO = (
-    "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE?e=7P5ex4"
-)
+if "show_auto" not in st.session_state:
+    st.session_state.show_auto = False
 
-# ─── Constantes ───────────────────────────────────────────────────────────────
-RANCH_CONFIG = {
-    "Prop-RM":     {"color": "#047857", "codes": ["VIV"], "keywords": ["PROP"]},
-    "PosCo-RM":    {"color": "#1d4ed8", "codes": ["POS", "LIM"], "keywords": ["POSCO"]},
-    "Campo-RM":    {"color": "#b45309", "codes": ["CAM", "RAM"], "keywords": ["CAMPO"]},
-    "Isabela":     {"color": "#7c3aed", "codes": ["ISA"], "keywords": ["ISABEL"]},
-    "HOOPS":       {"color": "#c2410c", "codes": ["HOO"], "keywords": ["HOOPS"]},
-    "Cecilia":     {"color": "#be185d", "codes": ["CEC"], "keywords": ["CECILIA"]},
-    "Cecilia 25":  {"color": "#047857", "codes": ["C25"], "keywords": ["CECILIA 25"]},
-    "Christina":   {"color": "#0369a1", "codes": ["CHR"], "keywords": ["CHRISTINA"]},
-    "Albahaca-RM": {"color": "#6d28d9", "codes": ["ALB"], "keywords": ["ALBAHACA"]},
-    "Campo-VI":    {"color": "#64748b", "codes": [], "keywords": ["CAMPO-VI", "CAMPO-IV"]}
+def toggle_auto():
+    st.session_state.show_auto = not st.session_state.show_auto
+
+if st.session_state.show_auto:
+    # CSS para el Panel de Automatización (Ancho y con márgenes limpios)
+    st.markdown('''
+    <style>
+      #MainMenu, header, footer { display: none !important; }
+      .stApp {
+        background:
+          radial-gradient(circle at top left, rgba(68,114,196,0.10), transparent 28%),
+          linear-gradient(180deg, #eef3f8 0%, #f7f9fc 100%);
+      }
+      .block-container {
+        padding: 1.35rem 1.35rem 1.75rem !important;
+        max-width: 1260px !important;
+      }
+      [data-testid="stVerticalBlock"] { gap: 0.75rem !important; }
+      section[data-testid="stSidebar"] { display: none !important; }
+
+      .auto-eyebrow {
+        color: #4472C4;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .auto-title {
+        color: #163152;
+        font-size: 30px;
+        font-weight: 800;
+        line-height: 1.05;
+        margin: 0 0 8px 0;
+      }
+      .auto-subtitle {
+        color: #5f6f84;
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 0;
+      }
+      .auto-stat-label {
+        color: #7a8798;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .auto-stat-value {
+        color: #163152;
+        font-size: 22px;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 6px;
+      }
+      .auto-stat-note {
+        color: #6d7c90;
+        font-size: 11px;
+        line-height: 1.35;
+      }
+      .auto-card-kicker {
+        color: #4472C4;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .auto-card-title {
+        color: #163152;
+        font-size: 19px;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+      .auto-card-note {
+        color: #66768a;
+        font-size: 12px;
+        line-height: 1.45;
+        margin-bottom: 10px;
+      }
+      .auto-section-title {
+        color: #163152;
+        font-size: 22px;
+        font-weight: 800;
+        margin: 6px 0 2px 0;
+      }
+      .auto-section-note {
+        color: #66768a;
+        font-size: 12px;
+        line-height: 1.45;
+        margin: 0 0 10px 0;
+      }
+      .auto-mini-title {
+        color: #163152;
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 2px;
+      }
+      .auto-mini-note {
+        color: #6d7c90;
+        font-size: 11px;
+        margin-bottom: 8px;
+      }
+
+      div[data-testid="stHorizontalBlock"]:has(#auto-hero-left) {
+        align-items: stretch !important;
+        gap: 0.8rem !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-hero-left),
+      div[data-testid="stColumn"]:has(#auto-hero-right),
+      div[data-testid="stColumn"]:has(#auto-stat-1),
+      div[data-testid="stColumn"]:has(#auto-stat-2),
+      div[data-testid="stColumn"]:has(#auto-stat-3),
+      div[data-testid="stColumn"]:has(#auto-stat-4),
+      div[data-testid="stColumn"]:has(#auto-card-download),
+      div[data-testid="stColumn"]:has(#auto-card-create),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell),
+      div[data-testid="stColumn"]:has(#auto-upload-pr),
+      div[data-testid="stColumn"]:has(#auto-upload-mp),
+      div[data-testid="stColumn"]:has(#auto-upload-me),
+      div[data-testid="stColumn"]:has(#auto-upload-mv),
+      div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
+        background: rgba(255,255,255,0.96) !important;
+        border: 1px solid #dbe4ef !important;
+        border-radius: 18px !important;
+        box-shadow: 0 10px 28px rgba(20,40,70,0.06) !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-hero-left),
+      div[data-testid="stColumn"]:has(#auto-hero-right),
+      div[data-testid="stColumn"]:has(#auto-stat-1),
+      div[data-testid="stColumn"]:has(#auto-stat-2),
+      div[data-testid="stColumn"]:has(#auto-stat-3),
+      div[data-testid="stColumn"]:has(#auto-stat-4),
+      div[data-testid="stColumn"]:has(#auto-card-download),
+      div[data-testid="stColumn"]:has(#auto-card-create),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell),
+      div[data-testid="stColumn"]:has(#auto-upload-pr),
+      div[data-testid="stColumn"]:has(#auto-upload-mp),
+      div[data-testid="stColumn"]:has(#auto-upload-me),
+      div[data-testid="stColumn"]:has(#auto-upload-mv) {
+        padding: 1rem 1rem 0.9rem 1rem !important;
+      }
+      div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
+        padding: 1rem 1rem 0.95rem 1rem !important;
+        margin-top: 0.15rem !important;
+      }
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell) {
+        padding: 1rem 1rem 0.95rem 1rem !important;
+        margin-top: 0.05rem !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-hero-right) {
+        display: flex !important;
+        align-items: stretch !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-hero-right) > div {
+        width: 100% !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-stat-1),
+      div[data-testid="stColumn"]:has(#auto-stat-2),
+      div[data-testid="stColumn"]:has(#auto-stat-3),
+      div[data-testid="stColumn"]:has(#auto-stat-4) {
+        min-height: 110px !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-upload-pr),
+      div[data-testid="stColumn"]:has(#auto-upload-mp),
+      div[data-testid="stColumn"]:has(#auto-upload-me),
+      div[data-testid="stColumn"]:has(#auto-upload-mv) {
+        min-height: 100% !important;
+      }
+
+      div[data-testid="stButton"] button,
+      div[data-testid="stDownloadButton"] button {
+        border-radius: 12px !important;
+        min-height: 42px !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+      }
+      div[data-testid="stFileUploaderDropzone"] {
+        padding: 0.85rem 0.95rem !important;
+        border-radius: 14px !important;
+        background: #f8fbff !important;
+        border: 1px dashed #bfd0e4 !important;
+      }
+      div[data-testid="stFileUploaderDropzone"] * {
+        font-size: 12px !important;
+      }
+      div[data-testid="stSelectbox"] label,
+      div[data-testid="stTextInput"] label,
+      div[data-testid="stFileUploader"] label {
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #516173 !important;
+      }
+      div[data-testid="stSelectbox"] > div,
+      div[data-testid="stTextInput"] > div {
+        margin-top: 0.1rem !important;
+      }
+      div[data-testid="stAlert"] {
+        border-radius: 14px !important;
+        padding-top: 0.55rem !important;
+        padding-bottom: 0.55rem !important;
+      }
+      hr {
+        margin: 0.35rem 0 0.2rem 0 !important;
+        border-top: 1px solid #dbe4ef !important;
+      }
+    </style>
+    ''', unsafe_allow_html=True)
+else:
+    # CSS para el Dashboard — header nativo de Streamlit, sin trucos de iframe
+    st.markdown('''
+    <style>
+      #MainMenu, header, footer { display: none !important; }
+      .stApp { background: #f0f0f0; }
+      /* Eliminar TODO espacio blanco sobre el header */
+      .block-container          { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+      .stMainBlockContainer     { padding: 0 !important; margin: 0 !important; }
+      [data-testid="stAppViewContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
+      [data-testid="stAppViewBlockContainer"] { padding: 0 !important; }
+      section.main              { padding-top: 0 !important; }
+      /* Primer bloque vertical (donde vive nuestro header de columnas) */
+      [data-testid="stVerticalBlock"] { gap: 0 !important; padding: 0 !important; }
+      section[data-testid="stSidebar"] { display: none !important; }
+
+      /* ── HEADER NATIVO: columnas de Streamlit que contienen #cfbc-brand ── */
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) {
+          background: #4472C4 !important;
+          border-bottom: 3px solid #16a34a !important;
+          min-height: 36px !important;
+          max-height: 36px !important;
+          padding: 0 10px !important;
+          align-items: center !important;
+          overflow: hidden !important;
+          gap: 4px !important;
+          margin: 0 !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) > [data-testid="stColumn"] {
+          padding: 0 2px !important;
+          display: flex !important;
+          align-items: center !important;
+      }
+      /* Texto de marca */
+      #cfbc-brand {
+          color: #ffffff;
+          font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          white-space: nowrap;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) p {
+          margin: 0 !important; padding: 0 !important; line-height: 36px !important;
+      }
+      /* Botones dentro del header nativo */
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] {
+          width: 100% !important;
+          display: flex !important;
+          justify-content: flex-end !important;
+          align-items: center !important;
+          padding: 0 !important;
+          margin: 0 !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button {
+          background: rgba(255,255,255,0.2) !important;
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.35) !important;
+          border-radius: 3px !important;
+          height: 24px !important;
+          min-height: 24px !important;
+          padding: 0 10px !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          white-space: nowrap !important;
+          cursor: pointer !important;
+          width: auto !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button:hover {
+          background: rgba(255,255,255,0.38) !important;
+      }
+      div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) div[data-testid="stButton"] button p {
+          color: #ffffff !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          margin: 0 !important;
+          line-height: 1 !important;
+      }
+    </style>
+    ''', unsafe_allow_html=True)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_data_conteo_v3():
+    return get_datos()
+
+
+try:
+    DATA = load_data_conteo_v3()
+except Exception as e:
+    st.error(f"❌ Error cargando datos: {e}")
+    st.stop()
+
+if "error" in DATA:
+    st.error(f"❌ {DATA['error']}")
+    if st.button("🔄 Reintentar"):
+        st.cache_data.clear()
+        st.rerun()
+    st.stop()
+
+import math
+
+def _sanitize(obj):
+    """Convierte NaN/Inf a 0 recursivamente para JSON válido."""
+    if isinstance(obj, float):
+        return 0 if (math.isnan(obj) or math.isinf(obj)) else obj
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    return obj
+
+data_json = base64.b64encode(
+    json.dumps(_sanitize(DATA), ensure_ascii=True, default=str).encode('utf-8')
+).decode('ascii')
+
+APP_CSS = """<style>
+:root {
+  --navy:   #1e3a5f;
+  --green:  #16a34a;
+  --red:    #dc2626;
+  --amber:  #b45309;
+  --blue:   #2563eb;
+  --border: #d0d0d0;
+
+  /* Pivot-table palette — Excel style */
+  --pt-hdr-bg:      #D9E1F2;   /* header de columnas  */
+  --pt-hdr-border:  #8EA9C1;
+  --pt-grp-bg:      #82A1C9;   /* fila de grupo/año - azul más suavizado */
+  --pt-grp-fg:      #ffffff;
+  --pt-sub-bg:      #BDD7EE;   /* fila subtotal       */
+  --pt-sub-fg:      #000000;
+  --pt-tot-bg:      #9DC3E6;   /* fila total general  */
+  --pt-tot-fg:      #000000;
+  --pt-row-hover:   #EBF3FB;
+  --pt-cell-border: #BFBFBF;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Calibri, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+  background: #f0f0f0;
 }
 
-RANCH_KEYS = []
-for data in RANCH_CONFIG.values():
-    RANCH_KEYS.extend(data["keywords"])
+/* ── LOADER ─────────────────────────────────── */
+#loader {
+  position: fixed; inset: 0; background: #fff; z-index: 999;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px;
+}
+.spin {
+  width: 36px; height: 36px;
+  border: 3px solid #e0e0e0; border-top-color: var(--green);
+  border-radius: 50%; animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.load-txt { font-size: 12px; color: #666; letter-spacing: 0.5px; }
 
-RANCH_CODE_MAP = {}
-for ranch, data in RANCH_CONFIG.items():
-    for code in data["codes"]:
-        RANCH_CODE_MAP[code] = ranch
+/* ── HEADER: ahora es nativo de Streamlit, no del iframe ─────────────── */
 
-CATEGORIAS_ORDEN = [
-    "DESINFECCION Y FERTILIZACION",
-    "AMPLIACION",
-    "CULTIVO TIERRA, CHAROLAS",
-    "MATERIAL VEGETAL",
-    "PREPARACION DE SUELO",
-    "FERTILIZANTES",
-    "DESINFECCION / PLAGUICIDAS",
-    "MANTENIMIENTO",
-    "EXPANSION CECILIA 25",
-    "RENOVACION DE SIEMBRA",
-    "MATERIAL DE EMPAQUE",
-    "COSTO SERVICIOS",
-    "COSTO MANO DE OBRA",
-]
+/* ── TOOLBAR ─────────────────────────────────── */
+.toolbar {
+  background: #ebebeb; border-bottom: 1px solid var(--border);
+  padding: 2px 8px; display: flex; align-items: center; gap: 6px;
+  flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; height: 28px;
+}
+.toolbar::-webkit-scrollbar { display: none; }
+.tb-label { font-size: 9px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
+.tb-sep   { width: 1px; height: 18px; background: #ccc; flex-shrink: 0; }
+select.tb-sel {
+  font-size: 11px; font-family: inherit;
+  background: #fff; border: 1px solid #bbb; border-radius: 3px;
+  padding: 2px 6px; color: #222; cursor: pointer; height: 22px; flex-shrink: 0;
+}
+select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
+.tb-btn {
+  font-size: 10px; font-weight: 700; font-family: inherit;
+  background: #fff; border: 1px solid #bbb; border-radius: 3px;
+  padding: 2px 8px; cursor: pointer; height: 22px;
+  white-space: nowrap; color: #333; transition: background 0.1s; flex-shrink: 0;
+}
+.tb-btn:hover  { background: #ddd; }
+.tb-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+.tb-grp { display: flex; flex-shrink: 0; }
+.tb-grp .tb-btn { border-radius: 0; border-right-width: 0; }
+.tb-grp .tb-btn:first-child { border-radius: 3px 0 0 3px; }
+.tb-grp .tb-btn:last-child  { border-radius: 0 3px 3px 0; border-right-width: 1px; }
+.week-ctr { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.week-ctr span { font-size: 11px; font-weight: 700; color: var(--navy); min-width: 62px; text-align: center; }
+.tb-slider  { width: 100px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+.yr-chip {
+  font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 3px;
+  cursor: pointer; border: 1px solid transparent; background: transparent;
+  transition: all 0.1s; flex-shrink: 0;
+}
+.yr-chip.on { background: #fff; }
 
-WK_MXN_RANCH_COLS = {
-    "Prop-RM": "E",
-    "PosCo-RM": "F",
-    "Campo-RM": "G",
-    "Isabela": "H",
-    "Christina": "I",
-    "Cecilia": "J",
-    "Cecilia 25": "K",
+/* ── RANGE BAR ───────────────────────────────── */
+.range-bar {
+  display: none; background: #f4f4f4; border-bottom: 1px solid var(--border);
+  padding: 3px 10px; align-items: center; gap: 8px; height: 26px; overflow: hidden;
+}
+.range-bar.show { display: flex; }
+.range-val   { font-size: 11px; font-weight: 700; color: var(--navy); min-width: 36px; text-align: center; }
+.range-badge {
+  font-size: 10px; background: #e8f5e9; border: 1px solid #a7d7b4;
+  color: var(--green); padding: 1px 8px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
 }
 
-WK_MATERIAL_AUTOFILL = {
-    "FERTILIZANTES": {"row": 15, "prefix": "PR", "tipo": "MIRFE"},
-    "DESINFECCION / PLAGUICIDAS": {"row": 16, "prefix": "PR", "tipo": "MIPE"},
-    "MANTENIMIENTO": {"row": 17, "prefix": "MP", "tipo": None},
-    "MATERIAL DE EMPAQUE": {"row": 20, "prefix": "ME", "tipo": None},
+/* ── VIEW TABS ───────────────────────────────── */
+.view-tabs {
+  background: #f8f8f8; border-bottom: 2px solid #d5d5d5;
+  display: flex; padding: 0; height: 28px;
+}
+.vtab {
+  padding: 0 14px; font-size: 10px; font-weight: 700; font-family: inherit;
+  cursor: pointer; border: none; background: transparent; color: #888;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  transition: color 0.1s; white-space: nowrap; height: 28px;
+}
+.vtab:hover  { color: #333; background: rgba(0,0,0,0.03); }
+.vtab.active { color: var(--green); border-bottom-color: var(--green); background: #fff; }
+
+/* ── TABLE WRAPPER ───────────────────────────── */
+#gridWrap {
+  background: #fff;
+  border: 1px solid #d5d5d5;
+  border-top: none;
+  overflow: hidden;
+}
+.pt-table-wrap {
+  overflow: auto;
+  width: 100%;
+  /* 28px toolbar + 28px view-tabs + 26px range-bar = 82px (header movido a Streamlit) */
+  max-height: calc(100vh - 82px);
+}
+.pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
+.pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
+
+/* ── PIVOT TABLE ─────────────────────────────── */
+.pt-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+  white-space: nowrap;
+}
+.pt-table th {
+  background: var(--pt-hdr-bg);
+  color: #1e3a5f;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 5px 8px;
+  border: none;
+  border-bottom: 1px solid var(--pt-hdr-border);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  user-select: none;
+}
+.pt-table th.pt-pinned { position: sticky; left: 0; z-index: 4; }
+.pt-table td {
+  padding: 3px 8px;
+  border: none;
+  border-bottom: 1px solid #eeeeee;
+  white-space: nowrap;
+  color: #000000;
+  height: 24px;
+  line-height: 18px;
+}
+.pt-table td.pt-pinned {
+  position: sticky; left: 0; z-index: 1;
+  background: inherit;
+}
+/* regular row */
+.pt-row { background: #fff; }
+.pt-row:hover td { background: var(--pt-row-hover) !important; }
+/* alternating */
+.pt-row:nth-child(even) { background: #F7FBFF; }
+/* group header row */
+.pt-row-group td {
+  background: var(--pt-grp-bg) !important;
+  color: var(--pt-grp-fg);
+  font-weight: 700;
+}
+/* subtotal row */
+.pt-row-sub td {
+  background: var(--pt-sub-bg) !important;
+  color: var(--pt-sub-fg);
+  font-weight: 700;
+}
+/* total row */
+.pt-row-total td {
+  background: var(--pt-tot-bg) !important;
+  color: var(--pt-tot-fg);
+  font-weight: 700;
+}
+/* muted/dash cells */
+.cell-muted { color: #bbb !important; }
+.cell-pos   { color: #16a34a !important; font-weight: 600; }
+.cell-neg   { color: #dc2626 !important; font-weight: 600; }
+.cell-navy  { color: #1e3a5f !important; font-weight: 600; }
+.prod-link  { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+
+/* ── COMPARATIVO TABLE ───────────────────────── */
+#comparativoWrap { display: none; background: #fff; border: 1px solid #d5d5d5; border-top: none; }
+#comparativoWrap.show { display: block; }
+.cmp-stat-strip { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 10px; background: #f4f4f4; border-bottom: 1px solid #d5d5d5; }
+.cmp-tbl-wrap { overflow-x: auto; scrollbar-width: thin; scrollbar-color: #b0c4d8 transparent; }
+.cmp-tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
+.cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
+.cmp-tbl { border-collapse: collapse; width: 100%; font-size: 12px; font-family: Calibri,'Segoe UI',Arial,sans-serif; }
+.cmp-tbl th {
+  padding: 5px 8px; background: var(--pt-hdr-bg); color: #1e3a5f;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+  white-space: nowrap; border: none; border-bottom: 1px solid var(--pt-hdr-border);
+  position: sticky; top: 0; z-index: 2; text-align: right;
+}
+.cmp-tbl th:first-child, .cmp-tbl th:nth-child(2) { text-align: left; }
+.cmp-tbl td { padding: 3px 8px; border: none; border-bottom: 1px solid #eeeeee; white-space: nowrap; text-align: right; height: 24px; }
+.cmp-tbl td:first-child, .cmp-tbl td:nth-child(2) { text-align: left; }
+.cmp-grp-hdr td {
+  background: var(--pt-grp-bg) !important; color: var(--pt-grp-fg);
+  font-weight: 700;
+}
+.cmp-grp-hdr td:first-child { border-left: 3px solid #4ade80; }
+.cmp-row { background: #fff; }
+.cmp-row:hover td { background: var(--pt-row-hover) !important; }
+.cmp-row:nth-child(even) { background: #F7FBFF; }
+.cmp-total-row td { background: var(--pt-sub-bg) !important; font-weight: 700; color: var(--pt-sub-fg); }
+.delta-cell { font-size: 10px; white-space: nowrap; }
+.delta-amt  { display: block; }
+.delta-pct  { display: block; font-size: 9px; opacity: 0.8; }
+.chg-pos { color: #16a34a; font-weight: 600; }
+.chg-neg { color: #dc2626; font-weight: 600; }
+.chg-0   { color: #aaa; }
+
+/* ── PRODUCTOS PANEL ─────────────────────────── */
+#prodPanel { 
+  display: none; background: #fdfdfd; border: 1px solid #cbd5e1; border-top: 2px solid #0f172a;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  margin: 5px 0 0 0; width: 100%; overflow: hidden;
+}
+#prodPanel.show { display: block; }
+#prodTableWrap { overflow: visible; }
+
+/* ── STATUS BAR ──────────────────────────────── */
+.statusbar { display: none !important; }
+.statusbar b { color: #333; }
+</style>"""
+
+APP_HTML_BODY = """
+<!-- LOADER -->
+<div id="ranchDropdownPanel" style="display:none;position:fixed;z-index:9999;background:#fff;border:1px solid #bbb;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.15);min-width:150px;max-height:220px;overflow-y:auto;padding:4px 0;"></div>
+<div id="loader">
+  <div class="spin"></div>
+  <div class="load-txt">CFBC &#8212; Cargando datos...</div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <span class="tb-label">Cat</span>
+    <select class="tb-sel" id="catSel" onchange="onCatChange(this.value)" style="max-width:200px"></select>
+    <div class="tb-sep"></div>
+    <span class="tb-label">Rancho</span>
+    <button class="tb-btn" id="ranchDropdownBtn" onclick="toggleRanchDropdown(event)" style="flex-shrink:0;min-width:90px;max-width:180px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Todos ▾</button>
+    <div class="tb-sep"></div>
+    <div class="tb-grp">
+      <button class="tb-btn"        id="btnUSD" onclick="setCurrency('usd')">USD</button>
+      <button class="tb-btn active" id="btnMXN" onclick="setCurrency('mxn')">MXN</button>
+    </div>
+    <div class="tb-sep"></div>
+    <span class="tb-label">Desde</span>
+    <span class="range-val" id="fromWeekLabel">W01</span>
+    <input type="range" class="tb-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
+    <span style="color:#aaa;font-size:11px;flex-shrink:0;">→</span>
+    <span class="tb-label">Hasta</span>
+    <span class="range-val" id="toWeekLabel">W52</span>
+    <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
+    <span class="range-badge" id="rangeBadge">W01 → W52</span>
+    <div class="tb-sep"></div>
+    <span class="tb-label">Años</span>
+    <div id="yearChips" style="display:flex;gap:3px"></div>
+  </div>
+
+  <!-- VIEW TABS -->
+  <div class="view-tabs">
+    <button class="vtab active" id="vtComparativo"  onclick="setView('comparativo')">Comparativo</button>
+    <button class="vtab"        id="vtRancho"       onclick="setView('rancho')">Por Rancho</button>
+    <button class="vtab"        id="vtServicios"    onclick="setView('servicios')">Costo Servicios</button>
+  </div>
+
+  <!-- RANGE BAR eliminada — controles movidos al toolbar -->
+
+  <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
+  <div id="gridWrap">
+    <div class="pt-table-wrap" id="tableWrap" style="overflow:auto"></div>
+  </div>
+
+  <!-- COMPARATIVO TABLE -->
+  <div id="comparativoWrap">
+    <div class="cmp-stat-strip" id="cmpStats"></div>
+    <div class="cmp-tbl-wrap">
+      <table class="cmp-tbl">
+        <thead id="cmpHead"></thead>
+        <tbody id="cmpBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PRODUCTOS SUB-PANEL -->
+  <div id="prodPanel">
+    <div id="prodTableWrap" style="display:flex; gap:6px; padding:6px; overflow-x:auto;"></div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="statusbar" id="statusbar">
+    <span>Total: <b id="stTotal">&#8212;</b></span>
+  </div>
+</div>
+"""
+
+APP_JS = """<script>
+// =======================================================
+// ERROR HANDLER &#8212; primero de todo
+// =======================================================
+window.onerror = function(msg, src, line, col, err) {
+  var loader = document.getElementById('loader');
+  if (loader) loader.innerHTML =
+    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;' +
+    'border-radius:8px;border:1px solid #fecaca;max-width:600px;margin:20px auto">' +
+    '<b>ERROR (línea ' + line + '):</b><br>' + msg +
+    (err && err.stack ? '<br><pre style="font-size:10px;color:#999;margin-top:8px;overflow:auto">' + err.stack + '</pre>' : '') +
+    '</div>';
+  return true;
+};
+
+// =======================================================
+// DATOS
+// =======================================================
+var DATA;
+try {
+  var _raw = atob('__DATA_JSON__');
+  DATA = JSON.parse(_raw);
+} catch(e) {
+  document.getElementById('loader').innerHTML =
+    '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;border-radius:8px;border:1px solid #fecaca;max-width:500px;margin:20px auto">' +
+    '<b>Error parseando datos:</b> ' + e.message + '</div>';
 }
 
-SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
-
-
-# ─── Descarga de Excel desde SharePoint ──────────────────────────────────────
-def _descargar_excel(url: str, label: str = "archivo") -> BytesIO | None:
-    """
-    Descarga un archivo .xlsx desde un link público de SharePoint/OneDrive.
-    Agrega el parámetro download=1 necesario para la descarga directa.
-    Funciona con URLs que tengan o no el token ?e=...
-    """
-    url = url.strip()
-    if "?e=" in url:
-        download_url = url.replace("?e=", "?download=1&e=")
-    elif "?" in url:
-        download_url = url + "&download=1"
-    else:
-        download_url = url + "?download=1"
-    try:
-        response = requests.get(download_url, timeout=30)
-        response.raise_for_status()
-        # SharePoint a veces devuelve HTML si la URL no es válida
-        content_type = response.headers.get("Content-Type", "")
-        if "html" in content_type.lower():
-            print(f"❌ {label}: SharePoint devolvió HTML en vez de Excel. Verifica que el link sea público.")
-            return None
-        return BytesIO(response.content)
-    except Exception as e:
-        print(f"❌ Error descargando {label}: {e}")
-        return None
-
-
-# Alias para compatibilidad con get_sheet_xlsx
-def descargar_excel() -> BytesIO | None:
-    return _descargar_excel(SHAREPOINT_URL_WK, "Excel WK")
-
-
-def _leer_hoja(xls: pd.ExcelFile, titulo: str, rango_filas: int = 60,
-               rango_cols: int = 35) -> list[list]:
-    """
-    Lee una hoja del ExcelFile y la retorna como lista de listas.
-    Las celdas vacías / NaN se convierten a "".
-    """
-    try:
-        df = pd.read_excel(
-            xls,
-            sheet_name=titulo,
-            header=None,
-            nrows=rango_filas,
-        ).fillna("")
-        if df.shape[1] > rango_cols:
-            df = df.iloc[:, :rango_cols]
-        return df.values.tolist()
-    except Exception as e:
-        print(f"   ⚠️  Error leyendo hoja '{titulo}': {e}")
-        return []
-
-
-# ─── Helpers de normalización ─────────────────────────────────────────────────
-def norm_ranch(s: str):
-    s = str(s).upper().strip()
-    if "CAMPO-VI" in s or "CAMPO-IV" in s:               return "Campo-VI"
-    if "CECILIA 25" in s:                                return "Cecilia 25"
-    if "CECILIA" in s and "25" not in s:                 return "Cecilia"
-    if "CAMPO" in s and "VI" not in s and "IV" not in s: return "Campo-RM"
-    
-    for ranch, data in RANCH_CONFIG.items():
-        if ranch in ["Campo-VI", "Cecilia 25", "Cecilia", "Campo-RM"]: 
-            continue
-        for kw in data["keywords"]:
-            if kw in s:
-                return ranch
-    return None
-
-
-def norm_cat(s: str):
-    s = str(s).upper().strip()
-    if "DESINFECCION" in s and "FERTILIZ" in s:  return "DESINFECCION Y FERTILIZACION"
-    if s.startswith("AMPLIACION"):                return "AMPLIACION"
-    if "CULTIVO" in s:                            return "CULTIVO TIERRA, CHAROLAS"
-    if "MATERIAL VEG" in s:                       return "MATERIAL VEGETAL"
-    if "PREPARACION" in s:                        return "PREPARACION DE SUELO"
-    if "FERTILIZANTE" in s:                       return "FERTILIZANTES"
-    if "SANIDAD" in s or "PLAGUICIDA" in s:       return "DESINFECCION / PLAGUICIDAS"
-    if "MANTENIMIENTO" in s:                      return "MANTENIMIENTO"
-    if "EXPANSION" in s:                          return "EXPANSION CECILIA 25"
-    if "RENOVACION" in s:                         return "RENOVACION DE SIEMBRA"
-    if "MATERIAL DE EMP" in s:                    return "MATERIAL DE EMPAQUE"
-    if "COSTO DE MAT" in s:                       return "COSTO_STOP"
-    if "COSTO DE MANO DE OBRA" in s:              return "COSTO MANO DE OBRA"
-    if "COSTO DE SERV" in s:                      return "COSTO SERVICIOS"
-    if s.startswith("ELECTRICIDAD"):                        return "SV:Electricidad"
-    if s.startswith("FLETES Y ACARREOS"):                   return "SV:Fletes y Acarreos"
-    if s.startswith("GASTOS DE EXPORTACION"):               return "SV:Gastos de Exportación"
-    if s.startswith("CERTIFICADO DE FITOSANITARIO"):        return "SV:Certificado Fitosanitario"
-    if s.startswith("TRANSPORTE DE PERSONAL"):              return "SV:Transporte de Personal"
-    if s.startswith("COMPRA DE FLOR"):                      return "SV:Compra de Flor a Terceros"
-    if s.startswith("COMIDA PARA EL PERSONAL"):             return "SV:Comida para el Personal"
-    if s.startswith("RO, TEL") or s.startswith("RO , TEL"): return "SV:RO, TEL, RTA.Alim"
-    # ── MANO DE OBRA ──────────────────────────────────────────────────────────
-    # Nómina + H.Extra + Bonos se colapsan al mismo subcat que BD CONTEO
-    # para que semanas 1-13 (conteo.xlsx) y 14+ (WK Excel) sean consistentes.
-    _is_nomina = "NOMINA" in s or "NÓMINA" in s
-    _is_hextra = "HORAS EXTR" in s
-    _is_bonos  = "BONOS ASISIT" in s
-
-    if _is_nomina or _is_hextra or _is_bonos:
-        # Admon Posco antes de Admon genérico (contiene "ADMON")
-        if "ADMON" in s and ("POSCO" in s or "POSCOSECHA" in s):
-            return "MO:Admon Posco"
-        # Administración: Nómina/H.Extra dom.festivos/Bonos despensa
-        if "ADMON" in s or ("FESTIVOS" in s and "FEST." not in s) or "DESPENSA" in s:
-            return "MO:Ing. Y Admon."
-        if "SUPERVISOR" in s:                              return "MO:Supervisores"
-        if "CORTE" in s:                                   return "MO:Corte"
-        if "TRANSPLANTE" in s:                             return "MO:Trasplante"
-        if "MANEJO" in s and "PLANTA" in s:                return "MO:Manejo P."
-        if "CONSOLIDAC" in s:                              return "MO:Consolidacion"
-        if "SIEMBRA" in s:                                 return "MO:Siembra"
-        if "MOV" in s and "CHAROLA" in s:                  return "MO:Mov. Charolas"
-        if "RIEGO" in s:                                   return "MO:Riego"
-        if "PHLOX" in s:                                   return "MO:Phlox"
-        if "HOOPS" in s:                                   return "MO:Hoops"
-        if "MIPE" in s or "MIRFE" in s:                    return "MO:MIPE Y MIRFE"
-        if "TRACTORES" in s or "CAMEROS" in s:             return "MO:Tract. Y Cameros"
-        if "VELADOR" in s:                                 return "MO:Veladores"
-        if "SOLDADOR" in s:                                return "MO:Soldadores"
-        if "CHOFER" in s:                                  return "MO:Transporte"
-        if "CONTRATISTA" in s:                             return "MO:Contratista y com."
-        if "ALM" in s and ("UPC" in s or "EMPAQ" in s):   return "MO:Alm.upc y empaq"
-        # Producción general, Dom y Fest. Prod., Nómina Producción → Prod. Patina y rec
-        return "MO:Prod. Patina y rec"
-    if "IMSS" in s or "INFONAVIT" in s:                    return "MO:IMSS,INFO Y RCV"
-    if "1.8%" in s or "TASA EFECTIVA" in s:                return "MO:Imp. 1.8%"
-    return None
-
-
-def sv(v) -> float:
-    try:
-        if isinstance(v, str):
-            v = v.replace("$", "").replace(",", "").strip()
-        f = float(v)
-        return f if f == f else 0.0
-    except (TypeError, ValueError):
-        return 0.0
-
-
-# ─── Parser genérico compartido (PR / MP / ME tienen el mismo formato) ────────
-def _parse_generic(rows: list) -> dict:
-    """
-    Formato común a PR####, MP####, ME####:
-      Col 2: UBICACION  (ej: RAMMIPRNN, CECMIPSNF)
-      Col 5: PRODUCTO
-      Col 7: UNIDADES
-      Col 9: GASTO
-    Retorna: { rancho: { tipo: [[producto, unidades, gasto, ubicacion], ...] } }
-    """
-    UBICACION_COL = 2
-    PRODUCTO_COL  = 5
-    UNIDADES_COL  = 7
-    GASTO_COL     = 9
-
-    # Autodetectar columnas si existe fila de encabezado (soporte para formato limpio)
-    for i in range(min(15, len(rows))):
-        if not rows[i]: continue
-        r_str = [str(c).strip().upper() for c in rows[i]]
-        if "UBICACION" in r_str and ("GASTO" in r_str or "COSTO" in r_str):
-            UBICACION_COL = r_str.index("UBICACION")
-            if "GASTO" in r_str:
-                GASTO_COL = r_str.index("GASTO")
-            elif "COSTO" in r_str:
-                GASTO_COL = r_str.index("COSTO")
-                
-            if "PRODUCTO" in r_str: 
-                PRODUCTO_COL = r_str.index("PRODUCTO")
-            if "UNIDADES" in r_str: 
-                UNIDADES_COL = r_str.index("UNIDADES")
-            elif "CANTIDAD" in r_str:
-                UNIDADES_COL = r_str.index("CANTIDAD")
-            break
-
-    result = {}
-    accum  = {}   # (rancho, tipo, producto, ubicacion) → [u_total, g_total]
-
-    for row in rows:
-        if not row or len(row) <= max(UBICACION_COL, PRODUCTO_COL, UNIDADES_COL, GASTO_COL):
-            continue
-
-        ubicacion = str(row[UBICACION_COL]).strip().upper() if len(row) > UBICACION_COL else ''
-        ubicacion = re.sub(r'\s+', '', ubicacion)
-
-        if not ubicacion or len(ubicacion) < 6:
-            continue
-        if not re.match(r'^[A-Z0-9]+$', ubicacion):
-            continue
-
-        ranch_code = ubicacion[:3]
-        rancho = RANCH_CODE_MAP.get(ranch_code)
-
-        if not rancho and ubicacion.startswith('VIV'):
-            rancho = 'Prop-RM'
-
-        if not rancho:
-            continue
-
-        tipo = 'MIPE' if 'MIP' in ubicacion else 'MIRFE'
-
-        producto = str(row[PRODUCTO_COL]).strip() if len(row) > PRODUCTO_COL else ''
-        if not producto or producto.upper() in ('PRODUCTO', 'NOMBRE', ''):
-            continue
-
-        unidades = str(row[UNIDADES_COL]).strip() if len(row) > UNIDADES_COL else ''
-        try:
-            u = float(str(unidades).replace(',', ''))
-            unidades = str(int(u)) if u == int(u) else str(round(u, 2))
-        except Exception:
-            unidades = '0'
-
-        gasto = str(row[GASTO_COL]).strip() if len(row) > GASTO_COL else ''
-        try:
-            g = float(str(gasto).replace(',', ''))
-            gasto = str(round(g, 2))
-        except Exception:
-            gasto = '0'
-
-        u_f = float(unidades) if unidades else 0.0
-        g_f = float(gasto)    if gasto    else 0.0
-
-        key = (rancho, tipo, producto, ubicacion)
-        if key in accum:
-            accum[key][0] += u_f
-            accum[key][1] += g_f
-        else:
-            accum[key] = [u_f, g_f]
-
-    for (rancho, tipo, producto, ubicacion), (u_tot, g_tot) in accum.items():
-        u_str = str(int(u_tot)) if u_tot == int(u_tot) else str(round(u_tot, 2))
-        g_str = str(round(g_tot, 2))
-        result.setdefault(rancho, {}).setdefault(tipo, []).append([producto, u_str, g_str, ubicacion])
-
-    return result
-
-
-# ─── Fetch hojas PR / MP / ME desde el segundo Excel de SharePoint ────────────
-def _fetch_desde_sharepoint(prefix: str, parser_fn, label: str) -> tuple[dict, dict]:
-    """
-    Descarga el Excel secundario de SharePoint y extrae todas las hojas
-    que coincidan con el patrón  {PREFIX}####  (ej: PR2611, MP2608, ME2610).
-
-    Args:
-        prefix:    "PR", "MP" o "ME"
-        parser_fn: función que convierte list[list] → dict de ranchos
-        label:     nombre legible para logs
-
-    Returns:
-        (datos, debug)  con el mismo formato que antes usaban las funciones gspread
-    """
-    datos = {}
-    debug = {f"hojas_{prefix.lower()}_encontradas": []}
-
-    archivo = _descargar_excel(SHAREPOINT_URL_PR, f"Excel {label}")
-    if archivo is None:
-        print(f"⚠️  No se pudo descargar el archivo para hojas {prefix}")
-        return datos, debug
-
-    try:
-        xls = pd.ExcelFile(archivo)
-    except Exception as e:
-        print(f"⚠️  No se pudo abrir el Excel de {label}: {e}")
-        return datos, debug
-
-    hojas_encontradas = []
-    pat = re.compile(rf'^{prefix}\s*\d{{4}}$', re.IGNORECASE)
-
-    for sname in xls.sheet_names:
-        sname = sname.strip()
-        if pat.match(sname):
-            raw_code = re.sub(rf'{prefix}\s*', '', sname, flags=re.IGNORECASE).strip()
-            try:
-                code = int(raw_code)
-                year = 2000 + (code // 100)
-                if 2018 <= year <= 2030:
-                    print(f"   ✅ {prefix}{code} encontrada en SharePoint: {sname}")
-                    hojas_encontradas.append((sname, code))
-                else:
-                    print(f"   ❌ {prefix}{code} año {year} fuera de rango")
-            except ValueError as e:
-                print(f"   ❌ Error código '{raw_code}': {e}")
-
-    debug[f"hojas_{prefix.lower()}_encontradas"] = [t for t, _ in hojas_encontradas]
-
-    if not hojas_encontradas:
-        print(f"   ℹ️  No hay hojas {prefix} en el Excel de SharePoint")
-        return datos, debug
-
-    for titulo, code in hojas_encontradas:
-        vals   = _leer_hoja(xls, titulo, rango_filas=500, rango_cols=11)
-        parsed = parser_fn(vals)
-        datos[code] = parsed
-        debug[f"{prefix}{code}_ranchos"] = list(parsed.keys()) if parsed else []
-        print(f"   📦 {prefix}{code} ranchos detectados: {list(parsed.keys())}")
-
-    return datos, debug
-
-
-def _normalizar_week_code(week_code: str) -> str:
-    code = str(week_code or "").strip().upper()
-    if code.startswith("WK"):
-        code = code[2:]
-    return code
-
-
-def _buscar_hoja_por_prefijo(sheet_names: list[str], prefix: str, week_code: str) -> str | None:
-    code = _normalizar_week_code(week_code)
-    pat = re.compile(rf'^{prefix}\s*{re.escape(code)}$', re.IGNORECASE)
-    for sname in sheet_names:
-        if pat.match(str(sname).strip()):
-            return str(sname).strip()
-    return None
-
-
-def _sumar_gasto_por_rancho(parsed: dict, tipo: str | None = None) -> tuple[dict, dict]:
-    totales = {rancho: 0.0 for rancho in WK_MXN_RANCH_COLS}
-    omitidos = {}
-    for rancho, by_tipo in (parsed or {}).items():
-        subtotal = 0.0
-        tipos = [tipo] if tipo else list((by_tipo or {}).keys())
-        for tipo_name in tipos:
-            for item in (by_tipo or {}).get(tipo_name, []):
-                try:
-                    subtotal += abs(float(str(item[2]).replace(",", "")))
-                except Exception:
-                    continue
-        subtotal = round(subtotal, 2)
-        if rancho in totales:
-            totales[rancho] = round(totales[rancho] + subtotal, 2)
-        elif subtotal:
-            omitidos[rancho] = round(omitidos.get(rancho, 0.0) + subtotal, 2)
-    return totales, omitidos
-
-
-# ─── Extractor principal ──────────────────────────────────────────────────────
-def extraer_datos(xls: pd.ExcelFile) -> dict:
-    all_data       = []
-    servicios_data = []
-    mano_obra_data = []
-
-    hojas_validas = []
-    pr_hojas      = []
-
-    print("\n" + "=" * 60)
-    print("🔍 DETECTANDO HOJAS EN EL EXCEL WK")
-    print("=" * 60)
-
-    for sname in xls.sheet_names:
-        sname = sname.strip()
-        print(f"\n📄 Hoja: '{sname}'")
-
-        if sname.upper() in SKIP:
-            print("   ⏭️  SKIP (en lista de exclusión)")
-            continue
-
-        pr_match = re.match(r'^PR\s*\d{4}$', sname, re.IGNORECASE)
-        if pr_match:
-            pr_raw = re.sub(r'PR\s*', '', sname, flags=re.IGNORECASE).strip()
-            try:
-                pr_code = int(pr_raw)
-                pr_year = 2000 + (pr_code // 100)
-                if 2018 <= pr_year <= 2030:
-                    print("   ✅ PR DETECTADA Y VÁLIDA (en WK Excel)")
-                    pr_hojas.append((sname, pr_code))
-                    continue
-            except ValueError:
-                pass
-
-        wk_match = re.match(r'^WK\s*\d{4}$', sname, re.IGNORECASE)
-        if wk_match:
-            code_raw = re.sub(r"WK\s*", "", sname, flags=re.IGNORECASE).strip()
-            try:
-                code = int(code_raw)
-                year = 2000 + (code // 100)
-                if 2018 <= year <= 2030:
-                    print("   ✅ WK DETECTADA Y VÁLIDA")
-                    hojas_validas.append((sname, code))
-                else:
-                    print(f"   ❌ Año {year} fuera de rango")
-            except ValueError:
-                print("   ❌ Error convirtiendo código")
-        else:
-            if not pr_match:
-                print("   ℹ️  No es WK ni PR")
-
-    print("\n" + "=" * 60)
-    print("📊 RESUMEN:")
-    print(f"   • Hojas WK encontradas: {len(hojas_validas)}")
-    print(f"   • Hojas PR en WK Excel: {len(pr_hojas)}")
-    print("=" * 60 + "\n")
-
-    if not hojas_validas:
-        return {"error": "No se encontraron hojas WK validas."}
-
-    # 2. Leer hojas WK
-    batch_data = {}
-    for titulo, _ in hojas_validas:
-        batch_data[titulo] = _leer_hoja(xls, titulo, rango_filas=120, rango_cols=35)
-
-    # 2b. Leer hojas PR que estén en el Excel WK (fallback)
-    productos       = {}
-    productos_debug = {"hojas_pr_encontradas": [t for t, _ in pr_hojas]}
-    for titulo, pr_code in pr_hojas:
-        vals   = _leer_hoja(xls, titulo, rango_filas=500, rango_cols=11)
-        parsed = _parse_generic(vals)
-        productos[pr_code] = parsed
-        productos_debug[f"PR{pr_code}_ranchos"] = list(parsed.keys()) if parsed else []
-
-    # 3. Procesar cada hoja WK
-    siembra_data: dict = {}  # {wk_code: {ranch: {charolas,esquejes,metros,hectareas}}}
-    unit_costs_data: dict = {}
-    SIEMBRA_LABELS = [
-        ("inv_inicial",     "INVENTARIO INICIAL"),
-        ("tallos_cos",      "TALLOS COSECHADOS"),
-        ("tallos_des",      "TALLOS DESECHADOS"),
-        ("tallos_des_sf",   "TALLOS DESECHADOS SF"),
-        ("tallos_comp",     "TALLOS COMPRADOS"),
-        ("tallos_bouq",     "TALLOS EN BOUQUETS O PROCESADOS"),
-        ("tallos_desp",     "TALLOS DESPACHADOS"),
-        ("libras_alb",      "LIBRAS DESPACHADAS ALBAHACA"),
-        ("tallos_mues",     "TALLOS MUESTRA"),
-        ("inv_final",       "INVENTARIO FINAL"),
-        ("tallos_proc",     "TALLOS PROCESADOS TOTALES"),
-        ("charolas_288",    "CHAROLAS SEMBRADAS"),
-        ("charolas",        "NUMERO DE CHAROLAS SEMBRADAS"),
-        ("esquejes",        "NUMERO DE ESQUEJES SEMBRADOS"),
-        ("metros",          "METROS DE SIEMBRA"),
-        ("hectareas",       "HECTAREAS EN SIEMBRA"),
-    ]
-
-    for titulo, code in hojas_validas:
-        raw = batch_data.get(titulo, [])
-        if not raw:
-            continue
-
-        yy   = code // 100
-        ww   = code % 100
-        year = 2000 + yy
-
-        max_cols = max((len(r) for r in raw), default=0)
-        data     = [r + [""] * (max_cols - len(r)) for r in raw]
-
-        date_range = ""
-        for _dr in range(min(8, len(data))):
-            for _dc in range(min(5, len(data[_dr]))):
-                _v = str(data[_dr][_dc]).strip()
-                if _v and " al " in _v.lower() and len(_v) > 8:
-                    date_range = _v
-                    break
-            if date_range:
-                break
-
-        exec_idx = -1
-        for i, row in enumerate(data):
-            if any(isinstance(c, str) and "EJECUCION SEMANAL" in c.upper() for c in row):
-                exec_idx = i
-                break
-        if exec_idx < 0:
-            continue
-
-        header_idx = -1
-        for i in range(exec_idx - 1, max(0, exec_idx - 6) - 1, -1):
-            if any(isinstance(v, str) and any(k in v.upper() for k in RANCH_KEYS) for v in data[i]):
-                header_idx = i
-                break
-        if header_idx < 0:
-            continue
-
-        header = data[header_idx]
-
-        total_cols = [j for j, v in enumerate(header)
-                      if isinstance(v, str) and v.strip().upper() == "TOTAL"]
-        if not total_cols:
-            continue
-        mxn_total_col = total_cols[0]
-        usd_total_col = total_cols[1] if len(total_cols) >= 2 else None
-
-        mxn_ranch_cols, usd_ranch_cols = {}, {}
-        for j, v in enumerate(header):
-            rn = norm_ranch(str(v)) if v else None
-            if not rn:
-                continue
-            if j < mxn_total_col:
-                mxn_ranch_cols[j] = rn
-            elif usd_total_col and mxn_total_col < j < usd_total_col:
-                mxn_ranch_cols[j] = rn
-            elif usd_total_col and j > usd_total_col:
-                usd_ranch_cols[j] = rn
-
-        print(f"\n[DEBUG {titulo}]")
-        print(f"   exec_idx={exec_idx}, header_idx={header_idx}")
-        print(f"   mxn_total_col={mxn_total_col}, usd_total_col={usd_total_col}")
-        print(f"   mxn_ranch_cols={mxn_ranch_cols}")
-        print(f"   usd_ranch_cols={usd_ranch_cols}")
-        hdr_vals = [(j, str(header[j])[:15]) for j in range(len(header)) if str(header[j]).strip()]
-        print(f"   header non-empty: {hdr_vals}")
-
-        for i in range(exec_idx + 1, min(exec_idx + 120, len(data))):
-            row   = data[i]
-            label = next((str(row[c]).strip() for c in range(5)
-                          if c < len(row) and row[c] and len(str(row[c]).strip()) > 3), None)
-            if not label:
-                continue
-
-            cat = norm_cat(label)
-            if not cat:
-                continue
-            if cat == "COSTO_STOP":
-                continue
-
-            mxn_ranches = {rn: sv(row[j]) for j, rn in mxn_ranch_cols.items() if j < len(row)}
-            usd_ranches = {rn: sv(row[j]) for j, rn in usd_ranch_cols.items() if j < len(row)}
-
-            if cat.startswith("SV:"):
-                print(f"   [SV] fila={i} label='{label[:30]}' cat='{cat}' mxn_ranches={mxn_ranches}")
-                servicios_data.append({
-                    "semana":      code,
-                    "year":        year,
-                    "week":        ww,
-                    "date_range":  date_range,
-                    "subcat":      cat[3:],
-                    "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
-                    "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
-                    "mxn_ranches": mxn_ranches,
-                    "usd_ranches": usd_ranches,
-                })
-            elif cat.startswith("MO:"):
-                mano_obra_data.append({
-                    "semana":      code,
-                    "year":        year,
-                    "week":        ww,
-                    "date_range":  date_range,
-                    "subcat":      cat[3:],
-                    "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
-                    "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
-                    "mxn_ranches": mxn_ranches,
-                    "usd_ranches": usd_ranches,
-                })
-            else:
-                all_data.append({
-                    "semana":      code,
-                    "year":        year,
-                    "week":        ww,
-                    "date_range":  date_range,
-                    "categoria":   cat,
-                    "mxn_total":   round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
-                    "usd_total":   round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
-                    "mxn_ranches": mxn_ranches,
-                    "usd_ranches": usd_ranches,
-                })
-
-        # ── Extraer filas de siembra (89-92 Excel = labels fijos) ────────────
-        wk_siembra: dict = {}
-        for field_key, field_label in SIEMBRA_LABELS:
-            for row in data:
-                cell_text = " ".join(str(row[c]).strip().upper() for c in range(min(5, len(row))))
-                if field_label in cell_text:
-                    # Total MXN (columna total)
-                    total_val = sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0
-                    wk_siembra.setdefault("TOTAL", {})[field_key] = total_val
-                    # Por rancho
-                    for j, rn in mxn_ranch_cols.items():
-                        if j < len(row):
-                            wk_siembra.setdefault(rn, {})[field_key] = sv(row[j])
-                    break
-        if wk_siembra:
-            siembra_data[code] = wk_siembra
-
-        # ── Extraer Indicadores y Costos Unitarios ────────────
-        wk_unit_costs = {}
-        curr_section = None
-        for i_r, row in enumerate(data):
-            cell_text = " ".join(str(row[c]).strip().upper() for c in range(min(5, len(row))))
-            if not cell_text.strip(): continue
-            
-            if "$ / TALLO" in cell_text or "$ / LIBRAS" in cell_text or "COSTOS UNITARIOS" in cell_text:
-                curr_section = "tallo"
-            elif "$ / HECTAREA" in cell_text or "$ / HECTÁREA" in cell_text:
-                curr_section = "ha"
-            elif "<<< INDICADORES" in cell_text or "KPI'S" in cell_text or "PROYECTOS" in cell_text:
-                curr_section = None
-                
-            label = str(row[1]).strip().upper() if len(row) > 1 else ""
-            if not label:
-                label = str(row[0]).strip().upper() if len(row) > 0 else ""
-                
-            key = None
-            # ── COSTOS UNITARIOS $ / TALLO PROCESADO ──────────────────────
-            # Los labels en el Excel son simples: "Materiales", "Mano de Obra", etc.
-            # curr_section ya identifica la sección; NO requieren "TALLO" en el label.
-            if curr_section == "tallo":
-                if "MANO DE OBRA PROD" in label:
-                    key = "mano_obra_prod_tallo"
-                elif "MATERIAL DE EMPAQUE" in label or "EMPAQUE" in label:
-                    key = "empaque_tallo"
-                elif "SANIDAD VEGETAL" in label or "SANIDAD" in label:
-                    key = "sanidad_tallo"
-                elif "FERTILIZ" in label or "FERTLIZ" in label:
-                    key = "fertilizacion_tallo"
-                elif "MANO DE OBRA" in label:
-                    key = "mano_obra_tallo"
-                elif "MATERIALES" in label or (label == "MATERIALES"):
-                    key = "materiales_tallo"
-                elif "SERVICIOS" in label or "FLETES" in label:
-                    key = "servicios_tallo"
-                elif "COSTO DE PRODUCCION" in label or "COSTO DE PRODUCCIÓN" in label:
-                    if "VENTAS" in label:
-                        key = "cpv_tallo"
-
-            # ── COSTOS UNITARIOS $ / HECTÁREA ────────────────────────────
-            # Misma lógica: labels simples, curr_section identifica la sección.
-            # Bug anterior: precedencia `and` > `or` causaba matches incorrectos.
-            elif curr_section == "ha":
-                if "$ / HECTAREA" in label or "$ / HECTÁREA" in label:
-                    key = "hectareas_ha"   # fila-encabezado con los totales de Ha por rancho
-                elif "MANO DE OBRA PROD" in label:
-                    key = "mano_obra_prod_ha"
-                elif "MATERIAL DE EMPAQUE" in label or "EMPAQUE" in label:
-                    key = "empaque_ha"
-                elif "FERTILIZ" in label or "FERTLIZ" in label:
-                    key = "fertilizacion_ha"
-                elif "MANO DE OBRA" in label:
-                    key = "mano_obra_ha"
-                elif "MATERIALES" in label or (label == "MATERIALES"):
-                    key = "materiales_ha"
-                elif "SERVICIOS" in label or "FLETES" in label:
-                    key = "servicios_ha"
-                elif "COSTO DE PRODUCCION" in label or "COSTO DE PRODUCCIÓN" in label:
-                    if "VENTAS" in label:
-                        key = "cpv_ha"
-                    
-            if key:
-                if wk_unit_costs.get("TOTAL", {}).get(key) is not None:
-                    continue
-                total_val = sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0
-                wk_unit_costs.setdefault("TOTAL", {})[key] = total_val
-                for j, rn in mxn_ranch_cols.items():
-                    if j < len(row):
-                        wk_unit_costs.setdefault(rn, {})[key] = sv(row[j])
-                        
-        if wk_unit_costs:
-            unit_costs_data[code] = wk_unit_costs
-
-    print(f"\n✅ servicios_data: {len(servicios_data)} registros encontrados")
-    if servicios_data:
-        print(f"   subcats: {list({r['subcat'] for r in servicios_data})}")
-    print(f"✅ mano_obra_data: {len(mano_obra_data)} registros encontrados")
-
-    cats_found = {r["categoria"] for r in all_data}
-    if mano_obra_data:
-        cats_found.add("COSTO MANO DE OBRA")
-    cats  = [c for c in CATEGORIAS_ORDEN if c in cats_found]
-    years = sorted({r["year"] for r in all_data})
-
-    ranches_seen: set = set()
-    for r in all_data:
-        ranches_seen.update(r["mxn_ranches"])
-        ranches_seen.update(r["usd_ranches"])
-    ranches = sorted(ranches_seen)
-
-    summary: dict = {cat: {yr: {"usd": 0.0, "mxn": 0.0, "ranches": {}, "ranches_mxn": {}}
-                            for yr in years} for cat in cats}
-    for r in all_data:
-        s = summary.get(r["categoria"], {}).get(r["year"])
-        if not s:
-            continue
-        s["usd"] += r["usd_total"]
-        s["mxn"] += r["mxn_total"]
-        for rn, v in r["usd_ranches"].items():
-            s["ranches"][rn] = round(s["ranches"].get(rn, 0) + v, 2)
-        for rn, v in r["mxn_ranches"].items():
-            s["ranches_mxn"][rn] = round(s["ranches_mxn"].get(rn, 0) + v, 2)
-    for cat in cats:
-        for yr in years:
-            d = summary[cat][yr]
-            d["usd"] = round(d["usd"], 2)
-            d["mxn"] = round(d["mxn"], 2)
-
-    weeks_per_year: dict = {}
-    week_date_ranges: dict = {}
-    for r in all_data:
-        weeks_per_year.setdefault(r["year"], set()).add(r["week"])
-        key = f"{r['year']}-{r['week']}"
-        if key not in week_date_ranges and r.get("date_range"):
-            week_date_ranges[key] = r["date_range"]
-    weeks_per_year = {yr: sorted(wks) for yr, wks in weeks_per_year.items()}
-
-    return {
-        "years":            years,
-        "categories":       cats,
-        "ranches":          ranches,
-        "summary":          summary,
-        "weeks_per_year":   weeks_per_year,
-        "week_date_ranges": week_date_ranges,
-        "weekly_detail":    all_data,
-        "productos":        productos,
-        "productos_debug":  productos_debug,
-        "servicios_data":   servicios_data,
-        "mano_obra_data":   mano_obra_data,
-        "siembra_data":     siembra_data,
-        "unit_costs_data":  unit_costs_data,
+// =======================================================
+// CONSTANTES Y CONFIGURACIÓN DINÁMICA
+// =======================================================
+var RANCH_ORDER  = (DATA && DATA.config) ? DATA.config.ranch_order : [];
+var RANCH_COLORS = (DATA && DATA.config) ? DATA.config.ranch_colors : {};
+var YEAR_COLORS = {2021:'#0ea5e9',2022:'#d97706',2023:'#16a34a',2024:'#9333ea',2025:'#f97316',2026:'#dc2626'};
+var CAT_MIRFE = 'FERTILIZANTES';
+var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
+
+// =======================================================
+// ESTADO
+// =======================================================
+var state = { cat:'', activeRanches:['Todos'], currency:'mxn', activeYears:{}, view:'comparativo', weekIdx:0, fromWeek:1, toWeek:52 };
+function getActiveRanches() { return state.activeRanches.indexOf('Todos') > -1 ? RANCH_ORDER : state.activeRanches; }
+var allWeeks = [];
+
+// =======================================================
+// TABLA PIVOT &#8212; estado global
+// =======================================================
+var _tableRows    = [];
+var _tableColDefs = [];
+
+// =======================================================
+// FORMATEO
+// =======================================================
+function fmt(n) {
+  if (n === null || n === undefined || n === 0 || isNaN(n)) return '';
+  var neg = n < 0, s = Math.abs(n);
+  return (neg ? '-$' : '$') + s.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+function fmtFull(n) {
+  if (!n || isNaN(n)) return '';
+  var neg = n < 0, s = Math.abs(n);
+  return (neg ? '-$' : '$') + s.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtPct(n) {
+  if (n === null || n === undefined || isNaN(n)) return '';
+  var sign = n > 0 ? '+' : '';
+  return sign + n.toFixed(1) + '%';
+}
+function fmtHa(n) {
+  if (n === null || n === undefined || n === 0 || isNaN(n)) return '';
+  var neg = n < 0, s = Math.abs(n);
+  return (neg ? '-' : '') + s.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4});
+}
+function fmtHc(n) {
+  if (!n || isNaN(n) || n === 0) return '';
+  return Math.round(n).toLocaleString('en-US');
+}
+function fmtHcDiff(n) {
+  if (!n || isNaN(n) || n === 0) return '—';
+  return Math.abs(Math.round(n)).toLocaleString('en-US');
+}
+function wFmt(n) { return 'W' + String(n).padStart(2,'0'); }
+function recargar() { window.location.reload(); }
+
+// =======================================================
+// DATA HELPERS
+// =======================================================
+function getActiveYears() { return DATA.years.filter(function(y){ return state.activeYears[y]; }); }
+function getWeekDetail(cat, wn, yr) {
+  return DATA.weekly_detail.filter(function(r){ return r.categoria===cat && r.week===wn && r.year===yr; });
+}
+function ranchFieldName(ranch) { return 'r_' + ranch.replace(/[^a-zA-Z0-9]/g,'_'); }
+function fieldToRanch(fn) {
+  if (!fn) return null;
+  for (var i=0;i<RANCH_ORDER.length;i++) { if (ranchFieldName(RANCH_ORDER[i])===fn) return RANCH_ORDER[i]; }
+  return null;
+}
+function monthFromRecord(rec) {
+  var dr = String(rec.date_range||'').toLowerCase();
+  var m  = {enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12,jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  for (var k in m) { if (dr.indexOf(k)!==-1) return m[k]; }
+  var wk = parseInt(rec.week||1); if (!wk||wk<1) wk=1;
+  return Math.max(1, Math.min(12, Math.ceil(wk/4.35)));
+}
+function sumDetail(recs, currency) {
+  var out = {total:0, ranches:{}};
+  recs.forEach(function(r){
+    var v = currency==='usd' ? r.usd_total : r.mxn_total;
+    out.total += v;
+    var rsrc = currency==='usd' ? r.usd_ranches : r.mxn_ranches;
+    Object.keys(rsrc||{}).forEach(function(rn){ out.ranches[rn]=(out.ranches[rn]||0)+rsrc[rn]; });
+    if (r.date_range) out.date_range = r.date_range;
+  });
+  return out;
+}
+
+// =======================================================
+// CELL RENDERERS (devuelven HTML string)
+// =======================================================
+function moneyRenderer(p) {
+  var v = p.value;
+  if (v===null||v===undefined||v===0||isNaN(v)) return '';
+  return '<span class="cell-navy">' + fmt(v) + '</span>';
+}
+function deltaRenderer(p) {
+  var v = p.value;
+  if (v===null||v===undefined||isNaN(v)) return '';
+  if (Math.abs(v)<0.5) return '<span style="color:#999">~0%</span>';
+  var cl = v>0 ? 'cell-pos' : 'cell-neg';
+  var ar = v>0 ? '&#9650;' : '&#9660;';
+  return '<span class="'+cl+'">'+ar+' '+Math.abs(v).toFixed(1)+'%</span>';
+}
+function deltaAmtRenderer(p) {
+  var v = p.value;
+  if (!v||isNaN(v)) return '';
+  var cl = v>0?'cell-pos':'cell-neg';
+  var sign = v>0?'+':'';
+  return '<span class="'+cl+'">'+sign+fmt(v)+'</span>';
+}
+function catRenderer(p) {
+  var v = p.value; if (!v) return '';
+  return '<span style="font-weight:700;color:#1e3a5f;font-size:11px">'+v+'</span>';
+}
+function ranchRenderer(ranch) {
+  return function(p) {
+    var v = p.value;
+    if (!v||isNaN(v)||v===0) return '';
+    return '<span style="color:#334155;font-weight:600">'+fmt(v)+'</span>';
+  };
+}
+
+// =======================================================
+// RENDER PIVOT TABLE
+// =======================================================
+function renderPivotTable(colDefs, rows, statusText) {
+  _tableColDefs = colDefs;
+  _tableRows    = rows;
+
+  // Detectar qué columnas son pinned (las primeras hasta que termine la racha pinned)
+  var pinnedCount = 0;
+  for (var pi=0; pi<colDefs.length; pi++) {
+    if (colDefs[pi].pinned === 'left') pinnedCount++;
+    else break;
+  }
+
+  // Head
+  var headHtml = '<tr>';
+  colDefs.forEach(function(col, ci) {
+    var align = col.type==='numericColumn' ? 'text-align:right' : 'text-align:left';
+    var pinnedCls = ci < pinnedCount ? ' pt-pinned' : '';
+    // Calcular left offset para múltiples columnas pinned
+    var leftOff = 0;
+    if (ci < pinnedCount) {
+      for (var px=0; px<ci; px++) leftOff += (colDefs[px].width || 120);
     }
+    var leftStyle = ci < pinnedCount ? ';left:'+leftOff+'px' : '';
+    headHtml += '<th class="'+pinnedCls+'" style="'+align+leftStyle+'">'+(col.headerName||'')+'</th>';
+  });
+  headHtml += '</tr>';
+
+  // Body
+  var bodyHtml = '';
+  rows.forEach(function(row, ri) {
+    var rowCls = 'pt-row';
+    if      (row._isGroup) rowCls = 'pt-row-group';
+    else if (row._isSub)   rowCls = 'pt-row-sub';
+    else if (row._isTotal) rowCls = 'pt-row-total';
+
+    bodyHtml += '<tr class="'+rowCls+'" data-ri="'+ri+'">';
+    colDefs.forEach(function(col, ci) {
+      var val  = row[col.field];
+      var align = col.type==='numericColumn' ? 'text-align:right' : 'text-align:left';
+      var pinnedCls = ci < pinnedCount ? ' pt-pinned' : '';
+      var leftOff = 0;
+      if (ci < pinnedCount) {
+        for (var px=0; px<ci; px++) leftOff += (colDefs[px].width || 120);
+      }
+      var leftStyle = ci < pinnedCount ? ';left:'+leftOff+'px' : '';
+      var html;
+      if (col.cellRenderer) {
+        try { html = col.cellRenderer({value:val, data:row, colDef:col}); }
+        catch(e) { html = (val===null||val===undefined)?'':String(val); }
+      } else {
+        html = (val===null||val===undefined)?'':String(val);
+      }
+      bodyHtml += '<td class="'+pinnedCls+'" style="'+align+leftStyle+'" data-ci="'+ci+'">'+html+'</td>';
+    });
+    bodyHtml += '</tr>';
+  });
+
+  var wrap = document.getElementById('tableWrap');
+  wrap.innerHTML = '<table class="pt-table"><thead>'+headHtml+'</thead><tbody>'+bodyHtml+'</tbody></table>';
+
+  if (statusText !== undefined) document.getElementById('stTotal').textContent = statusText;
+}
+
+// Delegated click sobre tableWrap
+document.addEventListener('click', function(e) {
+  var td = e.target.closest('#tableWrap td');
+  if (!td) return;
+  var tr = td.closest('tr');
+  var ri = parseInt(tr.dataset.ri);
+  var ci = parseInt(td.dataset.ci);
+  if (isNaN(ri)||isNaN(ci)) return;
+  var row = _tableRows[ri];
+  var col = _tableColDefs[ci];
+  if (!row||!col) return;
+  onMainCellClick({data:row, colDef:col});
+});
+
+// =======================================================
+// INICIALIZAR
+// =======================================================
+function inicializar() {
+  // prod-link handler
+  if (!window._prodLinkBound) {
+    document.addEventListener('click', function(e){
+      var el = e.target.closest('.prod-link');
+      if (!el) return;
+      var row = {
+        _cat:      decodeURIComponent(el.dataset.cat||''),
+        _year:     parseInt(el.dataset.year||'0',10),
+        _week:     parseInt(el.dataset.week||'0',10),
+        _fromWeek: parseInt(el.dataset.from||el.dataset.week||'0',10),
+        _toWeek:   parseInt(el.dataset.to  ||el.dataset.week||'0',10),
+      };
+      var ranch = decodeURIComponent(el.dataset.ranch||'');
+      showProdPanel(row, {ranch: ranch||null});
+      e.stopPropagation(); e.preventDefault();
+    });
+    window._prodLinkBound = true;
+  }
+
+  var prefCat = 'MATERIAL DE EMPAQUE';
+  state.cat = DATA.categories.indexOf(prefCat)>-1 ? prefCat : DATA.categories[0];
+
+  // Asegurar que los años del conteo de mano de obra también estén activos
+  if (Array.isArray(DATA.mano_obra_data)) {
+    DATA.mano_obra_data.forEach(function(r){
+      if (DATA.years.indexOf(r.year)<0) DATA.years.push(r.year);
+    });
+    DATA.years.sort(function(a,b){return a-b;});
+  }
+
+  state.activeYears = {};
+  var latestYr = DATA.years[DATA.years.length-1];
+  var prevYr   = DATA.years[DATA.years.length-2];
+  if (latestYr) state.activeYears[latestYr] = true;
+  if (prevYr)   state.activeYears[prevYr]   = true;
+
+  var wSet = {};
+  DATA.weekly_detail.forEach(function(r){ wSet[r.week]=1; });
+  // Incluir semanas del conteo de mano de obra
+  if (Array.isArray(DATA.mano_obra_data)) {
+    DATA.mano_obra_data.forEach(function(r){ wSet[r.week]=1; });
+  }
+  allWeeks = Object.keys(wSet).map(Number).sort(function(a,b){return a-b;});
+
+  // Semanas del año más reciente — fusionar weekly_detail + mano_obra_data
+  // para que semanas WK≥14 (que sólo existen en mano_obra_data) queden incluidas
+  // en state.toWeek y no sean filtradas por renderManoObra.
+  var _wkLatestSet = {};
+  DATA.weekly_detail
+    .filter(function(r){return r.year===latestYr;})
+    .forEach(function(r){_wkLatestSet[r.week]=1;});
+  if (Array.isArray(DATA.mano_obra_data)) {
+    DATA.mano_obra_data
+      .filter(function(r){return r.year===latestYr;})
+      .forEach(function(r){_wkLatestSet[r.week]=1;});
+  }
+  var wksLatest = Object.keys(_wkLatestSet).map(Number).sort(function(a,b){return a-b;});
+  var curWeek = wksLatest[wksLatest.length-1] || allWeeks[allWeeks.length-1];
+  var idx = allWeeks.indexOf(curWeek);
+  state.weekIdx = idx>=0 ? idx : allWeeks.length-1;
+
+  state.toWeek   = wksLatest[wksLatest.length-1] || allWeeks[allWeeks.length-1] || 52;
+  state.fromWeek = wksLatest[wksLatest.length-2] || wksLatest[0] || state.toWeek;
+
+  buildCatSelect();
+  buildRanchCheckboxes();
+  buildYearChips();
+  updateWeekControls();
+  updateRangeSliders();
+  // Ocultar tab Costo Servicios si la cat inicial no es de tipo servicio
+  var vtSrv = document.getElementById('vtServicios');
+  var _isSrvCat = (state.cat === 'COSTO SERVICIOS' || state.cat === 'COSTO MANO DE OBRA');
+  if (vtSrv) vtSrv.style.display = _isSrvCat ? '' : 'none';
+  renderView();
+
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('app').style.display    = 'block';
+  setTimeout(resizeTable, 80);
+  setTimeout(resizeTable, 300);
+}
+
+// =======================================================
+// UI BUILDERS
+// =======================================================
+function buildCatSelect() {
+  var el = document.getElementById('catSel');
+  el.innerHTML = DATA.categories.map(function(c){
+    var hasData = categoryHasData(c);
+    return '<option value="'+c.replace(/"/g,'&quot;')+'"'+(c===state.cat?' selected':'')+' style="color:'+(hasData?'#222':'#dc2626')+';font-weight:'+(hasData?'400':'700')+';">'+c+'</option>';
+  }).join('');
+  el.style.color = categoryHasData(state.cat) ? '#222' : '#dc2626';
+}
+function buildRanchCheckboxes() {
+  var panel = document.getElementById('ranchDropdownPanel');
+  if (!panel) return;
+  var ranches = ['Todos'].concat(RANCH_ORDER);
+  panel.innerHTML = ranches.map(function(r) {
+    var checked = state.activeRanches.indexOf(r) > -1 ? 'checked' : '';
+    var sep = (r === RANCH_ORDER[0]) ? 'border-top:1px solid #eee;margin-top:2px;padding-top:4px;' : '';
+    return '<label style="display:flex;align-items:center;gap:6px;padding:4px 10px;cursor:pointer;font-size:11px;white-space:nowrap;' + sep + '">'
+      + '<input type="checkbox" value="' + r + '" ' + checked + ' onchange="toggleRanch(this)" style="margin:0;cursor:pointer;">'
+      + r + '</label>';
+  }).join('');
+  var btn = document.getElementById('ranchDropdownBtn');
+  if (btn) {
+    var sel = state.activeRanches;
+    var label = sel.indexOf('Todos') > -1 ? 'Todos' : (sel.length === 1 ? sel[0] : sel.length + ' ranchos');
+    btn.textContent = label + ' \u25BE';
+  }
+}
+function toggleRanchDropdown(e) {
+  e.stopPropagation();
+  var panel = document.getElementById('ranchDropdownPanel');
+  if (!panel) return;
+  var isOpen = panel.style.display === 'block';
+  if (isOpen) {
+    panel.style.display = 'none';
+    return;
+  }
+  // Posicionar el panel usando fixed para escapar del overflow del toolbar
+  var btn = document.getElementById('ranchDropdownBtn');
+  var rect = btn.getBoundingClientRect();
+  panel.style.position = 'fixed';
+  panel.style.top  = (rect.bottom + 2) + 'px';
+  panel.style.left = rect.left + 'px';
+  panel.style.display = 'block';
+}
+document.addEventListener('click', function(e) {
+  var btn = document.getElementById('ranchDropdownBtn');
+  var panel = document.getElementById('ranchDropdownPanel');
+  if (panel && btn && !btn.contains(e.target) && !panel.contains(e.target)) {
+    panel.style.display = 'none';
+  }
+});
+function buildYearChips() {
+  var el = document.getElementById('yearChips');
+  el.innerHTML = DATA.years.map(function(y){
+    var col = YEAR_COLORS[y]||'#888';
+    var on  = state.activeYears[y] ? ' on' : '';
+    return '<button class="yr-chip'+on+'" id="yrChip'+y+'" style="color:'+col+';border-color:'+(state.activeYears[y]?col:'transparent')+';background:'+(state.activeYears[y]?col+'20':'transparent')+'" onclick="toggleYear('+y+')">'+y+'</button>';
+  }).join('');
+}
+function updateWeekControls() {
+  // weekSlider y weekLabel eliminados del toolbar — no-op
+}
+function rowHasData(rec) {
+  if (!rec) return false;
+  return Math.abs(rec.mxn_total||0) > 0 || Math.abs(rec.usd_total||0) > 0 || Math.abs(rec.hc_total||0) > 0;
+}
+function categoryHasData(cat) {
+  var years = getActiveYears();
+  var fromW = state.fromWeek || 1;
+  var toW   = state.toWeek   || 52;
+  if (!cat || !years.length) return false;
+  function inScope(rec) {
+    return years.indexOf(rec.year) > -1 && rec.week >= fromW && rec.week <= toW;
+  }
+  if (cat === 'COSTO MANO DE OBRA') {
+    return (DATA.mano_obra_data || []).some(function(rec){ return inScope(rec) && rowHasData(rec); });
+  }
+  if (cat === 'COSTO SERVICIOS') {
+    if ((DATA.servicios_data || []).some(function(rec){ return inScope(rec) && rowHasData(rec); })) return true;
+  }
+  return (DATA.weekly_detail || []).some(function(rec){ return rec.categoria === cat && inScope(rec) && rowHasData(rec); });
+}
+
+// =======================================================
+// EVENTS
+// =======================================================
+function onRanchChange(val) {
+  state.ranch = val;
+  buildRanchCheckboxes();
+  if (state.view !== 'semana') renderView();
+}
+function onCatChange(val) {
+  state.cat = val;
+  buildCatSelect();
+  var isSrvCat = (val === 'COSTO SERVICIOS' || val === 'COSTO MANO DE OBRA');
+  ['Comparativo','Rancho'].forEach(function(name) {
+    var el = document.getElementById('vt' + name);
+    if (el) el.style.display = isSrvCat ? 'none' : '';
+  });
+  var vtSrv = document.getElementById('vtServicios');
+  if (vtSrv) vtSrv.style.display = isSrvCat ? '' : 'none';
+
+  if (isSrvCat && state.view !== 'servicios') {
+    setView('servicios');
+  } else if (!isSrvCat && state.view === 'servicios') {
+    setView('comparativo');
+  } else {
+    renderView();
+  }
+}
+function setCurrency(cur) {
+  state.currency=cur;
+  document.getElementById('btnUSD').className='tb-btn'+(cur==='usd'?' active':'');
+  document.getElementById('btnMXN').className='tb-btn'+(cur==='mxn'?' active':'');
+  renderView();
+}
+function toggleYear(y) {
+  var active = DATA.years.filter(function(yr){return state.activeYears[yr];});
+  if (state.activeYears[y]&&active.length>1) delete state.activeYears[y];
+  else state.activeYears[y]=true;
+  buildYearChips();
+  buildCatSelect();
+  renderView();
+}
+function toggleRanch(cb) {
+  var val = cb.value;
+  var idx = state.activeRanches.indexOf(val);
+  if (val === 'Todos') {
+    // Si se marca "Todos", desmarcar todos los individuales
+    if (cb.checked) { state.activeRanches = ['Todos']; }
+    else            { state.activeRanches = RANCH_ORDER.slice(); }
+  } else {
+    // Si se marca un rancho individual, quitar "Todos"
+    var todosIdx = state.activeRanches.indexOf('Todos');
+    if (todosIdx > -1) state.activeRanches.splice(todosIdx, 1);
+    if (cb.checked) {
+      if (idx === -1) state.activeRanches.push(val);
+    } else {
+      if (idx > -1) state.activeRanches.splice(idx, 1);
+      // Si no queda ninguno seleccionado, volver a "Todos"
+      if (state.activeRanches.length === 0) state.activeRanches = ['Todos'];
+    }
+  }
+  buildRanchCheckboxes();
+  renderView();
+}
+function prevWeek() { if (state.weekIdx>0){state.weekIdx--;updateWeekControls();renderView();} }
+function nextWeek() { if (state.weekIdx<allWeeks.length-1){state.weekIdx++;updateWeekControls();renderView();} }
+function onWeekSlider(val) {
+  var wn=parseInt(val), idx=allWeeks.indexOf(wn);
+  if (idx<0){ idx=0; var mn=Math.abs(allWeeks[0]-wn); allWeeks.forEach(function(w,i){var d=Math.abs(w-wn);if(d<mn){mn=d;idx=i;}});}
+  state.weekIdx=idx; updateWeekControls(); renderView();
+}
+function setView(v) {
+  state.view=v;
+  ['comparativo','rancho','servicios'].forEach(function(name){
+    var el=document.getElementById('vt'+name.charAt(0).toUpperCase()+name.slice(1));
+    if(el) el.className='vtab'+(v===name?' active':'');
+  });
+  var rb=document.getElementById('rangeBar');
+  if (rb) rb.style.display='none';
+  var gw =document.getElementById('gridWrap');
+  var cmp=document.getElementById('comparativoWrap');
+  if (v==='comparativo') { if(gw)gw.style.display='none'; if(cmp)cmp.className='show'; }
+  else                   { if(gw)gw.style.display='';     if(cmp)cmp.className=''; }
+  closeProdPanel();
+  renderView();
+}
+function exportCSV() {
+  if (!_tableColDefs.length||!_tableRows.length) return;
+  var cols = _tableColDefs;
+  var lines = [cols.map(function(c){return '"'+(c.headerName||'').replace(/"/g,'""')+'"';}).join(',')];
+  _tableRows.forEach(function(row){
+    lines.push(cols.map(function(c){
+      var v = row[c.field];
+      if (v===null||v===undefined) return '';
+      return '"'+String(v).replace(/"/g,'""')+'"';
+    }).join(','));
+  });
+  var blob = new Blob([lines.join('\\n')], {type:'text/csv;charset=utf-8;'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href=url; a.download='CFBC_'+state.view+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+function updateRangeSliders() {
+  var f=state.fromWeek, t=state.toWeek;
+  var fEl=document.getElementById('fromSlider'), tEl=document.getElementById('toSlider');
+  var mn=allWeeks[0]||1, mx=allWeeks[allWeeks.length-1]||52;
+  if(fEl){fEl.min=mn;fEl.max=mx;fEl.value=f;}
+  if(tEl){tEl.min=mn;tEl.max=mx;tEl.value=t;}
+  var yy=String(DATA.years[DATA.years.length-1]).slice(2);
+  var fLbl=document.getElementById('fromWeekLabel'), tLbl=document.getElementById('toWeekLabel'), badge=document.getElementById('rangeBadge');
+  if(fLbl)fLbl.textContent=yy+String(f).padStart(2,'0');
+  if(tLbl)tLbl.textContent=yy+String(t).padStart(2,'0');
+  var count=allWeeks.filter(function(w){return w>=f&&w<=t;}).length;
+  if(badge)badge.textContent=yy+String(f).padStart(2,'0')+' → '+yy+String(t).padStart(2,'0')+' · '+count+' sem';
+}
+function onRangeChange() {
+  var f=parseInt(document.getElementById('fromSlider').value);
+  var t=parseInt(document.getElementById('toSlider').value);
+  if (f>t){var tmp=f;f=t;t=tmp;}
+  state.fromWeek=f; state.toWeek=t;
+  updateRangeSliders();
+  buildCatSelect();
+  renderView();
+}
+function resetRange() {
+  var latestYr=DATA.years[DATA.years.length-1];
+  var wks=DATA.weekly_detail.filter(function(r){return r.year===latestYr;}).map(function(r){return r.week;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort(function(a,b){return a-b;});
+  state.toWeek   = wks[wks.length-1]||allWeeks[allWeeks.length-1]||52;
+  state.fromWeek = wks[wks.length-2]||wks[0]||state.toWeek;
+  updateRangeSliders();
+  buildCatSelect();
+  if (state.view==='comparativo') renderComparativo();
+}
+
+// =======================================================
+// VIEW ROUTER
+// =======================================================
+function renderView() {
+  document.getElementById('prodPanel').className='';
+  if (state.view==='comparativo') renderComparativo();
+  else if (state.view==='rancho')      renderRancho();
+  else if (state.view==='servicios') {
+    if (state.cat==='COSTO MANO DE OBRA') renderManoObra();
+    else renderServicios();
+  }
+}
+
+// =======================================================
+// VIEW 1: SEMANA
+// =======================================================
+function renderSemana() {
+  var yrs=getActiveYears(), wn=allWeeks[state.weekIdx]||1, sym=state.currency.toUpperCase();
+  var cols = [
+    { field:'year', headerName:'AÑO', width:70, pinned:'left',
+      cellRenderer:function(p){ var c=YEAR_COLORS[p.value]||'#888'; return '<span style="color:'+c+';font-weight:700">'+p.value+'</span>'; }},
+    { field:'week', headerName:'SEM', width:60, type:'numericColumn', pinned:'left',
+      cellRenderer:function(p){ return wFmt(p.value); }},
+    { field:'cat_label', headerName:'CATEGORÍA', width:170, pinned:'left', cellRenderer:catRenderer },
+    { field:'total',    headerName:'TOTAL '+sym, width:110, type:'numericColumn', cellRenderer:moneyRenderer },
+    { field:'deltaAmt', headerName:'Δ $',        width:90,  type:'numericColumn', cellRenderer:deltaAmtRenderer },
+    { field:'deltaPct', headerName:'Δ %',        width:72,  type:'numericColumn', cellRenderer:deltaRenderer },
+  ];
+  RANCH_ORDER.forEach(function(r){ cols.push({field:ranchFieldName(r),headerName:r,width:100,type:'numericColumn',cellRenderer:ranchRenderer(r)}); });
+
+  var rows=[]; var grandTotal=0;
+  yrs.forEach(function(yr,i){
+    var prevYr=i>0?yrs[i-1]:null;
+    var recs=getWeekDetail(state.cat,wn,yr), agg=sumDetail(recs,state.currency);
+    var row={year:yr,week:wn,cat_label:state.cat,_cat:state.cat,_year:yr,_week:wn,_fromWeek:wn,_toWeek:wn};
+    row.total=agg.total;
+    if (prevYr){ var aggP=sumDetail(getWeekDetail(state.cat,wn,prevYr),state.currency); row.deltaAmt=agg.total-aggP.total; row.deltaPct=aggP.total>0?(agg.total-aggP.total)/aggP.total*100:null; }
+    RANCH_ORDER.forEach(function(r){ row[ranchFieldName(r)]=agg.ranches[r]||0; });
+    rows.push(row);
+    if (yr===yrs[yrs.length-1]) grandTotal+=agg.total;
+  });
+  renderPivotTable(cols, rows, fmt(grandTotal)+' '+sym+' · AÑO '+yrs[yrs.length-1]);
+}
+
+// =======================================================
+// VIEW 2: ANUAL
+// =======================================================
+function renderAnual() {
+  var yrs=getActiveYears(), sym=state.currency.toUpperCase();
+
+  // Columnas: CATEGORÍA fija + una columna de total por año
+  var cols=[
+    { field:'cat_label', headerName:'CATEGORÍA', width:220, pinned:'left', cellRenderer:catRenderer },
+  ];
+  yrs.forEach(function(yr){
+    var col=YEAR_COLORS[yr]||'#888';
+    cols.push({
+      field:'v'+yr, headerName:String(yr)+' '+sym, width:130, type:'numericColumn',
+      cellRenderer:(function(c){ return function(p){
+        var v=p.value; if(!v||isNaN(v)||v===0) return '';
+        return '<span style="color:#1e3a5f;font-weight:600">'+fmt(v)+'</span>';
+      };})(col)
+    });
+  });
+  if(yrs.length>=2){
+    cols.push({field:'deltaPct',headerName:'Δ %',width:72,type:'numericColumn',cellRenderer:deltaRenderer});
+  }
+
+  var getYrTotal=function(cat,yr){
+    var d=(DATA.summary[cat]||{})[yr]||{usd:0,mxn:0,ranches:{},ranches_mxn:{}};
+    return state.currency==='usd'?d.usd:d.mxn;
+  };
+
+  var cats=DATA.categories;
+  var rows=[];
+  var grandByYr={};
+  yrs.forEach(function(yr){ grandByYr[yr]=0; });
+
+  cats.forEach(function(cat){
+    var row={cat_label:cat,_cat:cat};
+    var hasAny=false;
+    yrs.forEach(function(yr){
+      var v=getYrTotal(cat,yr);
+      row['v'+yr]=v;
+      grandByYr[yr]+=v;
+      if(v) hasAny=true;
+    });
+    if(!hasAny) return;
+    if(yrs.length>=2){
+      var cur=getYrTotal(cat,yrs[yrs.length-1]);
+      var prev=getYrTotal(cat,yrs[yrs.length-2]);
+      row.deltaPct=prev>0?(cur-prev)/prev*100:null;
+    }
+    rows.push(row);
+  });
+
+  // Fila TOTAL GENERAL
+  var totRow={cat_label:'TOTAL GENERAL',_isTotal:true};
+  yrs.forEach(function(yr){ totRow['v'+yr]=grandByYr[yr]; });
+  if(yrs.length>=2){
+    var tCur=grandByYr[yrs[yrs.length-1]];
+    var tPrev=grandByYr[yrs[yrs.length-2]];
+    totRow.deltaPct=tPrev>0?(tCur-tPrev)/tPrev*100:null;
+  }
+  rows.push(totRow);
+
+  renderPivotTable(cols, rows);
+}
+
+// =======================================================
+// VIEW 3: COMPARATIVO
+// =======================================================
+// (Botones de grupo removidos)
+function fmtMes(dr) {
+  if (!dr) return '';
+  var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var lower=dr.toLowerCase();
+  for (var i=0;i<MESES.length;i++){
+    if (lower.indexOf(MESES[i])>-1){
+      var m=MESES[i].charAt(0).toUpperCase()+MESES[i].slice(1);
+      var yrMatch=dr.match(/\\b(20\\d{2})\\b/);
+      return m+(yrMatch?' '+yrMatch[1]:'');
+    }
+  }
+  return dr;
+}
+function aggregateRecs(recs) {
+  var out={usd:0,mxn:0,ranches:{},ranches_mxn:{},date_range:''};
+  recs.forEach(function(r){
+    out.usd+=r.usd_total; out.mxn+=r.mxn_total;
+    if (r.date_range) out.date_range=r.date_range;
+    Object.keys(r.usd_ranches||{}).forEach(function(rn){out.ranches[rn]=(out.ranches[rn]||0)+r.usd_ranches[rn];});
+    Object.keys(r.mxn_ranches||{}).forEach(function(rn){out.ranches_mxn[rn]=(out.ranches_mxn[rn]||0)+r.mxn_ranches[rn];});
+  });
+  out.usd=Math.round(out.usd*100)/100; out.mxn=Math.round(out.mxn*100)/100;
+  return out;
+}
+function getRangeByYear(cat,fromW,toW) {
+  var res={};
+  getActiveYears().forEach(function(yr){
+    var recs=DATA.weekly_detail.filter(function(r){return r.categoria===cat&&r.year===yr&&r.week>=fromW&&r.week<=toW;});
+    if (!recs.length) return;
+    var ag=aggregateRecs(recs);
+    ag.weekly={};
+    recs.forEach(function(r){ ag.weekly[r.week]=(ag.weekly[r.week]||0)+(state.currency==='usd'?r.usd_total:r.mxn_total); });
+    res[yr]=ag;
+  });
+  return res;
+}
+function deltaCellHtml(val,prev) {
+  if (prev===null||prev===undefined||prev===0) return '<td class="delta-cell chg-0">&#8212;</td>';
+  var diff=val-prev, p=((diff/prev)*100).toFixed(1);
+  var cls=diff>0?'chg-pos':diff<0?'chg-neg':'chg-0';
+  var sign=diff>0?'+':'';
+  return '<td class="delta-cell '+cls+'"><span class="delta-amt">'+sign+fmt(diff)+'</span><span class="delta-pct">'+sign+p+'%</span></td>';
+}
+function renderComparativo() {
+  var f=state.fromWeek,t=state.toWeek,yrs=getActiveYears(),sym=state.currency.toUpperCase();
+  var byYear=getRangeByYear(state.cat,f,t);
+  var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
+  var ranchCols=getActiveRanches();
+  document.getElementById('cmpStats').innerHTML='';
+
+  var weekData={};
+  yrs.forEach(function(yr){
+    weekData[yr]={};
+    rangeWeeks.forEach(function(w){
+      var recs=DATA.weekly_detail.filter(function(r){return r.categoria===state.cat&&r.year===yr&&r.week===w;});
+      if (recs.length) weekData[yr][w]=aggregateRecs(recs);
+    });
+  });
+
+  var head='<tr><th>Semana</th><th>Total '+sym+'</th><th>Δ$ vs sem ant.</th>'+ranchCols.map(function(r){return '<th>'+r+'</th>';}).join('')+'</tr>';
+  var body=yrs.map(function(yr,yi){
+    var col=YEAR_COLORS[yr]||'#888';
+    var prevWkVal=null;
+    return rangeWeeks.map(function(w){
+      var d=weekData[yr][w];
+      var val=0;
+      if(d){
+        if(state.activeRanches.indexOf('Todos')>-1) { val=state.currency==='usd'?d.usd:d.mxn; } else { val=0; var srcA=state.currency==='usd'?d.ranches:d.ranches_mxn; getActiveRanches().forEach(function(rn){ val += (srcA[rn]||0); }); }
+      }
+      var dCell=deltaCellHtml(val,prevWkVal);
+      if (val>0) prevWkVal=val;
+      var ranchCells=ranchCols.map(function(r){
+        if (!d) return '<td></td>';
+        var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
+        var v=src[r]||0;
+        var style='color:'+(v>0?'#334155':'#ddd')+(v>0?';cursor:pointer;font-weight:600':'');
+        var attrs=v>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch="'+r+'"':'';
+        return '<td style="'+style+'"'+attrs+'>'+(v>0?fmt(v):'')+'</td>';
+      }).join('');
+      var totalStyle='color:'+(val>0?'#1e3a5f':'#bbb')+';font-weight:'+(val>0?'700':'400')+(val>0?';cursor:pointer':'');
+      var totalAttrs=val>0?' class="cmp-clickable" data-yr="'+yr+'" data-wk="'+w+'" data-ranch=""':'';
+      return '<tr class="cmp-row">'+
+        '<td style="color:'+col+';font-weight:600">'+String(yr).slice(2)+String(w).padStart(2,'0')+'</td>'+
+        '<td style="'+totalStyle+'"'+totalAttrs+'>'+fmt(val)+'</td>'+
+        dCell+ranchCells+'</tr>';
+    }).join('');
+  }).join('');
+
+  document.getElementById('cmpHead').innerHTML=head;
+  document.getElementById('cmpBody').innerHTML=body;
+  var grandTotal=yrs.reduce(function(s,yr){
+    var d=byYear[yr];
+    if(!d) return s;
+    if(state.activeRanches.indexOf('Todos')>-1) { return s+(state.currency==='usd'?d.usd:d.mxn); } var stot=0; var srcB=state.currency==='usd'?d.ranches:d.ranches_mxn; getActiveRanches().forEach(function(rn){ stot += (srcB[rn]||0); }); return s+stot;
+  },0);
+  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
+}
+
+// Delegated click para comparativo clickeable
+document.addEventListener('click', function(e){
+  var td=e.target.closest('td.cmp-clickable');
+  if (!td) return;
+  showProdFromCmp(parseInt(td.dataset.yr), parseInt(td.dataset.wk), td.dataset.ranch||null);
+});
+
+// =======================================================
+// VIEW 4: POR RANCHO
+// =======================================================
+function renderRancho() {
+  var yrs=getActiveYears(), sym=state.currency.toUpperCase();
+  var f=state.fromWeek, t=state.toWeek;
+  var cur=state.currency;
+  var activeRanches = getActiveRanches();
+  var showTotal = state.activeRanches.indexOf('Todos')>-1;
+
+  var matCats=DATA.categories.filter(function(c){
+    return c!=='COSTO SERVICIOS'&&c!=='COSTO MANO DE OBRA';
+  });
+  var matRecs=(DATA.weekly_detail||[]).filter(function(r){ return matCats.indexOf(r.categoria)>-1; });
+  var moRecs=(DATA.weekly_detail||[]).filter(function(r){ return r.categoria==='COSTO MANO DE OBRA'; });
+  var svRecs=DATA.servicios_data||[];
+
+  // Semanas en el rango que tienen datos en algún año activo
+  var rangeWeeks=allWeeks.filter(function(w){ return w>=f&&w<=t; });
+  var nWk=rangeWeeks.length;
+  var nYrs=yrs.length;
+
+  // Sumar para un (año, semana) específico
+  function sumForYW(records, yr, wk){
+    var out={total:0};
+    activeRanches.forEach(function(rn){ out[rn]=0; });
+    records.forEach(function(r){
+      if(r.year!==yr||r.week!==wk) return;
+      var ranches=cur==='usd'?r.usd_ranches:r.mxn_ranches;
+      var rowTot = 0;
+      activeRanches.forEach(function(rn){
+        var v = ranches[rn]||0;
+        out[rn] += v;
+        rowTot += v;
+      });
+      out.total += rowTot;
+    });
+    return out;
+  }
+
+  // ywData[yr][wk] = {mat, mo, sv, cpv}
+  var ywData={};
+  yrs.forEach(function(yr){
+    ywData[yr]={};
+    rangeWeeks.forEach(function(wk){
+      var mat=sumForYW(matRecs,yr,wk);
+      var mo =sumForYW(moRecs, yr,wk);
+      var sv =sumForYW(svRecs, yr,wk);
+      var cpv={total:mat.total+mo.total+sv.total};
+      activeRanches.forEach(function(rn){ cpv[rn]=(mat[rn]||0)+(mo[rn]||0)+(sv[rn]||0); });
+      ywData[yr][wk]={mat:mat,mo:mo,sv:sv,cpv:cpv};
+    });
+  });
+
+  var CATS=[
+    {key:'mat', label:'COSTO DE MATERIALES', fmt:fmt},
+    {key:'mo',  label:'COSTO DE MANO DE OBRA', fmt:fmt},
+    {key:'sv',  label:'COSTO DE SERVICIOS', fmt:fmt},
+    {key:'cpv', label:'TOTAL CPV', fmt:fmt},
+  ];
+
+  // Columnas por grupo de rancho/total:
+  //   Por cada año: nWk columnas de semana + 1 DIF (si nWk>=2)
+  //   + 1 DIF entre años (si nYrs>=2)
+  var perYrCols=nWk+(nWk>=2?1:0);
+  var nCols=nYrs*perYrCols+(nYrs>=2?1:0);
+
+  var thB='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid #ddd;white-space:nowrap;position:sticky;top:0;z-index:3;';
+  var thPin=thB+'left:0;z-index:4;';
+
+  // ── Header nivel 1: CATEGORÍA | rancho (colspan) | TOTAL (colspan) ────────
+  var h1='<tr>';
+  h1+='<th rowspan="2" style="'+thPin+'min-width:220px;text-align:left">CATEGORÍA</th>';
+  activeRanches.forEach(function(rn){
+    var col=RANCH_COLORS[rn]||'#888';
+    h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
+  });
+  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #4472C4;background:#9DC3E6">TOTAL '+sym+'</th>';
+  h1+='</tr>';
+
+  // ── Header nivel 2: por año → semanas + DIF, luego DIF años ───────────────
+  function subHeaders(){
+    var s='';
+    yrs.forEach(function(yr,yi){
+      var col=YEAR_COLORS[yr]||'#888';
+      var yy=String(yr).slice(2);
+      rangeWeeks.forEach(function(wk,wi){
+        var lbl=yy+String(wk).padStart(2,'0');
+        var lb=wi===0?'2px solid '+col:'1px solid #ddd';
+        s+='<th style="'+thB+'font-size:9px;color:'+col+';min-width:72px;text-align:right;border-left:'+lb+'">'+lbl+'</th>';
+      });
+      if(nWk>=2){
+        s+='<th style="'+thB+'font-size:9px;min-width:62px;text-align:right;border-left:1px solid #aaa;background:#BDD7EE">DIF'+yy+'</th>';
+      }
+    });
+    if(nYrs>=2){
+      var y0=String(yrs[0]).slice(2), yn=String(yrs[nYrs-1]).slice(2);
+      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #4472C4;background:#9DC3E6">'+yn+'−'+y0+'</th>';
+    }
+    return s;
+  }
+  var h2='<tr>';
+  activeRanches.forEach(function(){ h2+=subHeaders(); });
+  if(showTotal) h2+=subHeaders(); // TOTAL
+  h2+='</tr>';
+
+  // ── Celda ─────────────────────────────────────────────────────────────────
+  function cell(v, isDif, bold, lb, fmtFn){
+    var format = fmtFn || fmt;
+    var s='padding:3px 5px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
+    if(lb) s+='border-left:'+lb+';';
+    if(bold) s+='font-weight:700;';
+    if(v===null||v===undefined||isNaN(v)||v===0) return '<td style="'+s+'color:#ccc">—</td>';
+    var text = format(v);
+    if(isDif){
+      var cl=v>0?'#16a34a':'#dc2626';
+      return '<td style="'+s+'color:'+cl+'">'+(v>0?'+':'')+text+'</td>';
+    }
+    return '<td style="'+s+'color:#1e3a5f">'+text+'</td>';
+  }
+
+  // ── Generar celdas para un rancho o TOTAL (rnKey=null) ────────────────────
+  function groupCells(rnKey){
+    var s='';
+    yrs.forEach(function(yr,yi){
+      var col=YEAR_COLORS[yr]||'#888';
+      rangeWeeks.forEach(function(wk,wi){
+        var v=rnKey!==null ? (ywData[yr][wk][cat.key][rnKey]||0) : (ywData[yr][wk][cat.key].total||0);
+        var lb=wi===0?'2px solid '+col:'';
+        s+=cell(v, false, isCpv, lb, cat.fmt);
+      });
+      if(nWk>=2){
+        var first=rnKey!==null?(ywData[yr][rangeWeeks[0]][cat.key][rnKey]||0):(ywData[yr][rangeWeeks[0]][cat.key].total||0);
+        var last =rnKey!==null?(ywData[yr][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yr][rangeWeeks[nWk-1]][cat.key].total||0);
+        s+=cell(last-first, true, isCpv, '1px solid #aaa', cat.fmt);
+      }
+    });
+    if(nYrs>=2){
+      var v0=rnKey!==null?(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key].total||0);
+      var vn=rnKey!==null?(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key].total||0);
+      s+=cell(vn-v0, true, true, '2px solid #4472C4', cat.fmt);
+    }
+    return s;
+  }
+
+  // ── Cuerpo ────────────────────────────────────────────────────────────────
+  var bodyHtml='';
+  var cat, isCpv; // shared with groupCells via closure
+  CATS.forEach(function(c,ci){
+    cat=c; isCpv=cat.key==='cpv';
+    var bgRow=isCpv?'var(--pt-tot-bg)':(ci%2===0?'#fff':'#F7FBFF');
+    var catColor=isCpv?'#1e3a5f':'#333';
+    var catFw=isCpv?'800':'700';
+    bodyHtml+='<tr style="background:'+bgRow+'">';
+    bodyHtml+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:'+catColor+';font-weight:'+catFw+'">'+cat.label+'</span></td>';
+    activeRanches.forEach(function(rn){ bodyHtml+=groupCells(rn); });
+    if(showTotal) bodyHtml+=groupCells(null); // TOTAL
+    bodyHtml+='</tr>';
+  });
+
+  // ── Inyectar en DOM ───────────────────────────────────────────────────────
+  var html='<div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var gw=document.getElementById('gridWrap');
+  gw.style.display='';
+  gw.innerHTML=html;
+  document.getElementById('comparativoWrap').className='';
+  
+  // ── AGREGAR TABLAS DE COSTOS UNITARIOS ─────────────────────────────────
+  renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRanches, showTotal);
+  renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRanches, showTotal);
+}
+
+// =======================================================
+// TABLA: COSTOS UNITARIOS $ / TALLO PROCESADO
+// =======================================================
+function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRanches, showTotal) {
+  var TALLO_CATS=[
+    {key:'materiales_tallo', label:'Materiales'},
+    {key:'mano_obra_tallo',  label:'Mano de Obra'},
+    {key:'servicios_tallo',  label:'Servicios (Fletes)'},
+    {key:'cpv_tallo',        label:'Costo de Producción y Ventas'},
+    {key:'empaque_tallo',    label:'Material de Empaque'},
+    {key:'sanidad_tallo',    label:'Sanidad Vegetal'},
+    {key:'fertilizacion_tallo', label:'Fertilización'},
+    {key:'mano_obra_prod_tallo', label:'Mano de Obra Prod'},
+  ];
+
+  var thB='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid #ddd;white-space:nowrap;position:sticky;top:0;z-index:3;';
+  var thPin=thB+'left:0;z-index:4;';
+  var fmt2=fmtFull;
+
+  // Header nivel 1
+  var h1='<tr>';
+  h1+='<th rowspan="2" style="'+thPin+'min-width:220px;text-align:left">CONCEPTO</th>';
+  activeRanches.forEach(function(rn){
+    var col=RANCH_COLORS[rn]||'#888';
+    h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
+  });
+  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #4472C4;background:#9DC3E6">TOTAL</th>';
+  h1+='</tr>';
+
+  // Header nivel 2
+  function subHeaders(){
+    var s='';
+    yrs.forEach(function(yr,yi){
+      var col=YEAR_COLORS[yr]||'#888';
+      var yy=String(yr).slice(2);
+      rangeWeeks.forEach(function(wk,wi){
+        var lbl=yy+String(wk).padStart(2,'0');
+        var lb=wi===0?'2px solid '+col:'1px solid #ddd';
+        s+='<th style="'+thB+'font-size:9px;color:'+col+';min-width:72px;text-align:right;border-left:'+lb+'">'+lbl+'</th>';
+      });
+      if(nWk>=2){
+        s+='<th style="'+thB+'font-size:9px;min-width:62px;text-align:right;border-left:1px solid #aaa;background:#BDD7EE">DIF'+yy+'</th>';
+      }
+    });
+    if(nYrs>=2){
+      var y0=String(yrs[0]).slice(2), yn=String(yrs[nYrs-1]).slice(2);
+      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #4472C4;background:#9DC3E6">'+yn+'−'+y0+'</th>';
+    }
+    return s;
+  }
+  var h2='<tr>';
+  activeRanches.forEach(function(){ h2+=subHeaders(); });
+  if(showTotal) h2+=subHeaders();
+  h2+='</tr>';
+
+  // Función celda
+  function cell(v, isDif, lb, fmtFn){
+    var format = fmtFn || fmt2;
+    var s='padding:3px 5px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
+    if(lb) s+='border-left:'+lb+';';
+    if(v===null||v===undefined||isNaN(v)||v===0) return '<td style="'+s+'color:#ccc">—</td>';
+    var text = format(v);
+    if(isDif){
+      var cl=v>0?'#16a34a':'#dc2626';
+      return '<td style="'+s+'color:'+cl+'">'+(v>0?'+':'')+text+'</td>';
+    }
+    return '<td style="'+s+'color:#1e3a5f">'+text+'</td>';
+  }
+
+  // Función para generar celdas por rancho
+  // Lee de DATA.unit_costs_data (estructura: { code: { ranch|"TOTAL": { key: val } } })
+  function groupCells(rnKey, cat){
+    var s='';
+    var ucData = DATA.unit_costs_data || {};
+    yrs.forEach(function(yr,yi){
+      var col=YEAR_COLORS[yr]||'#888';
+      rangeWeeks.forEach(function(wk,wi){
+        var code = (yr - 2000) * 100 + wk;
+        var wkUC = ucData[code] || ucData[String(code)] || {};
+        var rData = rnKey !== null ? (wkUC[rnKey]||{}) : (wkUC['TOTAL']||{});
+        var v = rData[cat.key] || 0;
+        var lb=wi===0?'2px solid '+col:'';
+        s+=cell(v, false, lb, cat.fmt);
+      });
+      if(nWk>=2){
+        var code0 = (yr-2000)*100 + rangeWeeks[0];
+        var codeN = (yr-2000)*100 + rangeWeeks[nWk-1];
+        var uc0 = ucData[code0] || ucData[String(code0)] || {};
+        var ucN = ucData[codeN] || ucData[String(codeN)] || {};
+        var r0 = rnKey!==null ? (uc0[rnKey]||{}) : (uc0['TOTAL']||{});
+        var rN = rnKey!==null ? (ucN[rnKey]||{}) : (ucN['TOTAL']||{});
+        var first = r0[cat.key]||0;
+        var last  = rN[cat.key]||0;
+        s+=cell(last-first, true, '1px solid #aaa', cat.fmt);
+      }
+    });
+    if(nYrs>=2){
+      var c0yr = (yrs[0]-2000)*100 + rangeWeeks[nWk-1];
+      var cNyr = (yrs[nYrs-1]-2000)*100 + rangeWeeks[nWk-1];
+      var uc0yr = ucData[c0yr] || ucData[String(c0yr)] || {};
+      var ucNyr = ucData[cNyr] || ucData[String(cNyr)] || {};
+      var r0yr = rnKey!==null ? (uc0yr[rnKey]||{}) : (uc0yr['TOTAL']||{});
+      var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
+      var v0 = r0yr[cat.key]||0;
+      var vn = rNyr[cat.key]||0;
+      s+=cell(vn-v0, true, '2px solid #4472C4', cat.fmt);
+    }
+    return s;
+  }
+
+  // Cuerpo de tabla
+  var bodyHtml='';
+  TALLO_CATS.forEach(function(c,ci){
+    var bgRow=ci%2===0?'#fff':'#F7FBFF';
+    bodyHtml+='<tr style="background:'+bgRow+'">';
+    bodyHtml+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:#333;font-weight:700">'+c.label+'</span></td>';
+    activeRanches.forEach(function(rn){ bodyHtml+=groupCells(rn, c); });
+    if(showTotal) bodyHtml+=groupCells(null, c);
+    bodyHtml+='</tr>';
+  });
+
+  var html='<div style="margin-top:20px"><h3 style="color:#1e3a5f;font-size:14px;font-weight:800;margin-bottom:10px">COSTOS UNITARIOS $ / TALLO PROCESADO</h3><div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
+  var gw=document.getElementById('gridWrap');
+  gw.innerHTML+=html;
+}
+
+// =======================================================
+// TABLA: COSTOS UNITARIOS $ / HECTÁREA
+// =======================================================
+function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRanches, showTotal) {
+  var HA_CATS=[
+    {key:'hectareas_ha',     label:'$ / Hectárea (Ha totales)', fmt:fmtHa},
+    {key:'materiales_ha',    label:'Materiales'},
+    {key:'mano_obra_ha',     label:'Mano de Obra'},
+    {key:'servicios_ha',     label:'Servicios (Fletes)'},
+    {key:'cpv_ha',           label:'Costo de Producción y Ventas'},
+    {key:'empaque_ha',       label:'Material de Empaque'},
+    {key:'fertilizacion_ha', label:'Fertilización'},
+    {key:'mano_obra_prod_ha',label:'Mano de Obra Prod'},
+  ];
+
+  var thB='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid #ddd;white-space:nowrap;position:sticky;top:0;z-index:3;';
+  var thPin=thB+'left:0;z-index:4;';
+  var fmt2=fmt;
+
+  // Header nivel 1
+  var h1='<tr>';
+  h1+='<th rowspan="2" style="'+thPin+'min-width:220px;text-align:left">CONCEPTO</th>';
+  activeRanches.forEach(function(rn){
+    var col=RANCH_COLORS[rn]||'#888';
+    h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
+  });
+  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #4472C4;background:#9DC3E6">TOTAL</th>';
+  h1+='</tr>';
+
+  // Header nivel 2
+  function subHeaders(){
+    var s='';
+    yrs.forEach(function(yr,yi){
+      var col=YEAR_COLORS[yr]||'#888';
+      var yy=String(yr).slice(2);
+      rangeWeeks.forEach(function(wk,wi){
+        var lbl=yy+String(wk).padStart(2,'0');
+        var lb=wi===0?'2px solid '+col:'1px solid #ddd';
+        s+='<th style="'+thB+'font-size:9px;color:'+col+';min-width:72px;text-align:right;border-left:'+lb+'">'+lbl+'</th>';
+      });
+      if(nWk>=2){
+        s+='<th style="'+thB+'font-size:9px;min-width:62px;text-align:right;border-left:1px solid #aaa;background:#BDD7EE">DIF'+yy+'</th>';
+      }
+    });
+    if(nYrs>=2){
+      var y0=String(yrs[0]).slice(2), yn=String(yrs[nYrs-1]).slice(2);
+      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #4472C4;background:#9DC3E6">'+yn+'−'+y0+'</th>';
+    }
+    return s;
+  }
+  var h2='<tr>';
+  activeRanches.forEach(function(){ h2+=subHeaders(); });
+  if(showTotal) h2+=subHeaders();
+  h2+='</tr>';
+
+  // Función celda
+  function cell(v, isDif, lb, fmtFn){
+    var format = fmtFn || fmt2;
+    var s='padding:3px 5px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
+    if(lb) s+='border-left:'+lb+';';
+    if(v===null||v===undefined||isNaN(v)||v===0) return '<td style="'+s+'color:#ccc">—</td>';
+    var text = format(v);
+    if(isDif){
+      var cl=v>0?'#16a34a':'#dc2626';
+      return '<td style="'+s+'color:'+cl+'">'+(v>0?'+':'')+text+'</td>';
+    }
+    return '<td style="'+s+'color:#1e3a5f">'+text+'</td>';
+  }
+
+  // Función para generar celdas por rancho
+  // Lee de DATA.unit_costs_data (estructura: { code: { ranch|"TOTAL": { key: val } } })
+  function groupCells(rnKey, cat){
+    var s='';
+    var ucData = DATA.unit_costs_data || {};
+    yrs.forEach(function(yr,yi){
+      var col=YEAR_COLORS[yr]||'#888';
+      rangeWeeks.forEach(function(wk,wi){
+        var code = (yr - 2000) * 100 + wk;
+        var wkUC = ucData[code] || ucData[String(code)] || {};
+        var rData = rnKey !== null ? (wkUC[rnKey]||{}) : (wkUC['TOTAL']||{});
+        var v = rData[cat.key] || 0;
+        var lb=wi===0?'2px solid '+col:'';
+        s+=cell(v, false, lb, cat.fmt);
+      });
+      if(nWk>=2){
+        var code0 = (yr-2000)*100 + rangeWeeks[0];
+        var codeN = (yr-2000)*100 + rangeWeeks[nWk-1];
+        var uc0 = ucData[code0] || ucData[String(code0)] || {};
+        var ucN = ucData[codeN] || ucData[String(codeN)] || {};
+        var r0 = rnKey!==null ? (uc0[rnKey]||{}) : (uc0['TOTAL']||{});
+        var rN = rnKey!==null ? (ucN[rnKey]||{}) : (ucN['TOTAL']||{});
+        var first = r0[cat.key]||0;
+        var last  = rN[cat.key]||0;
+        s+=cell(last-first, true, '1px solid #aaa', cat.fmt);
+      }
+    });
+    if(nYrs>=2){
+      var c0yr = (yrs[0]-2000)*100 + rangeWeeks[nWk-1];
+      var cNyr = (yrs[nYrs-1]-2000)*100 + rangeWeeks[nWk-1];
+      var uc0yr = ucData[c0yr] || ucData[String(c0yr)] || {};
+      var ucNyr = ucData[cNyr] || ucData[String(cNyr)] || {};
+      var r0yr = rnKey!==null ? (uc0yr[rnKey]||{}) : (uc0yr['TOTAL']||{});
+      var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
+      var v0 = r0yr[cat.key]||0;
+      var vn = rNyr[cat.key]||0;
+      s+=cell(vn-v0, true, '2px solid #4472C4', cat.fmt);
+    }
+    return s;
+  }
+
+  // Cuerpo de tabla
+  var bodyHtml='';
+  HA_CATS.forEach(function(c,ci){
+    var bgRow=ci%2===0?'#fff':'#F7FBFF';
+    bodyHtml+='<tr style="background:'+bgRow+'">';
+    bodyHtml+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:#333;font-weight:700">'+c.label+'</span></td>';
+    activeRanches.forEach(function(rn){ bodyHtml+=groupCells(rn, c); });
+    if(showTotal) bodyHtml+=groupCells(null, c);
+    bodyHtml+='</tr>';
+  });
+
+  var html='<div style="margin-top:20px"><h3 style="color:#1e3a5f;font-size:14px;font-weight:800;margin-bottom:10px">COSTOS UNITARIOS $ / HECTÁREA</h3><div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
+  var gw=document.getElementById('gridWrap');
+  gw.innerHTML+=html;
+}
+function renderDetalle() {
+  var sym=state.currency.toUpperCase();
+  var activeRanches = getActiveRanches();
+  var cols=[
+    { field:'year',      headerName:'AÑO',      width:60,  type:'numericColumn', pinned:'left' },
+    { field:'week',      headerName:'SEM',       width:55,  type:'numericColumn', pinned:'left', cellRenderer:function(p){return wFmt(p.value);} },
+    { field:'categoria', headerName:'CATEGORÍA', width:220, pinned:'left', cellRenderer:catRenderer },
+    { field:'usd_total', headerName:'USD',       width:100, type:'numericColumn', cellRenderer:moneyRenderer },
+    { field:'mxn_total', headerName:'MXN',       width:110, type:'numericColumn', cellRenderer:moneyRenderer },
+    { field:'date_range',headerName:'PERÍODO',   width:160,
+      cellRenderer:function(p){return '<span style="color:#888;font-size:11px">'+(p.value||'')+'</span>';}},
+  ];
+  activeRanches.forEach(function(r){
+    var c=RANCH_COLORS[r]||'#888';
+    cols.push((function(color){return {field:'rn_'+r.replace(/[^a-zA-Z0-9]/g,'_'),headerName:r,width:100,type:'numericColumn',
+      cellRenderer:function(p){var v=p.value;if(!v||v<0.01)return '<span class="cell-muted">&#8212;</span>';return '<span style="color:'+color+'">'+fmt(v)+'</span>';}};})(c));
+  });
+  var rows=[],grandTotal=0;
+  DATA.weekly_detail.forEach(function(r){
+    if (!state.activeYears[r.year]) return;
+    if (r.categoria!==state.cat) return;
+    var row={year:r.year,week:r.week,categoria:r.categoria,usd_total:r.usd_total,mxn_total:r.mxn_total,date_range:r.date_range||''};
+    activeRanches.forEach(function(rn){var src=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;row['rn_'+rn.replace(/[^a-zA-Z0-9]/g,'_')]=src[rn]||0;});
+    grandTotal+=state.currency==='usd'?r.usd_total:r.mxn_total;
+    rows.push(row);
+  });
+  rows.sort(function(a,b){return b.year!==a.year?b.year-a.year:b.week-a.week;});
+  renderPivotTable(cols,rows,fmt(grandTotal)+' '+sym+' ('+rows.length+' registros) · '+state.cat);
+}
+
+// =======================================================
+// VIEW 6: PRODUCTOS
+// =======================================================
+function renderProductosFull() {
+  var cols=[
+    { field:'tipo',      headerName:'TIPO',     width:60,  pinned:'left' },
+    { field:'cat',       headerName:'CAT',       width:55,  pinned:'left',
+      cellRenderer:function(p){var m={'PR':'#16a34a','MP':'#7c3aed','ME':'#0369a1','MV':'#b45309'};return '<span style="color:'+(m[p.value]||'#666')+';font-weight:700">'+(p.value||'')+'</span>';}},
+    { field:'week_code', headerName:'WK',        width:72 },
+    { field:'rancho',    headerName:'RANCHO',    width:110,
+      cellRenderer:function(p){return '<span style="color:'+(RANCH_COLORS[p.value]||'#666')+';font-weight:600">'+(p.value||'')+'</span>';}},
+    { field:'producto',  headerName:'PRODUCTO',  width:260,
+      cellRenderer:function(p){return '<span style="color:#1e3a5f">'+(p.value||'')+'</span>';}},
+    { field:'unidades',  headerName:'UNID.',     width:80,
+      cellRenderer:function(p){return '<span style="color:#555">'+(p.value||'')+'</span>';}},
+    { field:'gasto',     headerName:'GASTO',     width:100, type:'numericColumn', cellRenderer:moneyRenderer },
+  ];
+  var rows=[];
+  function flattenProd(dataSet,label){
+    if (!dataSet) return;
+    Object.keys(dataSet).forEach(function(wkCode){
+      var byRanch=dataSet[wkCode];
+      Object.keys(byRanch).forEach(function(ranch){
+        var byTipo=byRanch[ranch];
+        Object.keys(byTipo).forEach(function(tipo){
+          var items=byTipo[tipo];
+          if (!Array.isArray(items)) return;
+          items.forEach(function(item){rows.push({cat:label,tipo:tipo,week_code:parseInt(wkCode)||wkCode,rancho:ranch,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0});});
+        });
+      });
+    });
+  }
+  flattenProd(DATA.productos,'PR'); flattenProd(DATA.productos_mp,'MP'); flattenProd(DATA.productos_me,'ME'); flattenProd(DATA.productos_mv,'MV');
+  rows.sort(function(a,b){if(b.week_code!==a.week_code)return (b.week_code||0)-(a.week_code||0);return (a.rancho||'').localeCompare(b.rancho||'');});
+  var total=rows.reduce(function(s,r){return s+(r.gasto||0);},0);
+  renderPivotTable(cols,rows,fmt(total)+' · '+rows.length+' registros');
+}
+
+// =======================================================
+// VIEW 7: COSTO SERVICIOS  (con desglose por rancho)
+// =======================================================
+var SV_SUBCATS=['Electricidad','Fletes y Acarreos','Gastos de Exportación','Certificado Fitosanitario','Transporte de Personal','Compra de Flor a Terceros','Comida para el Personal','RO, TEL, RTA.Alim'];
+function renderServicios() {
+  var sym=state.currency.toUpperCase();
+  var f=state.fromWeek, t=state.toWeek;
+  var yrs=getActiveYears();
+  var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
+
+  // ── Acumular datos ─────────────────────────────────────
+  var weekMap={};
+  var src=Array.isArray(DATA.servicios_data)&&DATA.servicios_data.length ? DATA.servicios_data : DATA.weekly_detail;
+  src.forEach(function(r){
+    if (!state.activeYears[r.year]) return;
+    if (r.week<f||r.week>t) return;
+    var key=r.year+'-'+r.week;
+    if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,date_range:r.date_range||''};
+    var subcat, val, ranches;
+    if (r.subcat) {
+      subcat=r.subcat;
+      val=state.currency==='usd'?r.usd_total:r.mxn_total;
+      ranches=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;
+    } else if (r.categoria&&r.categoria.startsWith('SV:')) {
+      subcat=r.categoria.replace('SV:','');
+      val=state.currency==='usd'?r.usd_total:r.mxn_total;
+      ranches=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;
+    } else return;
+    if (!subcat) return;
+    weekMap[key][subcat]=(weekMap[key][subcat]||0)+(val||0);
+    Object.keys(ranches||{}).forEach(function(rn){
+      weekMap[key][subcat+'__r__'+rn]=(weekMap[key][subcat+'__r__'+rn]||0)+(ranches[rn]||0);
+    });
+  });
+
+  // ── Semanas con datos ─────────────────────────────────
+  var weekKeys=[];
+  yrs.forEach(function(yr){
+    rangeWeeks.forEach(function(w){
+      var key=yr+'-'+w;
+      var hasSome=false;
+      Object.keys(weekMap[key]||{}).forEach(function(k){
+        if(k[0]!=='_'&&!k.includes('__r__')&&weekMap[key][k]>0) hasSome=true;
+      });
+      if(hasSome) weekKeys.push(key);
+    });
+  });
+
+  // ── Subcats ordenadas ─────────────────────────────────
+  var subcatsSet={};
+  weekKeys.forEach(function(key){
+    Object.keys(weekMap[key]||{}).forEach(function(k){
+      if(k[0]!=='_'&&!k.includes('__r__')) subcatsSet[k]=1;
+    });
+  });
+  var orderedSubcats=SV_SUBCATS.filter(function(sc){return subcatsSet[sc];});
+  Object.keys(subcatsSet).forEach(function(sc){if(orderedSubcats.indexOf(sc)===-1)orderedSubcats.push(sc);});
+
+  // ── Ranchos activos ───────────────────────────────────
+  var allowedRanches=getActiveRanches();
+  var activeRanches=allowedRanches.filter(function(rn){
+    return weekKeys.some(function(key){
+      return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
+    });
+  });
+  var showTotal = state.activeRanches.indexOf('Todos')>-1;
+
+  // ── Sin datos ─────────────────────────────────────────
+  if (!weekKeys.length || !orderedSubcats.length) {
+    document.getElementById('gridWrap').style.display='';
+    document.getElementById('gridWrap').innerHTML='<div style="padding:20px;color:#888;font-size:12px">Sin datos para el rango seleccionado.</div>';
+    document.getElementById('comparativoWrap').className='';
+    document.getElementById('stTotal').textContent='—';
+    return;
+  }
+
+  // ─────────────────────────────────────────────────────
+  // NUEVO LAYOUT: columnas = RANCHO, sub-columnas = semanas
+  // CONCEPTO | [Isabela: wk1 wk2 ... SUB] | [PosCo: wk1 wk2 ... SUB] | TOTAL
+  // ─────────────────────────────────────────────────────
+  var nWeeks = weekKeys.length;
+  var nColsPerRanch = nWeeks + 1; // semanas + SUB
+
+  var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
+  var thPin =thBase+'position:sticky;top:0;z-index:4;';
+  var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
+
+  // ── Header nivel 1: CONCEPTO | [Ranch colspan=nColsPerRanch] ... | TOTAL group ──
+  var h1='<tr>';
+  h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:190px">CONCEPTO</th>';
+  activeRanches.forEach(function(rn){
+    var col=RANCH_COLORS[rn]||'#888';
+    h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
+  });
+  if(showTotal) h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #4472C4;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
+  h1+='</tr>';
+
+  // ── Header nivel 2: por cada rancho → [wk labels... | DIF] + TOTAL group ──
+  var h2='<tr>';
+  activeRanches.forEach(function(){
+    weekKeys.forEach(function(key){
+      var d=weekMap[key];
+      var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+      var col=YEAR_COLORS[d._year]||'#888';
+      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:60px">'+lbl+'</th>';
+    });
+    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">DIF</th>';
+  });
+  if(showTotal) {
+    weekKeys.forEach(function(key){
+      var d=weekMap[key];
+      var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+      var col=YEAR_COLORS[d._year]||'#888';
+      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:70px;background:#EAF3FF">'+lbl+'</th>';
+    });
+    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
+  }
+  h2+='</tr>';
+
+  // ── Acumuladores totales ──────────────────────────────
+  var grandByRnWk={}, grandByRn={}, grandTotal=0;
+  var grandTotWk={};
+  activeRanches.forEach(function(rn){
+    grandByRnWk[rn]={}; grandByRn[rn]=0;
+    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; });
+  });
+  weekKeys.forEach(function(k){ grandTotWk[k]=0; });
+
+  function cell(v,bold,color){
+    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">—</td>';
+    var s='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
+    if(bold) s+='font-weight:700;';
+    s+='color:'+(color||'#1e3a5f')+';';
+    return '<td style="'+s+'">'+fmt(v)+'</td>';
+  }
+
+  // ── Filas por subcat ──────────────────────────────────
+  var bodyHtml='';
+  orderedSubcats.forEach(function(sc){
+    var scByRnWk={}, scByRn={}, scTotal=0, scByWk={};
+    weekKeys.forEach(function(k){ scByWk[k]=0; });
+    activeRanches.forEach(function(rn){
+      scByRnWk[rn]={}; scByRn[rn]=0;
+      weekKeys.forEach(function(k){
+        var v=(weekMap[k]&&weekMap[k][sc+'__r__'+rn])?weekMap[k][sc+'__r__'+rn]:0;
+        scByRnWk[rn][k]=v;
+        scByRn[rn]+=v;
+        scTotal+=v;
+        scByWk[k]+=v;
+        grandByRnWk[rn][k]+=v;
+        grandByRn[rn]+=v;
+        grandTotal+=v;
+        grandTotWk[k]+=v;
+      });
+    });
+    if(scTotal===0) return;
+
+    var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;font-size:11px;';
+    bodyHtml+='<tr class="pt-row">';
+    bodyHtml+='<td style="'+tdPin+'left:0;color:#1e3a5f;font-weight:700">'+sc+'</td>';
+    activeRanches.forEach(function(rn){
+      weekKeys.forEach(function(key){
+        var v=scByRnWk[rn][key];
+        if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
+        else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#334155;font-weight:600">'+fmt(v)+'</td>';}
+      });
+      var rnDif=(scByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(scByRnWk[rn][weekKeys[0]]||0);
+      bodyHtml+=cell(rnDif||0,true,'#1e3a5f');
+    });
+    // Celdas TOTAL por semana
+    var totCellStyle='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;background:#EAF3FF;font-weight:700;color:#1e3a5f;';
+    if(showTotal) {
+      weekKeys.forEach(function(key){
+        var v=scByWk[key];
+        bodyHtml+='<td style="'+totCellStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+      });
+      var scDif=Math.abs((scByWk[weekKeys[weekKeys.length-1]]||0)-(scByWk[weekKeys[0]]||0));
+      bodyHtml+='<td style="'+totCellStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(scDif?fmt(scDif):'—')+'</td>';
+    }
+    bodyHtml+='</tr>';
+  });
+
+  // ── Fila TOTAL GENERAL ────────────────────────────────
+  var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;';
+  var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;z-index:2;white-space:nowrap;';
+  bodyHtml+='<tr>';
+  bodyHtml+='<td style="'+totPin+'left:0;text-align:left">TOTAL GENERAL</td>';
+  activeRanches.forEach(function(rn){
+    weekKeys.forEach(function(key){
+      var v=grandByRnWk[rn][key];
+      bodyHtml+='<td style="'+totStyle+'color:#1e3a5f">'+(v?fmt(v):'—')+'</td>';
+    });
+    var rnTotDif=(grandByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(grandByRnWk[rn][weekKeys[0]]||0);
+    bodyHtml+='<td style="'+totStyle+'color:#1e3a5f;border-left:1px solid #aaa">'+(rnTotDif?fmt(rnTotDif):'—')+'</td>';
+  });
+  var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  if(showTotal) {
+    weekKeys.forEach(function(key){
+      var v=grandTotWk[key]||0;
+      bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+    });
+    var gtDif=Math.abs((grandTotWk[weekKeys[weekKeys.length-1]]||0)-(grandTotWk[weekKeys[0]]||0));
+    bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
+  }
+  bodyHtml+='</tr>';
+
+  // ── Inyectar en el DOM ────────────────────────────────
+  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:auto"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var gw=document.getElementById('gridWrap');
+  if(gw){ gw.style.display=''; gw.innerHTML=html; }
+  document.getElementById('comparativoWrap').className='';
+  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
+  setTimeout(resizeTable,80);
+}
+
+// =======================================================
+// VIEW 8: COSTO MANO DE OBRA
+// =======================================================
+var MO_SUBCATS = [
+  'Ing. Y Admon.','Supervisores','Corte','Trasplante','Manejo P.',
+  'Consolidacion','Siembra','Mov. Charolas','Riego','Phlox','Hoops','MIPE Y MIRFE',
+  'Tract. Y Cameros','Veladores','Soldadores','Transporte',
+  'Admon Posco','Alm.upc y empaq','Contratista y com.',
+  'Prod. Patina y rec','IMSS,INFO Y RCV','Imp. 1.8%'
+];
+
+// Colores para ranchos del conteo de personal (distintos a los ranchos físicos)
+var MO_RANCH_COLORS = {
+  'Administracion':  '#374151',
+  'Propagacion':     '#047857',
+  'Poscosecha':      '#0369a1',
+  'Ramona':          '#b45309',
+  'Isabela':         '#7c3aed',
+  'Christina':       '#0369a1',
+  'Cecilia':         '#be185d',
+  'Cecilia 25':      '#047857',
+};
+
+// Orden preferido de ranchos en mano de obra
+var MO_RANCH_ORDER = [
+  'Administracion','Propagacion','Poscosecha','Ramona',
+  'Isabela','Christina','Cecilia','Cecilia 25'
+];
+
+function renderManoObra() {
+  var sym=state.currency.toUpperCase();
+  var f=state.fromWeek, t=state.toWeek;
+  var yrs=getActiveYears();
+
+  // ── Acumular datos ─────────────────────────────────────
+  var weekMap={};
+  var src=Array.isArray(DATA.mano_obra_data)&&DATA.mano_obra_data.length?DATA.mano_obra_data:[];
+  src.forEach(function(r){
+    if (!state.activeYears[r.year]) return;
+    if (r.week<f||r.week>t) return;
+    var key=r.year+'-'+r.week;
+    if (!weekMap[key]) weekMap[key]={_year:r.year,_week:r.week,date_range:r.date_range||''};
+    var subcat=(r.subcat||'').trim(); if (!subcat) return;
+    var val=state.currency==='usd'?r.usd_total:r.mxn_total;
+    var ranches=state.currency==='usd'?r.usd_ranches:r.mxn_ranches;
+    var valHc=r.hc_total||0;
+    var hcRanches=r.hc_ranches||{};
+    weekMap[key][subcat]=(weekMap[key][subcat]||0)+(val||0);
+    Object.keys(ranches||{}).forEach(function(rn){
+      weekMap[key][subcat+'__r__'+rn]=(weekMap[key][subcat+'__r__'+rn]||0)+(ranches[rn]||0);
+    });
+    Object.keys(hcRanches||{}).forEach(function(rn){
+      weekMap[key][subcat+'__hc_r__'+rn]=(weekMap[key][subcat+'__hc_r__'+rn]||0)+(hcRanches[rn]||0);
+    });
+  });
+
+  // MO_GROUPS: un subcat por grupo — igual tanto en conteo.xlsx (sem 1-13)
+  // como en el WK Excel (sem 14+), ya que norm_cat() ahora colapsa
+  // Nómina + H.Extra + Bonos al mismo nombre unificado del BD CONTEO.
+  var MO_GROUPS=[
+    {label:'ING. Y ADMON.',      subcats:['Ing. Y Admon.']},
+    {label:'SUPERVISORES',       subcats:['Supervisores']},
+    {label:'CORTE',              subcats:['Corte']},
+    {label:'TRASPLANTE',         subcats:['Trasplante']},
+    {label:'MANEJO PLANTA',      subcats:['Manejo P.']},
+    {label:'CONSOLIDACIÓN',      subcats:['Consolidacion']},
+    {label:'SIEMBRA',            subcats:['Siembra']},
+    {label:'MOV. CHAROLAS',      subcats:['Mov. Charolas']},
+    {label:'RIEGO',              subcats:['Riego']},
+    {label:'PHLOX',              subcats:['Phlox']},
+    {label:'HOOPS',              subcats:['Hoops']},
+    {label:'MIPE / MIRFE',       subcats:['MIPE Y MIRFE']},
+    {label:'TRACTORES/CAMEROS',  subcats:['Tract. Y Cameros']},
+    {label:'VELADORES',          subcats:['Veladores']},
+    {label:'SOLDADORES',         subcats:['Soldadores']},
+    {label:'TRANSPORTE',         subcats:['Transporte']},
+    {label:'ADMON POSCO',        subcats:['Admon Posco']},
+    {label:'ALM. UPC Y EMPAQUE', subcats:['Alm.upc y empaq']},
+    {label:'CONTRATISTA',        subcats:['Contratista y com.']},
+    {label:'PROD. PÁTINA Y REC', subcats:['Prod. Patina y rec']},
+    {label:'IMSS/INFO/RCV',      subcats:['IMSS,INFO Y RCV']},
+    {label:'IMP. 1.8%',          subcats:['Imp. 1.8%']},
+  ];
+
+  // Semanas con datos — directamente del weekMap (orden año-semana)
+  var weekKeys=Object.keys(weekMap).filter(function(key){
+    var hasSome=false;
+    Object.keys(weekMap[key]).forEach(function(k){if(k[0]!=='_'&&!k.includes('__r__')&&weekMap[key][k]>0)hasSome=true;});
+    return hasSome;
+  }).sort(function(a,b){
+    var pa=a.split('-'), pb=b.split('-');
+    return (parseInt(pa[0])-parseInt(pb[0]))||( parseInt(pa[1])-parseInt(pb[1]));
+  });
+
+  // Ranchos con datos: usar los ranchos del conteo (no RANCH_ORDER físico)
+  // Primero recolectar todos los ranchos que aparecen en los datos
+  var ranchesEnDatos={};
+  weekKeys.forEach(function(key){
+    Object.keys(weekMap[key]||{}).forEach(function(k){
+      if(!k.includes('__r__')) return;
+      var rn=k.split('__r__')[1];
+      if(weekMap[key][k]>0) ranchesEnDatos[rn]=true;
+    });
+  });
+  // Mapeo de ranchos para Mano de Obra
+  var moMap = {
+    'Isabela': ['Isabela'],
+    'Cecilia': ['Cecilia'],
+    'Cecilia 25': ['Cecilia 25'],
+    'Prop-RM': ['Propagacion'],
+    'Campo-RM': ['Ramona'],
+    'PosCo-RM': ['Poscosecha']
+  };
+  var _ar=getActiveRanches(); var allowedRanches=[]; if(state.activeRanches.indexOf('Todos')>-1){allowedRanches=MO_RANCH_ORDER;}else{_ar.forEach(function(rn){var m=moMap[rn]||[rn]; m.forEach(function(nx){if(allowedRanches.indexOf(nx)<0)allowedRanches.push(nx);});});}
+  var activeRanches = allowedRanches.filter(function(rn){ return ranchesEnDatos[rn]; });
+  Object.keys(ranchesEnDatos).forEach(function(rn){
+    if (state.activeRanches.indexOf('Todos')<0 && allowedRanches.indexOf(rn) < 0) return;
+    if (activeRanches.indexOf(rn) < 0) activeRanches.push(rn);
+  });
+  var showTotal = state.activeRanches.indexOf('Todos') > -1;
+
+  function shortLabel(sc){
+    return sc.replace('Nómina Prod. ','').replace('Nómina Op. ','')
+      .replace('H.Extra Dom. y Festivos ','H.Extra ').replace('H.Extra Dom. y Fest. ','H.Extra ')
+      .replace('Bonos Asist./Puntualidad ','Bonos ');
+  }
+  function cell(v,bold,color){
+    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ccc">—</td>';
+    var s='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
+    if(bold) s+='font-weight:700;';
+    s+='color:'+(color||'#1e3a5f')+';';
+    return '<td style="'+s+'">'+fmt(v)+'</td>';
+  }
+  function cellGrp(v){
+    if(!v||isNaN(v)||v===0) return '<td style="padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700">—</td>';
+    return '<td style="padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700">'+fmt(v)+'</td>';
+  }
+
+  if (!weekKeys.length || !activeRanches.length) {
+    var diagHtml = '<div style="padding:16px;font-family:monospace;font-size:11px;background:#fff3cd;border:1px solid #ffc107;margin:10px">';
+    diagHtml += '<b>DEBUG</b><br>';
+    diagHtml += 'mano_obra_data.length: ' + (Array.isArray(DATA.mano_obra_data) ? DATA.mano_obra_data.length : 'NO ARRAY') + '<br>';
+    if (Array.isArray(DATA.mano_obra_data) && DATA.mano_obra_data.length > 0) {
+      var s=DATA.mano_obra_data[0];
+      diagHtml += 'sample: year='+s.year+' week='+s.week+' subcat="'+s.subcat+'" mxn='+s.mxn_total+'<br>';
+      diagHtml += 'mxn_ranches='+JSON.stringify(s.mxn_ranches)+'<br>';
+    }
+    diagHtml += 'activeYears='+JSON.stringify(state.activeYears)+'<br>';
+    diagHtml += 'weekMap keys='+JSON.stringify(Object.keys(weekMap))+'<br>';
+    diagHtml += 'activeRanches='+JSON.stringify(activeRanches)+'<br>';
+    diagHtml += '</div>';
+    var gw=document.getElementById('gridWrap');
+    if(gw){gw.style.display='';gw.innerHTML=diagHtml;}
+    document.getElementById('comparativoWrap').className='';
+    document.getElementById('stTotal').textContent='—';
+    return;
+  }
+
+  // ── Construir HTML ────────────────────────────────────
+  // LAYOUT: CONCEPTO (grupo+subcat colapsable) | [Rancho: wk1 wk2 ... DIF] | TOTAL
+  var nWeeks = weekKeys.length;
+  var nColsPerRanch = nWeeks + 1; // semanas + SUB
+
+  var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
+  var thPin=thBase+'position:sticky;top:0;z-index:4;';
+  var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
+
+  var h1='<tr>';
+  h1+='<th rowspan="2" style="'+thPin+'left:0;min-width:200px">CONCEPTO</th>';
+  activeRanches.forEach(function(rn){
+    var col=MO_RANCH_COLORS[rn]||RANCH_COLORS[rn]||'#374151';
+    h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
+  });
+  if(showTotal) h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #4472C4;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
+  h1+='</tr>';
+
+  // HEADER nivel 2: [por cada rancho: wk labels... | DIF] + TOTAL group
+  var h2='<tr>';
+  activeRanches.forEach(function(){
+    weekKeys.forEach(function(key){
+      var d=weekMap[key];
+      var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+      var col=YEAR_COLORS[d._year]||'#888';
+      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:60px">'+lbl+'</th>';
+    });
+    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">DIF</th>';
+  });
+  // Sub-headers del grupo TOTAL
+  if(showTotal) {
+    weekKeys.forEach(function(key){
+      var d=weekMap[key];
+      var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
+      var col=YEAR_COLORS[d._year]||'#888';
+      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:70px;background:#EAF3FF">'+lbl+'</th>';
+    });
+    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
+  }
+  h2+='</tr>';
+
+  // ── FILAS ─────────────────────────────────────────────
+  var grandByRnWk={}, grandByRn={}, grandTotal=0;
+  var grandHcByRnWk={};
+  activeRanches.forEach(function(rn){
+    grandByRnWk[rn]={}; grandByRn[rn]=0;
+    grandHcByRnWk[rn]={};
+    weekKeys.forEach(function(k){ grandByRnWk[rn][k]=0; grandHcByRnWk[rn][k]=0; });
+  });
+
+  var bodyHtml='';
+
+  window.togglePtGroup = window.togglePtGroup || function(grpClass) {
+    var rows = document.getElementsByClassName(grpClass);
+    if (!rows.length) return;
+    var isHidden = rows[0].style.display === 'none';
+    for(var i=0; i<rows.length; i++){
+      rows[i].style.display = isHidden ? '' : 'none';
+    }
+  };
+
+  MO_GROUPS.forEach(function(grp, grpIdx){
+    var grpByRnWk={}, grpByRn={}, grpTotal=0, grpHcByRn={};
+    activeRanches.forEach(function(rn){
+      grpByRnWk[rn]={}; grpByRn[rn]=0; grpHcByRn[rn]=0;
+      weekKeys.forEach(function(k){ grpByRnWk[rn][k]=0; });
+    });
+    var scRows=[];
+
+    grp.subcats.forEach(function(sc){
+      var scByRnWk={}, scByRn={}, scTotal=0;
+      var hcByRnWk={}, hcByRn={}, hcTotal=0;
+      activeRanches.forEach(function(rn){
+        scByRnWk[rn]={}; scByRn[rn]=0;
+        hcByRnWk[rn]={}; hcByRn[rn]=0;
+        weekKeys.forEach(function(k){
+          var val=(weekMap[k]&&weekMap[k][sc+'__r__'+rn])?weekMap[k][sc+'__r__'+rn]:0;
+          var hc_val=(weekMap[k]&&weekMap[k][sc+'__hc_r__'+rn])?weekMap[k][sc+'__hc_r__'+rn]:0;
+          scByRnWk[rn][k]=val;
+          scByRn[rn]+=val;
+          scTotal+=val;
+          hcByRnWk[rn][k]=hc_val;
+          grandHcByRnWk[rn][k]=(grandHcByRnWk[rn][k]||0)+hc_val;
+          grpByRnWk[rn][k]+=val;
+          grpByRn[rn]+=val;
+          grpTotal+=val;
+          grandByRnWk[rn][k]+=val;
+          grandByRn[rn]+=val;
+          grandTotal+=val;
+        });
+        // SUB HC = ultima semana - primera semana del rango
+        var firstKey=weekKeys[0], lastKey=weekKeys[weekKeys.length-1];
+        hcByRn[rn]=(hcByRnWk[rn][lastKey]||0)-(hcByRnWk[rn][firstKey]||0);
+      });
+      // hcTotal = suma de diferencias por rancho
+      hcTotal=activeRanches.reduce(function(s,rn){return s+(hcByRn[rn]||0);},0);
+      activeRanches.forEach(function(rn){ grpHcByRn[rn]+=(hcByRn[rn]||0); });
+      if(scTotal>0) scRows.push({label:shortLabel(sc),byRnWk:scByRnWk,byRn:scByRn,total:scTotal, hcByRnWk:hcByRnWk, hcByRn:hcByRn, hcTotal:hcTotal});
+    });
+    if(grpTotal===0) return;
+
+    // Fila grupo
+    var gTdPin='padding:4px 8px;background:var(--pt-grp-bg);color:#fff;font-weight:700;font-size:11px;position:sticky;z-index:2;border-bottom:1px solid #ddd;border-right:1px solid rgba(255,255,255,0.2);white-space:nowrap;';
+    bodyHtml+='<tr style="cursor:pointer;" onclick="togglePtGroup(`mo_grp_'+grpIdx+'`)" title="Clic para expandir/contraer">';
+    bodyHtml+='<td style="'+gTdPin+'left:0">'+grp.label+'</td>';
+    activeRanches.forEach(function(rn){
+      weekKeys.forEach(function(key){
+        bodyHtml+=cellGrp(grpByRnWk[rn][key]);
+      });
+      var firstKey=weekKeys[0], lastKey=weekKeys[weekKeys.length-1];
+      var costDif=Math.abs((grpByRnWk[rn][lastKey]||0)-(grpByRnWk[rn][firstKey]||0));
+      var grpDifStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700';
+      bodyHtml+='<td style="'+grpDifStyle+'">'+(costDif?fmt(costDif):'—')+'</td>';
+    });
+    // Celdas TOTAL por semana (suma todos los ranchos)
+    var grpTotStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:#9DC3E6;color:#1e3a5f;font-weight:700;border-left:1px solid #8EA9C1;';
+    if(showTotal) {
+      weekKeys.forEach(function(key){
+        var v=activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][key]||0);},0);
+        bodyHtml+='<td style="'+grpTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+      });
+      var grpTotDif=Math.abs(
+        activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[weekKeys.length-1]]||0);},0)-
+        activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[0]]||0);},0)
+      );
+      bodyHtml+='<td style="'+grpTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(grpTotDif?fmt(grpTotDif):'—')+'</td>';
+    }
+    bodyHtml+='</tr>';
+
+    // Filas subcat
+    scRows.forEach(function(sc){
+      var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;';
+      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="Número de personas (Headcount)">';
+      bodyHtml+='<td style="'+tdPin+'left:0;padding-left:20px;color:#334155;font-size:11px"><span style="color:#888;font-size:9px;margin-right:4px;">👤</span>'+sc.label+'</td>';
+      activeRanches.forEach(function(rn){
+        weekKeys.forEach(function(key){
+          var v=sc.hcByRnWk[rn][key];
+          if(!v||v===0){bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#ddd">—</td>';}
+          else{bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#475569;font-weight:600">'+fmtHc(v)+'</td>';}
+        });
+        var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
+        bodyHtml+='<td style="'+cellStyle+'">'+(sc.hcByRn[rn]?fmtHcDiff(sc.hcByRn[rn]):'—')+'</td>';
+      });
+      // Celdas TOTAL HC por semana
+      var scTotHcStyle='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;background:#EAF3FF;color:#1e3a5f;font-weight:700;';
+      if(showTotal) {
+        weekKeys.forEach(function(key){
+          var v=activeRanches.reduce(function(s,rn){return s+(sc.hcByRnWk[rn][key]||0);},0);
+          bodyHtml+='<td style="'+scTotHcStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+        });
+        bodyHtml+='<td style="'+scTotHcStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(sc.hcTotal?fmtHcDiff(sc.hcTotal):'—')+'</td>';
+      }
+      bodyHtml+='</tr>';
+    });
+  });
+
+  // Fila total general
+  // ── Totales por semana (filas al fondo) ───────────────
+  var _fk=weekKeys[0], _lk=weekKeys[weekKeys.length-1];
+  var grandCostWk={}, grandHcWk={};
+  weekKeys.forEach(function(k){
+    grandCostWk[k]=activeRanches.reduce(function(s,rn){return s+(grandByRnWk[rn][k]||0);},0);
+    grandHcWk[k]=activeRanches.reduce(function(s,rn){return s+(grandHcByRnWk[rn][k]||0);},0);
+  });
+
+  var totStyle='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  var totPin='padding:4px 8px;background:var(--pt-tot-bg);font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;left:0;z-index:2;white-space:nowrap;color:#1e3a5f;';
+  var totHcStyle='padding:4px 8px;background:#ddeedd;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  var totHcPin='padding:4px 8px;background:#ddeedd;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;position:sticky;left:0;z-index:2;white-space:nowrap;color:#1e3a5f;';
+  var dash='<td style="'+totStyle+'color:#bbb">—</td>';
+  var dashHc='<td style="'+totHcStyle+'color:#bbb">—</td>';
+
+  // Fila TOTAL $
+  bodyHtml+='<tr>';
+  bodyHtml+='<td style="'+totPin+'">TOTAL $</td>';
+  activeRanches.forEach(function(rn){
+    weekKeys.forEach(function(key){
+      var v=grandByRnWk[rn][key]||0;
+      bodyHtml+='<td style="'+totStyle+'">'+(v?fmt(v):'—')+'</td>';
+    });
+    var rnDif=Math.abs((grandByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(grandByRnWk[rn][weekKeys[0]]||0));
+    bodyHtml+='<td style="'+totStyle+'border-left:1px solid #aaa">'+(rnDif?fmt(rnDif):'—')+'</td>';
+  });
+  var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  if(showTotal) {
+    weekKeys.forEach(function(key){
+      var v=grandCostWk[key]||0;
+      bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+    });
+    var gtDif=Math.abs((grandCostWk[weekKeys[weekKeys.length-1]]||0)-(grandCostWk[weekKeys[0]]||0));
+    bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
+  }
+  bodyHtml+='</tr>';
+
+  // Fila TOTAL 👤
+  bodyHtml+='<tr>';
+  bodyHtml+='<td style="'+totHcPin+'">TOTAL 👤</td>';
+  activeRanches.forEach(function(rn){
+    weekKeys.forEach(function(key){
+      var v=grandHcByRnWk[rn][key]||0;
+      bodyHtml+='<td style="'+totHcStyle+'">'+(v?fmtHc(v):'—')+'</td>';
+    });
+    bodyHtml+=dashHc;
+  });
+  var totHcTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
+  if(showTotal) {
+    weekKeys.forEach(function(key){
+      var v=grandHcWk[key]||0;
+      bodyHtml+='<td style="'+totHcTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+    });
+    bodyHtml+='<td style="'+totHcTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">—</td>';
+  }
+  bodyHtml+='</tr>';
+
+  // ── Inyectar en el DOM ────────────────────────────────
+  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:auto"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var gw=document.getElementById('gridWrap');
+  if(gw){ gw.style.display=''; gw.innerHTML=html; }
+  document.getElementById('comparativoWrap').className='';
+  document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
+  setTimeout(resizeTable,80);
+}
+
+function onMainCellClick(evt) {
+  if (!evt||!evt.data||!evt.colDef) return;
+  var data=evt.data, clickedField=evt.colDef.field||'';
+  var clickedRanch=fieldToRanch(clickedField);
+  if (state.view==='semana') { showProdPanel(data,{ranch:clickedRanch||null}); return; }
+  if (state.view==='rancho') { if (clickedField==='rancho'||clickedRanch) showProdPanel(data,{ranch:data.rancho||null}); }
+}
+
+// =======================================================
+// PRODUCTOS SUBPANEL
+// =======================================================
+var _prodViews = [];
+
+function showProdPanel(rowData, opts) {
+  opts=opts||{};
+  var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
+  var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
+  var ranchFilter=opts.ranch||null;
+  if (!ranchFilter && state.activeRanches.indexOf('Todos')<0) ranchFilter = state.activeRanches[0];
+  if (!cat||!yr) return;
+  var hideProducts = false;
+
+  var isMant=cat==='MANTENIMIENTO', isMatEmp=cat==='MATERIAL DE EMPAQUE', isMatVeg=cat==='MATERIAL VEGETAL';
+  var isMirfe=cat===CAT_MIRFE, isMipe=cat===CAT_MIPE;
+  var src=isMant?'mp':(isMatEmp?'me':(isMatVeg?'mv':'pr'));
+  var tipoFilter=null;
+  if (src==='pr'){ if(isMirfe)tipoFilter='MIRFE'; else if(isMipe)tipoFilter='MIPE'; }
+  var dsMap={pr:DATA.productos,mp:DATA.productos_mp,me:DATA.productos_me,mv:DATA.productos_mv};
+  var ds=dsMap[src]||{};
+
+  var wkStart=parseInt(fromW||wn||0), wkEnd=parseInt(toW||wn||0);
+  if (!wkStart||!wkEnd) return;
+  if (wkStart>wkEnd){var tmp=wkStart;wkStart=wkEnd;wkEnd=tmp;}
+
+  var rows=[];
+  if (!hideProducts) {
+    for (var wk=wkStart;wk<=wkEnd;wk++){
+      var wkCodeShort=((yr%100)*100)+wk, wkCodeLong=(yr*100)+wk;
+      var weekD=ds[wkCodeShort]||ds[String(wkCodeShort)]||ds[wkCodeLong]||ds[String(wkCodeLong)];
+      if (!weekD) continue;
+      Object.keys(weekD).forEach(function(ranch){
+        if (ranchFilter&&ranch!==ranchFilter) return;
+        var byTipo=weekD[ranch];
+        Object.keys(byTipo).forEach(function(tipo){
+          if (tipoFilter&&tipo!==tipoFilter) return;
+          (byTipo[tipo]||[]).forEach(function(item){
+            rows.push({week_code:wkCodeShort,rancho:ranch,tipo:tipo,producto:item[0]||'',unidades:item[1]||'',gasto:parseFloat(item[2])||0,ubicacion:item[3]||''});
+          });
+        });
+      });
+    }
+  }
+
+  var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
+  var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
+  
+  var panelHtml = '';
+
+  // ── KPI de siembra ────────────────────────────────────────────────
+  var kpiSection = '';
+  var _allMetas = [
+    {k:'inv_inicial',  lbl:'INV. INICIAL'},
+    {k:'tallos_cos',   lbl:'TALLOS COSECHADOS'},
+    {k:'tallos_des',   lbl:'TALLOS DESECHADOS'},
+    {k:'tallos_des_sf',lbl:'TALLOS DESECHADOS SF'},
+    {k:'tallos_comp',  lbl:'TALLOS COMPRADOS'},
+    {k:'tallos_bouq',  lbl:'TALLOS BOUQUETS/PROC.'},
+    {k:'tallos_desp',  lbl:'TALLOS DESPACHADOS'},
+    {k:'libras_alb',   lbl:'LIBRAS ALBAHACA'},
+    {k:'tallos_mues',  lbl:'TALLOS MUESTRA'},
+    {k:'inv_final',    lbl:'INV. FINAL'},
+    {k:'tallos_proc',  lbl:'TALLOS PROC. TOTALES'},
+    {k:'charolas_288', lbl:'CHAROLAS *288'},
+    {k:'charolas',     lbl:'N\u00ba CHAROLAS'},
+    {k:'esquejes',     lbl:'N\u00ba ESQUEJES'},
+    {k:'metros',       lbl:'METROS SIEMBRA'},
+    {k:'hectareas',    lbl:'HECT\u00c1REAS'},
+  ];
+  if (DATA.siembra_data) {
+    var _wkKey = ((yr%100)*100) + wkStart;
+    var _wkSrc = DATA.siembra_data[_wkKey] || DATA.siembra_data[String(_wkKey)] || null;
+    if (_wkSrc) {
+      var _sRow = ranchFilter ? (_wkSrc[ranchFilter] || _wkSrc['TOTAL'] || {}) : (_wkSrc['TOTAL'] || {});
+      var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
+      if (_activos.length > 0) {
+        kpiSection = '<div style="flex-shrink:0;background:#EBF3FB;border-bottom:1px solid #8EA9C1;padding:3px 8px;display:flex;align-items:center;overflow-x:auto;scrollbar-width:none;">';
+        _activos.forEach(function(m,i){
+          if (i>0) kpiSection += '<div style="width:1px;background:#8EA9C1;height:16px;margin:0 10px;flex-shrink:0;"></div>';
+          kpiSection += '<div style="display:flex;align-items:baseline;gap:4px;flex-shrink:0;white-space:nowrap;">'+
+            '<span style="font-size:9px;color:#44546A;text-transform:uppercase;">'+m.lbl+':</span>'+
+            '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</span>'+
+            '</div>';
+        });
+        kpiSection += '</div>';
+      }
+    }
+  }
+
+  // ── Zona 2: Tabla de productos ────────────────────────────────────
+  var productSection = '';
+  if (hideProducts) {
+    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Detalle de productos no disponible para MATERIAL VEGETAL.</div>';
+  } else if (rows.length === 0) {
+    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
+  } else {
+    rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
+    var total=rows.reduce(function(s,r){return s+r.gasto;},0);
+    var panelMeta = 'Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>';
+    productSection =
+      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">' +
+        '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
+        '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
+      '</div>' +
+      '<div style="overflow-x:auto; overflow-y:auto; flex:1; min-height:0; max-height:min(58vh, 520px); scrollbar-width:thin;">' +
+        '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
+          '<thead><tr style="position:sticky;top:0;z-index:1;">' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
+            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
+            '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO</th>' +
+          '</tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
+      productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
+        '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
+        '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
+        '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
+        '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+fmt(r.gasto)+'</td>' +
+        '</tr>';
+    });
+    productSection += '</tbody></table></div>';
+  }
+
+  panelHtml =
+    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #4472C4; display:flex; flex-direction:column; background:#fff; overflow:hidden; max-height:min(68vh, 620px);">' +
+      '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
+        '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
+      '</div>' +
+      kpiSection +
+      productSection +
+    '</div>';
+  
+  if (_prodViews.indexOf(panelHtml) === -1) {
+    _prodViews.push(panelHtml);
+    if (_prodViews.length > 2) {
+      _prodViews.shift(); // keep max 2 side-by-side
+    }
+  }
+  
+  document.getElementById('prodPanel').className='show';
+  document.getElementById('prodTableWrap').innerHTML = _prodViews.join('');
+  setTimeout(resizeTable,80);
+}
+function closeProdPanel() { _prodViews = []; document.getElementById('prodPanel').className=''; setTimeout(resizeTable,60); }
+function showProdFromCmp(yr,wk,ranch) { showProdPanel({_cat:state.cat,_year:yr,_week:wk,_fromWeek:wk,_toWeek:wk},{ranch:ranch||null}); }
+
+// =======================================================
+// RESIZE
+// =======================================================
+function resizeTable() {
+  reportHeight();
+}
+window.addEventListener('resize', resizeTable);
+
+// =======================================================
+// HEIGHT REPORTING
+// =======================================================
+function reportHeight() {
+  var body = document.body || {};
+  var docEl = document.documentElement || {};
+  var appEl = document.getElementById('app');
+  var h = Math.max(
+    window.innerHeight || 0,
+    docEl.clientHeight || 0,
+    docEl.scrollHeight || 0,
+    docEl.offsetHeight || 0,
+    body.scrollHeight || 0,
+    body.offsetHeight || 0,
+    appEl ? appEl.scrollHeight : 0,
+    appEl ? appEl.offsetHeight : 0,
+    700
+  );
+  window.parent.postMessage({type:'streamlit:setFrameHeight',height:h},'*');
+}
+var ro=new ResizeObserver(reportHeight);
+ro.observe(document.getElementById('app')||document.body);
+reportHeight();
+// Reportar varias veces al inicio para que Streamlit capture la altura real
+setTimeout(reportHeight,100);
+setTimeout(reportHeight,300);
+setTimeout(reportHeight,700);
+setTimeout(reportHeight,1500);
+
+// =======================================================
+// ARRANCAR &#8212; diferido con protección
+// =======================================================
+if (!DATA || !DATA.weekly_series) {
+  if (DATA) {
+    DATA.weekly_series={};
+    DATA.categories.forEach(function(cat){DATA.weekly_series[cat]={};});
+    DATA.weekly_detail.forEach(function(r){
+      if (r.usd_total>0){
+        if (!DATA.weekly_series[r.categoria]) DATA.weekly_series[r.categoria]={};
+        var key=r.year+'-W'+String(r.week).padStart(2,'0');
+        DATA.weekly_series[r.categoria][key]=(DATA.weekly_series[r.categoria][key]||0)+r.usd_total;
+      }
+    });
+  }
+}
+
+setTimeout(function() {
+  if (!DATA) return;
+  try {
+    inicializar();
+  } catch(e) {
+    var loader = document.getElementById('loader');
+    if (loader) loader.innerHTML =
+      '<div style="color:#dc2626;font-family:monospace;padding:20px;background:#fff;' +
+      'border-radius:8px;border:1px solid #fecaca;max-width:600px;margin:20px auto">' +
+      '<b>Error en inicializar:</b> ' + e.message +
+      (e.stack ? '<br><pre style="font-size:10px;color:#999;margin-top:8px;overflow:auto">' + e.stack + '</pre>' : '') +
+      '</div>';
+  }
+}, 100);
+</script>"""
+
+HTML = f'''<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CFBC &#8212; Control Operativo</title>
+{APP_CSS}
+</head>
+<body>
+{APP_HTML_BODY}
+{APP_JS}
+</body>
+</html>'''
+
+html_final = HTML.replace('__DATA_JSON__', data_json)
 
 
-# ─── Punto de entrada público ─────────────────────────────────────────────────
-def _extraer_mano_obra_conteo() -> list:
-    """
-    Lee el Excel de conteo de personal desde SharePoint.
-    """
-    print(f"📥 Descargando conteo desde: {SHAREPOINT_URL_CONTEO}")
-    archivo = _descargar_excel(SHAREPOINT_URL_CONTEO, "Conteo Personal")
-    if archivo is None:
-        print("⚠️  No se pudo descargar conteo.xlsx — mano_obra_data vacío")
-        return []
-    print(f"✅ Descarga OK, tamaño={len(archivo.getvalue())} bytes")
+# ─── LÓGICA DE RENDERIZADO (DASHBOARD VS AUTOMATIZACIÓN) ─────────────────────
+available_weeks = sorted(
+    {str(r["year"] % 100).zfill(2) + str(r["week"]).zfill(2) for r in DATA.get("weekly_detail", [])},
+    reverse=True
+)
 
+from data_extractor import get_sheet_xlsx
+try:
+    from data_extractor import crear_hoja_wk
+    _crear_disponible = True
+except ImportError:
+    _crear_disponible = False
+
+try:
+    from data_extractor import insertar_hojas_pr_me_mp
+    _subir_disponible = True
+except ImportError:
+    _subir_disponible = False
+
+try:
+    from data_extractor import autorrellenar_materiales_wk
+    _autofill_disponible = True
+except ImportError:
+    _autofill_disponible = False
+
+if not st.session_state.show_auto:
+    # ==== MODO DASHBOARD ====
+    # Header nativo de Streamlit — mismo color #4472C4, botones reales sin trucos de z-index
+    col_brand, col_reload, col_auto = st.columns([10, 1, 1])
+    with col_brand:
+        st.markdown('<span id="cfbc-brand">CFBC &#9656; CONTROL SEMANAL</span>', unsafe_allow_html=True)
+    with col_reload:
+        if st.button("⟳ Recargar", key="btn_reload", help="Recargar datos desde SharePoint"):
+            st.cache_data.clear()
+            st.rerun()
+    with col_auto:
+        st.button("⚙️ Auto", key="btn_auto", on_click=toggle_auto, help="Panel de Automatización")
+
+    # iframe sin header propio (36px ya los ocupa el header nativo de arriba)
+    components.html(html_final, height=864, scrolling=False)
+
+else:
+    # ==== MODO PANEL DE AUTOMATIZACIÓN ====
     try:
-        df = pd.read_excel(archivo, sheet_name="BD", header=2)
-        print(f"✅ Excel leído: {df.shape[0]} filas, columnas={list(df.columns)}")
-    except Exception as e:
-        print(f"⚠️  Error leyendo conteo.xlsx: {e}")
-        return []
-
-    df.columns = [str(c).strip() for c in df.columns]
-    needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS", "Conteo"}
-    missing = needed - set(df.columns)
-    if missing:
-        print(f"⚠️  Conteo.xlsx — columnas faltantes: {missing}")
-        return []
-
-    # ── Diagnóstico columna Conteo ────────────────────────────────────────────
-    print(f"🔍 Conteo dtype  : {df['Conteo'].dtype}")
-    print(f"🔍 Conteo sample : {df['Conteo'].head(10).tolist()}")
-    print(f"🔍 Conteo no-nulos: {df['Conteo'].notna().sum()} de {len(df)} filas")
-    # Forzar conversión numérica por si llegan como string o formula
-    df["Conteo"] = pd.to_numeric(df["Conteo"], errors="coerce").fillna(0.0)
-
-    df = df.dropna(subset=["Año", "Semana", "Área"])
-    df["Año"]    = pd.to_numeric(df["Año"],    errors="coerce")
-    df["Semana"] = pd.to_numeric(df["Semana"], errors="coerce")
-    df = df.dropna(subset=["Año", "Semana"])
-    df["Año"]    = df["Año"].astype(int)
-    df["Semana"] = df["Semana"].astype(int)
-
-    def _sv(v):
-        try:
-            s = str(v).strip().replace(",", "").replace(" ", "")
-            if not s or s in ("-", "-   ", " -   "):
-                return 0.0
-            return round(float(s), 2)
-        except:
-            return 0.0
-
-    result = []
-    for (anio, semana, area), grp in df.groupby(["Año", "Semana", "Área"]):
-        code = (int(anio) - 2000) * 100 + int(semana)
-        mxn_ranches, usd_ranches, hc_ranches = {}, {}, {}
-        mxn_total = usd_total = hc_total = 0.0
-        for _, row in grp.iterrows():
-            rancho     = str(row.get("Rancho", "")).strip()
-            costo_mn   = _sv(row.get("Costo MN",   0))
-            costo_dlls = _sv(row.get("Costo DLLS", 0))
-            conteo_val = _sv(row.get("Conteo", 0))
-            mxn_total += costo_mn
-            usd_total += costo_dlls
-            hc_total  += conteo_val
-            if rancho:
-                mxn_ranches[rancho] = round(mxn_ranches.get(rancho, 0.0) + costo_mn,   2)
-                usd_ranches[rancho] = round(usd_ranches.get(rancho, 0.0) + costo_dlls, 2)
-                hc_ranches[rancho]  = hc_ranches.get(rancho, 0.0) + conteo_val
-        result.append({
-            "semana":      code,
-            "year":        int(anio),
-            "week":        int(semana),
-            "date_range":  "",
-            "subcat":      str(area).strip(),
-            "mxn_total":   round(mxn_total, 2),
-            "usd_total":   round(usd_total, 2),
-            "hc_total":    hc_total,
-            "mxn_ranches": mxn_ranches,
-            "usd_ranches": usd_ranches,
-            "hc_ranches":  hc_ranches,
-        })
-
-    print(f"✅ conteo mano_obra_data: {len(result)} registros desde conteo.xlsx")
-    return result
-
-
-def get_datos() -> dict:
-    """
-    - Hojas WK  → Excel principal en SharePoint
-    - Hojas PR  → Excel secundario en SharePoint
-    - Hojas MP  → Excel secundario en SharePoint (MANTENIMIENTO)
-    - Hojas ME  → Excel secundario en SharePoint (MATERIAL DE EMPAQUE)
-    """
-    # 1. Descargar y leer Excel WK
-    archivo = _descargar_excel(SHAREPOINT_URL_WK, "Excel WK")
-    if archivo is None:
-        return {"error": "No se pudo descargar el archivo WK de SharePoint."}
-
-    try:
-        xls = pd.ExcelFile(archivo)
-    except Exception as e:
-        return {"error": f"No se pudo abrir el Excel WK: {e}"}
-
-    resultado = extraer_datos(xls)
-
-    if "error" not in resultado:
-        # 2. Leer PR desde Excel secundario de SharePoint
-        print("\n" + "=" * 60)
-        print("🔍 LEYENDO HOJAS PR DESDE SHAREPOINT")
-        print("=" * 60)
-        productos, productos_debug = _fetch_desde_sharepoint("PR", _parse_generic, "PR")
-        # Merge con cualquier PR que ya estuviera en el Excel WK
-        resultado["productos"].update(productos)
-        resultado["productos_debug"].update(productos_debug)
-
-        # 3. Leer MP desde Excel secundario de SharePoint (MANTENIMIENTO)
-        print("\n" + "=" * 60)
-        print("🔍 LEYENDO HOJAS MP DESDE SHAREPOINT (MANTENIMIENTO)")
-        print("=" * 60)
-        productos_mp, productos_mp_debug = _fetch_desde_sharepoint("MP", _parse_generic, "MP")
-        resultado["productos_mp"]       = productos_mp
-        resultado["productos_mp_debug"] = productos_mp_debug
-
-        # 4. Leer ME desde Excel secundario de SharePoint (MATERIAL DE EMPAQUE)
-        print("\n" + "=" * 60)
-        print("🔍 LEYENDO HOJAS ME DESDE SHAREPOINT (MATERIAL DE EMPAQUE)")
-        print("=" * 60)
-        productos_me, productos_me_debug = _fetch_desde_sharepoint("ME", _parse_generic, "ME")
-        resultado["productos_me"]       = productos_me
-        resultado["productos_me_debug"] = productos_me_debug
-
-        HIDDEN_RANCHES = {"Albahaca-RM", "Campo-VI"}
-        resultado["config"] = {
-            "ranch_order": [k for k in RANCH_CONFIG.keys() if k not in HIDDEN_RANCHES],
-            "ranch_colors": {k: v["color"] for k, v in RANCH_CONFIG.items() if k not in HIDDEN_RANCHES}
-        }
-
-        # 5. Reemplazar mano_obra_data con datos del conteo de personal (Inteligente)
-        print("\n" + "=" * 60)
-        print("🔍 LEYENDO CONTEO DE PERSONAL (MANO DE OBRA)")
-        print("=" * 60)
-        
-        conteo_data_raw = _extraer_mano_obra_conteo()
-        
-        # Filtrar registros vacíos (plantillas en el Excel de conteo sin dinero ni personal)
-        conteo_data = [r for r in conteo_data_raw if r.get("mxn_total", 0) > 0 or r.get("usd_total", 0) > 0 or r.get("hc_total", 0) > 0]
-        conteo_keys = {(r["year"], r["week"]) for r in conteo_data}
-        
-        wk_mano_obra = resultado.get("mano_obra_data", [])
-        
-        merged_mano_obra = list(conteo_data)
-        wk_added_count = 0
-        for r in wk_mano_obra:
-            if (r["year"], r["week"]) not in conteo_keys:
-                merged_mano_obra.append(r)
-                wk_added_count += 1
-                
-        resultado["mano_obra_data"] = merged_mano_obra
-        print(f"✅ Merge: {len(conteo_data)} registros reales de Conteo + {wk_added_count} registros de WK Excel (Fallback)")
-
-        # CRITICAL: If Week 14 only exists in mano_obra_data, we must inject it into the global lists
-        # so the JavaScript frontend (`allWeeks` / `rangeWeeks`) knows this week exists!
-        for r in merged_mano_obra:
-            yr = r["year"]
-            wk = r["week"]
-            if yr not in resultado["years"]:
-                resultado["years"].append(yr)
-                resultado["years"].sort()
-            
-            w_per_year = resultado.get("weeks_per_year", {})
-            if yr not in w_per_year:
-                w_per_year[yr] = []
-            if wk not in w_per_year[yr]:
-                w_per_year[yr].append(wk)
-                w_per_year[yr].sort()
-            resultado["weeks_per_year"] = w_per_year
-            
-            key = f"{yr}-{wk}"
-            if key not in resultado["week_date_ranges"]:
-                resultado["week_date_ranges"][key] = r.get("date_range", f"W{wk:02d}")
-
-    return resultado
-
-
-# --- Construir hoja WK en blanco con estructura fija ---
-def _construir_hoja_wk(ws, nombre_hoja: str):
-    """
-    Escribe la estructura completa de una hoja WK#### con formato IDENTICO al Excel de SharePoint.
-    Colores, negritas, bordes y rellenos exactos.
-    """
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
-    # ── Helpers ─────────────────────────────────────────────────────────
-    NAVY  = "333399"   # color texto principal
-    GRAY  = "44546A"   # color texto datos rancho
-    WHITE = "FFFFFF"
-
-    def _f(bold=False, size=10, color=NAVY, name="Calibri"):
-        return Font(bold=bold, size=size, color=color, name=name)
-
-    def _fill(hex_color):
-        if not hex_color or hex_color in ("", "none"):
-            return PatternFill(fill_type=None)
-        c = hex_color.lstrip("FF") if len(hex_color) == 8 else hex_color
-        if len(c) != 6:
-            return PatternFill(fill_type=None)
-        return PatternFill("solid", fgColor=c)
-
-    def _al(h="general", v="center", wrap=False):
-        return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
-
-    thin   = Side(style="thin")
-    medium = Side(style="medium")
-    none_s = Side(style=None)
-
-    def _bdr(left=None, right=None, top=None, bottom=None):
-        return Border(left=left or none_s, right=right or none_s,
-                      top=top or none_s,   bottom=bottom or none_s)
-
-    # Rellenos
-    fill_green  = _fill("CCFFCC")   # verde claro USD   (FFCCFFCC en real)
-    fill_blue   = _fill("DAE3F3")   # azul claro encabezado
-    fill_lime   = _fill("C5E0B4")   # verde lima codigo semana
-    fill_orange = _fill("FFCC99")   # naranja subtotales (FFFFCC99)
-    fill_yellow = _fill("FFFFCC")   # amarillo produccion
-    fill_white  = _fill("FFFFFF")
-    fill_kpi    = _fill("008000")   # verde oscuro KPI headers
-
-    # Bordes reutilizables
-    bdr_L_med         = _bdr(left=medium)
-    bdr_L_med_R_thin  = _bdr(left=medium, right=thin)
-    bdr_R_med         = _bdr(right=medium)
-    bdr_L_R_thin      = _bdr(left=thin, right=thin)
-
-    # ── Ancho de columnas ────────────────────────────────────────────────
-    ws.column_dimensions["A"].width = 3
-    ws.column_dimensions["B"].width = 69.4
-    ws.column_dimensions["C"].width = 14
-    for col in ("D","E","F","G","H","I","J"):
-        ws.column_dimensions[col].width = 11
-    ws.column_dimensions["K"].width = 3
-    for col in ("L","M","N","O","P","Q","R","S"):
-        ws.column_dimensions[col].width = 11
-
-    # ── Fila 1 ───────────────────────────────────────────────────────────
-    ws["B1"].value = "CENTRO FLORICULTOR DE BAJA CALIFORNIA, S.A. DE C.V. "
-    ws["B1"].font  = _f(bold=True)
-
-    # ── Fila 2 ───────────────────────────────────────────────────────────
-    ws["B2"].value = "SEMANA DE CALCULO - Mexico"
-    ws["B2"].font  = _f(bold=True)
-    ws["B2"].fill  = fill_blue
-    ws["B2"].alignment = _al("center")
-
-    # ── Fila 3 ───────────────────────────────────────────────────────────
-    code = nombre_hoja[2:] if nombre_hoja.upper().startswith("WK") else nombre_hoja
-    ws["B3"].value = code
-    ws["B3"].font  = _f(bold=True)
-    ws["B3"].fill  = fill_lime
-    ws["B3"].alignment = _al("center")
-    ws["C3"].value = 19;  ws["C3"].font = _f(bold=True)
-    ws["C3"].border = _bdr(bottom=medium)
-    ws["D3"].value = " tipo de cambio"; ws["D3"].font = _f(bold=True)
-    ws["L3"].value = 19;  ws["L3"].font = _f(bold=True)
-    ws["M3"].value = "  tipo de cambio "; ws["M3"].font = _f(bold=True)
-
-    # ── Fila 4 ───────────────────────────────────────────────────────────
-    ws["B4"].value = "Del ___ al ___ de ________ 20__"
-    ws["B4"].alignment = _al("center")
-    ws.row_dimensions[4].height = 15
-
-    # ── Fila 5 ───────────────────────────────────────────────────────────
-    ws.merge_cells("C5:J5")
-    ws["C5"].value = "(MXN) Pesos Mexicanos"
-    ws["C5"].alignment = _al("center")
-    ws["C5"].border = _bdr(left=medium, right=medium, top=medium, bottom=thin)
-    ws.merge_cells("L5:R5")
-    ws["L5"].value = "US Dollars"
-    ws["L5"].fill  = fill_green
-    ws["L5"].alignment = _al("center")
-    ws["L5"].border = _bdr(left=medium, top=medium, bottom=thin)
-    ws["S5"].fill  = fill_green
-    ws["S5"].border = _bdr(right=medium, top=medium, bottom=thin)
-
-    # ── Fila 6 ───────────────────────────────────────────────────────────
-    ws["B6"].value = "TOTAL FINCA"
-    ws["B6"].fill  = fill_white
-    ws["B6"].alignment = _al("center")
-    ws["B6"].border = bdr_L_med
-    ws["C6"].border = _bdr(left=medium, right=thin, top=thin)
-    for col in ("L","M","N","O","P","Q","R"):
-        ws[f"{col}6"].fill = fill_green
-        ws[f"{col}6"].alignment = _al("center")
-    ws["L6"].border = _bdr(left=medium, right=thin)
-    ws["S6"].fill  = fill_green
-    ws["S6"].border = bdr_R_med
-    ws["S6"].alignment = _al("center")
-    ws.row_dimensions[6].height = 26.4
-
-    # ── Fila 7 ───────────────────────────────────────────────────────────
-    ws["B7"].value = "Produccion"
-    ws["B7"].fill  = fill_white
-    ws["B7"].alignment = _al("center")
-    ws["B7"].border = bdr_L_med
-    headers_mxn = ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","Isabela","Christina","Cecilia","Cecilia 25"]
-    headers_usd = ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","ISABELA","Christina","CECILIA","CECILIA 25"]
-    for i, h in enumerate(headers_mxn):
-        col = chr(ord("C")+i)
-        ws[f"{col}7"].value = h
-        ws[f"{col}7"].font  = _f(bold=(i==0))
-        ws[f"{col}7"].alignment = _al("center")
-    ws["C7"].border = _bdr(left=medium, right=thin)
-    ws["J7"].border = bdr_R_med
-    usd_cols = ["L","M","N","O","P","Q","R","S"]
-    for i, h in enumerate(headers_usd):
-        c = usd_cols[i]
-        ws[f"{c}7"].value = h
-        ws[f"{c}7"].fill  = fill_green
-        ws[f"{c}7"].alignment = _al("center")
-    ws["L7"].border = _bdr(left=medium, right=thin)
-    ws["S7"].border = bdr_R_med
-
-    # ── Fila 8 ───────────────────────────────────────────────────────────
-    ws["C8"].value = "SEMANAL "
-    ws["C8"].alignment = _al("center")
-    ws["C8"].border = _bdr(left=medium, right=thin)
-    ws["L8"].value = '"WEEKLY"'
-    ws["L8"].fill  = fill_green
-    ws["L8"].alignment = _al("center")
-    ws["L8"].border = _bdr(left=medium, right=thin)
-    for col in ("M","N","O","P","Q","R"):
-        ws[f"{col}8"].fill = fill_green
-    ws["S8"].fill  = fill_green
-    ws["S8"].border = bdr_R_med
-
-    # ── Fila 9 ───────────────────────────────────────────────────────────
-    ws["B9"].value = "EJECUCION SEMANAL"
-    ws["B9"].font  = _f(bold=True)
-    ws["B9"].fill  = fill_white
-    ws["B9"].alignment = _al("center")
-    ws["B9"].border = _bdr(left=medium, bottom=thin)
-    ws["C9"].border = _bdr(left=medium, right=thin, bottom=thin)
-    for col in ("D","E","F","G","H","I"):
-        ws[f"{col}9"].value = 1
-        ws[f"{col}9"].alignment = _al("center")
-        ws[f"{col}9"].border = _bdr(bottom=thin)
-    ws["J9"].value = 1
-    ws["J9"].alignment = _al("center")
-    ws["J9"].border = _bdr(right=medium, bottom=thin)
-    ws["L9"].fill  = fill_green
-    ws["L9"].border = _bdr(left=medium, right=thin, bottom=thin)
-    for col in ("M","N","O","P","Q","R"):
-        ws[f"{col}9"].fill  = fill_green
-        ws[f"{col}9"].border = _bdr(bottom=thin)
-    ws["S9"].fill  = fill_green
-    ws["S9"].border = _bdr(right=medium, bottom=thin)
-
-    # ── Helper fila de categoría ─────────────────────────────────────────
-    def _fila_cat(row, label, fill_usd=None, top_border=False):
-        if fill_usd is None:
-            fill_usd = fill_green
-        ws[f"B{row}"].value = label
-        ws[f"B{row}"].font  = _f()
-        ws[f"B{row}"].fill  = fill_white
-        ws[f"B{row}"].alignment = _al("left")
-        ws[f"B{row}"].border = bdr_L_med
-        ws[f"C{row}"].value = 0
-        ws[f"C{row}"].font  = _f(bold=True)
-        ws[f"C{row}"].border = bdr_L_med_R_thin
-        ws[f"C{row}"].number_format = '#,##0;-#,##0;"-   "'
-        for dc in ("D","E","F","G","H","I"):
-            ws[f"{dc}{row}"].value = 0
-            ws[f"{dc}{row}"].font  = _f(color=GRAY)
-            ws[f"{dc}{row}"].number_format = '#,##0;-#,##0;"-   "'
-        ws[f"J{row}"].value = 0
-        ws[f"J{row}"].font  = _f(color=GRAY)
-        ws[f"J{row}"].border = bdr_R_med
-        ws[f"J{row}"].number_format = '#,##0;-#,##0;"-   "'
-        ws[f"L{row}"].value = 0
-        ws[f"L{row}"].font  = _f(bold=True)
-        ws[f"L{row}"].fill  = fill_usd
-        if top_border:
-            ws[f"L{row}"].border = _bdr(left=medium, right=thin, top=thin)
-        else:
-            ws[f"L{row}"].border = bdr_L_med_R_thin
-        ws[f"L{row}"].number_format = '#,##0;-#,##0;"-   "'
-        for uc in ("M","N","O","P","Q","R"):
-            ws[f"{uc}{row}"].value = 0
-            ws[f"{uc}{row}"].fill  = fill_usd
-            ws[f"{uc}{row}"].alignment = _al("center")
-            ws[f"{uc}{row}"].number_format = '#,##0;-#,##0;" -   "'
-            if top_border:
-                ws[f"{uc}{row}"].border = _bdr(top=thin)
-        ws[f"S{row}"].value = 0
-        ws[f"S{row}"].fill  = fill_usd
-        ws[f"S{row}"].alignment = _al("center")
-        ws[f"S{row}"].number_format = '#,##0;-#,##0;" -   "'
-        if top_border:
-            ws[f"S{row}"].border = _bdr(right=medium, top=thin)
-        else:
-            ws[f"S{row}"].border = bdr_R_med
-
-    def _fila_blank(row, fill_usd=None):
-        if fill_usd is None:
-            fill_usd = fill_green
-        ws[f"B{row}"].fill  = fill_white
-        ws[f"B{row}"].border = bdr_L_med
-        ws[f"C{row}"].border = bdr_L_med_R_thin
-        ws[f"J{row}"].border = bdr_R_med
-        ws[f"L{row}"].fill  = fill_usd
-        ws[f"L{row}"].border = bdr_L_med_R_thin
-        for uc in ("M","N","O","P","Q","R"):
-            ws[f"{uc}{row}"].fill  = fill_usd
-        ws[f"S{row}"].fill  = fill_usd
-        ws[f"S{row}"].border = bdr_R_med
-
-    def _fila_subtotal(row, label):
-        ws[f"B{row}"].value = label
-        ws[f"B{row}"].font  = _f(bold=True)
-        ws[f"B{row}"].fill  = fill_white
-        ws[f"B{row}"].border = bdr_L_med
-        for col in ("C","D","E","F","G","H","I"):
-            ws[f"{col}{row}"].value = 0
-            ws[f"{col}{row}"].font  = _f(bold=True)
-            ws[f"{col}{row}"].fill  = fill_orange
-            ws[f"{col}{row}"].alignment = _al("center")
-            ws[f"{col}{row}"].number_format = '#,##0;-#,##0;"-   "'
-        ws[f"C{row}"].border = bdr_L_med_R_thin
-        ws[f"J{row}"].value = 0
-        ws[f"J{row}"].font  = _f(bold=True)
-        ws[f"J{row}"].fill  = fill_orange
-        ws[f"J{row}"].alignment = _al("center")
-        ws[f"J{row}"].border = bdr_R_med
-        ws[f"J{row}"].number_format = '#,##0;-#,##0;"-   "'
-        for col in ("L","M","N","O","P","Q","R"):
-            ws[f"{col}{row}"].value = 0
-            ws[f"{col}{row}"].font  = _f(bold=True)
-            ws[f"{col}{row}"].fill  = fill_orange
-            ws[f"{col}{row}"].alignment = _al("center")
-            ws[f"{col}{row}"].border = _bdr(top=thin, bottom=thin)
-            ws[f"{col}{row}"].number_format = '#,##0;-#,##0;"-   "'
-        ws[f"L{row}"].border = _bdr(left=medium, right=thin, top=thin, bottom=thin)
-        ws[f"S{row}"].value = 0
-        ws[f"S{row}"].font  = _f(bold=True)
-        ws[f"S{row}"].fill  = fill_orange
-        ws[f"S{row}"].alignment = _al("center")
-        ws[f"S{row}"].border = _bdr(right=medium, top=thin, bottom=thin)
-        ws[f"S{row}"].number_format = '#,##0;-#,##0;"-   "'
-
-    # ── Filas 10-20: Materiales ──────────────────────────────────────────
-    categorias = [
-        (10, "DESINFECCION Y FERTILIZACION"),
-        (11, "AMPLIACION "),
-        (12, "CULTIVO TIERRA, CHAROLAS"),
-        (13, "MATERIAL VEGETAL"),
-        (14, "PREPARACION DE SUELO"),
-        (15, "FERTILIZANTES (Manejo Integrado de Riego y Fertilizacion) "),
-        (16, "DESINFECCION / PLAGUICIDAS (Manejo Integrado de Plagas y Enfermedades)"),
-        (17, "MANTENIMIENTO"),
-        (18, "EXPANSION CECILIA 25"),
-        (19, "RENOVACION DE SIEMBRA"),
-        (20, "MATERIAL DE EMPAQUE"),
-    ]
-    for i, (row, label) in enumerate(categorias):
-        _fila_cat(row, label, top_border=(i == 0))
-    _fila_blank(21)
-    _fila_subtotal(22, "COSTO DE MATERIALES")
-    _fila_blank(23)
-
-    # ── Filas 24-59: Nominas ─────────────────────────────────────────────
-    nominas = [
-        (24, "NOMINA ADMON Oficina, Jefes de Finca, Ingenieros"),
-        (25, "HORAS EXTR. DOM. Y FESTIVOS"),
-        (26, "BONOS ASISIT, PUNTAULIDAD Y DESPENSA"),
-        (27, "NOMINA PRODUCCION "),
-        (28, "HORAS EXTR. DOM. Y FEST."),
-        (29, "BONOS ASISIT, PUNT. Y DESP."),
-        (30, "NOMINA PRODUCCION CORTE"),
-        (31, "HORAS EXTR. DOM. Y FESTIVOS CORTE"),
-        (32, "BONOS ASISIT, PUNTAULIDAD Y DESP. CORTE"),
-        (33, "NOMINA PRODUCCION TRANSPLANTE"),
-        (34, "HORAS EXTR. DOM. Y FEST. TRANSPLANTE"),
-        (35, "BONOS ASISIT, PUNT. Y DESP. TRANSPLANTE"),
-        (36, "NOMINA PRODUCCION MANEJO PLANTA"),
-        (37, "HORAS EXTR. DOM. Y FEST. MANEJO PLANTA"),
-        (38, "BONOS ASISIT, PUNT. Y DESP. MANEJO PLANTA"),
-        (39, "NOMINA  HOOPS"),
-        (40, "HORAS EXTR. DOM. Y FEST. HOOPS"),
-        (41, "BONOS ASISIT, PUNT. Y DESP.HOOPS"),
-        (42, "NOMINA  (MIPE,MIRFE,)"),
-        (43, "HORAS EXTR. DOM. Y FEST. (MIPE,MIRFE)"),
-        (44, "BONOS ASISIT, PUNT. Y DESP.(MIPE,MIRFE)"),
-        (45, "NOMINA OPERATIVOS (TRACTORES, CAMEROS)"),
-        (46, "HORAS EXTR. DOM. Y FEST. (TRACTORES, CAMEROS)"),
-        (47, "BONOS ASISIT, PUNT. Y DESP. (TRACTORES, CAMEROS)"),
-        (48, "NOMINA OPERATIVOS (CHOFER)"),
-        (49, "HORAS EXTR. DOM. Y FEST. (CHOFER)"),
-        (50, "BONOS ASISIT, PUNT. Y DESP. (CHOFER)"),
-        (51, "NOMINA OPERATIVOS (VELADORES)"),
-        (52, "HORAS EXTR. DOM. Y FEST. (VELADORES)"),
-        (53, "BONOS ASISIT, PUNT. Y DESP. (VELADORES)"),
-        (54, "NOMINA OPERATIVOS (SOLDADOR)"),
-        (55, "HORAS EXTR. DOM. Y FEST. (SOLDADOR)"),
-        (56, "BONOS ASISIT, PUNT. Y DESP. (SOLDADOR)"),
-        (57, "NOMINA PRODUCCION Contratista y comisiones"),
-        (58, "IMSS , INFONAVIT RCV"),
-        (59, "1.8% al estado (1.2% tasa efectiva)"),
-    ]
-    for row, label in nominas:
-        _fila_cat(row, label)
-    _fila_blank(60)
-    _fila_subtotal(61, "COSTO DE MANO DE OBRA")
-    _fila_blank(62)
-
-    # ── Filas 63-70: Servicios ───────────────────────────────────────────
-    servicios = [
-        (63, "ELECTRICIDAD"),
-        (64, "FLETES Y ACARREOS (Flete aduana)"),
-        (65, "GASTOS DE EXPORTACION "),
-        (66, "CERTIFICADO DE FITOSANITARIOS"),
-        (67, "Transporte de personal"),
-        (68, "COMPRA DE FLOR A TERCEROS"),
-        (69, "COMIDA PARA EL PERSONAL"),
-        (70, "RO, TEL, RTA.ALIM."),
-    ]
-    for row, label in servicios:
-        _fila_cat(row, label)
-    _fila_blank(71)
-    _fila_subtotal(72, "COSTO DE SERVICIOS")
-
-    # Fila 73: separadora con bordes top/bottom
-    ws["B73"].fill  = fill_white
-    ws["B73"].border = _bdr(left=medium, top=thin, bottom=thin)
-    ws["C73"].border = _bdr(left=medium, top=thin, bottom=thin)
-    ws["L73"].fill  = fill_green; ws["L73"].border = bdr_L_med
-    for col in ("M","N","O","P","Q","R"):
-        ws[f"{col}73"].fill = fill_green
-    ws["S73"].fill  = fill_green; ws["S73"].border = bdr_R_med
-
-    # ── Fila 74: COSTO DE PRODUCCION Y VENTAS ────────────────────────────
-    ws["B74"].value = "COSTO DE PRODUCCION Y VENTAS"
-    ws["B74"].font  = _f(bold=True)
-    ws["B74"].fill  = fill_white
-    ws["B74"].border = _bdr(left=medium, bottom=medium)
-    for col in ("D","E","F","G","H","I"):
-        ws[f"{col}74"].value = 0
-        ws[f"{col}74"].font  = _f(bold=True)
-        ws[f"{col}74"].border = _bdr(bottom=medium)
-        ws[f"{col}74"].number_format = '#,##0;-#,##0;"-   "'
-    ws["C74"].value = 0; ws["C74"].font = _f(bold=True)
-    ws["C74"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
-    ws["C74"].number_format = '#,##0;-#,##0;"-   "'
-    ws["J74"].value = 0; ws["J74"].font = _f(bold=True)
-    ws["J74"].border = _bdr(right=medium, bottom=medium)
-    ws["J74"].number_format = '#,##0;-#,##0;"-   "'
-    for col in ("M","N","O","P","Q","R"):
-        ws[f"{col}74"].value = 0; ws[f"{col}74"].font = _f(bold=True)
-        ws[f"{col}74"].fill  = fill_green
-        ws[f"{col}74"].border = _bdr(top=thin, bottom=medium)
-        ws[f"{col}74"].number_format = '#,##0;-#,##0;"-   "'
-    ws["L74"].value = 0; ws["L74"].font = _f(bold=True)
-    ws["L74"].fill  = fill_green
-    ws["L74"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
-    ws["L74"].number_format = '#,##0;-#,##0;"-   "'
-    ws["S74"].value = 0; ws["S74"].font = _f(bold=True)
-    ws["S74"].fill  = fill_green
-    ws["S74"].border = _bdr(right=medium, top=thin, bottom=medium)
-    ws["S74"].number_format = '#,##0;-#,##0;"-   "'
-    ws.row_dimensions[74].height = 15
-
-    # ── Filas 76-92: Produccion ───────────────────────────────────────────
-    produccion = [
-        (76, "CAJAS PROCESADAS TOTALES"),
-        (77, "INVENTARIO INICIAL"),
-        (78, "TALLOS COSECHADOS"),
-        (79, "TALLOS DESECHADOS"),
-        (80, "TALLOS DESECHADOS sf"),
-        (81, "TALLOS COMPRADOS"),
-        (82, "TALLOS EN BOUQUETS O PROCESADOS"),
-        (83, "TALLOS DESPACHADOS"),
-        (84, "LIBRAS DESPACHADAS ALBAHACA"),
-        (85, "TALLOS muestra"),
-        (86, "INVENTARIO FINAL"),
-        (87, "TALLOS PROCESADOS TOTALES"),
-        (88, " CHAROLAS SEMBRADAS *288 PLUGS ="),
-        (89, " NUMERO DE CHAROLAS SEMBRADAS "),
-        (90, " NUMERO DE ESQUEJES SEMBRADOS"),
-        (91, " METROS DE SIEMBRA"),
-        (92, " HECTAREAS EN SIEMBRA"),
-    ]
-    for i, (row, label) in enumerate(produccion):
-        first = (i == 0)
-        last  = (i == len(produccion)-1)
-        ws[f"B{row}"].value = label
-        ws[f"B{row}"].fill  = fill_white
-        ws[f"B{row}"].alignment = _al("left")
-        b_bdr = _bdr(left=medium, top=medium) if first else (_bdr(left=medium, bottom=medium) if last else bdr_L_med)
-        ws[f"B{row}"].border = b_bdr
-        ws[f"C{row}"].value = 0
-        ws[f"C{row}"].font  = _f(bold=True)
-        c_bdr = _bdr(left=medium, right=thin, top=medium) if first else (_bdr(left=medium, right=thin, bottom=medium) if last else bdr_L_med_R_thin)
-        ws[f"C{row}"].border = c_bdr
-        for dc in ("D","E","F","G","H","I"):
-            ws[f"{dc}{row}"].value = 0
-            ws[f"{dc}{row}"].border = _bdr(top=medium) if first else (_bdr(bottom=medium) if last else _bdr())
-        ws[f"J{row}"].value = 0
-        ws[f"J{row}"].border = _bdr(right=medium, top=medium) if first else (_bdr(right=medium, bottom=medium) if last else bdr_R_med)
-        ws[f"L{row}"].value = 0
-        ws[f"L{row}"].font  = _f(bold=True)
-        ws[f"L{row}"].fill  = fill_yellow
-        ws[f"L{row}"].border = _bdr(left=medium, right=thin, top=medium) if first else (_bdr(left=medium, right=thin, bottom=medium) if last else bdr_L_med_R_thin)
-        for uc in ("M","N","O","P","Q","R"):
-            ws[f"{uc}{row}"].value = 0
-            ws[f"{uc}{row}"].fill  = fill_yellow
-            ws[f"{uc}{row}"].alignment = _al("center")
-            ws[f"{uc}{row}"].border = _bdr(top=medium) if first else (_bdr(bottom=medium) if last else _bdr())
-        ws[f"S{row}"].value = 0
-        ws[f"S{row}"].fill  = fill_yellow
-        ws[f"S{row}"].alignment = _al("center")
-        ws[f"S{row}"].border = _bdr(right=medium, top=medium) if first else (_bdr(right=medium, bottom=medium) if last else bdr_R_med)
-
-    ws.row_dimensions[92].height = 15
-
-    # ── Fila 93 ───────────────────────────────────────────────────────────
-    ws["B93"].value = "<<< INDICADORES"
-    ws["B93"].font  = _f(bold=True)
-    ws.row_dimensions[93].height = 15
-
-    # ── Filas 94-121: Costos unitarios ────────────────────────────────────
-    ws["B94"].value = "COSTOS UNITARIOS"; ws["B94"].font = _f(bold=True)
-    ws["B94"].border = _bdr(left=medium, top=medium)
-    ws["L94"].fill  = fill_green; ws["L94"].border = _bdr(left=medium, right=thin, top=medium)
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}94"].fill = fill_green; ws[f"{col}94"].border = _bdr(top=medium)
-    ws["S94"].fill  = fill_green; ws["S94"].border = _bdr(right=medium, top=medium)
-
-    def _cu_row(row, label, bold=False, fill_b=None):
-        ws[f"B{row}"].value = label; ws[f"B{row}"].font = _f(bold=bold)
-        if fill_b: ws[f"B{row}"].fill = fill_b
-        ws[f"B{row}"].border = bdr_L_med
-        ws[f"C{row}"].value = 0; ws[f"C{row}"].font = _f(bold=True)
-        ws[f"C{row}"].border = bdr_L_med_R_thin
-        ws[f"L{row}"].value = 0; ws[f"L{row}"].font = _f(bold=True)
-        ws[f"L{row}"].fill  = fill_green; ws[f"L{row}"].border = bdr_L_med_R_thin
-        for col in ("M","N","O","P","Q","R"): ws[f"{col}{row}"].fill = fill_green
-        ws[f"S{row}"].fill = fill_green; ws[f"S{row}"].border = bdr_R_med
-        if fill_b:
-            ws[f"C{row}"].fill = fill_b
-            for col in ("L","M","N","O","P","Q","R","S"): ws[f"{col}{row}"].fill = fill_b
-
-    _cu_row(95, "$ / Tallo Procesado", bold=True)
-    _cu_row(96, "COSTOS UNITARIOS", bold=True)
-    _cu_row(97, "$ / Libras Procesadas", bold=True)
-    ws["L97"].border = _bdr(left=medium, right=thin, bottom=thin)
-
-    _cu_row(98, "Materiales")
-    ws["B98"].border = _bdr(left=medium, top=thin)
-    ws["C98"].border = _bdr(left=medium, right=thin, top=thin)
-    ws["L98"].border = _bdr(left=medium, right=thin, top=thin)
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}98"].border = _bdr(top=thin)
-    ws["S98"].border = _bdr(right=medium, top=thin)
-
-    _cu_row(99, "Mano de Obra")
-    _cu_row(100, "Servicios (Fletes)")
-    ws["B100"].border = _bdr(left=medium, bottom=thin)
-    ws["C100"].border = _bdr(left=medium, right=thin, bottom=thin)
-    ws["L100"].border = _bdr(left=medium, right=thin, bottom=thin)
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}100"].border = _bdr(bottom=thin)
-    ws["S100"].border = _bdr(right=medium, bottom=thin)
-
-    _cu_row(101, "Costo de Produccion y Ventas", bold=True, fill_b=fill_orange)
-    ws["B101"].border = _bdr(left=medium, top=thin, bottom=thin)
-    ws["C101"].border = _bdr(left=medium, right=thin, top=thin, bottom=thin)
-    ws["L101"].border = _bdr(left=medium, right=thin, bottom=thin)
-    ws["S101"].border = _bdr(right=medium, bottom=thin)
-
-    # Spacers 102, 104, 107
-    for row in (102, 104, 107):
-        ws[f"C{row}"].border = bdr_L_med_R_thin
-        ws[f"L{row}"].fill = fill_green; ws[f"L{row}"].border = bdr_L_med_R_thin
-        for col in ("M","N","O","P","Q","R"): ws[f"{col}{row}"].fill = fill_green
-        ws[f"S{row}"].fill = fill_green; ws[f"S{row}"].border = bdr_R_med
-
-    _cu_row(103, "Material de Empaque / Tallo", bold=True)
-    ws["B103"].border = _bdr(left=medium, top=thin, bottom=thin)
-    ws["C103"].border = _bdr(left=medium, right=thin, top=thin, bottom=thin)
-    ws["L103"].border = _bdr(left=medium, right=thin, top=thin, bottom=thin)
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}103"].border = _bdr(top=thin, bottom=thin)
-    ws["S103"].border = _bdr(right=medium, top=thin, bottom=thin)
-
-    _cu_row(105, "Sanidad Vegetal / Tallo", bold=True)
-    ws["B105"].border = _bdr(left=medium, top=thin)
-    ws["C105"].border = _bdr(left=medium, right=thin, top=thin)
-    ws["L105"].border = _bdr(left=medium, right=thin, top=thin)
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}105"].border = _bdr(top=thin)
-    ws["S105"].border = _bdr(right=medium, top=thin)
-
-    _cu_row(106, "Fertlizacion / Tallo", bold=True)
-    ws["B106"].border = _bdr(left=medium, bottom=thin)
-    ws["C106"].border = _bdr(left=medium, right=thin, bottom=thin)
-    ws["L106"].border = _bdr(left=medium, right=thin, bottom=thin)
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}106"].border = _bdr(bottom=thin)
-    ws["S106"].border = _bdr(right=medium, bottom=thin)
-
-    _cu_row(108, "Mano de Obra Prod / Tallo", bold=True)
-    ws["B108"].border = _bdr(left=medium, top=thin, bottom=medium)
-    ws["C108"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
-    ws["L108"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}108"].border = _bdr(top=thin, bottom=medium)
-    ws["S108"].border = _bdr(right=medium, top=thin, bottom=medium)
-    ws.row_dimensions[108].height = 15
-    ws.row_dimensions[109].height = 15
-
-    # ── Fila 110-121: $ / Hectarea ────────────────────────────────────────
-    ws["B110"].value = "$ / Hectarea"; ws["B110"].font = _f(bold=True)
-    ws["B110"].border = _bdr(left=medium, top=medium)
-    ws["C110"].border = _bdr(left=medium, right=thin, top=medium, bottom=thin)
-    ws["J110"].border = _bdr(right=medium, top=medium)
-    ws["L110"].fill = fill_yellow; ws["L110"].border = _bdr(left=medium, right=thin, top=medium)
-    for col in ("M","N","O","P","Q","R"):
-        ws[f"{col}110"].fill = fill_yellow; ws[f"{col}110"].border = _bdr(top=medium)
-    ws["S110"].fill = fill_yellow; ws["S110"].border = _bdr(right=medium, top=medium)
-
-    def _ha_row(row, label, top_b=False, bottom_b=False, both_b=False):
-        ws[f"B{row}"].value = label; ws[f"B{row}"].font = _f()
-        ws[f"B{row}"].fill  = fill_white; ws[f"B{row}"].alignment = _al("left")
-        if both_b:   ws[f"B{row}"].border = _bdr(left=medium, top=thin, bottom=thin)
-        elif top_b:  ws[f"B{row}"].border = _bdr(left=medium, top=thin)
-        elif bottom_b: ws[f"B{row}"].border = _bdr(left=medium, bottom=thin)
-        else:        ws[f"B{row}"].border = bdr_L_med
-        ws[f"C{row}"].value = 0; ws[f"C{row}"].font = _f(bold=True)
-        ws[f"C{row}"].border = _bdr(left=medium, right=thin,
-                                    top=(thin if top_b or both_b else none_s),
-                                    bottom=(thin if bottom_b or both_b else none_s))
-        ws[f"J{row}"].border = bdr_R_med
-        ws[f"L{row}"].value = 0; ws[f"L{row}"].font = _f(bold=True)
-        ws[f"L{row}"].fill  = fill_yellow
-        ws[f"L{row}"].border = _bdr(left=medium, right=thin,
-                                    top=(thin if top_b or both_b else none_s),
-                                    bottom=(thin if bottom_b or both_b else none_s))
-        for col in ("M","N","O","P","Q","R"):
-            ws[f"{col}{row}"].fill = fill_yellow
-            ws[f"{col}{row}"].border = _bdr(top=(thin if top_b or both_b else none_s),
-                                            bottom=(thin if bottom_b or both_b else none_s))
-        ws[f"S{row}"].fill = fill_yellow
-        ws[f"S{row}"].border = _bdr(right=medium,
-                                    top=(thin if top_b or both_b else none_s),
-                                    bottom=(thin if bottom_b or both_b else none_s))
-
-    _ha_row(111, "Materiales", top_b=True)
-    _ha_row(112, "Mano de Obra")
-    _ha_row(113, "Servicios (Fletes)", bottom_b=True)
-    # spacer 115
-    ws[f"C115"].border = bdr_L_med_R_thin
-    ws["L115"].fill = fill_yellow; ws["L115"].border = bdr_L_med_R_thin
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}115"].fill = fill_yellow
-    ws["S115"].fill = fill_yellow; ws["S115"].border = bdr_R_med
-
-    _ha_row(114, "Costo de Produccion y Ventas", both_b=True)
-    _ha_row(116, "Material de Empaque / Caja", both_b=True)
-    ws["B116"].font = _f(bold=True)
-    # spacer 117
-    ws["C117"].border = bdr_L_med_R_thin
-    ws["L117"].fill = fill_yellow; ws["L117"].border = bdr_L_med_R_thin
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}117"].fill = fill_yellow
-    ws["S117"].fill = fill_yellow; ws["S117"].border = bdr_R_med
-
-    _ha_row(118, "Sanidad Vegetal / Ha", top_b=True)
-    ws["B118"].font = _f(bold=True)
-    _ha_row(119, "Fertlizacion / Ha", bottom_b=True)
-    ws["B119"].font = _f(bold=True)
-    # spacer 120
-    ws["C120"].border = bdr_L_med_R_thin
-    ws["L120"].fill = fill_yellow; ws["L120"].border = bdr_L_med_R_thin
-    for col in ("M","N","O","P","Q","R"): ws[f"{col}120"].fill = fill_yellow
-    ws["S120"].fill = fill_yellow; ws["S120"].border = bdr_R_med
-
-    ws.row_dimensions[121].height = 15
-    ws["B121"].value = "Mano de Obra Prod / Ha"; ws["B121"].font = _f(bold=True)
-    ws["B121"].fill = fill_white
-    ws["B121"].border = _bdr(left=medium, top=thin, bottom=medium)
-    ws["C121"].value = 0; ws["C121"].font = _f(bold=True)
-    ws["C121"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
-    ws["L121"].value = 0; ws["L121"].font = _f(bold=True)
-    ws["L121"].fill = fill_yellow
-    ws["L121"].border = _bdr(left=medium, right=thin, top=thin, bottom=medium)
-    for col in ("M","N","O","P","Q","R"):
-        ws[f"{col}121"].fill = fill_yellow
-        ws[f"{col}121"].border = _bdr(top=thin, bottom=medium)
-    ws["S121"].fill = fill_yellow
-    ws["S121"].border = _bdr(right=medium, top=thin, bottom=medium)
-
-    # ── KPI's ─────────────────────────────────────────────────────────────
-    ws["B124"].value = "KPI's "; ws["B124"].font = _f(bold=True)
-
-    # Proyectos de inversion
-    ws["B125"].value = "Proyectos de inversion"
-    ws["B125"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
-    ws["B125"].fill  = fill_kpi
-    ws["B125"].alignment = _al("left")
-    ws["B125"].border = _bdr(left=thin, right=thin, top=thin)
-    ws["L125"].value = "Total Weekly"
-    ws["L125"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
-    ws["L125"].fill  = fill_kpi
-    ws["L125"].alignment = _al("center")
-    ws["L125"].border = _bdr(left=thin, right=thin, top=thin, bottom=thin)
-
-    proyectos = [
-        (126, "Sistema de riego (Ramona)"),
-        (127, "Sistema de riego (Isabella)"),
-        (128, "Caseta (Isabella)"),
-        (129, "Sistema de ventilacion"),
-        (130, "Sistema de tratamiento de aguas residuales (Isabella)"),
-        (131, "Arcos para invernaderos "),
-        (132, "proyecto luz"),
-        (133, "Construccion de Almacen (Ramona) "),
-        (134, "Construccion de Almacen (Isabela) "),
-        (135, "Carritos"),
-        (136, "Maquinaria "),
-        (137, "Chiller"),
-        (138, "Cuarto frio"),
-        (139, "veronicas"),
-    ]
-    for row, label in proyectos:
-        ws[f"B{row}"].value = label
-        ws[f"B{row}"].fill  = fill_white
-        ws[f"B{row}"].border = _bdr(left=thin, right=thin)
-        ws[f"C{row}"].value = 0
-        ws[f"C{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
-        ws[f"C{row}"].fill  = fill_white
-        ws[f"C{row}"].border = _bdr(left=thin, right=thin)
-        ws[f"C{row}"].number_format = '"$"#,##0;-"$"#,##0;" $-   "'
-        ws[f"J{row}"].border = _bdr(right=thin)
-        ws[f"L{row}"].value = 0
-        ws[f"L{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
-        ws[f"L{row}"].fill  = fill_white
-        ws[f"L{row}"].border = _bdr(left=thin, right=thin)
-        ws[f"L{row}"].number_format = '" $"#,##0;-" $"#,##0;" $-   "'
-        for uc in ("M","N","O","P","Q","R","S"):
-            ws[f"{uc}{row}"].value = 0
-            ws[f"{uc}{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
-            ws[f"{uc}{row}"].fill  = fill_white
-            ws[f"{uc}{row}"].border = _bdr(left=thin, right=thin)
-
-    ws["B139"].border = _bdr(left=thin, right=thin, bottom=thin)
-    ws["C139"].border = _bdr(left=thin, right=thin, bottom=thin)
-    ws["J139"].border = _bdr(right=thin, bottom=thin)
-    for uc in ("L","M","N","O","P","Q","R","S"):
-        ws[f"{uc}139"].border = _bdr(left=thin, right=thin, bottom=thin)
-
-    ws["B140"].value = "Total "
-    ws["B140"].font  = _f(bold=True)
-    ws["B140"].fill  = fill_white
-    ws["B140"].border = _bdr(left=thin, right=thin, top=thin, bottom=thin)
-    ws["C140"].value = 0
-    ws["C140"].font  = Font(color="0000FF", name="Calibri", size=10)
-    ws["C140"].border = _bdr(top=thin, bottom=thin)
-    ws["C140"].number_format = '" $"#,##0;-" $"#,##0;" $-   "'
-    ws["L140"].value = 0
-    ws["L140"].font  = Font(color="0000FF", name="Calibri", size=10)
-    ws["L140"].border = _bdr(left=thin, right=thin, bottom=thin)
-    ws["L140"].number_format = '" $"#,##0;-" $"#,##0;" $-   "'
-
-    # Logistica
-    ws["B143"].value = "Logistica "
-    ws["B143"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
-    ws["B143"].fill  = fill_kpi
-    ws["B143"].alignment = _al("left")
-    ws["B143"].border = _bdr(left=thin, top=thin)
-    ws["J143"].border = _bdr(right=thin, top=thin)
-    ws["L143"].value = "Total Weekly"
-    ws["L143"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
-    ws["L143"].fill  = fill_kpi
-    ws["L143"].alignment = _al("center")
-    ws["L143"].border = _bdr(left=thin, right=thin, top=thin, bottom=thin)
-    ws["N143"].value = "PosCo-RM"
-    ws["N143"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
-    ws["N143"].fill  = fill_kpi
-    ws["N143"].alignment = _al("center")
-    ws["N143"].border = _bdr(left=thin, right=thin, top=thin, bottom=thin)
-
-    logistica = [
-        (144, "Numero de camiones despachados "),
-        (145, "Numero de tarimas despachadas (montadas al camion)"),
-        (146, "Numero de cajas despachadas"),
-        (147, "Numero de Pies cubicos de cajas despachadas "),
-        (148, "Numero de Pies cubicos promedio / camion despachado "),
-        (149, "Capacidad en pies cubicos por camion "),
-        (150, "Rendimiento promedio por camion "),
-    ]
-    for row, label in logistica:
-        ws[f"B{row}"].value = label
-        ws[f"B{row}"].fill  = fill_white
-        ws[f"B{row}"].border = _bdr(left=thin)
-        ws[f"C{row}"].value = 0
-        ws[f"C{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
-        ws[f"C{row}"].fill  = fill_white
-        ws[f"C{row}"].border = _bdr(left=thin, right=thin)
-        ws[f"J{row}"].border = _bdr(right=thin)
-        ws[f"L{row}"].value = 0
-        ws[f"L{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
-        ws[f"L{row}"].fill  = fill_white
-        ws[f"L{row}"].border = _bdr(left=thin, right=thin)
-        ws[f"N{row}"].value = 0
-        ws[f"N{row}"].font  = _f(bold=True)
-        ws[f"N{row}"].fill  = fill_white
-        ws[f"N{row}"].border = _bdr(right=thin)
-        ws[f"S{row}"].border = _bdr(right=thin)
-
-    kpi_groups = [
-        (152, "Costo incurrido por flete, gtos expo, fitosanitarios"),
-        (153, "Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-        (154, "Numero de Camiones despachados "),
-        (156, "Costo incurrido promedio flete, gtos expo, fitosanitarios / pie cubico"),
-        (157, "Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-        (158, "Numero de Pies cubicos de cajas despachadas"),
-        (160, "Costo incurrido flete, gtos expo, fitosanitarios / cajas despachadas"),
-        (161, "Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-        (162, "Numero de cajas despachadas"),
-    ]
-    for row, label in kpi_groups:
-        ws[f"B{row}"].value = label
-        ws[f"B{row}"].fill  = fill_white
-        ws[f"B{row}"].border = _bdr(left=thin)
-        ws[f"C{row}"].value = 0
-        ws[f"C{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
-        ws[f"C{row}"].fill  = fill_white
-        ws[f"C{row}"].border = _bdr(left=thin, right=thin)
-        ws[f"L{row}"].value = 0
-        ws[f"L{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
-        ws[f"L{row}"].fill  = fill_white
-        ws[f"L{row}"].border = _bdr(left=thin, right=thin)
-        ws[f"N{row}"].value = 0
-        ws[f"N{row}"].border = _bdr(right=thin)
-
-    ws["B165"].value = "Material de empaque / Caja"
-    ws["B165"].font  = Font(bold=True, color=WHITE, name="Calibri", size=10)
-    ws["B165"].fill  = fill_kpi
-    ws["B165"].alignment = _al("left")
-    ws["B165"].border = _bdr(left=thin, top=thin)
-
-    me_rows = [
-        (166, "Costo incurrido en Material de empaque / pie cubico"),
-        (167, "Costo incurrido en Material de empaque (USD)"),
-        (168, "Numero de Pies cubicos de cajas despachadas"),
-        (170, "Costo incurrido en Material de empaque / cajas despachadas"),
-        (171, "Costo incurrido en Material de empaque (USD)"),
-        (172, "Numero de cajas despachadas"),
-    ]
-    for row, label in me_rows:
-        ws[f"B{row}"].value = label
-        ws[f"B{row}"].fill  = fill_white
-        ws[f"B{row}"].border = _bdr(left=thin)
-        ws[f"C{row}"].value = 0
-        ws[f"C{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
-        ws[f"C{row}"].fill  = fill_white
-        ws[f"C{row}"].border = _bdr(left=thin, right=thin)
-        ws[f"L{row}"].value = 0
-        ws[f"L{row}"].font  = Font(color="0000FF", name="Calibri", size=10)
-        ws[f"L{row}"].fill  = fill_white
-        ws[f"L{row}"].border = _bdr(left=thin, right=thin)
-        ws[f"N{row}"].value = 0
-        ws[f"N{row}"].border = _bdr(right=thin)
-
-    # Merged cells
-    merges = [
-        "C5:J5", "L5:R5",
-        "C153:C154", "L153:L154",
-        "C157:C158", "L157:L158",
-        "C161:C162", "L161:L162",
-        "C167:C168", "L167:L168",
-        "C171:C172", "L171:L172",
-    ]
-    for m in merges:
-        try:
-            ws.merge_cells(m)
-        except Exception:
-            pass
-
-# --- Crear nueva hoja WK en SharePoint via Microsoft Graph API (con sesión) ---
-def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
-    """
-    Crea una nueva hoja WK#### desde cero usando una sesión de workbook de Graph API.
-    Funciona aunque el archivo esté abierto por otros usuarios (no requiere lock).
-    Escribe todas las celdas directamente via API, sin subir el archivo completo.
-    Requiere Files.ReadWrite en la App Registration de Azure AD.
-    """
-    import base64 as _b64
-    import time
-
-    # ── Helper: construir lista plana de celdas { address, value } ────────
-    def _celdas_de_la_hoja(nombre):
-        """Devuelve lista de dicts con address y valor para escribir via Graph API."""
-        celdas = []
-
-        def c(addr, val):
-            celdas.append({"address": addr, "value": val})
-
-        # Encabezados
-        c("B1", "CENTRO FLORICULTOR DE BAJA CALIFORNIA, S.A. DE C.V. ")
-        c("B2", "SEMANA DE CALCULO - Mexico")
-        c("B3", nombre)
-        c("C3", 19); c("D3", " tipo de cambio")
-        c("L3", 19); c("M3", "  tipo de cambio ")
-        c("B4", "Del ___ al ___ de ________ 20__")
-        c("C5", "(MXN) Pesos Mexicanos")
-        c("L5", "US Dollars")
-        c("B6", "TOTAL FINCA")
-        # Fila 7: ranchos MXN
-        for col, h in zip(["C","D","E","F","G","H","I","J"],
-                          ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","Isabela","Christina","Cecilia","Cecilia 25"]):
-            c(f"{col}7", h)
-        # Fila 7: ranchos USD
-        for col, h in zip(["L","M","N","O","P","Q","R","S"],
-                          ["TOTAL","Prop-RM","PosCo-RM","Campo -RM","ISABELA","Christina","CECILIA","CECILIA 25"]):
-            c(f"{col}7", h)
-        c("B7", "Produccion"); c("C8", "SEMANAL "); c("L8", '"WEEKLY"')
-        c("B9", "EJECUCION SEMANAL")
-        for col in ["D","E","F","G","H","I","J"]:
-            c(f"{col}9", 1)
-
-        # Categorías de materiales (filas 10-20)
-        categorias = [
-            (10, "DESINFECCION Y FERTILIZACION"),
-            (11, "AMPLIACION "),
-            (12, "CULTIVO TIERRA, CHAROLAS"),
-            (13, "MATERIAL VEGETAL"),
-            (14, "PREPARACION DE SUELO"),
-            (15, "FERTILIZANTES (Manejo Integrado de Riego y Fertilización) "),
-            (16, "DESINFECCION / PLAGUICIDAS (Manejo Integrado de Plagas y Enfermedades)"),
-            (17, "MANTENIMIENTO"),
-            (18, "EXPANSION CECILIA 25"),
-            (19, "RENOVACION DE SIEMBRA"),
-            (20, "MATERIAL DE EMPAQUE"),
-        ]
-        for row, label in categorias:
-            c(f"B{row}", label)
-
-        c("B22", "COSTO DE MATERIALES")
-
-        # Nóminas (filas 24-59)
-        nominas = [
-            (24, "NOMINA ADMON Oficina, Jefes de Finca, Ingenieros"),
-            (25, "HORAS EXTR. DOM. Y FESTIVOS"),
-            (26, "BONOS ASISIT, PUNTAULIDAD Y DESPENSA"),
-            (27, "NOMINA PRODUCCION "),
-            (28, "HORAS EXTR. DOM. Y FEST."),
-            (29, "BONOS ASISIT, PUNT. Y DESP."),
-            (30, "NOMINA PRODUCCION CORTE"),
-            (31, "HORAS EXTR. DOM. Y FESTIVOS CORTE"),
-            (32, "BONOS ASISIT, PUNTAULIDAD Y DESP. CORTE"),
-            (33, "NOMINA PRODUCCION TRANSPLANTE"),
-            (34, "HORAS EXTR. DOM. Y FEST. TRANSPLANTE"),
-            (35, "BONOS ASISIT, PUNT. Y DESP. TRANSPLANTE"),
-            (36, "NOMINA PRODUCCION MANEJO PLANTA"),
-            (37, "HORAS EXTR. DOM. Y FEST. MANEJO PLANTA"),
-            (38, "BONOS ASISIT, PUNT. Y DESP. MANEJO PLANTA"),
-            (39, "NOMINA  HOOPS"),
-            (40, "HORAS EXTR. DOM. Y FEST. HOOPS"),
-            (41, "BONOS ASISIT, PUNT. Y DESP.HOOPS"),
-            (42, "NOMINA  (MIPE,MIRFE,)"),
-            (43, "HORAS EXTR. DOM. Y FEST. (MIPE,MIRFE)"),
-            (44, "BONOS ASISIT, PUNT. Y DESP.(MIPE,MIRFE)"),
-            (45, "NOMINA OPERATIVOS (TRACTORES, CAMEROS)"),
-            (46, "HORAS EXTR. DOM. Y FEST. (TRACTORES, CAMEROS)"),
-            (47, "BONOS ASISIT, PUNT. Y DESP. (TRACTORES, CAMEROS)"),
-            (48, "NOMINA OPERATIVOS (CHOFER)"),
-            (49, "HORAS EXTR. DOM. Y FEST. (CHOFER)"),
-            (50, "BONOS ASISIT, PUNT. Y DESP. (CHOFER)"),
-            (51, "NOMINA OPERATIVOS (VELADORES)"),
-            (52, "HORAS EXTR. DOM. Y FEST. (VELADORES)"),
-            (53, "BONOS ASISIT, PUNT. Y DESP. (VELADORES)"),
-            (54, "NOMINA OPERATIVOS (SOLDADOR)"),
-            (55, "HORAS EXTR. DOM. Y FEST. (SOLDADOR)"),
-            (56, "BONOS ASISIT, PUNT. Y DESP. (SOLDADOR)"),
-            (57, "NOMINA PRODUCCION Contratista y comisiones"),
-            (58, "IMSS , INFONAVIT RCV"),
-            (59, "1.8% al estado (1.2% tasa efectiva)"),
-        ]
-        for row, label in nominas:
-            c(f"B{row}", label)
-
-        c("B61", "COSTO DE MANO DE OBRA")
-
-        # Servicios (filas 63-70)
-        servicios = [
-            (63, "ELECTRICIDAD"),
-            (64, "FLETES Y ACARREOS (Flete aduana)"),
-            (65, "GASTOS DE EXPORTACION "),
-            (66, "CERTIFICADO DE FITOSANITARIOS"),
-            (67, "Transporte de personal"),
-            (68, "COMPRA DE FLOR A TERCEROS"),
-            (69, "COMIDA PARA EL PERSONAL"),
-            (70, "RO, TEL, RTA.ALIM."),
-        ]
-        for row, label in servicios:
-            c(f"B{row}", label)
-
-        c("B72", "COSTO DE SERVICIOS")
-        c("B74", "COSTO DE PRODUCCION Y VENTAS")
-
-        # Producción (filas 76-92)
-        prod = [
-            (76, "CAJAS PROCESADAS TOTALES"),
-            (77, "INVENTARIO INICIAL"),
-            (78, "TALLOS COSECHADOS"),
-            (79, "TALLOS DESECHADOS"),
-            (80, "TALLOS DESECHADOS sf"),
-            (81, "TALLOS COMPRADOS"),
-            (82, "TALLOS EN BOUQUETS O PROCESADOS"),
-            (83, "TALLOS DESPACHADOS"),
-            (84, "LIBRAS DESPACHADAS ALBAHACA"),
-            (85, "TALLOS muestra"),
-            (86, "INVENTARIO FINAL"),
-            (87, "TALLOS PROCESADOS TOTALES"),
-            (88, " CHAROLAS SEMBRADAS *288 PLUGS ="),
-            (89, " NUMERO DE CHAROLAS SEMBRADAS "),
-            (90, " NUMERO DE ESQUEJES SEMBRADOS"),
-            (91, " METROS DE SIEMBRA"),
-            (92, " HECTAREAS EN SIEMBRA"),
-        ]
-        for row, label in prod:
-            c(f"B{row}", label)
-
-        c("B93", "<<< INDICADORES")
-        c("B94", "COSTOS UNITARIOS"); c("B95", "$ / Tallo Procesado")
-        c("B96", "COSTOS UNITARIOS"); c("B97", "$ / Libras Procesadas")
-        for row, label in [(98,"Materiales"),(99,"Mano de Obra"),(100,"Servicios (Fletes)"),
-                           (101,"Costo de Produccion y Ventas"),(103,"Material de Empaque / Tallo"),
-                           (105,"Sanidad Vegetal / Tallo"),(106,"Fertlizacion / Tallo"),
-                           (108,"Mano de Obra Prod / Tallo")]:
-            c(f"B{row}", label)
-        c("B110", "$ / Hectarea")
-        for row, label in [(111,"Materiales"),(112,"Mano de Obra"),(113,"Servicios (Fletes)"),
-                           (114,"Costo de Produccion y Ventas"),(121,"Mano de Obra Prod / Ha")]:
-            c(f"B{row}", label)
-
-        c("B124", "KPI's ")
-        c("B125", "Proyectos de inversión"); c("L125", "Total Weekly")
-        proyectos = [
-            (126,"Sistema de riego (Ramona)"),(127,"Sistema de riego (Isabella)"),
-            (128,"Caseta (Isabella)"),(129,"Sistema de ventilacion)"),
-            (130,"Sistema de tratamiento de aguas residuales (Isabella)"),
-            (131,"Arcos para invernaderos "),(132,"proyecto luz"),
-            (133,"Construcción de Almacén (Ramona) "),(134,"Construcción de Almacén (Isabela) "),
-            (135,"Carritos"),(136,"Maquinaria "),(137,"Chiller"),
-            (138,"Cuarto frio"),(139,"veronicas"),
-        ]
-        for row, label in proyectos:
-            c(f"B{row}", label)
-        c("B140", "Total ")
-        c("B143", "Logística "); c("L143", "Total Weekly"); c("N143", "PosCo-RM")
-        for row, label in [
-            (144,"Número de camiones despachados "),(145,"Número de tarimas despachadas (montadas al camión)"),
-            (146,"Número de cajas despachadas"),(147,"Número de Pies cúbicos de cajas despachadas "),
-            (148,"Número de Pies cubicos promedio / camión despachado "),
-            (149,"Capacidad en pies cúbicos por camión "),(150,"Rendimiento promedio por camión "),
-        ]:
-            c(f"B{row}", label)
-        for row, label in [
-            (152,"Costo incurrido por flete, gtos expo, fitosanitarios"),
-            (153,"Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-            (154,"Número de Camiones despachados "),
-            (156,"Costo incurrido promedio flete, gtos expo, fitosanitarios / pie cúbico"),
-            (157,"Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-            (158,"Número de Pies cúbicos de cajas despachadas"),
-            (160,"Costo incurrido flete, gtos expo, fitosanitarios / cajas despachadas"),
-            (161,"Costo incurrido en flete, gtos expo, fitosanitarios (USD)"),
-            (162,"Número de cajas despachadas"),
-        ]:
-            c(f"B{row}", label)
-        c("B165", "Material de empaque / Caja")
-        for row, label in [
-            (166,"Costo incurrido en Material de empaque / pie cúbico"),
-            (167,"Costo incurrido en Material de empaque (USD)"),
-            (168,"Número de Pies cúbicos de cajas despachadas"),
-            (170,"Costo incurrido en Material de empaque / cajas despachadas"),
-            (171,"Costo incurrido en Material de empaque (USD)"),
-            (172,"Número de cajas despachadas"),
-        ]:
-            c(f"B{row}", label)
-
-        return celdas
-
-    # ── 1. Token OAuth2 ───────────────────────────────────────────────────
-    token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
-    token_resp = requests.post(token_url, data={
-        "grant_type":    "client_credentials",
-        "client_id":     client_id,
-        "client_secret": client_secret,
-        "scope":         "https://graph.microsoft.com/.default",
-    }, timeout=20)
-    if token_resp.status_code != 200:
-        return {"ok": False, "error": f"Error obteniendo token: {token_resp.text}"}
-
-    token = token_resp.json().get('access_token')
-    hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-    # ── 2. Resolver driveId + itemId ──────────────────────────────────────
-    encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip('=')
-    encoded = 'u!' + encoded.replace('/', '_').replace('+', '-')
-    res = requests.get(
-        f'https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem',
-        headers=hdrs_json, timeout=20,
-    )
-    if res.status_code != 200:
-        return {"ok": False, "error": f"No se pudo resolver el archivo: {res.text}"}
-
-    item     = res.json()
-    drive_id = item.get('parentReference', {}).get('driveId')
-    item_id  = item.get('id')
-    if not drive_id or not item_id:
-        return {"ok": False, "error": "No se pudo obtener driveId o itemId."}
-
-    wb_url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook'
-
-    # ── 3. Abrir sesión de workbook (permite trabajar con archivo abierto) ─
-    sess_resp = requests.post(
-        f'{wb_url}/createSession',
-        headers=hdrs_json,
-        json={"persistChanges": True},
-        timeout=30,
-    )
-    if sess_resp.status_code not in (200, 201):
-        return {"ok": False, "error": f"Error abriendo sesión: {sess_resp.text}"}
-
-    session_id = sess_resp.json().get('id')
-    hdrs = {**hdrs_json, "workbook-session-id": session_id}
-
-    try:
-        # ── 4. Verificar que la hoja no exista ────────────────────────────
-        sheets_resp = requests.get(f'{wb_url}/worksheets', headers=hdrs, timeout=20)
-        if sheets_resp.status_code != 200:
-            return {"ok": False, "error": f"Error listando hojas: {sheets_resp.text}"}
-        nombres = [h['name'].strip() for h in sheets_resp.json().get('value', [])]
-        if nombre_hoja.upper() in [n.upper() for n in nombres]:
-            return {"ok": False, "error": f"La hoja '{nombre_hoja}' ya existe."}
-
-        # ── 5. Crear la hoja nueva ────────────────────────────────────────
-        add_resp = requests.post(
-            f'{wb_url}/worksheets/add',
-            headers=hdrs,
-            json={"name": nombre_hoja},
-            timeout=20,
+        _sp_cfg = st.secrets["sharepoint"]
+        _secrets_ok = all(k in _sp_cfg for k in ["tenant_id", "client_id", "client_secret"])
+    except Exception:
+        _secrets_ok = False
+
+    hero_left, hero_right = st.columns([7, 1.6], gap="small")
+    with hero_left:
+        st.markdown(
+            '''
+            <div id="auto-hero-left"></div>
+            <div class="auto-eyebrow">Centro Floricultor de Baja California</div>
+            <div class="auto-title">Panel Auto</div>
+            <div class="auto-subtitle">Operaciones de descarga, creación y carga de hojas SharePoint con una vista más compacta, clara y ejecutiva.</div>
+            ''',
+            unsafe_allow_html=True,
         )
-        if add_resp.status_code not in (200, 201):
-            return {"ok": False, "error": f"Error creando hoja: {add_resp.text}"}
+    with hero_right:
+        st.markdown('<div id="auto-hero-right"></div>', unsafe_allow_html=True)
+        st.button("⬅ Dashboard", type="secondary", on_click=toggle_auto, use_container_width=True)
 
-        ws_id = add_resp.json().get('id', nombre_hoja)
-        # ── 6. Mover al inicio (posición 0) ───────────────────────
-        requests.patch(
-            f'{wb_url}/worksheets/{nombre_hoja}',
-            headers=hdrs,
-            json={"position": 0},
-            timeout=20,
+    stat_cols = st.columns(4, gap="small")
+    stat_values = [
+        ("auto-stat-1", str(len(available_weeks)), "Semanas detectadas", "Base disponible para operaciones WK."),
+        ("auto-stat-2", "Lista" if _crear_disponible else "Off", "Crear WK", "Plantilla oficial lista para alta manual."),
+        ("auto-stat-3", "Lista" if _subir_disponible else "Off", "Carga PR/MP/ME", "Inserción automática al libro principal."),
+        ("auto-stat-4", "OK" if _secrets_ok else "Pend.", "Credenciales", "Estado de acceso a SharePoint / Graph."),
+    ]
+    for col, (marker, value, label, note) in zip(stat_cols, stat_values):
+        with col:
+            st.markdown(
+                f'''<div id="{marker}"></div>
+                <div class="auto-stat-label">{label}</div>
+                <div class="auto-stat-value">{value}</div>
+                <div class="auto-stat-note">{note}</div>''',
+                unsafe_allow_html=True,
+            )
+
+    col_down, col_create = st.columns(2, gap="medium")
+
+    with col_down:
+        st.markdown(
+            '''
+            <div id="auto-card-download"></div>
+            <div class="auto-card-kicker">Operación WK</div>
+            <div class="auto-card-title">Descargar hoja semanal</div>
+            <div class="auto-card-note">Prepara un archivo individual con el formato oficial para revisión o descarga inmediata.</div>
+            ''',
+            unsafe_allow_html=True,
         )
-
-        # ── 7. Copiado masivo de Fórmulas y Formatos de Número (A1:Z1500) ─────────
-        import re
-        prev_wk_name = None
-        m = re.search(r'\d+', nombre_hoja)
-        if m:
-            num = int(m.group())
-            prev_wk_name = nombre_hoja.replace(str(num), str(num - 1))
-
-        copied_data = None
-        if prev_wk_name and prev_wk_name.upper() in [n.upper() for n in nombres]:
-            # Traer fórmulas y formatos de número explícitamente de A1 hasta Z1500
-            try:
-                get_resp = requests.get(
-                    f"{wb_url}/worksheets/{prev_wk_name}/range(address='A1:Z1500')?$select=formulas,numberFormat",
-                    headers=hdrs, timeout=60
-                )
-                if get_resp.status_code == 200:
-                    copied_data = get_resp.json()
-            except:
-                pass
-
-        if copied_data and "formulas" in copied_data:
-            # Pegar el bloque de 1500 filas directo
-            patch_resp = requests.patch(
-                f"{wb_url}/worksheets/{nombre_hoja}/range(address='A1:Z1500')",
-                headers=hdrs, 
-                json={
-                    "formulas": copied_data["formulas"],
-                    "numberFormat": copied_data.get("numberFormat", [])
-                }, 
-                timeout=120
-            )
-            # Actualizar nombre de la semana en la celda B3 independientemente
-            requests.patch(
-                f"{wb_url}/worksheets/{nombre_hoja}/range(address='B3')",
-                headers=hdrs, json={"values": [[nombre_hoja]]}, timeout=20
-            )
-            
-            # NOTE: Dejamos que el código continúe hacia el Paso 8 para "pintar" la plantilla (colores/bordes), 
-            # ya que leer puras fórmulas no copia los colores de fondo nativamente.
-
-        else:
-            # ── Alternativa: Escribir celdas desde cero (batchUpdate vía range) ───────────
-            NROWS, NCOLS = 250, 21  # cols A(0)..S(18)
-            col_idx = {c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTU")}
-            matrix = [[""] * NCOLS for _ in range(NROWS)]
-    
-            for cell in _celdas_de_la_hoja(nombre_hoja):
-                addr = cell["address"]
-                val  = cell["value"]
-                col_str = ''.join(ch for ch in addr if ch.isalpha())
-                row_str = ''.join(ch for ch in addr if ch.isdigit())
-                if col_str in col_idx and row_str:
-                    r = int(row_str) - 1
-                    col_c = col_idx[col_str]
-                    if 0 <= r < NROWS and 0 <= col_c < NCOLS:
-                        matrix[r][col_c] = val if val is not None else ""
-    
-            range_addr = f"A1:S{NROWS}"
-            patch_resp = requests.patch(
-                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{range_addr}\')',
-                headers=hdrs,
-                json={"values": matrix},
-                timeout=60,
-            )
-            if patch_resp.status_code not in (200, 201):
-                return {"ok": False, "error": f"Error escribiendo celdas: {patch_resp.text}"}
-
-        # ── 8. Aplicar formatos via Graph API ─────────────────────────────
-        def fmt(rng, body):
-            requests.patch(
-                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format',
-                headers=hdrs, json=body, timeout=30,
+        if available_weeks:
+            selected_wk = st.selectbox(
+                "Semana disponible",
+                options=available_weeks,
+                format_func=lambda c: f"WK{c}",
+                key="auto_download_wk",
             )
 
-        def fill(rng, color):
-            requests.patch(
-                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/fill',
-                headers=hdrs, json={"color": f"#{color}"}, timeout=30,
-            )
-
-        def font(rng, bold=False, color=None, size=None):
-            body = {"bold": bold, "name": "Arial"}
-            if color: body["color"] = f"#{color}"
-            if size:  body["size"]  = size
-            requests.patch(
-                f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/font',
-                headers=hdrs, json=body, timeout=30,
-            )
-
-        def border(rng, left=None, right=None, top=None, bottom=None, inner_h=None, inner_v=None):
-            style_map = {"thin": "Continuous", "medium": "Medium"}
-            base = f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format/borders'
-            for side_name, style in [
-                ("EdgeLeft",left), ("EdgeRight",right), ("EdgeTop",top), ("EdgeBottom",bottom),
-                ("InsideHorizontal",inner_h), ("InsideVertical",inner_v)
-            ]:
-                if style:
-                    requests.patch(
-                        f'{base}/{side_name}',
-                        headers=hdrs,
-                        json={"style": style_map.get(style, style), "color": "#000000"},
-                        timeout=30,
+            if st.button("Preparar archivo XLSX", use_container_width=True, key="btn_prepare_wk"):
+                with st.spinner(f"Conectando con SharePoint y preparando WK{selected_wk}..."):
+                    xlsx_bytes = get_sheet_xlsx(selected_wk)
+                if xlsx_bytes:
+                    st.success("Archivo listo para descarga.")
+                    st.download_button(
+                        label=f"Descargar WK{selected_wk}.xlsx",
+                        data=xlsx_bytes,
+                        file_name=f"WK{selected_wk}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="primary",
+                        use_container_width=True,
                     )
+                else:
+                    st.error(f"No se encontró WK{selected_wk} en el servidor.")
+        else:
+            st.warning("No hay semanas disponibles para descargar.")
 
-        # ── Colores de fondo ──────────────────────────────────────────────
-        fill("B2",        "DAE3F3")   # azul claro encabezado semana
-        fill("B3",        "C5E0B4")   # verde lima código semana
-
-        # Verde claro (CCFFCC) — columnas USD L:S
-        for rng in [
-            "L5:U9",
-            "L10:U21", "L22:U23", "L24:U60",
-            "L61:U62", "L63:U71", "L72:U74",
-            "L94:U100", "L102:U102", "L104:U104", "L107:U107",
-        ]:
-            fill(rng, "CCFFCC")
-
-        # Naranja (FFCC99) — subtotales
-        fill("C22:J22",   "FFCC99")
-        fill("L22:U22",   "FFCC99")
-        fill("C61:J61",   "FFCC99")
-        fill("L61:U61",   "FFCC99")
-        fill("C72:J72",   "FFCC99")
-        fill("L72:U72",   "FFCC99")
-        fill("B101:J101", "FFCC99")
-        fill("L101:U101", "FFCC99")
-
-        # Amarillo claro (FFFFCC) — producción y $/Ha
-        fill("L76:U92",   "FFFFCC")
-        fill("L110:U121", "FFFFCC")
-        # Amarillo vivo (FFFF00) — charolas/esquejes MXN
-        fill("D89:J91",   "FFFF00")
-
-        # Verde oscuro (008000) — headers KPI
-        for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
-            fill(rng, "008000")
-
-        # Blanco explícito — sección KPI proyectos / logística (filas 126-250)
-        fill("B126:U250", "FFFFFF")
-
-        # ── Color de texto navy (#333399) en todo el cuerpo + tamaño 10 ──
-        font("B1:U250",  bold=False, color="333399", size=10)
-
-        # ── Negritas ──────────────────────────────────────────────────────
-        font("B1:B3",    bold=True,  color="333399", size=10)
-        font("B9",       bold=True,  color="333399", size=10)
-        font("B22",      bold=True,  color="333399", size=10)
-        font("B61",      bold=True,  color="333399", size=10)
-        font("B72",      bold=True,  color="333399", size=10)
-        font("B74",      bold=True,  color="333399", size=10)
-        font("B93:B97",  bold=True,  color="333399", size=10)
-        font("B101",     bold=True,  color="333399", size=10)
-        font("B103",     bold=True,  color="333399", size=10)
-        font("B105",     bold=True,  color="333399", size=10)
-        font("B106",     bold=True,  color="333399", size=10)
-        font("B108",     bold=True,  color="333399", size=10)
-        font("B110",     bold=True,  color="333399", size=10)
-        font("B116",     bold=True,  color="333399", size=10)
-        font("B118",     bold=True,  color="333399", size=10)
-        font("B119",     bold=True,  color="333399", size=10)
-        font("B121",     bold=True,  color="333399", size=10)
-        font("B124",     bold=True,  color="333399", size=10)
-        font("B140",     bold=True,  color="333399", size=10)
-        # Columna C subtotales / columna L subtotales USD
-        for rng in ["C22:J22", "C61:J61", "C72:J72", "C74:J74",
-                    "L22:U22", "L61:U61", "L72:U72", "L74:U74",
-                    "L76:L92", "L95:L121",
-                    "L101:U101", "L103:U103", "L105:U106", "L108:U108",
-                    "L111:N114", "L116:N119", "L121:U121"]:
-            font(rng, bold=True, size=10)
-        # Columna C negrita en todas las filas de datos
-        for rng in ["C10:C21", "C24:C60", "C63:C70",
-                    "C76:C92", "C95:C121"]:
-            font(rng, bold=True, color="333399", size=10)
-        # KPI headers — texto blanco negrita
-        for rng in ["B125", "L125", "B143", "L143", "N143", "B165"]:
-            font(rng, bold=True, color="FFFFFF", size=10)
-        # Texto azul en valores KPI proyectos/logística
-        for rng in ["C126:C250", "L126:L250"]:
-            font(rng, bold=False, color="0000FF", size=10)
-
-        # ── Bordes — estrategia simplificada (pocas llamadas) ─────────────
-        
-        # GRILLAS INTERNAS (Lo que faltaba para no dejarlo a medias)
-        border("B5:U122", inner_h="thin", inner_v="thin")
-        border("B125:U250", inner_h="thin", inner_v="thin")
-
-        # ESTRUCTURA PRINCIPAL: 3 columnas clave con rangos grandes
-        # Left medio en B (toda el área de datos)
-        border("B2:B250",  left="medium")
-        # Right medio en J (toda el área de datos)
-        border("J2:J250",  right="medium")
-        # Right thin en C (separador columna TOTAL)
-        border("C5:C250",  right="thin")
-        # Left medio en L + right medio en S (todo el bloque USD)
-        border("L5:L250",  left="medium")
-        border("U5:U250",  right="medium")
-        # Left medio en L para separar C de la zona MXN izquierda también
-        border("C5:C9",    left="medium")
-        border("C10:C21",  left="medium")
-        border("C22:C74",  left="medium")
-        border("C76:C121", left="medium")
-
-        # FILAS ESPECIALES — separadores horizontales MXN
-        border("B5:J5",    top="medium", bottom="thin")
-        border("B9:J9",    bottom="thin")
-        border("B22:J22",  top="thin",   bottom="thin")
-        border("B61:J61",  top="thin",   bottom="thin")
-        border("B72:J72",  top="thin",   bottom="thin")
-        border("B74:J74",  top="thin",   bottom="medium")
-        border("B76:J76",  top="medium")
-        border("B92:J92",  bottom="medium")
-        border("B94:J94",  top="medium")
-        border("B108:J108",bottom="medium")
-        border("B110:J110",top="medium")
-        border("B121:J121",bottom="medium")
-
-        # FILAS ESPECIALES — separadores horizontales USD
-        border("L5:U5",    top="medium", bottom="thin")
-        border("L9:U9",    bottom="thin")
-        border("L10:U10",  top="thin")
-        border("L22:U22",  top="thin",   bottom="thin")
-        border("L61:U61",  top="thin",   bottom="thin")
-        border("L72:U72",  top="thin",   bottom="thin")
-        border("L74:U74",  top="thin",   bottom="medium")
-        border("L76:U76",  top="medium")
-        border("L92:U92",  bottom="medium")
-        border("L94:U94",  top="medium")
-        border("L97:U97",  bottom="thin")
-        border("L98:U98",  top="thin")
-        border("L100:U100",bottom="thin")
-        border("L101:U101",bottom="thin")
-        border("L103:U103",top="thin",   bottom="thin")
-        border("L105:U105",top="thin")
-        border("L106:U106",bottom="thin")
-        border("L108:U108",top="thin",   bottom="medium")
-        border("L110:U110",top="medium")
-        border("L113:U113",bottom="thin")
-        border("L114:U114",top="thin",   bottom="thin")
-        border("L116:U116",top="thin",   bottom="thin")
-        border("L118:U118",top="thin")
-        border("L119:U119",bottom="thin")
-        border("L121:U121",top="thin",   bottom="medium")
-
-        # KPI HEADERS borders
-        border("B125",  left="thin", right="thin", top="thin")
-        border("L125",  left="thin", right="thin", top="thin", bottom="thin")
-        border("B143",  left="thin", right="thin", top="thin")
-        border("J143",  right="thin", top="thin")
-        border("L143",  left="thin", right="thin", top="thin", bottom="thin")
-        border("N143",  left="thin", right="thin", top="thin", bottom="thin")
-        border("B165",  left="thin", right="thin", top="thin")
-
-        # PROYECTOS — outline
-        border("B126:J139", left="thin",   right="thin")
-        border("B139:J139", bottom="thin")
-        border("L126:U139", left="thin",   right="thin")
-        border("L139:U139", bottom="thin")
-        border("B140",  left="thin", right="thin", top="thin", bottom="thin")
-        border("L140",  left="thin", right="thin", bottom="thin")
-
-        # LOGÍSTICA — outline extendido
-        border("B144:B250", left="thin")
-        border("J144:J250", right="thin")
-        border("B250:J250", bottom="thin")
-        
-        border("L144:L250", left="thin")
-        border("N144:N250", right="thin")
-        border("U144:U250", right="thin")
-        border("L250:U250", bottom="thin")
-
-        # ── Alineación ────────────────────────────────────────────────────
-        fmt("B2",    {"horizontalAlignment": "Center"})
-        fmt("B3",    {"horizontalAlignment": "Center"})
-        fmt("B4",    {"horizontalAlignment": "Center"})
-        fmt("C5:J5", {"horizontalAlignment": "Center"})
-        fmt("L5:U5", {"horizontalAlignment": "Center", "verticalAlignment": "Center"})
-        fmt("B6",    {"horizontalAlignment": "Center", "verticalAlignment": "Top", "wrapText": True})
-        fmt("B7",    {"horizontalAlignment": "Center", "verticalAlignment": "Top", "wrapText": True})
-        fmt("C7:J7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
-        fmt("L7:U7", {"horizontalAlignment": "Center", "verticalAlignment": "Top"})
-        fmt("C8",    {"horizontalAlignment": "Center"})
-        fmt("L8",    {"horizontalAlignment": "Center"})
-        fmt("B9",    {"horizontalAlignment": "Center"})
-        fmt("L125",  {"horizontalAlignment": "Center"})
-        fmt("L143",  {"horizontalAlignment": "Center"})
-        fmt("N143",  {"horizontalAlignment": "Center"})
-
-        # ── Anchos de columnas ────────────────────────────────────────────
-        # Configurar anchos de columna para que coincidan con el formato esperado
-        # Graph API requiere usar el endpoint de columnas específico
-        column_widths = {
-            "A": 3,
-            "B": 69.4,
-            "C": 14,
-            "D": 11, "E": 11, "F": 11, "G": 11, "H": 11, "I": 11, "J": 11,
-            "K": 11,
-            "L": 11, "M": 11, "N": 11, "O": 11, "P": 11, "Q": 11, "R": 11, "S": 11, "T": 11, "U": 11,
-        }
-        for col_letter, width in column_widths.items():
-            try:
-                # Usamos el endpoint de formato de rango para establecer el ancho
-                requests.patch(
-                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{col_letter}:{col_letter}\')/format',
-                    headers=hdrs,
-                    json={"columnWidth": width * 7.5},
-                    timeout=20,
-                )
-            except Exception as e:
-                # No es crítico si falla el ajuste de ancho
-                print(f"⚠️  Error configurando ancho columna {col_letter}: {e}")
-
-        # ── Alto de filas ─────────────────────────────────────────────────
-        # Configurar alto de filas específicas
-        row_heights = {
-            3: 15.0,
-            4: 15.0,
-            6: 26.4,
-        }
-        for row_num, height in row_heights.items():
-            try:
-                requests.patch(
-                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{row_num}:{row_num}\')/format',
-                    headers=hdrs,
-                    json={"rowHeight": height},
-                    timeout=20,
-                )
-            except Exception as e:
-                # No es crítico si falla el ajuste de alto
-                print(f"⚠️  Error configurando alto fila {row_num}: {e}")
-
-        # ── Formato de número (#,##0) para celdas de valores ─────────────
-        # Aplicar formato de número con separador de miles a las celdas con valores
-        number_ranges = [
-            # Subtotales MXN
-            "C22:J22", "C61:J61", "C72:J72", "C74:J74",
-            # Subtotales USD
-            "L22:U22", "L61:U61", "L72:U72", "L74:U74",
-            # Valores de datos MXN
-            "C10:J21", "C24:J60", "C63:J70",
-            # Valores de datos USD
-            "L10:U21", "L24:U60", "L63:U70",
-            # Sección de producción y costos
-            "C76:J92", "L76:U92",
-            "C95:J121", "L95:U121",
-        ]
-        for rng in number_ranges:
-            try:
-                requests.patch(
-                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{rng}\')/format',
-                    headers=hdrs,
-                    json={"numberFormat": "#,##0"},
-                    timeout=20,
-                )
-            except Exception as e:
-                print(f"⚠️  Error configurando formato número en {rng}: {e}")
-
-        # ── Merge de celdas ───────────────────────────────────────────────
-        merges = [
-            # Headers principales
-            "C5:J5", "L5:R5",
-            # Headers columnas K-L
-            "K1:L1", "K2:L2", "K4:L4",
-            # Separadores K-L
-            "K75:L75", "K93:L93", "K109:L109",
-            # KPI headers K-L
-            "K122:L122", "K123:L123", "K124:L124",
-            "K141:L141", "K142:L142",
-            "K164:L164",
-            "K174:L174", "K175:L175",
-            # KPI sections A-B
-            "A123:B123",
-            "A141:B141", "A142:B142",
-            "A164:B164",
-            "A174:B174", "A175:B175",
-            # Valores combinados verticalmente (logística)
-            "C153:C154", "L153:L154",
-            "C157:C158", "L157:L158",
-            "C161:C162", "L161:L162",
-            "C167:C168", "L167:L168",
-            "C171:C172", "L171:L172",
-        ]
-        for m in merges:
-            try:
-                requests.post(
-                    f'{wb_url}/worksheets/{nombre_hoja}/range(address=\'{m}\')/merge',
-                    headers=hdrs, json={"across": False}, timeout=20,
-                )
-            except Exception as e:
-                print(f"⚠️  Error merge {m}: {e}")
-
-    finally:
-        # ── 8. Cerrar la sesión siempre ───────────────────────────────────
-        requests.post(
-            f'{wb_url}/closeSession',
-            headers=hdrs,
-            timeout=20,
+    with col_create:
+        st.markdown(
+            '''
+            <div id="auto-card-create"></div>
+            <div class="auto-card-kicker">Alta manual</div>
+            <div class="auto-card-title">Crear nueva hoja WK</div>
+            <div class="auto-card-note">Genera una hoja en blanco con celdas, fórmulas y formato corporativo directamente en SharePoint.</div>
+            ''',
+            unsafe_allow_html=True,
         )
+        if _crear_disponible:
+            nuevo_nombre = st.text_input(
+                "Código de hoja",
+                placeholder="WK2518",
+                key="auto_new_wk_name",
+            ).strip().upper()
 
-    return {
-        "ok": True,
-        "mensaje": f"Hoja '{nombre_hoja}' creada exitosamente en SharePoint.",
-    }
-
-
-def autorrellenar_materiales_wk(week_code: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
-    """
-    Autorrellena las filas de materiales en MN por rancho para una WK existente.
-
-    Categorías soportadas:
-    - FERTILIZANTES                  <- PR#### tipo MIRFE
-    - DESINFECCION / PLAGUICIDAS     <- PR#### tipo MIPE
-    - MANTENIMIENTO                  <- MP#### total por rancho
-    - MATERIAL DE EMPAQUE            <- ME#### total por rancho
-    """
-    import base64 as _b64
-
-    code = _normalizar_week_code(week_code)
-    if not (code.isdigit() and len(code) == 4):
-        return {"ok": False, "error": "El código de semana debe ser exactamente 4 dígitos (ej: 2614)."}
-
-    nombre_hoja = f"WK{code}"
-
-    archivo = _descargar_excel(SHAREPOINT_URL_PR, "Excel PR/MP/ME")
-    if archivo is None:
-        return {"ok": False, "error": "No se pudo descargar el Excel de PR/MP/ME desde SharePoint."}
-
-    try:
-        xls = pd.ExcelFile(archivo)
-    except Exception as e:
-        return {"ok": False, "error": f"No se pudo abrir el Excel de PR/MP/ME: {e}"}
-
-    resumen = {}
-    fuentes_ok = []
-    fuentes_faltantes = []
-    omitidos = {}
-
-    for categoria, cfg in WK_MATERIAL_AUTOFILL.items():
-        prefix = cfg["prefix"]
-        tipo = cfg["tipo"]
-        sheet_name = _buscar_hoja_por_prefijo(xls.sheet_names, prefix, code)
-        if not sheet_name:
-            resumen[categoria] = {"row": cfg["row"], "totales": {rn: 0.0 for rn in WK_MXN_RANCH_COLS}}
-            missing_name = f"{prefix}{code}"
-            if missing_name not in fuentes_faltantes:
-                fuentes_faltantes.append(missing_name)
-            continue
-
-        vals = _leer_hoja(xls, sheet_name, rango_filas=500, rango_cols=11)
-        parsed = _parse_generic(vals)
-        totales, omitidos_cat = _sumar_gasto_por_rancho(parsed, tipo=tipo)
-        resumen[categoria] = {"row": cfg["row"], "totales": totales}
-        if sheet_name not in fuentes_ok:
-            fuentes_ok.append(sheet_name)
-        if omitidos_cat:
-            omitidos[categoria] = omitidos_cat
-
-    if not fuentes_ok:
-        return {
-            "ok": False,
-            "error": f"No se encontraron las hojas PR{code}, MP{code} ni ME{code} en el Excel fuente.",
-        }
-
-    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
-    token_resp = requests.post(token_url, data={
-        "grant_type": "client_credentials",
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "scope": "https://graph.microsoft.com/.default",
-    }, timeout=20)
-    if token_resp.status_code != 200:
-        return {"ok": False, "error": f"Error obteniendo token: {token_resp.text[:300]}"}
-
-    token = token_resp.json().get("access_token")
-    hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-    encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip("=")
-    encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
-    res = requests.get(
-        f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem",
-        headers=hdrs_json,
-        timeout=20,
-    )
-    if res.status_code != 200:
-        return {"ok": False, "error": f"No se pudo resolver el archivo WK: {res.text[:300]}"}
-
-    item = res.json()
-    drive_id = item.get("parentReference", {}).get("driveId")
-    item_id = item.get("id")
-    if not drive_id or not item_id:
-        return {"ok": False, "error": "No se pudo obtener driveId o itemId del Excel WK."}
-
-    wb_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
-    sess_resp = requests.post(
-        f"{wb_url}/createSession",
-        headers=hdrs_json,
-        json={"persistChanges": True},
-        timeout=30,
-    )
-    if sess_resp.status_code not in (200, 201):
-        return {"ok": False, "error": f"Error abriendo sesión del workbook WK: {sess_resp.text[:300]}"}
-
-    session_id = sess_resp.json().get("id")
-    hdrs = {**hdrs_json, "workbook-session-id": session_id}
-
-    try:
-        sheets_resp = requests.get(f"{wb_url}/worksheets", headers=hdrs, timeout=20)
-        if sheets_resp.status_code != 200:
-            return {"ok": False, "error": f"Error listando hojas WK: {sheets_resp.text[:300]}"}
-
-        target_sheet = None
-        normalized_target = nombre_hoja.replace(" ", "").upper()
-        for ws in sheets_resp.json().get("value", []):
-            ws_name = str(ws.get("name", "")).strip()
-            if ws_name.replace(" ", "").upper() == normalized_target:
-                target_sheet = ws_name
-                break
-
-        if not target_sheet:
-            return {"ok": False, "error": f"La hoja '{nombre_hoja}' no existe en el Excel WK."}
-
-        cols = list(WK_MXN_RANCH_COLS.values())
-        for categoria, info in resumen.items():
-            row = info["row"]
-            values = [[info["totales"].get(rn, 0.0) for rn in WK_MXN_RANCH_COLS]]
-            patch_resp = requests.patch(
-                f"{wb_url}/worksheets/{target_sheet}/range(address='E{row}:K{row}')",
-                headers=hdrs,
-                json={"values": values},
-                timeout=30,
-            )
-            if patch_resp.status_code not in (200, 201):
-                return {
-                    "ok": False,
-                    "error": f"No se pudo escribir {categoria} en {target_sheet}: {patch_resp.text[:300]}",
-                }
-
-            requests.patch(
-                f"{wb_url}/worksheets/{target_sheet}/range(address='E{row}:K{row}')/format",
-                headers=hdrs,
-                json={"numberFormat": "#,##0"},
-                timeout=20,
-            )
-            requests.patch(
-                f"{wb_url}/worksheets/{target_sheet}/range(address='E{row}:K{row}')/format/font",
-                headers=hdrs,
-                json={"color": "#C00000", "bold": True, "name": "Arial"},
-                timeout=20,
-            )
-
-    finally:
-        requests.post(f"{wb_url}/closeSession", headers=hdrs, timeout=20)
-
-    fuentes_txt = ", ".join(fuentes_ok) if fuentes_ok else "ninguna"
-    faltantes_txt = f" Faltantes: {', '.join(fuentes_faltantes)}." if fuentes_faltantes else ""
-    omitidos_txt = ""
-    if omitidos:
-        partes = []
-        for categoria, datos in omitidos.items():
-            ranchos = ", ".join(f"{rn}={round(val, 2)}" for rn, val in datos.items())
-            partes.append(f"{categoria}: {ranchos}")
-        omitidos_txt = f" Ranchos omitidos sin columna WK: {' | '.join(partes)}."
-
-    return {
-        "ok": True,
-        "mensaje": f"Materiales MN autorrellenados en '{nombre_hoja}'. Fuentes: {fuentes_txt}.{faltantes_txt}{omitidos_txt}",
-    }
-
-
-# ─── Descarga de una hoja WK#### como xlsx con formato completo ───────────────
-def get_sheet_xlsx(week_code: str) -> bytes | None:
-    """
-    Descarga el Excel de SharePoint y extrae la hoja WK{week_code}
-    como un archivo .xlsx independiente con formato completo.
-    """
-    archivo = _descargar_excel(SHAREPOINT_URL_WK, "Excel WK")
-    if archivo is None:
-        return None
-
-    archivo_bytes = archivo.getvalue()
-    sheet_name = f"WK{week_code}"
-
-    try:
-        wb = openpyxl.load_workbook(BytesIO(archivo_bytes))
-
-        target = None
-        for sname in wb.sheetnames:
-            normalized = re.sub(r'\s+', '', sname.strip()).upper()
-            if normalized == sheet_name.upper():
-                target = sname
-                break
-
-        if target is None:
-            return None
-
-        src_ws = wb[target]
-        new_wb = openpyxl.Workbook()
-        new_ws = new_wb.active
-        new_ws.title = target
-
-        for row in src_ws.iter_rows():
-            for cell in row:
-                new_cell = new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
-                if cell.has_style:
-                    new_cell.font          = copy(cell.font)
-                    new_cell.border        = copy(cell.border)
-                    new_cell.fill          = copy(cell.fill)
-                    new_cell.number_format = cell.number_format
-                    new_cell.protection    = copy(cell.protection)
-                    new_cell.alignment     = copy(cell.alignment)
-
-        for merge in src_ws.merged_cells.ranges:
-            new_ws.merge_cells(str(merge))
-
-        for col_letter, col_dim in src_ws.column_dimensions.items():
-            new_ws.column_dimensions[col_letter].width  = col_dim.width
-            new_ws.column_dimensions[col_letter].hidden = col_dim.hidden
-        for row_num, row_dim in src_ws.row_dimensions.items():
-            new_ws.row_dimensions[row_num].height = row_dim.height
-            new_ws.row_dimensions[row_num].hidden = row_dim.hidden
-
-        buf = BytesIO()
-        new_wb.save(buf)
-        buf.seek(0)
-        return buf.read()
-
-    except Exception as e:
-        print(f"⚠️  Error extrayendo hoja {sheet_name}: {e}")
-        return None
-
-
-# ─── Subir hojas PR / ME / MP al Excel secundario de SharePoint ──────────────
-def insertar_hojas_pr_me_mp(
-    semana_code: str,
-    tenant_id: str,
-    client_id: str,
-    client_secret: str,
-    pr_file=None,
-    mp_file=None,
-    me_file1=None,
-    me_file2=None,
-) -> dict:
-    """
-    Inserta hojas PR####, MP#### y/o ME#### en el Excel secundario de SharePoint
-    usando Microsoft Graph API (misma técnica que crear_hoja_wk).
-
-    Args:
-        semana_code : código de 4 dígitos, ej "2613"
-        tenant_id   : Azure AD tenant ID
-        client_id   : App registration client ID
-        client_secret: App registration client secret
-        pr_file     : BytesIO o file-like del Excel PR (opcional)
-        mp_file     : BytesIO o file-like del Excel MP (opcional)
-        me_file1    : BytesIO o file-like del primer Excel ME (opcional)
-        me_file2    : BytesIO o file-like del segundo Excel ME (opcional)
-
-    Returns:
-        dict con claves "PR", "MP", "ME" → cada una con {"ok": bool, "msg": str}
-    """
-    import base64 as _b64
-    import time
-
-    code = semana_code.strip().upper()
-    # Aceptar "WK2613" o "2613"
-    if code.startswith("WK"):
-        code = code[2:]
-
-    resultado = {}
-
-    # ── Helper: leer Excel → matriz de valores ─────────────────────────────
-    def _read_matrix(f, max_rows=700, max_cols=20):
-        """Lee un archivo Excel y devuelve lista de listas de valores (str/num/None).
-        Acepta: Streamlit UploadedFile, BytesIO, o cualquier file-like object.
-        Soporta .xlsx (openpyxl) y .xls antiguo (xlrd).
-        """
-        from io import BytesIO as _BytesIO
-        try:
-            # Leer todos los bytes en memoria para garantizar compatibilidad
-            if hasattr(f, "read"):
-                raw = f.read()
-                if hasattr(f, "seek"):
+            if st.button("Crear hoja en SharePoint", type="primary", use_container_width=True, key="btn_create_wk"):
+                if not nuevo_nombre:
+                    st.warning("Escribe el nombre de la hoja.")
+                elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
+                    st.warning("El formato debe ser exactamente WK#### (ej: WK2518).")
+                else:
                     try:
-                        f.seek(0)
-                    except Exception:
-                        pass
-            elif isinstance(f, (bytes, bytearray)):
-                raw = bytes(f)
-            else:
-                raw = f.getvalue()
+                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                        client_id     = st.secrets["sharepoint"]["client_id"]
+                        client_secret = st.secrets["sharepoint"]["client_secret"]
+                        with st.spinner(f"Escribiendo {nuevo_nombre} vía Microsoft Graph API..."):
+                            resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
+                        if resultado.get("ok"):
+                            st.success(resultado["mensaje"])
+                            st.cache_data.clear()
+                        else:
+                            st.error(resultado["error"])
+                    except KeyError as e:
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+        else:
+            st.error("La función de crear hojas no está disponible en data_extractor.py")
 
-            if not raw:
-                raise RuntimeError("El archivo está vacío o no se pudo leer.")
+    with st.container():
+        st.markdown(
+            '''
+            <div id="auto-card-fill-shell"></div>
+            <div class="auto-card-kicker">Post-creación</div>
+            <div class="auto-section-title">Autorrellenar materiales MN</div>
+            <div class="auto-section-note">Llena por rancho las filas de FERTILIZANTES, DESINFECCION / PLAGUICIDAS, MANTENIMIENTO y MATERIAL DE EMPAQUE usando PR / MP / ME de la misma semana. Los totales y USD siguen por fórmula.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
 
-            file_obj = _BytesIO(raw)
-
-            # Intentar openpyxl (.xlsx)
-            try:
-                wb = openpyxl.load_workbook(file_obj, read_only=True, data_only=True)
-                ws = wb.active
-                rows = []
-                for row in ws.iter_rows(max_row=max_rows, max_col=max_cols, values_only=True):
-                    rows.append([v if v is not None else "" for v in row])
-                wb.close()
-                return rows
-            except Exception as xlsx_err:
-                # Si falla openpyxl intentar con xlrd (.xls legacy)
-                file_obj.seek(0)
-                try:
-                    import xlrd
-                    wb_xls = xlrd.open_workbook(file_contents=file_obj.read())
-                    ws_xls = wb_xls.sheet_by_index(0)
-                    rows = []
-                    for ri in range(min(ws_xls.nrows, max_rows)):
-                        row = []
-                        for ci in range(min(ws_xls.ncols, max_cols)):
-                            cell = ws_xls.cell(ri, ci)
-                            row.append(cell.value if cell.value != "" else "")
-                        rows.append(row)
-                    return rows
-                except ImportError:
-                    raise RuntimeError(
-                        f"No se pudo leer el archivo. "
-                        f"Si es un archivo .xls antiguo, instala xlrd (pip install xlrd). "
-                        f"Error original: {xlsx_err}"
+        if not _autofill_disponible:
+            st.error("La función `autorrellenar_materiales_wk` no está disponible en data_extractor.py")
+        else:
+            fill_sel_col, fill_manual_col, fill_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+            with fill_sel_col:
+                if available_weeks:
+                    fill_wk_sel = st.selectbox(
+                        "WK disponible",
+                        options=available_weeks,
+                        format_func=lambda c: f"WK{c}",
+                        key="autofill_wk_sel",
                     )
-                except Exception as xls_err:
-                    raise RuntimeError(
-                        f"No se pudo leer como .xlsx ({xlsx_err}) ni como .xls ({xls_err}). "
-                        f"Asegúrate de que el archivo no esté corrupto o protegido con contraseña."
+                    fill_week_code = fill_wk_sel
+                else:
+                    fill_week_code = ""
+            with fill_manual_col:
+                fill_week_manual = st.text_input(
+                    "O captura WK",
+                    placeholder="2614",
+                    max_chars=4,
+                    key="autofill_wk_manual",
+                ).strip()
+                if fill_week_manual:
+                    fill_week_code = fill_week_manual
+            with fill_info_col:
+                fill_label = f"WK{fill_week_code}" if fill_week_code else "Sin WK"
+                st.markdown(
+                    f'''<div class="auto-card-kicker">Acción</div>
+                    <div class="auto-card-title">{fill_label}</div>
+                    <div class="auto-card-note">Usa este paso después de crear y revisar la hoja.</div>''',
+                    unsafe_allow_html=True,
+                )
+
+            if st.button(
+                f"Autorrellenar materiales {'— WK' + fill_week_code if fill_week_code else ''}",
+                type="primary",
+                use_container_width=True,
+                key="btn_autofill_materials",
+                disabled=not bool(fill_week_code),
+            ):
+                if not (fill_week_code.isdigit() and len(fill_week_code) == 4):
+                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2614).")
+                else:
+                    try:
+                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                        client_secret = st.secrets["sharepoint"]["client_secret"]
+                        with st.spinner(f"Autorrellenando materiales en WK{fill_week_code}..."):
+                            res_fill = autorrellenar_materiales_wk(
+                                week_code=fill_week_code,
+                                tenant_id=tenant_id,
+                                client_id=client_id_sp,
+                                client_secret=client_secret,
+                            )
+                        if res_fill.get("ok"):
+                            st.success(res_fill.get("mensaje", "Materiales autorrellenados correctamente."))
+                            st.cache_data.clear()
+                        else:
+                            st.error(res_fill.get("error", "No se pudo autorrellenar la WK."))
+                    except KeyError as e:
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                    except Exception as e:
+                        st.error(f"Error inesperado: {e}")
+
+    with st.container():
+        st.markdown(
+            '''
+            <div id="auto-upload-shell"></div>
+            <div class="auto-card-kicker">Carga consolidada</div>
+            <div class="auto-section-title">Subir PR / MP / ME / MV</div>
+            <div class="auto-section-note">Carga archivos fuente para una semana de trabajo y crea las hojas correspondientes dentro del Excel principal. ME admite 2 archivos fusionados.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
+
+        if not _subir_disponible:
+            st.error("La función `insertar_hojas_pr_me_mp` no está disponible en data_extractor.py")
+        else:
+            ctrl_sel, ctrl_manual, ctrl_state = st.columns([1.8, 1.1, 0.9], gap="small")
+            with ctrl_sel:
+                if available_weeks:
+                    semana_sel = st.selectbox(
+                        "Semana base",
+                        options=available_weeks,
+                        format_func=lambda c: f"WK{c}",
+                        key="upload_wk_sel",
                     )
-        except RuntimeError:
-            raise
-        except Exception as e:
-            raise RuntimeError(f"Error leyendo Excel: {e}")
+                    semana_code_upload = semana_sel
+                else:
+                    semana_code_upload = ""
+            with ctrl_manual:
+                semana_manual = st.text_input(
+                    "O captura el código",
+                    placeholder="2518",
+                    max_chars=4,
+                    key="upload_wk_manual",
+                ).strip()
+                if semana_manual:
+                    semana_code_upload = semana_manual
+            with ctrl_state:
+                wk_label = f"WK{semana_code_upload}" if semana_code_upload else "Sin WK"
+                st.markdown(
+                    f'''<div class="auto-card-kicker">Destino</div>
+                    <div class="auto-card-title">{wk_label}</div>
+                    <div class="auto-card-note">Semana objetivo para la inserción.</div>''',
+                    unsafe_allow_html=True,
+                )
 
+            upload_pr_col, upload_mp_col, upload_me_col, upload_mv_col = st.columns([1, 1, 1.15, 1], gap="medium")
 
+            with upload_pr_col:
+                st.markdown(
+                    '''
+                    <div id="auto-upload-pr"></div>
+                    <div class="auto-mini-title">PR</div>
+                    <div class="auto-mini-note">Plaguicidas / riego</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                pr_uploaded = st.file_uploader(
+                    f"Archivo PR{' · WK' + semana_code_upload if semana_code_upload else ''}",
+                    type=["xlsx", "xls"],
+                    key="upload_pr",
+                    help="Un archivo Excel con los datos PR de la semana seleccionada.",
+                )
+                if pr_uploaded:
+                    st.caption(f"OK · {pr_uploaded.name} ({round(pr_uploaded.size/1024,1)} KB)")
 
-    # ── Helper: obtener token OAuth2 ───────────────────────────────────────
-    def _get_token():
-        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
-        r = requests.post(token_url, data={
-            "grant_type":    "client_credentials",
-            "client_id":     client_id,
-            "client_secret": client_secret,
-            "scope":         "https://graph.microsoft.com/.default",
-        }, timeout=20)
-        if r.status_code != 200:
-            raise RuntimeError(f"Error obteniendo token: {r.text[:300]}")
-        return r.json()["access_token"]
+            with upload_mp_col:
+                st.markdown(
+                    '''
+                    <div id="auto-upload-mp"></div>
+                    <div class="auto-mini-title">MP</div>
+                    <div class="auto-mini-note">Mantenimiento</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                mp_uploaded = st.file_uploader(
+                    f"Archivo MP{' · WK' + semana_code_upload if semana_code_upload else ''}",
+                    type=["xlsx", "xls"],
+                    key="upload_mp",
+                    help="Un archivo Excel con los datos MP de la semana seleccionada.",
+                )
+                if mp_uploaded:
+                    st.caption(f"OK · {mp_uploaded.name} ({round(mp_uploaded.size/1024,1)} KB)")
 
-    # ── Helper: resolver driveId + itemId desde URL de SharePoint ──────────
-    def _resolver_item(token, url):
-        encoded = _b64.b64encode(url.encode()).decode().rstrip("=")
-        encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
-        hdrs = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        r = requests.get(
-            f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem",
-            headers=hdrs, timeout=20,
-        )
-        if r.status_code != 200:
-            raise RuntimeError(f"No se pudo resolver el archivo PR/ME/MP: {r.text[:300]}")
-        item     = r.json()
-        drive_id = item.get("parentReference", {}).get("driveId")
-        item_id  = item.get("id")
-        if not drive_id or not item_id:
-            raise RuntimeError("No se pudo obtener driveId o itemId del Excel secundario.")
-        return drive_id, item_id
+            with upload_me_col:
+                st.markdown(
+                    '''
+                    <div id="auto-upload-me"></div>
+                    <div class="auto-mini-title">ME</div>
+                    <div class="auto-mini-note">Material de empaque · 2 archivos opcionales</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                me1_uploaded = st.file_uploader(
+                    "Archivo ME 1",
+                    type=["xlsx", "xls"],
+                    key="upload_me1",
+                    help="Primer archivo Excel ME.",
+                )
+                if me1_uploaded:
+                    st.caption(f"OK · {me1_uploaded.name} ({round(me1_uploaded.size/1024,1)} KB)")
+                me2_uploaded = st.file_uploader(
+                    "Archivo ME 2",
+                    type=["xlsx", "xls"],
+                    key="upload_me2",
+                    help="Segundo archivo Excel ME; se fusiona con el primero en la misma hoja.",
+                )
+                if me2_uploaded:
+                    st.caption(f"OK · {me2_uploaded.name} ({round(me2_uploaded.size/1024,1)} KB)")
 
-    # ── Helper: abrir sesión de workbook ────────────────────────────────────
-    def _abrir_sesion(wb_url, hdrs_json):
-        r = requests.post(
-            f"{wb_url}/createSession",
-            headers=hdrs_json,
-            json={"persistChanges": True},
-            timeout=30,
-        )
-        if r.status_code not in (200, 201):
-            raise RuntimeError(f"Error abriendo sesión: {r.text[:300]}")
-        return r.json()["id"]
+            with upload_mv_col:
+                st.markdown(
+                    '''
+                    <div id="auto-upload-mv"></div>
+                    <div class="auto-mini-title">MV</div>
+                    <div class="auto-mini-note">Material Vegetal</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                mv_uploaded = st.file_uploader(
+                    f"Archivo MV{' · WK' + semana_code_upload if semana_code_upload else ''}",
+                    type=["xlsx", "xls"],
+                    key="upload_mv",
+                    help="Un archivo Excel con los datos MV de la semana seleccionada.",
+                )
+                if mv_uploaded:
+                    st.caption(f"OK · {mv_uploaded.name} ({round(mv_uploaded.size/1024,1)} KB)")
 
-    # ── Helper: crear e insertar una hoja ───────────────────────────────────
-    def _crear_hoja(wb_url, hdrs, nombre_hoja, matrix):
-        """
-        1. Verifica que la hoja no exista.
-        2. Crea la hoja nueva.
-        3. Escribe la matriz de valores via PATCH range.
-        """
-        # Verificar existencia
-        sheets_r = requests.get(f"{wb_url}/worksheets", headers=hdrs, timeout=20)
-        if sheets_r.status_code != 200:
-            raise RuntimeError(f"Error listando hojas: {sheets_r.text[:300]}")
-        existentes = [h["name"].strip().upper() for h in sheets_r.json().get("value", [])]
-        if nombre_hoja.upper() in existentes:
-            raise RuntimeError(f"La hoja '{nombre_hoja}' ya existe en SharePoint.")
+            st.markdown("---")
 
-        # Crear hoja
-        add_r = requests.post(
-            f"{wb_url}/worksheets/add",
-            headers=hdrs,
-            json={"name": nombre_hoja},
-            timeout=20,
-        )
-        if add_r.status_code not in (200, 201):
-            raise RuntimeError(f"Error creando hoja '{nombre_hoja}': {add_r.text[:300]}")
+            _hay_archivos  = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded, mv_uploaded])
+            _hay_semana    = bool(semana_code_upload)
+            _semana_valida = semana_code_upload.isdigit() and len(semana_code_upload) == 4
 
-        time.sleep(0.5)  # pequeña pausa para que SharePoint registre la hoja
+            if st.button(
+                f"Crear hojas en SharePoint {'— WK' + semana_code_upload if semana_code_upload else ''}",
+                type="primary",
+                use_container_width=True,
+                key="btn_subir_pr_me_mp",
+                disabled=not (_hay_archivos and _hay_semana),
+            ):
+                if not _semana_valida:
+                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2613).")
+                else:
+                    try:
+                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                        client_secret = st.secrets["sharepoint"]["client_secret"]
 
-        # Preparar matriz (asegurar que todas las filas tienen el mismo número de cols)
-        if not matrix:
-            raise RuntimeError("Matriz vacía — el archivo parece estar vacío.")
+                        tipos_subidos = []
+                        if pr_uploaded:
+                            tipos_subidos.append("PR")
+                        if mp_uploaded:
+                            tipos_subidos.append("MP")
+                        if me1_uploaded or me2_uploaded:
+                            tipos_subidos.append("ME")
+                        if mv_uploaded:
+                            tipos_subidos.append("MV")
 
-        max_cols = max(len(r) for r in matrix)
-        # Normalizar a max_cols columnas y serializar valores a strings seguros para JSON
-        def _safe(v):
-            if v is None or v == "":
-                return ""
-            if isinstance(v, float) and (v != v):  # NaN check
-                return ""
-            return v
+                        with st.spinner(
+                            f"Conectando con SharePoint y creando hojas {', '.join(tipos_subidos)} para WK{semana_code_upload}..."
+                        ):
+                            res = insertar_hojas_pr_me_mp(
+                                semana_code   = semana_code_upload,
+                                tenant_id     = tenant_id,
+                                client_id     = client_id_sp,
+                                client_secret = client_secret,
+                                pr_file       = pr_uploaded  if pr_uploaded  else None,
+                                mp_file       = mp_uploaded  if mp_uploaded  else None,
+                                me_file1      = me1_uploaded if me1_uploaded else None,
+                                me_file2      = me2_uploaded if me2_uploaded else None,
+                                mv_file       = mv_uploaded  if mv_uploaded  else None,
+                            )
 
-        padded = [
-            [_safe(v) for v in (row + [""] * (max_cols - len(row)))]
-            for row in matrix
-        ]
-        nrows = len(padded)
-        # Convertir número de columna a letra Excel (A, B, ..., Z, AA, ...)
-        def _col_letter(n):  # n = 1-indexed
-            s = ""
-            while n > 0:
-                n, r = divmod(n - 1, 26)
-                s = chr(65 + r) + s
-            return s
+                        hubo_error = False
+                        for tipo in ["PR", "MP", "ME", "MV"]:
+                            info = res.get(tipo, {})
+                            ok   = info.get("ok")
+                            msg  = info.get("msg", "")
+                            if ok is True:
+                                st.success(msg)
+                            elif ok is False:
+                                st.error(msg)
+                                hubo_error = True
 
-        end_col = _col_letter(max_cols)
-        range_addr = f"A1:{end_col}{nrows}"
+                        if not hubo_error:
+                            st.cache_data.clear()
+                            st.info("Recarga el dashboard para reflejar los nuevos datos.")
+                        else:
+                            st.warning("Algunos archivos no se pudieron subir. Revisa los mensajes mostrados.")
 
-        patch_r = requests.patch(
-            f"{wb_url}/worksheets/{nombre_hoja}/range(address='{range_addr}')",
-            headers=hdrs,
-            json={"values": padded},
-            timeout=120,
-        )
-        if patch_r.status_code not in (200, 201):
-            raise RuntimeError(
-                f"Error escribiendo datos en '{nombre_hoja}': {patch_r.text[:400]}"
-            )
+                    except KeyError as e:
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                    except Exception as e:
+                        st.error(f"Error inesperado: {e}")
 
-        return nrows
-
-    # ── Obtener token y resolver Excel secundario UNA sola vez ─────────────
-    # (reutilizamos para todas las hojas que se vayan a crear)
-    token = None
-    drive_id = None
-    item_id  = None
-    wb_url   = None
-    session_id = None
-    hdrs_json  = None
-    hdrs       = None
-
-    def _init_conexion():
-        nonlocal token, drive_id, item_id, wb_url, session_id, hdrs_json, hdrs
-        if wb_url is not None:
-            return  # ya inicializado
-        token     = _get_token()
-        hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        drive_id, item_id = _resolver_item(token, SHAREPOINT_URL_PR)
-        wb_url    = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
-        session_id = _abrir_sesion(wb_url, hdrs_json)
-        hdrs       = {**hdrs_json, "workbook-session-id": session_id}
-
-    # ── Helper: Limpiar archivos crudos de CONTPAQ ──────────────────────────
-    def _limpiar_matriz(matrix):
-        """Toma la matriz con basura y extrae exactamente las 5 columnas."""
-        import re
-        cleaned = [["FECHA", "UBICACION", "PRODUCTO", "UNIDADES", "GASTO"]]
-        for row in matrix:
-            # Asegurar que la fila tenga al menos 12 elementos rellenando con vacíos
-            r = list(row) + [""] * max(0, 12 - len(row))
-            
-            ubicacion = str(r[2]).strip().upper()
-            ubicacion_cln = re.sub(r'\s+', '', ubicacion)
-            
-            if not ubicacion_cln or len(ubicacion_cln) < 5:
-                continue
-            if not re.match(r'^[A-Z0-9]+$', ubicacion_cln):
-                continue
-                
-            fecha = r[0]
-            
-            # El dashboard originalmente usa la columna 5 para producto.
-            # Vamos a usar col 5. Si está vacía, intentamos col 6.
-            prod_c = str(r[5]).strip()
-            prod_n = str(r[6]).strip()
-            prod = prod_c if prod_c else prod_n
-            
-            # Unidades y Gasto
-            unid = str(r[7]).strip()
-            gasto = str(r[9]).strip()
-            
-            # Para evitar que filas 2 y 3 con "basura" pasen el filtro (metadatos de CONTPAQ), 
-            # aseguramos que unidades o gasto contengan un número real.
-            def is_num(v):
-                if not v: return False
-                try:
-                    float(v.replace(',', '').replace('$', '').strip())
-                    return True
-                except ValueError: return False
-                
-            if not is_num(unid) and not is_num(gasto):
-                continue
-            
-            cleaned.append([fecha, ubicacion_cln, prod, unid, gasto])
-            
-        print(f"   [Debug Clean] Matriz original tenía {len(matrix)} filas, la limpia tiene {len(cleaned)} filas")
-        return cleaned if len(cleaned) > 1 else matrix
-
-    # ── Procesar PR ─────────────────────────────────────────────────────────
-    if pr_file is not None:
-        nombre = f"PR{code}"
-        try:
-            _init_conexion()
-            matrix = _read_matrix(pr_file)
-            matrix = _limpiar_matriz(matrix)
-            filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
-            resultado["PR"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas limpias)"}
-            print(f"✅ {nombre} insertada con {filas} filas.")
-        except Exception as e:
-            resultado["PR"] = {"ok": False, "msg": f"❌ PR — {e}"}
-            print(f"❌ Error PR: {e}")
-    else:
-        resultado["PR"] = {"ok": None, "msg": "⏭️ PR — no se subió archivo"}
-
-    # ── Procesar MP ─────────────────────────────────────────────────────────
-    if mp_file is not None:
-        nombre = f"MP{code}"
-        try:
-            _init_conexion()
-            matrix = _read_matrix(mp_file)
-            matrix = _limpiar_matriz(matrix)
-            filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
-            resultado["MP"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas limpias)"}
-            print(f"✅ {nombre} insertada con {filas} filas.")
-        except Exception as e:
-            resultado["MP"] = {"ok": False, "msg": f"❌ MP — {e}"}
-            print(f"❌ Error MP: {e}")
-    else:
-        resultado["MP"] = {"ok": None, "msg": "⏭️ MP — no se subió archivo"}
-
-    # ── Procesar ME (fusión de hasta 2 archivos) ────────────────────────────
-    if me_file1 is not None or me_file2 is not None:
-        nombre = f"ME{code}"
-        try:
-            _init_conexion()
-            matrix = []
-            if me_file1 is not None:
-                matrix += _read_matrix(me_file1)
-            if me_file2 is not None:
-                matrix += _read_matrix(me_file2)
-                
-            matrix_limpia = _limpiar_matriz(matrix)
-            filas = _crear_hoja(wb_url, hdrs, nombre, matrix_limpia)
-            
-            resultado["ME"] = {
-                "ok":  True,
-                "msg": f"✅ {nombre} creada ({filas} filas limpias totales)",
-            }
-            print(f"✅ {nombre} insertada: {filas} filas.")
-        except Exception as e:
-            resultado["ME"] = {"ok": False, "msg": f"❌ ME — {e}"}
-            print(f"❌ Error ME: {e}")
-    else:
-        resultado["ME"] = {"ok": None, "msg": "⏭️ ME — no se subió archivo"}
-
-    return resultado
+            if not _hay_semana:
+                st.caption("Selecciona o captura una semana para habilitar la carga.")
+            elif not _hay_archivos:
+                st.caption("Sube al menos un archivo para habilitar la creación de hojas.")
