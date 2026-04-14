@@ -2748,6 +2748,154 @@ def autorrellenar_materiales_wk(week_code: str, tenant_id: str, client_id: str, 
     }
 
 
+def autorrellenar_material_vegetal_wk(week_code: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
+    """
+    Autorrellena la fila de MATERIAL VEGETAL (fila 14, columnas E:K) en la hoja WK####
+    usando los datos de la hoja MV#### del Excel secundario de SharePoint.
+
+    Usa mv_mode=True en el parser para detectar correctamente los ranchos
+    con nombres completos (Propagacion, Cristina, Cecilia25, etc.).
+    """
+    import base64 as _b64
+
+    code = _normalizar_week_code(week_code)
+    if not (code.isdigit() and len(code) == 4):
+        return {"ok": False, "error": "El código de semana debe ser exactamente 4 dígitos (ej: 2614)."}
+
+    nombre_hoja = f"WK{code}"
+    mv_sheet_name_expected = f"MV{code}"
+
+    # ── 1. Descargar Excel secundario (PR/MP/ME/MV) ────────────────────────────
+    archivo = _descargar_excel(SHAREPOINT_URL_PR, "Excel MV")
+    if archivo is None:
+        return {"ok": False, "error": "No se pudo descargar el Excel de MV desde SharePoint."}
+
+    try:
+        xls = pd.ExcelFile(archivo)
+    except Exception as e:
+        return {"ok": False, "error": f"No se pudo abrir el Excel de MV: {e}"}
+
+    sheet_name = _buscar_hoja_por_prefijo(xls.sheet_names, "MV", code)
+    if not sheet_name:
+        return {
+            "ok": False,
+            "error": f"No se encontró la hoja '{mv_sheet_name_expected}' en el Excel fuente. "
+                     f"Súbela primero desde el panel 'Subir PR / MP / ME / MV'.",
+        }
+
+    # ── 2. Parsear MV con mv_mode=True ────────────────────────────────────────
+    vals = _leer_hoja(xls, sheet_name, rango_filas=500, rango_cols=11)
+    parsed = _parse_generic(vals, mv_mode=True)
+    totales, omitidos = _sumar_gasto_por_rancho(parsed, tipo=None)
+
+    mv_row = WK_MATERIAL_AUTOFILL["MATERIAL VEGETAL"]["row"]  # → 14
+
+    # ── 3. Autenticar contra Microsoft Graph ───────────────────────────────────
+    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    token_resp = requests.post(token_url, data={
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "scope": "https://graph.microsoft.com/.default",
+    }, timeout=20)
+    if token_resp.status_code != 200:
+        return {"ok": False, "error": f"Error obteniendo token: {token_resp.text[:300]}"}
+
+    token = token_resp.json().get("access_token")
+    hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    # ── 4. Resolver el Excel WK principal ────────────────────────────────────
+    encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip("=")
+    encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
+    res = requests.get(
+        f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem",
+        headers=hdrs_json,
+        timeout=20,
+    )
+    if res.status_code != 200:
+        return {"ok": False, "error": f"No se pudo resolver el archivo WK: {res.text[:300]}"}
+
+    item = res.json()
+    drive_id = item.get("parentReference", {}).get("driveId")
+    item_id = item.get("id")
+    if not drive_id or not item_id:
+        return {"ok": False, "error": "No se pudo obtener driveId o itemId del Excel WK."}
+
+    wb_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
+    sess_resp = requests.post(
+        f"{wb_url}/createSession",
+        headers=hdrs_json,
+        json={"persistChanges": True},
+        timeout=30,
+    )
+    if sess_resp.status_code not in (200, 201):
+        return {"ok": False, "error": f"Error abriendo sesión del workbook WK: {sess_resp.text[:300]}"}
+
+    session_id = sess_resp.json().get("id")
+    hdrs = {**hdrs_json, "workbook-session-id": session_id}
+
+    try:
+        # ── 5. Verificar que exista la hoja WK#### ────────────────────────────
+        sheets_resp = requests.get(f"{wb_url}/worksheets", headers=hdrs, timeout=20)
+        if sheets_resp.status_code != 200:
+            return {"ok": False, "error": f"Error listando hojas WK: {sheets_resp.text[:300]}"}
+
+        target_sheet = None
+        normalized_target = nombre_hoja.replace(" ", "").upper()
+        for ws in sheets_resp.json().get("value", []):
+            ws_name = str(ws.get("name", "")).strip()
+            if ws_name.replace(" ", "").upper() == normalized_target:
+                target_sheet = ws_name
+                break
+
+        if not target_sheet:
+            return {"ok": False, "error": f"La hoja '{nombre_hoja}' no existe en el Excel WK."}
+
+        # ── 6. Escribir totales MV en la fila 14 (columnas E:K) ───────────────
+        values = [[totales.get(rn, 0.0) for rn in WK_MXN_RANCH_COLS]]
+        patch_resp = requests.patch(
+            f"{wb_url}/worksheets/{target_sheet}/range(address='E{mv_row}:K{mv_row}')",
+            headers=hdrs,
+            json={"values": values},
+            timeout=30,
+        )
+        if patch_resp.status_code not in (200, 201):
+            return {
+                "ok": False,
+                "error": f"No se pudo escribir MATERIAL VEGETAL en {target_sheet}: {patch_resp.text[:300]}",
+            }
+
+        # Formato numérico y estilo rojo-negrita igual que el resto de materiales
+        requests.patch(
+            f"{wb_url}/worksheets/{target_sheet}/range(address='E{mv_row}:K{mv_row}')/format",
+            headers=hdrs,
+            json={"numberFormat": "#,##0"},
+            timeout=20,
+        )
+        requests.patch(
+            f"{wb_url}/worksheets/{target_sheet}/range(address='E{mv_row}:K{mv_row}')/format/font",
+            headers=hdrs,
+            json={"color": "#C00000", "bold": True, "name": "Arial"},
+            timeout=20,
+        )
+
+    finally:
+        requests.post(f"{wb_url}/closeSession", headers=hdrs, timeout=20)
+
+    omitidos_txt = ""
+    if omitidos:
+        partes = [f"{rn}={round(val, 2)}" for rn, val in omitidos.items()]
+        omitidos_txt = f" Ranchos omitidos sin columna WK: {', '.join(partes)}."
+
+    return {
+        "ok": True,
+        "mensaje": (
+            f"✅ MATERIAL VEGETAL autorrellenado en '{nombre_hoja}' (fila {mv_row}) "
+            f"usando '{sheet_name}'.{omitidos_txt}"
+        ),
+    }
+
+
 # ─── Descarga de una hoja WK#### como xlsx con formato completo ───────────────
 def get_sheet_xlsx(week_code: str) -> bytes | None:
     """
