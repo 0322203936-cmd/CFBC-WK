@@ -226,13 +226,17 @@ def norm_cat(s: str):
     return None
 
 
+# ── Mapa de nombres de rancho WK → BD (para consistencia en mano_obra_data) ──
+WK_RANCH_TO_BD = {
+    "Prop-RM":  "Propagacion",
+    "PosCo-RM": "Poscocecha",
+}
+
+
 def _area_from_concepto_rancho(label: str, ranch: str) -> str:
     """
-    Dado el label (Concepto) de una fila del WK y el nombre del rancho,
-    retorna el Área equivalente al BD para que semanas 1-13 (BD/Conteo)
-    y 14+ (WK Excel) sean consistentes en mano_obra_data.
-
-    Rancho viene de norm_ranch() → "Prop-RM", "PosCo-RM", "Campo-RM", etc.
+    Dado el label (Concepto) de una fila WK y el nombre del rancho (norm_ranch),
+    retorna el Área equivalente al BD para que semanas 1-13 y 14+ sean consistentes.
     """
     s = str(label).upper().strip()
     r = str(ranch).upper().strip() if ranch else ""
@@ -240,24 +244,18 @@ def _area_from_concepto_rancho(label: str, ranch: str) -> str:
     _is_nomina = "NOMINA" in s or "NÓMINA" in s
     _is_hextra = "HORAS EXTR" in s
     _is_bonos  = "BONOS ASISIT" in s
-
-    _is_prop  = "PROP" in r          # Prop-RM  → Propagacion
-    _is_posco = "POSCO" in r         # PosCo-RM → Poscosecha
+    _is_prop   = "PROP" in r      # Prop-RM  → Propagacion
+    _is_posco  = "POSCO" in r     # PosCo-RM → Poscocecha
 
     if not (_is_nomina or _is_hextra or _is_bonos):
         if "IMSS" in s or "INFONAVIT" in s:        return "IMSS,INFO Y RCV"
         if "1.8%" in s or "TASA EFECTIVA" in s:    return "Imp. 1.8%"
         return None
 
-    # ── Administración Poscosecha (antes de Admon genérico) ──────────────────
     if "ADMON" in s and ("POSCO" in s or "POSCOSECHA" in s):
         return "Admon Posco"
-
-    # ── Ingeniería y Administración ──────────────────────────────────────────
     if "ADMON" in s or ("FESTIVOS" in s and "FEST." not in s) or "DESPENSA" in s:
         return "Ing. Y Admon."
-
-    # ── Actividades con keyword explícito ────────────────────────────────────
     if "SUPERVISOR" in s:                           return "Supervisores"
     if "CORTE" in s:
         return "Phlox" if _is_prop else "Corte"
@@ -277,8 +275,7 @@ def _area_from_concepto_rancho(label: str, ranch: str) -> str:
     if "CONTRATISTA" in s:                          return "Contratista y com."
     if "ALM" in s and ("UPC" in s or "EMPAQ" in s): return "Alm.upc y empaq"
 
-    # ── NOMINA PRODUCCION genérica (sin actividad específica) ────────────────
-    # Propagacion → Supervisores, Poscosecha → Admon Posco, resto → Supervisores
+    # NOMINA PRODUCCION genérica sin actividad → según rancho
     if _is_posco:
         return "Admon Posco"
     return "Supervisores"
@@ -681,30 +678,35 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                     "usd_ranches": usd_ranches,
                 })
             elif cat.startswith("MO:"):
-                # ── Agrupar ranchos por su Área correcta ─────────────────────
-                # Un mismo Concepto puede tener distinto Área según el rancho
-                # (ej: NOMINA PRODUCCION → Supervisores para Prop, Admon Posco para PosCo)
-                area_groups: dict = {}  # {area: {mxn_ranches, usd_ranches, mxn_t, usd_t}}
+                # Agrupar ranchos por su Área correcta (varía según rancho)
+                # y normalizar nombre de rancho de WK a nombre BD
+                area_groups: dict = {}
                 for rn, mxn_val in mxn_ranches.items():
+                    if mxn_val == 0.0:
+                        continue   # omitir ranchos sin costo
                     area = _area_from_concepto_rancho(label, rn) or cat[3:]
+                    rn_bd = WK_RANCH_TO_BD.get(rn, rn)   # normalizar nombre
                     ag = area_groups.setdefault(area, {
                         "mxn_ranches": {}, "usd_ranches": {},
                         "mxn_t": 0.0, "usd_t": 0.0,
                     })
-                    ag["mxn_ranches"][rn] = mxn_val
+                    ag["mxn_ranches"][rn_bd] = round(ag["mxn_ranches"].get(rn_bd, 0.0) + mxn_val, 2)
                     ag["mxn_t"] = round(ag["mxn_t"] + mxn_val, 2)
                     usd_val = usd_ranches.get(rn, 0.0)
-                    ag["usd_ranches"][rn] = usd_val
-                    ag["usd_t"] = round(ag["usd_t"] + usd_val, 2)
+                    if usd_val:
+                        ag["usd_ranches"][rn_bd] = round(ag["usd_ranches"].get(rn_bd, 0.0) + usd_val, 2)
+                        ag["usd_t"] = round(ag["usd_t"] + usd_val, 2)
 
-                # Si no hubo ranchos, crear un registro con totales de la fila
+                # Sin ranchos: un registro con el total de la fila
                 if not area_groups:
-                    area = _area_from_concepto_rancho(label, "") or cat[3:]
-                    area_groups[area] = {
-                        "mxn_ranches": {}, "usd_ranches": {},
-                        "mxn_t": round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2),
-                        "usd_t": round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2),
-                    }
+                    mxn_t = round(sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0, 2)
+                    usd_t = round(sv(row[usd_total_col]) if usd_total_col and usd_total_col < len(row) else 0, 2)
+                    if mxn_t or usd_t:
+                        area = _area_from_concepto_rancho(label, "") or cat[3:]
+                        area_groups[area] = {
+                            "mxn_ranches": {}, "usd_ranches": {},
+                            "mxn_t": mxn_t, "usd_t": usd_t,
+                        }
 
                 for area, ag in area_groups.items():
                     mano_obra_data.append({
@@ -904,7 +906,7 @@ def _extraer_mano_obra_conteo() -> list:
         return []
 
     df.columns = [str(c).strip() for c in df.columns]
-    needed = {"Año", "Semana", "Concepto", "Rancho", "Costo MN", "Costo DLLS", "Conteo"}
+    needed = {"Año", "Semana", "Área", "Rancho", "Costo MN", "Costo DLLS", "Conteo"}
     missing = needed - set(df.columns)
     if missing:
         print(f"⚠️  Conteo.xlsx — columnas faltantes: {missing}")
@@ -917,7 +919,7 @@ def _extraer_mano_obra_conteo() -> list:
     # Forzar conversión numérica por si llegan como string o formula
     df["Conteo"] = pd.to_numeric(df["Conteo"], errors="coerce").fillna(0.0)
 
-    df = df.dropna(subset=["Año", "Semana", "Concepto"])
+    df = df.dropna(subset=["Año", "Semana", "Área"])
     df["Año"]    = pd.to_numeric(df["Año"],    errors="coerce")
     df["Semana"] = pd.to_numeric(df["Semana"], errors="coerce")
     df = df.dropna(subset=["Año", "Semana"])
@@ -934,7 +936,7 @@ def _extraer_mano_obra_conteo() -> list:
             return 0.0
 
     result = []
-    for (anio, semana, area), grp in df.groupby(["Año", "Semana", "Concepto"]):
+    for (anio, semana, area), grp in df.groupby(["Año", "Semana", "Área"]):
         code = (int(anio) - 2000) * 100 + int(semana)
         mxn_ranches, usd_ranches, hc_ranches = {}, {}, {}
         mxn_total = usd_total = hc_total = 0.0
