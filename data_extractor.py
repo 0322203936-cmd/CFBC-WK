@@ -2705,9 +2705,10 @@ def insertar_hojas_pr_me_mp(
     mp_file=None,
     me_file1=None,
     me_file2=None,
+    mv_file=None,
 ) -> dict:
     """
-    Inserta hojas PR####, MP#### y/o ME#### en el Excel secundario de SharePoint
+    Inserta hojas PR####, MP####, ME#### y/o MV#### en el Excel secundario de SharePoint
     usando Microsoft Graph API (misma técnica que crear_hoja_wk).
 
     Args:
@@ -2719,9 +2720,10 @@ def insertar_hojas_pr_me_mp(
         mp_file     : BytesIO o file-like del Excel MP (opcional)
         me_file1    : BytesIO o file-like del primer Excel ME (opcional)
         me_file2    : BytesIO o file-like del segundo Excel ME (opcional)
+        mv_file     : BytesIO o file-like del Excel MV - Material Vegetal (opcional)
 
     Returns:
-        dict con claves "PR", "MP", "ME" → cada una con {"ok": bool, "msg": str}
+        dict con claves "PR", "MP", "ME", "MV" → cada una con {"ok": bool, "msg": str}
     """
     import base64 as _b64
     import time
@@ -3036,5 +3038,21 @@ def insertar_hojas_pr_me_mp(
             print(f"❌ Error ME: {e}")
     else:
         resultado["ME"] = {"ok": None, "msg": "⏭️ ME — no se subió archivo"}
+
+    # ── Procesar MV (Material Vegetal) ──────────────────────────────────────
+    if mv_file is not None:
+        nombre = f"MV{code}"
+        try:
+            _init_conexion()
+            matrix = _read_matrix(mv_file)
+            matrix = _limpiar_matriz(matrix)
+            filas  = _crear_hoja(wb_url, hdrs, nombre, matrix)
+            resultado["MV"] = {"ok": True, "msg": f"✅ {nombre} creada ({filas} filas limpias)"}
+            print(f"✅ {nombre} insertada con {filas} filas.")
+        except Exception as e:
+            resultado["MV"] = {"ok": False, "msg": f"❌ MV — {e}"}
+            print(f"❌ Error MV: {e}")
+    else:
+        resultado["MV"] = {"ok": None, "msg": "⏭️ MV — no se subió archivo"}
 
     return resultado
