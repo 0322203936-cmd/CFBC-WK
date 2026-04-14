@@ -143,6 +143,7 @@ if st.session_state.show_auto:
       div[data-testid="stColumn"]:has(#auto-upload-pr),
       div[data-testid="stColumn"]:has(#auto-upload-mp),
       div[data-testid="stColumn"]:has(#auto-upload-me),
+      div[data-testid="stColumn"]:has(#auto-upload-mv),
       div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
         background: rgba(255,255,255,0.96) !important;
         border: 1px solid #dbe4ef !important;
@@ -160,7 +161,8 @@ if st.session_state.show_auto:
       div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell),
       div[data-testid="stColumn"]:has(#auto-upload-pr),
       div[data-testid="stColumn"]:has(#auto-upload-mp),
-      div[data-testid="stColumn"]:has(#auto-upload-me) {
+      div[data-testid="stColumn"]:has(#auto-upload-me),
+      div[data-testid="stColumn"]:has(#auto-upload-mv) {
         padding: 1rem 1rem 0.9rem 1rem !important;
       }
       div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
@@ -186,7 +188,8 @@ if st.session_state.show_auto:
       }
       div[data-testid="stColumn"]:has(#auto-upload-pr),
       div[data-testid="stColumn"]:has(#auto-upload-mp),
-      div[data-testid="stColumn"]:has(#auto-upload-me) {
+      div[data-testid="stColumn"]:has(#auto-upload-me),
+      div[data-testid="stColumn"]:has(#auto-upload-mv) {
         min-height: 100% !important;
       }
 
@@ -1870,7 +1873,7 @@ function renderProductosFull() {
   var cols=[
     { field:'tipo',      headerName:'TIPO',     width:60,  pinned:'left' },
     { field:'cat',       headerName:'CAT',       width:55,  pinned:'left',
-      cellRenderer:function(p){var m={'PR':'#16a34a','MP':'#7c3aed','ME':'#0369a1'};return '<span style="color:'+(m[p.value]||'#666')+';font-weight:700">'+(p.value||'')+'</span>';}},
+      cellRenderer:function(p){var m={'PR':'#16a34a','MP':'#7c3aed','ME':'#0369a1','MV':'#b45309'};return '<span style="color:'+(m[p.value]||'#666')+';font-weight:700">'+(p.value||'')+'</span>';}},
     { field:'week_code', headerName:'WK',        width:72 },
     { field:'rancho',    headerName:'RANCHO',    width:110,
       cellRenderer:function(p){return '<span style="color:'+(RANCH_COLORS[p.value]||'#666')+';font-weight:600">'+(p.value||'')+'</span>';}},
@@ -1895,7 +1898,7 @@ function renderProductosFull() {
       });
     });
   }
-  flattenProd(DATA.productos,'PR'); flattenProd(DATA.productos_mp,'MP'); flattenProd(DATA.productos_me,'ME');
+  flattenProd(DATA.productos,'PR'); flattenProd(DATA.productos_mp,'MP'); flattenProd(DATA.productos_me,'ME'); flattenProd(DATA.productos_mv,'MV');
   rows.sort(function(a,b){if(b.week_code!==a.week_code)return (b.week_code||0)-(a.week_code||0);return (a.rancho||'').localeCompare(b.rancho||'');});
   var total=rows.reduce(function(s,r){return s+(r.gasto||0);},0);
   renderPivotTable(cols,rows,fmt(total)+' · '+rows.length+' registros');
@@ -2517,14 +2520,14 @@ function showProdPanel(rowData, opts) {
   var ranchFilter=opts.ranch||null;
   if (!ranchFilter && state.activeRanches.indexOf('Todos')<0) ranchFilter = state.activeRanches[0];
   if (!cat||!yr) return;
-  var hideProducts = cat==='MATERIAL VEGETAL';
+  var hideProducts = false;
 
-  var isMant=cat==='MANTENIMIENTO', isMatEmp=cat==='MATERIAL DE EMPAQUE';
+  var isMant=cat==='MANTENIMIENTO', isMatEmp=cat==='MATERIAL DE EMPAQUE', isMatVeg=cat==='MATERIAL VEGETAL';
   var isMirfe=cat===CAT_MIRFE, isMipe=cat===CAT_MIPE;
-  var src=isMant?'mp':(isMatEmp?'me':'pr');
+  var src=isMant?'mp':(isMatEmp?'me':(isMatVeg?'mv':'pr'));
   var tipoFilter=null;
   if (src==='pr'){ if(isMirfe)tipoFilter='MIRFE'; else if(isMipe)tipoFilter='MIPE'; }
-  var dsMap={pr:DATA.productos,mp:DATA.productos_mp,me:DATA.productos_me};
+  var dsMap={pr:DATA.productos,mp:DATA.productos_mp,me:DATA.productos_me,mv:DATA.productos_mv};
   var ds=dsMap[src]||{};
 
   var wkStart=parseInt(fromW||wn||0), wkEnd=parseInt(toW||wn||0);
@@ -2978,7 +2981,7 @@ else:
             '''
             <div id="auto-upload-shell"></div>
             <div class="auto-card-kicker">Carga consolidada</div>
-            <div class="auto-section-title">Subir PR / MP / ME</div>
+            <div class="auto-section-title">Subir PR / MP / ME / MV</div>
             <div class="auto-section-note">Carga archivos fuente para una semana de trabajo y crea las hojas correspondientes dentro del Excel principal. ME admite 2 archivos fusionados.</div>
             ''',
             unsafe_allow_html=True,
@@ -3017,7 +3020,7 @@ else:
                     unsafe_allow_html=True,
                 )
 
-            upload_pr_col, upload_mp_col, upload_me_col = st.columns([1, 1, 1.15], gap="medium")
+            upload_pr_col, upload_mp_col, upload_me_col, upload_mv_col = st.columns([1, 1, 1.15, 1], gap="medium")
 
             with upload_pr_col:
                 st.markdown(
@@ -3081,9 +3084,27 @@ else:
                 if me2_uploaded:
                     st.caption(f"OK · {me2_uploaded.name} ({round(me2_uploaded.size/1024,1)} KB)")
 
+            with upload_mv_col:
+                st.markdown(
+                    '''
+                    <div id="auto-upload-mv"></div>
+                    <div class="auto-mini-title">MV</div>
+                    <div class="auto-mini-note">Material Vegetal</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                mv_uploaded = st.file_uploader(
+                    f"Archivo MV{' · WK' + semana_code_upload if semana_code_upload else ''}",
+                    type=["xlsx", "xls"],
+                    key="upload_mv",
+                    help="Un archivo Excel con los datos MV de la semana seleccionada.",
+                )
+                if mv_uploaded:
+                    st.caption(f"OK · {mv_uploaded.name} ({round(mv_uploaded.size/1024,1)} KB)")
+
             st.markdown("---")
 
-            _hay_archivos  = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded])
+            _hay_archivos  = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded, mv_uploaded])
             _hay_semana    = bool(semana_code_upload)
             _semana_valida = semana_code_upload.isdigit() and len(semana_code_upload) == 4
 
@@ -3109,6 +3130,8 @@ else:
                             tipos_subidos.append("MP")
                         if me1_uploaded or me2_uploaded:
                             tipos_subidos.append("ME")
+                        if mv_uploaded:
+                            tipos_subidos.append("MV")
 
                         with st.spinner(
                             f"Conectando con SharePoint y creando hojas {', '.join(tipos_subidos)} para WK{semana_code_upload}..."
@@ -3122,10 +3145,11 @@ else:
                                 mp_file       = mp_uploaded  if mp_uploaded  else None,
                                 me_file1      = me1_uploaded if me1_uploaded else None,
                                 me_file2      = me2_uploaded if me2_uploaded else None,
+                                mv_file       = mv_uploaded  if mv_uploaded  else None,
                             )
 
                         hubo_error = False
-                        for tipo in ["PR", "MP", "ME"]:
+                        for tipo in ["PR", "MP", "ME", "MV"]:
                             info = res.get(tipo, {})
                             ok   = info.get("ok")
                             msg  = info.get("msg", "")
