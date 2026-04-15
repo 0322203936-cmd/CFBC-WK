@@ -2811,6 +2811,12 @@ try:
 except ImportError:
     _autofill_mv_disponible = False
 
+try:
+    from data_extractor import autorrellenar_nomina_wk
+    _autofill_nomina_disponible = True
+except ImportError:
+    _autofill_nomina_disponible = False
+
 if not st.session_state.show_auto:
     # ==== MODO DASHBOARD ====
     # Header nativo de Streamlit — mismo color #4472C4, botones reales sin trucos de z-index
@@ -3089,6 +3095,81 @@ else:
                             st.cache_data.clear()
                         else:
                             st.error(res_mv.get("error", "No se pudo autorrellenar Material Vegetal."))
+                    except KeyError as e:
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                    except Exception as e:
+                        st.error(f"Error inesperado: {e}")
+
+    with st.container():
+        st.markdown(
+            '''
+            <div id="auto-card-fill-nomina-shell"></div>
+            <div class="auto-card-kicker">Post-creación · Nómina</div>
+            <div class="auto-section-title">Automatizar nómina MN</div>
+            <div class="auto-section-note">Llena por rancho el bloque de nómina WK usando la hoja BD del SharePoint de nómina. Toma la columna MN #### de la semana capturada y suma PLANTA + CONTRATISTA cuando caen en el mismo concepto.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
+
+        if not _autofill_nomina_disponible:
+            st.error("La función `autorrellenar_nomina_wk` no está disponible en data_extractor.py")
+        else:
+            nom_sel_col, nom_manual_col, nom_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+            with nom_sel_col:
+                if available_weeks:
+                    nom_wk_sel = st.selectbox(
+                        "WK disponible",
+                        options=available_weeks,
+                        format_func=lambda c: f"WK{c}",
+                        key="autofill_nomina_wk_sel",
+                    )
+                    nom_week_code = nom_wk_sel
+                else:
+                    nom_week_code = ""
+            with nom_manual_col:
+                nom_week_manual = st.text_input(
+                    "O captura WK",
+                    placeholder="2615",
+                    max_chars=4,
+                    key="autofill_nomina_wk_manual",
+                ).strip()
+                if nom_week_manual:
+                    nom_week_code = nom_week_manual
+            with nom_info_col:
+                nom_fill_label = f"WK{nom_week_code}" if nom_week_code else "Sin WK"
+                st.markdown(
+                    f'''<div class="auto-card-kicker">Acción</div>
+                    <div class="auto-card-title">{nom_fill_label}</div>
+                    <div class="auto-card-note">Usa la columna MN {nom_week_code or '####'} de la hoja BD y escribe en E→K.</div>''',
+                    unsafe_allow_html=True,
+                )
+
+            if st.button(
+                f"Automatizar nómina {'— WK' + nom_week_code if nom_week_code else ''}",
+                type="primary",
+                use_container_width=True,
+                key="btn_autofill_nomina",
+                disabled=not bool(nom_week_code),
+            ):
+                if not (nom_week_code.isdigit() and len(nom_week_code) == 4):
+                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2615).")
+                else:
+                    try:
+                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                        client_secret = st.secrets["sharepoint"]["client_secret"]
+                        with st.spinner(f"Automatizando nómina en WK{nom_week_code}..."):
+                            res_nom = autorrellenar_nomina_wk(
+                                week_code=nom_week_code,
+                                tenant_id=tenant_id,
+                                client_id=client_id_sp,
+                                client_secret=client_secret,
+                            )
+                        if res_nom.get("ok"):
+                            st.success(res_nom.get("mensaje", "Nómina autorrellenada correctamente."))
+                            st.cache_data.clear()
+                        else:
+                            st.error(res_nom.get("error", "No se pudo automatizar la nómina."))
                     except KeyError as e:
                         st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
                     except Exception as e:
