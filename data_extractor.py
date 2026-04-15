@@ -33,6 +33,12 @@ SHAREPOINT_URL_CONTEO = (
     "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE?e=7P5ex4"
 )
 
+# Nómina detallada (filas 24-59, automatización mano de obra)
+SHAREPOINT_URL_NOMINA = (
+    "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
+    "anahi_mora_cfbc_co/IQCVhuBzeYCZRp39wgxJli7ZAfCYH_KtiWdCB-pS4cqX6h4?e=zPmvTA"
+)
+
 # ─── Constantes ───────────────────────────────────────────────────────────────
 RANCH_CONFIG = {
     "Prop-RM":     {"color": "#047857", "codes": ["VIV"], "keywords": ["PROP"]},
