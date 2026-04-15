@@ -96,6 +96,32 @@ WK_MATERIAL_AUTOFILL = {
     "MATERIAL VEGETAL": {"row": 13, "prefix": "MV", "tipo": None},
 }
 
+NOMINA_BD_FINCA_TO_WK_RANCH = {
+    "VIVERO": "Prop-RM",
+    "POSCOSECHA": "PosCo-RM",
+    "RAMONA": "Campo-RM",
+    "ISABELA": "Isabela",
+    "CHRISTINA": "Christina",
+    "CECILIA": "Cecilia",
+    "CECILIA 25": "Cecilia 25",
+    "CECILIA25": "Cecilia 25",
+}
+
+NOMINA_WK_ROWS = {
+    24: "NOMINA ADMON Oficina, Jefes de Finca, Ingenieros",
+    27: "NOMINA PRODUCCION",
+    30: "NOMINA PRODUCCION CORTE",
+    33: "NOMINA PRODUCCION TRANSPLANTE",
+    36: "NOMINA PRODUCCION MANEJO PLANTA",
+    39: "NOMINA HOOPS",
+    42: "NOMINA (MIPE,MIRFE,)",
+    45: "NOMINA OPERATIVOS (TRACTORES, CAMEROS)",
+    48: "NOMINA OPERATIVOS (CHOFER)",
+    51: "NOMINA OPERATIVOS (VELADORES)",
+    54: "NOMINA OPERATIVOS (SOLDADOR)",
+    57: "NOMINA PRODUCCION Contratista y comisiones",
+}
+
 SKIP = {"ACUMULADO", "GRAFICOS I-IV", "COMPARATIVO", "DATOS", "HOJA1", "SHEET1"}
 
 
@@ -499,6 +525,67 @@ def _buscar_hoja_por_prefijo(sheet_names: list[str], prefix: str, week_code: str
     for sname in sheet_names:
         if pat.match(str(sname).strip()):
             return str(sname).strip()
+    return None
+
+
+def _nomina_wk_row_from_departamento(departamento: str) -> int | None:
+    dep = str(departamento).strip().upper()
+    if not dep:
+        return None
+    if dep in {"ADMON", "ADMON CAMPO"}:
+        return 24
+    if dep in {"VIVERO", "POSCOSECHA"}:
+        return 27
+    if dep.startswith("CORTE "):
+        return 30
+    if dep.startswith("TRANSPLANTE "):
+        return 33
+    if dep.startswith("MANEJO "):
+        return 36
+    if dep.startswith("HOOPS "):
+        return 39
+    if dep.startswith("MIPE ") or dep.startswith("MIRFE "):
+        return 42
+    if dep.startswith("CAMERO ") or dep.startswith("TRACTORISTA "):
+        return 45
+    if dep.startswith("CHOFER "):
+        return 48
+    if dep.startswith("VELADOR "):
+        return 51
+    if dep.startswith("SOLDADOR "):
+        return 54
+    if "COMISIONES" in dep:
+        return 57
+    return None
+
+
+def _nomina_wk_ranch_from_bd(finca: str, departamento: str) -> str | None:
+    finca_norm = str(finca).strip().upper()
+    if finca_norm in NOMINA_BD_FINCA_TO_WK_RANCH:
+        return NOMINA_BD_FINCA_TO_WK_RANCH[finca_norm]
+
+    dep = str(departamento).strip().upper().replace("  ", " ")
+    if "CECILIA 25" in dep or "CECILIA25" in dep:
+        return "Cecilia 25"
+    if dep.endswith("CECILIA"):
+        return "Cecilia"
+    if dep.endswith("CHRISTINA"):
+        return "Christina"
+    if dep.endswith("ISABELA"):
+        return "Isabela"
+    if dep.endswith("RAMONA"):
+        return "Campo-RM"
+    if dep.endswith("POSCOSECHA") or dep == "POSCOSECHA":
+        return "PosCo-RM"
+    if dep.endswith("VIVERO") or dep == "VIVERO":
+        return "Prop-RM"
+
+    # Casos administrativos: se alinean con el mismo bloque E:K del autorrelleno WK.
+    if dep == "ADMON":
+        return "Prop-RM"
+    if dep == "ADMON CAMPO":
+        return "Campo-RM"
+
     return None
 
 
@@ -2900,6 +2987,174 @@ def autorrellenar_material_vegetal_wk(week_code: str, tenant_id: str, client_id:
         "mensaje": (
             f"✅ MATERIAL VEGETAL autorrellenado en '{nombre_hoja}' (fila {mv_row}) "
             f"usando '{sheet_name}'.{omitidos_txt}"
+        ),
+    }
+
+
+def autorrellenar_nomina_wk(week_code: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
+    """
+    Autorrellena filas base de nómina en una hoja WK#### usando la hoja BD
+    del Excel de nómina en SharePoint. Lee exclusivamente la columna MN ####.
+    """
+    import base64 as _b64
+
+    code = _normalizar_week_code(week_code)
+    if not (code.isdigit() and len(code) == 4):
+        return {"ok": False, "error": "El código de semana debe ser exactamente 4 dígitos (ej: 2615)."}
+
+    archivo = _descargar_excel(SHAREPOINT_URL_NOMINA, "Excel Nómina")
+    if archivo is None:
+        return {"ok": False, "error": "No se pudo descargar el Excel de nómina desde SharePoint."}
+
+    try:
+        df = pd.read_excel(archivo, sheet_name="BD", header=5)
+    except Exception as e:
+        return {"ok": False, "error": f"No se pudo abrir la hoja BD del Excel de nómina: {e}"}
+
+    df.columns = [str(c).strip() for c in df.columns]
+    monto_col = f"MN {code}"
+    required = {"FINCA", "ESTATUS", "DEPARTAMENTO", monto_col}
+    missing = required - set(df.columns)
+    if missing:
+        return {"ok": False, "error": f"Faltan columnas en BD: {', '.join(sorted(missing))}."}
+
+    df = df[["FINCA", "ESTATUS", "DEPARTAMENTO", monto_col]].copy()
+    df["FINCA"] = df["FINCA"].fillna("").astype(str).str.strip().str.upper()
+    df["ESTATUS"] = df["ESTATUS"].fillna("").astype(str).str.strip().str.upper()
+    df["DEPARTAMENTO"] = df["DEPARTAMENTO"].fillna("").astype(str).str.strip().str.upper()
+    df[monto_col] = pd.to_numeric(df[monto_col], errors="coerce").fillna(0.0)
+
+    df = df[
+        (df["FINCA"] != "")
+        & (df["DEPARTAMENTO"] != "")
+        & (df[monto_col] != 0)
+    ].copy()
+
+    resumen = {row: {rn: 0.0 for rn in WK_MXN_RANCH_COLS} for row in NOMINA_WK_ROWS}
+    omitidos = []
+    usados = 0
+
+    for _, row in df.iterrows():
+        departamento = row["DEPARTAMENTO"]
+        wk_row = _nomina_wk_row_from_departamento(departamento)
+        if wk_row is None:
+            continue
+
+        rancho = _nomina_wk_ranch_from_bd(row["FINCA"], departamento)
+        if not rancho or rancho not in WK_MXN_RANCH_COLS:
+            omitidos.append(f"{departamento} [{row['FINCA']}]={round(float(row[monto_col]), 2)}")
+            continue
+
+        resumen[wk_row][rancho] = round(resumen[wk_row][rancho] + float(row[monto_col]), 2)
+        usados += 1
+
+    rows_con_datos = [row for row, vals in resumen.items() if any(vals.values())]
+    if not rows_con_datos:
+        return {
+            "ok": False,
+            "error": f"No se encontraron filas compatibles para automatizar usando la columna '{monto_col}'.",
+        }
+
+    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    token_resp = requests.post(token_url, data={
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "scope": "https://graph.microsoft.com/.default",
+    }, timeout=20)
+    if token_resp.status_code != 200:
+        return {"ok": False, "error": f"Error obteniendo token: {token_resp.text[:300]}"}
+
+    token = token_resp.json().get("access_token")
+    hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip("=")
+    encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
+    res = requests.get(
+        f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem",
+        headers=hdrs_json,
+        timeout=20,
+    )
+    if res.status_code != 200:
+        return {"ok": False, "error": f"No se pudo resolver el archivo WK: {res.text[:300]}"}
+
+    item = res.json()
+    drive_id = item.get("parentReference", {}).get("driveId")
+    item_id = item.get("id")
+    if not drive_id or not item_id:
+        return {"ok": False, "error": "No se pudo obtener driveId o itemId del Excel WK."}
+
+    nombre_hoja = f"WK{code}"
+    wb_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
+    sess_resp = requests.post(
+        f"{wb_url}/createSession",
+        headers=hdrs_json,
+        json={"persistChanges": True},
+        timeout=30,
+    )
+    if sess_resp.status_code not in (200, 201):
+        return {"ok": False, "error": f"Error abriendo sesión del workbook WK: {sess_resp.text[:300]}"}
+
+    session_id = sess_resp.json().get("id")
+    hdrs = {**hdrs_json, "workbook-session-id": session_id}
+
+    try:
+        sheets_resp = requests.get(f"{wb_url}/worksheets", headers=hdrs, timeout=20)
+        if sheets_resp.status_code != 200:
+            return {"ok": False, "error": f"Error listando hojas WK: {sheets_resp.text[:300]}"}
+
+        target_sheet = None
+        normalized_target = nombre_hoja.replace(" ", "").upper()
+        for ws in sheets_resp.json().get("value", []):
+            ws_name = str(ws.get("name", "")).strip()
+            if ws_name.replace(" ", "").upper() == normalized_target:
+                target_sheet = ws_name
+                break
+
+        if not target_sheet:
+            return {"ok": False, "error": f"La hoja '{nombre_hoja}' no existe en el Excel WK."}
+
+        for wk_row in rows_con_datos:
+            values = [[resumen[wk_row].get(rn, 0.0) for rn in WK_MXN_RANCH_COLS]]
+            patch_resp = requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E{wk_row}:K{wk_row}')",
+                headers=hdrs,
+                json={"values": values},
+                timeout=30,
+            )
+            if patch_resp.status_code not in (200, 201):
+                return {
+                    "ok": False,
+                    "error": f"No se pudo escribir la fila {wk_row} en {target_sheet}: {patch_resp.text[:300]}",
+                }
+
+            requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E{wk_row}:K{wk_row}')/format",
+                headers=hdrs,
+                json={"numberFormat": "#,##0"},
+                timeout=20,
+            )
+            requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E{wk_row}:K{wk_row}')/format/font",
+                headers=hdrs,
+                json={"color": "#C00000", "bold": True, "name": "Arial"},
+                timeout=20,
+            )
+    finally:
+        requests.post(f"{wb_url}/closeSession", headers=hdrs, timeout=20)
+
+    filas_txt = ", ".join(f"{row}={NOMINA_WK_ROWS[row]}" for row in rows_con_datos)
+    omitidos_txt = ""
+    if omitidos:
+        omitidos_txt = f" Omitidos sin cruce WK: {' | '.join(omitidos[:8])}"
+        if len(omitidos) > 8:
+            omitidos_txt += f" | +{len(omitidos) - 8} más"
+
+    return {
+        "ok": True,
+        "mensaje": (
+            f"Nómina MN autorrellenada en '{nombre_hoja}' usando '{monto_col}'. "
+            f"Filas actualizadas: {filas_txt}. Registros sumados: {usados}.{omitidos_txt}"
         ),
     }
 
