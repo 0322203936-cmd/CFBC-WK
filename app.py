@@ -2907,8 +2907,8 @@ if not st.session_state.show_auto:
         st.button("⚙️ Auto", key="btn_auto", on_click=toggle_auto, help="Panel de Automatización")
 
     # iframe sin header propio (36px ya los ocupa el header nativo de arriba)
-    # Renderizado usando auto-resize de Streamlit
-    components.html(html_final, height=None, scrolling=False)
+    # Asignamos una altura gigante fija porque components.html puro no tiene auto-resize
+    components.html(html_final, height=4000, scrolling=False)
 
 else:
     # ==== MODO PANEL DE AUTOMATIZACIÓN ====
