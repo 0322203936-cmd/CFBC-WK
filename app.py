@@ -2720,7 +2720,7 @@ function showProdPanel(rowData, opts) {
         '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
         '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
       '</div>' +
-      '<div style="overflow-x:auto; overflow-y:auto; flex:1; min-height:0; max-height:min(58vh, 520px); scrollbar-width:thin;">' +
+      '<div style="overflow-x:auto; flex:1; scrollbar-width:thin;">' +
         '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
           '<thead><tr style="position:sticky;top:0;z-index:1;">' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
