@@ -2512,6 +2512,63 @@ function renderManoObra() {
       bodyHtml+='</tr>';
     }
 
+    if (grp.label === 'TRASPLANTE' && DATA.siembra_data) {
+      var tcPin='padding:3px 8px;position:sticky;z-index:1;background:#f0fdf4;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;white-space:nowrap;';
+      var tcStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;color:#15803d;font-weight:600;background:#f0fdf4;';
+      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="NUMERO DE CHAROLAS SEMBRADAS">';
+      bodyHtml+='<td style="'+tcPin+'left:0;padding-left:20px;color:#166534;font-size:11px"><span style="color:#22c55e;font-size:9px;margin-right:4px;">🌱</span>NUMERO DE CHAROLAS SEMBRADAS</td>';
+      var wkTcTotal = {};
+      var wKeyOrdered = [];
+      activeRanches.forEach(function(rn){
+        weekKeys.forEach(function(key){
+          var pw=key.split('-');
+          var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
+          var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
+          var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
+          var targetRn = revMap[rn] || rn;
+          var sRow = sData[targetRn] || sData[rn] || {};
+          var v = sRow['charolas'] || 0;
+          wkTcTotal[key] = (wkTcTotal[key]||0) + v;
+          if(wKeyOrdered.indexOf(key)===-1) wKeyOrdered.push(key);
+          if(!v||v===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
+          else { bodyHtml+='<td style="'+tcStyle+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+        });
+        var wkTcDiff = 0;
+        if (weekKeys.length > 0) {
+          var fw = weekKeys[0], lw = weekKeys[weekKeys.length-1];
+          var getV = function(key) {
+            var pw=key.split('-');
+            var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
+            var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
+            var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
+            var targetRn = revMap[rn] || rn;
+            var sRow = sData[targetRn] || sData[rn] || {};
+            return sRow['charolas'] || 0;
+          };
+          wkTcDiff = Math.abs(getV(lw) - getV(fw));
+        }
+        if(!wkTcDiff||wkTcDiff===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
+        else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+      });
+      if(showTotal) {
+        wKeyOrdered.forEach(function(key){
+          var v = wkTcTotal[key]||0;
+          var borderLeft = (wKeyOrdered[0]===key) ? 'border-left:3px solid #86efac;' : '';
+          var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
+          if(!v||v===0) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
+          else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+        });
+        var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
+        var gtDif = 0;
+        if(wKeyOrdered.length > 0) {
+          gtDif = Math.abs((wkTcTotal[wKeyOrdered[wKeyOrdered.length-1]]||0) - (wkTcTotal[wKeyOrdered[0]]||0));
+        }
+        if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
+        else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+      }
+      bodyHtml+='</tr>';
+    }
+
   });
 
   // Fila total general
