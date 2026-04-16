@@ -1205,21 +1205,24 @@ def _extraer_metros_acumulados() -> list:
             continue
 
         # Normalizar nombre de rancho: CECILIA→Cecilia, RAMONA→Campo-RM, etc.
-        rancho = norm_ranch(rancho_raw)
-        if not rancho:
-            rancho = rancho_raw  # mantener original si no mapea
+        if rancho_raw.upper() == "RAMONA":
+            rancho = "Campo-RM"
+        else:
+            rancho = norm_ranch(rancho_raw)
+            if not rancho:
+                rancho = rancho_raw  # mantener original si no mapea
 
-        # Extraer código de semana final: '2302 - 2616'  →  2616
+        # Extraer código de semana final: '2302 - 2616' o '2616' o '2616.0'
         semana_fin = None
         if "-" in sem_raw:
             partes = sem_raw.split("-")
             try:
-                semana_fin = int(str(partes[-1]).strip())
+                semana_fin = int(float(str(partes[-1]).strip()))
             except ValueError:
                 pass
         else:
             try:
-                semana_fin = int(sem_raw.strip())
+                semana_fin = int(float(sem_raw.strip()))
             except ValueError:
                 pass
 
