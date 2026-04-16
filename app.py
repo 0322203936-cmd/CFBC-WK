@@ -460,13 +460,12 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   background: #fff;
   border: 1px solid #d5d5d5;
   border-top: none;
-  overflow: hidden;
+  overflow: visible;
 }
 .pt-table-wrap {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: visible;
   width: 100%;
-  /* 28px toolbar + 28px view-tabs + 26px range-bar = 82px (header movido a Streamlit) */
-  max-height: calc(100vh - 82px);
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
