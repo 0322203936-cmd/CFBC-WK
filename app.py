@@ -2624,8 +2624,8 @@ function showProdPanel(rowData, opts) {
             
           if (isMetros && DATA.metros_acumulados) {
             var mRows = DATA.metros_acumulados.filter(function(r){ 
-              // _wkKey tiene el formato 2616, que es el que viene desde Excel
-              return r.semana_fin === _wkKey && (!ranchFilter || r.rancho === ranchFilter); 
+              // _wkKey tiene el formato 2616. Nos aseguramos que sea Int.
+              return parseInt(r.semana_fin) === parseInt(_wkKey) && (!ranchFilter || r.rancho === ranchFilter); 
             });
             if (mRows.length > 0) {
               var tbl = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
@@ -2645,6 +2645,9 @@ function showProdPanel(rowData, opts) {
               });
               tbl += '</tbody></table>';
               siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl+'</td></tr>';
+            } else {
+              var mTotal = DATA.metros_acumulados ? DATA.metros_acumulados.length : 0;
+              siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin detalle para semana ' + _wkKey + (ranchFilter?' ('+ranchFilter+')':'') + ' (Total DB: '+mTotal+')</i></td></tr>';
             }
           }
         });
