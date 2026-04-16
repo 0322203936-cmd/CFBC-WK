@@ -273,10 +273,25 @@ WK_RANCH_TO_BD = {
 }
 
 
-def _area_from_concepto_rancho(label: str, ranch: str) -> str:
+def _area_from_concepto_rancho(label: str, ranch: str) -> str | None:
     """
     Dado el label (Concepto) de una fila WK y el nombre del rancho (norm_ranch),
     retorna el Área equivalente al BD para que semanas 1-13 y 14+ sean consistentes.
+    Retorna None si el concepto no aplica para ese rancho (se debe omitir).
+
+    Tabla de mapeo (fuente: columna Área del Conteo Personal BD):
+      Concepto WK              | Prop-RM       | PosCo-RM          | Otros
+      -------------------------|---------------|-------------------|-------------------
+      NOMINA PRODUCCION        | Supervisores  | Admon Posco       | (vacío/omitir)
+      PRODUCCION CORTE         | Phlox         | Supervisores      | Corte
+      PRODUCCION TRANSPLANTE   | Siembra       | Prod. Patina y rec| Trasplante
+      PRODUCCION MANEJO PLANTA | Consolidacion | Alm.upc y empaq   | Manejo P.
+      HOOPS                    | Mov. Charolas | (omitir)          | Hoops
+      (MIPE,MIRFE)             | Riego         | (omitir)          | MIPE Y MIRFE
+      TRACTORES/CAMEROS        | (omitir)      | (omitir)          | Tract. Y Cameros
+      CHOFER                   | (omitir)      | Transporte        | Transporte
+      VELADORES                | (omitir)      | (omitir)          | Veladores
+      SOLDADOR                 | (omitir)      | (omitir)          | Soldadores
     """
     s = str(label).upper().strip()
     r = str(ranch).upper().strip() if ranch else ""
@@ -285,40 +300,92 @@ def _area_from_concepto_rancho(label: str, ranch: str) -> str:
     _is_hextra = "HORAS EXTR" in s
     _is_bonos  = "BONOS ASISIT" in s
     _is_prop   = "PROP" in r      # Prop-RM  → Propagacion
-    _is_posco  = "POSCO" in r     # PosCo-RM → Poscocecha
+    _is_posco  = "POSCO" in r     # PosCo-RM → Poscosecha
 
     if not (_is_nomina or _is_hextra or _is_bonos):
         if "IMSS" in s or "INFONAVIT" in s:        return "IMSS,INFO Y RCV"
         if "1.8%" in s or "TASA EFECTIVA" in s:    return "Imp. 1.8%"
         return None
 
+    # ── 1. Actividades específicas PRIMERO (antes de chequeos genéricos) ─────
+
+    # CORTE: Prop=Phlox, PosCo=Supervisores, otros=Corte
+    if "CORTE" in s:
+        if _is_prop:  return "Phlox"
+        if _is_posco: return "Supervisores"
+        return "Corte"
+
+    # TRANSPLANTE: Prop=Siembra, PosCo=Prod. Patina y rec, otros=Trasplante
+    if "TRANSPLANTE" in s or "TRASPLANTE" in s:
+        if _is_prop:  return "Siembra"
+        if _is_posco: return "Prod. Patina y rec"
+        return "Trasplante"
+
+    # MANEJO PLANTA: Prop=Consolidacion, PosCo=Alm.upc y empaq, otros=Manejo P.
+    if "MANEJO" in s and "PLANTA" in s:
+        if _is_prop:  return "Consolidacion"
+        if _is_posco: return "Alm.upc y empaq"
+        return "Manejo P."
+
+    # HOOPS: Prop=Mov. Charolas, PosCo=omitir, otros=Hoops
+    if "HOOPS" in s:
+        if _is_prop:  return "Mov. Charolas"
+        if _is_posco: return None
+        return "Hoops"
+
+    # MIPE/MIRFE: Prop=Riego, PosCo=omitir, otros=MIPE Y MIRFE
+    if "MIPE" in s or "MIRFE" in s:
+        if _is_prop:  return "Riego"
+        if _is_posco: return None
+        return "MIPE Y MIRFE"
+
+    # TRACTORES/CAMEROS: Prop=omitir, PosCo=omitir, otros=Tract. Y Cameros
+    if "TRACTORES" in s or "CAMEROS" in s:
+        if _is_prop or _is_posco: return None
+        return "Tract. Y Cameros"
+
+    # CHOFER: Prop=omitir, PosCo=Transporte, otros=Transporte
+    if "CHOFER" in s:
+        if _is_prop: return None
+        return "Transporte"
+
+    # VELADORES: Prop=omitir, PosCo=omitir, otros=Veladores
+    if "VELADOR" in s:
+        if _is_prop or _is_posco: return None
+        return "Veladores"
+
+    # SOLDADOR: Prop=omitir, PosCo=omitir, otros=Soldadores
+    if "SOLDADOR" in s:
+        if _is_prop or _is_posco: return None
+        return "Soldadores"
+
+    # ── 2. Conceptos varios ──────────────────────────────────────────────────
+    if "CONTRATISTA" in s:                           return "Contratista y com."
+    if "ALM" in s and ("UPC" in s or "EMPAQ" in s): return "Alm.upc y empaq"
+    if "CONSOLIDAC" in s:                            return "Consolidacion"
+    if "SIEMBRA" in s:                               return "Siembra"
+    if "MOV" in s and "CHAROLA" in s:                return "Mov. Charolas"
+    if "RIEGO" in s:                                 return "Riego"
+    if "PHLOX" in s:                                 return "Phlox"
+    if "SUPERVISOR" in s:                            return "Supervisores"
+
+    # ── 3. Administración (DESPUÉS de actividades específicas) ───────────────
     if "ADMON" in s and ("POSCO" in s or "POSCOSECHA" in s):
         return "Admon Posco"
-    if "ADMON" in s or ("FESTIVOS" in s and "FEST." not in s) or "DESPENSA" in s:
+    if "ADMON" in s or "DESPENSA" in s:
         return "Ing. Y Admon."
-    if "SUPERVISOR" in s:                           return "Supervisores"
-    if "CORTE" in s:
-        return "Phlox" if _is_prop else "Corte"
-    if "TRANSPLANTE" in s or "TRASPLANTE" in s:     return "Siembra"
-    if "MANEJO" in s and "PLANTA" in s:             return "Consolidacion"
-    if "CONSOLIDAC" in s:                           return "Consolidacion"
-    if "SIEMBRA" in s:                              return "Siembra"
-    if "HOOPS" in s:                                return "Mov. Charolas"
-    if "MOV" in s and "CHAROLA" in s:               return "Mov. Charolas"
-    if "MIPE" in s or "MIRFE" in s:                 return "Riego"
-    if "RIEGO" in s:                                return "Riego"
-    if "PHLOX" in s:                                return "Phlox"
-    if "TRACTORES" in s or "CAMEROS" in s:          return "Tract. Y Cameros"
-    if "VELADOR" in s:                              return "Veladores"
-    if "SOLDADOR" in s:                             return "Soldadores"
-    if "CHOFER" in s:                               return "Transporte"
-    if "CONTRATISTA" in s:                          return "Contratista y com."
-    if "ALM" in s and ("UPC" in s or "EMPAQ" in s): return "Alm.upc y empaq"
 
-    # NOMINA PRODUCCION genérica sin actividad → según rancho
-    if _is_posco:
-        return "Admon Posco"
-    return "Supervisores"
+    # HORAS EXTR. DOM. Y FESTIVOS (palabra completa, sin qualifier de actividad)
+    # → horas extra de Administración
+    if _is_hextra and "FESTIVOS" in s:
+        return "Ing. Y Admon."
+
+    # ── 4. NOMINA PRODUCCION genérica / HORAS EXTR. DOM. Y FEST. / BONOS ────
+    # Sin actividad específica → mapeo según rancho
+    # Prop-RM=Supervisores, PosCo-RM=Admon Posco, otros=omitir (vacío en BD)
+    if _is_posco: return "Admon Posco"
+    if _is_prop:  return "Supervisores"
+    return None   # otros ranches: vacío — omitir
 
 
 def sv(v) -> float:
@@ -816,7 +883,9 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                 for rn, mxn_val in mxn_ranches.items():
                     if mxn_val == 0.0:
                         continue   # omitir ranchos sin costo
-                    area = _area_from_concepto_rancho(label, rn) or cat[3:]
+                    area = _area_from_concepto_rancho(label, rn)
+                    if area is None:
+                        continue   # este concepto no aplica para este rancho (vacío en BD)
                     rn_bd = WK_RANCH_TO_BD.get(rn, rn)   # normalizar nombre
                     ag = area_groups.setdefault(area, {
                         "mxn_ranches": {}, "usd_ranches": {},
