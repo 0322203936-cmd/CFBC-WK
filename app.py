@@ -2646,8 +2646,16 @@ function showProdPanel(rowData, opts) {
               tbl += '</tbody></table>';
               siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl+'</td></tr>';
             } else {
-              var mTotal = DATA.metros_acumulados ? DATA.metros_acumulados.length : 0;
-              siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin detalle para semana ' + _wkKey + (ranchFilter?' ('+ranchFilter+')':'') + ' (Total DB: '+mTotal+')</i></td></tr>';
+              var availableWks = [];
+              if (DATA.metros_acumulados) {
+                var wks = {};
+                DATA.metros_acumulados.forEach(function(x){
+                  if (!ranchFilter || x.rancho === ranchFilter) wks[x.semana_fin] = true;
+                });
+                availableWks = Object.keys(wks).sort();
+              }
+              var wksTxt = availableWks.length > 0 ? availableWks.join(', ') : 'Ninguna';
+              siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semana ' + _wkKey + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt + '</i></td></tr>';
             }
           }
         });
