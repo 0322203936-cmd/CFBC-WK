@@ -460,7 +460,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   background: #fff;
   border: 1px solid #d5d5d5;
   border-top: none;
-  overflow: hidden;
+  overflow: visible;
 }
 .pt-table-wrap {
   overflow: visible;
