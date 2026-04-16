@@ -460,12 +460,12 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   background: #fff;
   border: 1px solid #d5d5d5;
   border-top: none;
-  overflow: visible;
+  overflow: hidden;
 }
 .pt-table-wrap {
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: visible;
   width: 100%;
+  max-height: none;
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
@@ -634,7 +634,7 @@ APP_HTML_BODY = """
 
   <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
   <div id="gridWrap">
-    <div class="pt-table-wrap" id="tableWrap" style="overflow:visible"></div>
+    <div class="pt-table-wrap" id="tableWrap"></div>
   </div>
 
   <!-- COMPARATIVO TABLE -->
@@ -1166,6 +1166,17 @@ function setView(v) {
   var cmp=document.getElementById('comparativoWrap');
   if (v==='comparativo') { if(gw)gw.style.display='none'; if(cmp)cmp.className='show'; }
   else                   { if(gw)gw.style.display='';     if(cmp)cmp.className=''; }
+  // Scroll solo en Costo Mano de Obra y Costo Servicios
+  var tw = document.getElementById('tableWrap');
+  if (tw) {
+    if (v === 'servicios') {
+      tw.style.overflow = 'auto';
+      tw.style.maxHeight = 'calc(100vh - 92px)';
+    } else {
+      tw.style.overflow = 'visible';
+      tw.style.maxHeight = 'none';
+    }
+  }
   closeProdPanel();
   renderView();
 }
