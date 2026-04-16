@@ -269,7 +269,8 @@ def norm_cat(s: str):
 # ── Mapa de nombres de rancho WK → BD (para consistencia en mano_obra_data) ──
 WK_RANCH_TO_BD = {
     "Prop-RM":  "Propagacion",
-    "PosCo-RM": "Poscocecha",
+    "PosCo-RM": "Poscosecha",
+    "Campo-RM": "Ramona",
 }
 
 
