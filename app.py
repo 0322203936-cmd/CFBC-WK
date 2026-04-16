@@ -2612,7 +2612,7 @@ function showProdPanel(rowData, opts) {
         _activos.forEach(function(m, i){
           var bg = (i % 2 === 0) ? '#FFF3BF' : '#FFF8D6';
           var isMetros = (m.k === 'metros');
-          var lblStyle = isMetros ? 'cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px;' : '';
+          var lblStyle = isMetros ? 'cursor:pointer;' : '';
           var toggleClick = isMetros ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className===\\\'metros-detail\\\') n.style.display=(n.style.display===\\\'none\\\'?\\\'table-row\\\':\\\'none\\\');"' : '';
           
           siembraRowsHtml +=
