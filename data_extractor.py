@@ -1136,15 +1136,22 @@ def _extraer_metros_acumulados() -> list:
         SHEET_NAME = match
 
     try:
-        # header=2  →  fila 3 (índice 2) como encabezado
-        df = pd.read_excel(xls, sheet_name=SHEET_NAME, header=2).fillna("")
+        df_raw = pd.read_excel(xls, sheet_name=SHEET_NAME, header=None).fillna("")
     except Exception as e:
         print(f"⚠️  Error leyendo hoja '{SHEET_NAME}': {e}")
         return []
 
-    # Normalizar nombres de columnas
-    df.columns = [str(c).strip() for c in df.columns]
-    print(f"✅ Metros Acumulados leído: {df.shape[0]} filas, columnas={list(df.columns)}")
+    # Autodetectar la fila de encabezados buscando 'Rancho' y 'Flor'
+    header_idx = 0
+    for i in range(min(10, len(df_raw))):
+        row_strs = [str(v).strip().lower() for v in df_raw.iloc[i].values]
+        if 'rancho' in row_strs and 'flor' in row_strs:
+            header_idx = i
+            break
+
+    df = df_raw.iloc[header_idx + 1:].copy()
+    df.columns = [str(c).strip() for c in df_raw.iloc[header_idx].values]
+    print(f"✅ Metros Acumulados leído: {df.shape[0]} filas, encabezados detectados en fila {header_idx + 1}")
 
     # Mapear columnas por posición si los nombres difieren ligeramente
     cols = list(df.columns)
