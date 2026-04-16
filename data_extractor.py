@@ -39,6 +39,12 @@ SHAREPOINT_URL_NOMINA = (
     "anahi_mora_cfbc_co/IQCVhuBzeYCZRp39wgxJli7ZAfCYH_KtiWdCB-pS4cqX6h4?e=zPmvTA"
 )
 
+# Detalle de metros de siembra (Material Vegetal)
+SHAREPOINT_URL_SIEMBRA_DETALLE = (
+    "https://pacificafarms.sharepoint.com/:x:/s/DocCampos/"
+    "IQBI78e0rcjORJ_X5CCr_wIPATLI-hk9D99Sxj-h08Z41Zc?e=hdFeqi"
+)
+
 # ─── Constantes ───────────────────────────────────────────────────────────────
 RANCH_CONFIG = {
     "Prop-RM":     {"color": "#047857", "codes": ["VIV"], "keywords": ["PROP"]},
@@ -1094,6 +1100,112 @@ def _extraer_mano_obra_conteo() -> list:
     return result
 
 
+# ─── Detalle de Metros Acumulados (Material Vegetal) ─────────────────────────
+def _extraer_metros_acumulados() -> list:
+    """
+    Lee la hoja 'Mtrs Acumulados' del Excel de siembra (SHAREPOINT_URL_SIEMBRA_DETALLE).
+    Estructura:
+      Fila 3: headers  →  A=Rancho, B=Flor, C=Metros, D=Pla. Acum., E=Semana
+      Fila 4+: datos
+    La columna Semana tiene el formato '2302 - 2616' (inicio - fin acumulado).
+    Se indexa por el código de semana FINAL (ej: 2616) para que el dashboard
+    pueda filtrar por la semana que el usuario tiene seleccionada.
+    Retorna lista de dicts:
+      { 'semana_fin': int, 'rancho': str, 'flor': str,
+        'metros': float, 'pla_acum': float, 'semana_rango': str }
+    """
+    print(f"📥 Descargando Metros Acumulados desde SharePoint...")
+    archivo = _descargar_excel(SHAREPOINT_URL_SIEMBRA_DETALLE, "Metros Acumulados")
+    if archivo is None:
+        print("⚠️  No se pudo descargar el Excel de Metros Acumulados")
+        return []
+
+    try:
+        xls = pd.ExcelFile(archivo)
+    except Exception as e:
+        print(f"⚠️  No se pudo abrir el Excel de Metros Acumulados: {e}")
+        return []
+
+    SHEET_NAME = "Mtrs Acumulados"
+    if SHEET_NAME not in xls.sheet_names:
+        # intento case-insensitive
+        match = next((s for s in xls.sheet_names if s.strip().lower() == SHEET_NAME.lower()), None)
+        if not match:
+            print(f"⚠️  Hoja '{SHEET_NAME}' no encontrada. Hojas disponibles: {xls.sheet_names}")
+            return []
+        SHEET_NAME = match
+
+    try:
+        # header=2  →  fila 3 (índice 2) como encabezado
+        df = pd.read_excel(xls, sheet_name=SHEET_NAME, header=2).fillna("")
+    except Exception as e:
+        print(f"⚠️  Error leyendo hoja '{SHEET_NAME}': {e}")
+        return []
+
+    # Normalizar nombres de columnas
+    df.columns = [str(c).strip() for c in df.columns]
+    print(f"✅ Metros Acumulados leído: {df.shape[0]} filas, columnas={list(df.columns)}")
+
+    # Mapear columnas por posición si los nombres difieren ligeramente
+    cols = list(df.columns)
+    COL_RANCHO   = cols[0] if len(cols) > 0 else "Rancho"
+    COL_FLOR     = cols[1] if len(cols) > 1 else "Flor"
+    COL_METROS   = cols[2] if len(cols) > 2 else "Metros"
+    COL_PLA_ACUM = cols[3] if len(cols) > 3 else "Pla. Acum."
+    COL_SEMANA   = cols[4] if len(cols) > 4 else "Semana"
+
+    def _to_float(v):
+        try:
+            return round(float(str(v).replace(",", "").strip()), 2)
+        except Exception:
+            return 0.0
+
+    result = []
+    for _, row in df.iterrows():
+        rancho_raw = str(row.get(COL_RANCHO, "")).strip()
+        flor       = str(row.get(COL_FLOR,   "")).strip()
+        sem_raw    = str(row.get(COL_SEMANA, "")).strip()
+        metros_v   = row.get(COL_METROS,   0)
+        pla_v      = row.get(COL_PLA_ACUM, 0)
+
+        if not rancho_raw or not flor:
+            continue
+
+        # Normalizar nombre de rancho: CECILIA→Cecilia, RAMONA→Campo-RM, etc.
+        rancho = norm_ranch(rancho_raw)
+        if not rancho:
+            rancho = rancho_raw  # mantener original si no mapea
+
+        # Extraer código de semana final: '2302 - 2616'  →  2616
+        semana_fin = None
+        if "-" in sem_raw:
+            partes = sem_raw.split("-")
+            try:
+                semana_fin = int(str(partes[-1]).strip())
+            except ValueError:
+                pass
+        else:
+            try:
+                semana_fin = int(sem_raw.strip())
+            except ValueError:
+                pass
+
+        if semana_fin is None:
+            continue
+
+        result.append({
+            "semana_fin":   semana_fin,
+            "rancho":       rancho,
+            "flor":         flor,
+            "metros":       _to_float(metros_v),
+            "pla_acum":     _to_float(pla_v),
+            "semana_rango": sem_raw,
+        })
+
+    print(f"✅ metros_acumulados: {len(result)} registros cargados")
+    return result
+
+
 def get_datos() -> dict:
     """
     - Hojas WK  → Excel principal en SharePoint
@@ -1101,6 +1213,7 @@ def get_datos() -> dict:
     - Hojas MP  → Excel secundario en SharePoint (MANTENIMIENTO)
     - Hojas ME  → Excel secundario en SharePoint (MATERIAL DE EMPAQUE)
     - Hojas MV  → Excel secundario en SharePoint (MATERIAL VEGETAL)
+    - Metros Acumulados → Excel de siembra (SHAREPOINT_URL_SIEMBRA_DETALLE)
     """
     # 1. Descargar y leer Excel WK
     archivo = _descargar_excel(SHAREPOINT_URL_WK, "Excel WK")
@@ -1197,6 +1310,12 @@ def get_datos() -> dict:
             key = f"{yr}-{wk}"
             if key not in resultado["week_date_ranges"]:
                 resultado["week_date_ranges"][key] = r.get("date_range", f"W{wk:02d}")
+
+        # 7. Leer Metros Acumulados (Material Vegetal — siembra detalle)
+        print("\n" + "=" * 60)
+        print("🔍 LEYENDO METROS ACUMULADOS (SIEMBRA DETALLE)")
+        print("=" * 60)
+        resultado["metros_acumulados"] = _extraer_metros_acumulados()
 
     return resultado
 
