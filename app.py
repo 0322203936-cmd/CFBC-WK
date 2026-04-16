@@ -634,7 +634,7 @@ APP_HTML_BODY = """
 
   <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
   <div id="gridWrap">
-    <div class="pt-table-wrap" id="tableWrap" style="overflow:auto"></div>
+    <div class="pt-table-wrap" id="tableWrap" style="overflow:visible"></div>
   </div>
 
   <!-- COMPARATIVO TABLE -->
@@ -2134,7 +2134,7 @@ function renderServicios() {
   bodyHtml+='</tr>';
 
   // ── Inyectar en el DOM ────────────────────────────────
-  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:auto"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:visible"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
   var gw=document.getElementById('gridWrap');
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
   document.getElementById('comparativoWrap').className='';
@@ -2515,7 +2515,7 @@ function renderManoObra() {
   bodyHtml+='</tr>';
 
   // ── Inyectar en el DOM ────────────────────────────────
-  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:auto"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:visible"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
   var gw=document.getElementById('gridWrap');
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
   document.getElementById('comparativoWrap').className='';
