@@ -2719,7 +2719,7 @@ function showProdPanel(rowData, opts) {
         '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
         '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
       '</div>' +
-      '<div style="overflow-x:auto; flex:1; scrollbar-width:thin;">' +
+      '<div style="overflow-x:auto; scrollbar-width:thin;">' +
         '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
           '<thead><tr style="position:sticky;top:0;z-index:1;">' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
@@ -2748,7 +2748,7 @@ function showProdPanel(rowData, opts) {
   }
 
   panelHtml =
-    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #4472C4; display:flex; flex-direction:column; background:#fff; overflow:hidden; max-height:min(68vh, 620px);">' +
+    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #4472C4; display:block; background:#fff;">' +
       '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
         '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
       '</div>' +
