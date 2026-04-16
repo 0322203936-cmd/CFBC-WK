@@ -1195,10 +1195,10 @@ function updateRangeSliders() {
   if(tEl){tEl.min=mn;tEl.max=mx;tEl.value=t;}
   var yy=String(DATA.years[DATA.years.length-1]).slice(2);
   var fLbl=document.getElementById('fromWeekLabel'), tLbl=document.getElementById('toWeekLabel'), badge=document.getElementById('rangeBadge');
-  if(fLbl)fLbl.textContent='WK '+String(f).padStart(2,'0');
-  if(tLbl)tLbl.textContent='WK '+String(t).padStart(2,'0');
+  if(fLbl)fLbl.textContent=String(f).padStart(2,'0');
+  if(tLbl)tLbl.textContent=String(t).padStart(2,'0');
   var count=allWeeks.filter(function(w){return w>=f&&w<=t;}).length;
-  if(badge)badge.textContent='WK '+String(f).padStart(2,'0')+' → WK '+String(t).padStart(2,'0')+' ('+count+' sem)';
+  if(badge)badge.textContent=String(f).padStart(2,'0')+' → '+String(t).padStart(2,'0')+' ('+count+' sem)';
 }
 function onRangeChange() {
   var f=parseInt(document.getElementById('fromSlider').value);
