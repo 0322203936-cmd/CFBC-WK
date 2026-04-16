@@ -192,6 +192,7 @@ def norm_ranch(s: str):
     if "CECILIA 25" in s:                                return "Cecilia 25"
     if "CECILIA" in s and "25" not in s:                 return "Cecilia"
     if "CAMPO" in s and "VI" not in s and "IV" not in s: return "Campo-RM"
+    if "CRISTINA" in s:                                  return "Christina"
     
     for ranch, data in RANCH_CONFIG.items():
         if ranch in ["Campo-VI", "Cecilia 25", "Cecilia", "Campo-RM"]: 
