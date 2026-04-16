@@ -1100,22 +1100,48 @@ def _extraer_mano_obra_conteo() -> list:
     return result
 
 
+def _descargar_con_graph(url: str, label: str) -> BytesIO | None:
+    import base64
+    try:
+        import streamlit as st
+        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+        client_id     = st.secrets["sharepoint"]["client_id"]
+        client_secret = st.secrets["sharepoint"]["client_secret"]
+        
+        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        resp = requests.post(token_url, data={
+            "client_id": client_id,
+            "scope": "https://graph.microsoft.com/.default",
+            "client_secret": client_secret,
+            "grant_type": "client_credentials"
+        })
+        token = resp.json().get("access_token")
+        if not token:
+            print(f"❌ {label}: MS Graph auth falló (revisa secrets)")
+            return None
+            
+        base64_value = base64.urlsafe_b64encode(url.encode("utf-8")).decode("utf-8").rstrip("=")
+        graph_url = f"https://graph.microsoft.com/v1.0/shares/u!{base64_value}/driveItem/content"
+        
+        dl_resp = requests.get(graph_url, headers={"Authorization": f"Bearer {token}"})
+        if dl_resp.status_code == 200:
+            return BytesIO(dl_resp.content)
+        else:
+            print(f"❌ {label}: Falló ({dl_resp.status_code}) -> {dl_resp.text[:200]}")
+            return None
+    except Exception as e:
+        print(f"❌ Error en _descargar_con_graph para {label}: {e}")
+        return None
+
 # ─── Detalle de Metros Acumulados (Material Vegetal) ─────────────────────────
 def _extraer_metros_acumulados() -> list:
     """
-    Lee la hoja 'Mtrs Acumulados' del Excel de siembra (SHAREPOINT_URL_SIEMBRA_DETALLE).
-    Estructura:
-      Fila 3: headers  →  A=Rancho, B=Flor, C=Metros, D=Pla. Acum., E=Semana
-      Fila 4+: datos
-    La columna Semana tiene el formato '2302 - 2616' (inicio - fin acumulado).
-    Se indexa por el código de semana FINAL (ej: 2616) para que el dashboard
-    pueda filtrar por la semana que el usuario tiene seleccionada.
-    Retorna lista de dicts:
-      { 'semana_fin': int, 'rancho': str, 'flor': str,
-        'metros': float, 'pla_acum': float, 'semana_rango': str }
+    Lee la hoja 'Mtrs Acumulados' del Excel de siembra.
+    Se usa MS Graph API porque este link no es público y requiere autenticación.
     """
-    print(f"📥 Descargando Metros Acumulados desde SharePoint...")
-    archivo = _descargar_excel(SHAREPOINT_URL_SIEMBRA_DETALLE, "Metros Acumulados")
+    print(f"📥 Descargando Metros Acumulados desde SharePoint vía MS Graph...")
+    url_limpia = SHAREPOINT_URL_SIEMBRA_DETALLE.split("?")[0]
+    archivo = _descargar_con_graph(url_limpia, "Metros Acumulados")
     if archivo is None:
         print("⚠️  No se pudo descargar el Excel de Metros Acumulados")
         return []
