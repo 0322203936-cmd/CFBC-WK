@@ -463,9 +463,9 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   overflow: visible;
 }
 .pt-table-wrap {
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: visible;
   width: 100%;
-  max-height: none;
 }
 .pt-table-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .pt-table-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
@@ -634,7 +634,7 @@ APP_HTML_BODY = """
 
   <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
   <div id="gridWrap">
-    <div class="pt-table-wrap" id="tableWrap"></div>
+    <div class="pt-table-wrap" id="tableWrap" style="overflow:visible"></div>
   </div>
 
   <!-- COMPARATIVO TABLE -->
@@ -1166,17 +1166,6 @@ function setView(v) {
   var cmp=document.getElementById('comparativoWrap');
   if (v==='comparativo') { if(gw)gw.style.display='none'; if(cmp)cmp.className='show'; }
   else                   { if(gw)gw.style.display='';     if(cmp)cmp.className=''; }
-  // Scroll solo en Costo Mano de Obra y Costo Servicios
-  var tw = document.getElementById('tableWrap');
-  if (tw) {
-    if (v === 'servicios') {
-      tw.style.overflow = 'auto';
-      tw.style.maxHeight = 'calc(100vh - 92px)';
-    } else {
-      tw.style.overflow = 'visible';
-      tw.style.maxHeight = 'none';
-    }
-  }
   closeProdPanel();
   renderView();
 }
@@ -1608,7 +1597,7 @@ function renderRancho() {
   });
 
   // ── Inyectar en DOM ───────────────────────────────────────────────────────
-  var html='<div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var html='<div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
   var gw=document.getElementById('gridWrap');
   gw.style.display='';
   gw.innerHTML=html;
@@ -1740,7 +1729,7 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
     bodyHtml+='</tr>';
   });
 
-  var html='<div style="margin-top:20px"><h3 style="color:#1e3a5f;font-size:14px;font-weight:800;margin-bottom:10px">COSTOS UNITARIOS $ / TALLO PROCESADO</h3><div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
+  var html='<div style="margin-top:20px"><h3 style="color:#1e3a5f;font-size:14px;font-weight:800;margin-bottom:10px">COSTOS UNITARIOS $ / TALLO PROCESADO</h3><div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
   var gw=document.getElementById('gridWrap');
   gw.innerHTML+=html;
 }
@@ -1866,7 +1855,7 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRan
     bodyHtml+='</tr>';
   });
 
-  var html='<div style="margin-top:20px"><h3 style="color:#1e3a5f;font-size:14px;font-weight:800;margin-bottom:10px">COSTOS UNITARIOS $ / HECTÁREA</h3><div class="pt-table-wrap"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
+  var html='<div style="margin-top:20px"><h3 style="color:#1e3a5f;font-size:14px;font-weight:800;margin-bottom:10px">COSTOS UNITARIOS $ / HECTÁREA</h3><div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
   var gw=document.getElementById('gridWrap');
   gw.innerHTML+=html;
 }
@@ -2145,7 +2134,7 @@ function renderServicios() {
   bodyHtml+='</tr>';
 
   // ── Inyectar en el DOM ────────────────────────────────
-  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:visible"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
   var gw=document.getElementById('gridWrap');
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
   document.getElementById('comparativoWrap').className='';
@@ -2526,7 +2515,7 @@ function renderManoObra() {
   bodyHtml+='</tr>';
 
   // ── Inyectar en el DOM ────────────────────────────────
-  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow:visible"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
+  var html='<div class="pt-table-wrap" id="tableWrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table" style="border-collapse:collapse;width:100%"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
   var gw=document.getElementById('gridWrap');
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
   document.getElementById('comparativoWrap').className='';
