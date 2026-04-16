@@ -189,10 +189,11 @@ def _leer_hoja(xls: pd.ExcelFile, titulo: str, rango_filas: int = 60,
 def norm_ranch(s: str):
     s = str(s).upper().strip()
     if "CAMPO-VI" in s or "CAMPO-IV" in s:               return "Campo-VI"
-    if "CECILIA 25" in s:                                return "Cecilia 25"
+    if "CECILIA 25" in s or "25 CECILIA" in s:           return "Cecilia 25"
     if "CECILIA" in s and "25" not in s:                 return "Cecilia"
     if "CAMPO" in s and "VI" not in s and "IV" not in s: return "Campo-RM"
     if "CRISTINA" in s:                                  return "Christina"
+    if "PROPAGACION" in s:                               return "Prop-RM"
     
     for ranch, data in RANCH_CONFIG.items():
         if ranch in ["Campo-VI", "Cecilia 25", "Cecilia", "Campo-RM"]: 
@@ -1180,7 +1181,6 @@ def _extraer_metros_acumulados() -> list:
     df.columns = [str(c).strip() for c in df_raw.iloc[header_idx].values]
     print(f"✅ Metros Acumulados leído: {df.shape[0]} filas, encabezados detectados en fila {header_idx + 1}")
 
-    # Mapear columnas por posición si los nombres difieren ligeramente
     cols = list(df.columns)
     COL_RANCHO   = cols[0] if len(cols) > 0 else "Rancho"
     COL_FLOR     = cols[1] if len(cols) > 1 else "Flor"
@@ -1240,6 +1240,102 @@ def _extraer_metros_acumulados() -> list:
         })
 
     print(f"✅ metros_acumulados: {len(result)} registros cargados")
+    return result
+
+
+
+# ─── Detalle de Plantas (Charolas Sembradas) ─────────────────────────────────
+def _extraer_plantas_metros() -> list:
+    """
+    Lee la hoja 'Pl.-Mtrs' del Excel de siembra.
+    Columnas: Rancho, Flor, Plantas, Metros, Semana, Año.
+    """
+    print(f"📥 Descargando Pl.-Mtrs desde SharePoint vía MS Graph...")
+    url_limpia = SHAREPOINT_URL_SIEMBRA_DETALLE.split("?")[0]
+    archivo = _descargar_con_graph(url_limpia, "Plantas-Metros")
+    if archivo is None:
+        print("⚠️  No se pudo descargar el Excel de Pl.-Mtrs")
+        return []
+
+    try:
+        xls = pd.ExcelFile(archivo)
+    except Exception as e:
+        print(f"⚠️  No se pudo abrir el Excel de Pl.-Mtrs: {e}")
+        return []
+
+    SHEET_NAME = "Pl.-Mtrs"
+    if SHEET_NAME not in xls.sheet_names:
+        match = next((s for s in xls.sheet_names if s.strip().lower() == SHEET_NAME.lower()), None)
+        if not match:
+            print(f"⚠️  Hoja '{SHEET_NAME}' no encontrada. Hojas disponibles: {xls.sheet_names}")
+            return []
+        SHEET_NAME = match
+
+    try:
+        df_raw = pd.read_excel(xls, sheet_name=SHEET_NAME, header=None).fillna("")
+    except Exception as e:
+        print(f"⚠️  Error leyendo hoja '{SHEET_NAME}': {e}")
+        return []
+
+    # Detección de encabezados
+    header_idx = 0
+    for i in range(min(10, len(df_raw))):
+        row_strs = [str(v).strip().lower() for v in df_raw.iloc[i].values]
+        if 'rancho' in row_strs and 'flor' in row_strs and 'plantas' in row_strs:
+            header_idx = i
+            break
+
+    df = df_raw.iloc[header_idx + 1:].copy()
+    df.columns = [str(c).strip() for c in df_raw.iloc[header_idx].values]
+    print(f"✅ Pl.-Mtrs leído: {df.shape[0]} filas, detectados en fila {header_idx + 1}")
+
+    cols = list(df.columns)
+    COL_RANCHO  = cols[0] if len(cols) > 0 else "Rancho"
+    COL_FLOR    = cols[1] if len(cols) > 1 else "Flor"
+    COL_PLANTAS = cols[2] if len(cols) > 2 else "Plantas"
+    COL_METROS  = cols[3] if len(cols) > 3 else "Metros"
+    COL_SEMANA  = cols[4] if len(cols) > 4 else "Semana"
+    COL_ANO     = cols[5] if len(cols) > 5 else "Año"
+
+    def _to_float(v):
+        try: return round(float(str(v).replace(",", "").strip()), 2)
+        except: return 0.0
+
+    result = []
+    for _, row in df.iterrows():
+        rancho_raw = str(row.get(COL_RANCHO, "")).strip()
+        flor       = str(row.get(COL_FLOR,   "")).strip()
+        sem        = str(row.get(COL_SEMANA, "")).strip()
+        ano        = str(row.get(COL_ANO,    "")).strip()
+        plantas_v  = row.get(COL_PLANTAS, 0)
+        metros_v   = row.get(COL_METROS,  0)
+
+        if not rancho_raw or not flor:
+            continue
+
+        if rancho_raw.upper() == "RAMONA": rancho = "Campo-RM"
+        else:
+            rancho = norm_ranch(rancho_raw)
+            if not rancho: rancho = rancho_raw
+        
+        try:
+            week_i = int(float(sem))
+            year_i = int(float(ano))
+        except ValueError:
+            continue
+
+        # Convertir 2023, 1 -> 2301
+        semana_fin = (year_i % 100) * 100 + week_i
+
+        result.append({
+            "semana_fin": semana_fin,
+            "rancho":     rancho,
+            "flor":       flor,
+            "plantas":    _to_float(plantas_v),
+            "metros":     _to_float(metros_v)
+        })
+
+    print(f"✅ plantas_metros: {len(result)} registros cargados")
     return result
 
 
@@ -1353,6 +1449,12 @@ def get_datos() -> dict:
         print("🔍 LEYENDO METROS ACUMULADOS (SIEMBRA DETALLE)")
         print("=" * 60)
         resultado["metros_acumulados"] = _extraer_metros_acumulados()
+
+        # 8. Leer Plantas y Metros (Charolas Sembradas — siembra detalle)
+        print("\n" + "=" * 60)
+        print("🔍 LEYENDO PLANTAS-METROS (CHAROLAS SEMBRADAS)")
+        print("=" * 60)
+        resultado["plantas_metros"] = _extraer_plantas_metros()
 
     return resultado
 
