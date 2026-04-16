@@ -888,6 +888,9 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                     if area is None:
                         continue   # este concepto no aplica para este rancho (vacío en BD)
                     rn_bd = WK_RANCH_TO_BD.get(rn, rn)   # normalizar nombre
+                    if area == "Ing. Y Admon." and rn_bd == "Poscosecha":
+                        rn_bd = "Administracion"
+                        
                     ag = area_groups.setdefault(area, {
                         "mxn_ranches": {}, "usd_ranches": {},
                         "mxn_t": 0.0, "usd_t": 0.0,
