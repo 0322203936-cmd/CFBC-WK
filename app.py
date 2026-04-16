@@ -2611,14 +2611,43 @@ function showProdPanel(rowData, opts) {
       if (_activos.length > 0) {
         _activos.forEach(function(m, i){
           var bg = (i % 2 === 0) ? '#FFF3BF' : '#FFF8D6';
+          var isMetros = (m.k === 'metros');
+          var lblStyle = isMetros ? 'cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px;' : '';
+          var toggleClick = isMetros ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className===\\\'metros-detail\\\') n.style.display=(n.style.display===\\\'none\\\'?\\\'table-row\\\':\\\'none\\\');"' : '';
+          
           siembraRowsHtml +=
             '<tr style="background:'+bg+';border-bottom:1px solid #E9D98F;">' +
               '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#9a6a20;font-weight:700;">SIEMBRA</td>' +
-              '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;">'+m.lbl+'</td>' +
+              '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+(isMetros?' \u25BE':'')+'</span></td>' +
               '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
             '</tr>';
+            
+          if (isMetros && DATA.metros_acumulados) {
+            var mRows = DATA.metros_acumulados.filter(function(r){ 
+              // Convertir wkStart a número por si acaso, semana_fin también es número
+              return r.semana_fin === parseInt(wkStart) && (!ranchFilter || r.rancho === ranchFilter); 
+            });
+            if (mRows.length > 0) {
+              var tbl = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
+                '<thead><tr>' +
+                  (!ranchFilter ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Rancho</th>' : '') +
+                  '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
+                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Metros</th>' +
+                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Plantas Acum.</th>' +
+                '</tr></thead><tbody>';
+              mRows.forEach(function(mr){
+                tbl += '<tr>' +
+                  (!ranchFilter ? '<td style="color:#8a4b08;padding:2px 4px;">'+mr.rancho+'</td>' : '') +
+                  '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+mr.flor+'</td>' +
+                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+mr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+mr.pla_acum.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+                '</tr>';
+              });
+              tbl += '</tbody></table>';
+              siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl+'</td></tr>';
+            }
+          }
         });
-        siembraRowsHtml +=
           '<tr style="background:#ffffff;border-bottom:1px solid #EEE3B8;">' +
             '<td colspan="4" style="padding:2px 0;"></td>' +
           '</tr>';
