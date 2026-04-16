@@ -2624,8 +2624,8 @@ function showProdPanel(rowData, opts) {
             
           if (isMetros && DATA.metros_acumulados) {
             var mRows = DATA.metros_acumulados.filter(function(r){ 
-              // Convertir wkStart a número por si acaso, semana_fin también es número
-              return r.semana_fin === parseInt(wkStart) && (!ranchFilter || r.rancho === ranchFilter); 
+              // _wkKey tiene el formato 2616, que es el que viene desde Excel
+              return r.semana_fin === _wkKey && (!ranchFilter || r.rancho === ranchFilter); 
             });
             if (mRows.length > 0) {
               var tbl = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
