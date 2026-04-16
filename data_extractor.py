@@ -30,7 +30,7 @@ SHAREPOINT_URL_PR = (
 # Conteo de personal (Mano de Obra)
 SHAREPOINT_URL_CONTEO = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE?e=7P5ex4"
+    "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE?e=h01Qti"
 )
 
 # Nómina detallada (filas 24-59, automatización mano de obra)
