@@ -2476,7 +2476,22 @@ function renderManoObra() {
           if(!v||v===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
           else { bodyHtml+='<td style="'+tcStyle+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
         });
-        bodyHtml+='<td style="'+tcStyle+'">—</td>'; // Dif rancho
+        var wkTcDiff = 0;
+        if (weekKeys.length > 0) {
+          var fw = weekKeys[0], lw = weekKeys[weekKeys.length-1];
+          var getV = function(key) {
+            var pw=key.split('-');
+            var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
+            var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
+            var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
+            var targetRn = revMap[rn] || rn;
+            var sRow = sData[targetRn] || sData[rn] || {};
+            return sRow['tallos_cos'] || 0;
+          };
+          wkTcDiff = Math.abs(getV(lw) - getV(fw));
+        }
+        if(!wkTcDiff||wkTcDiff===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
+        else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       });
       if(showTotal) {
         wKeyOrdered.forEach(function(key){
@@ -2486,7 +2501,13 @@ function renderManoObra() {
           if(!v||v===0) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
           else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
         });
-        bodyHtml+='<td style="padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac">—</td>'; // Dif total
+        var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
+        var gtDif = 0;
+        if(wKeyOrdered.length > 0) {
+          gtDif = Math.abs((wkTcTotal[wKeyOrdered[wKeyOrdered.length-1]]||0) - (wkTcTotal[wKeyOrdered[0]]||0));
+        }
+        if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
+        else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       }
       bodyHtml+='</tr>';
     }
