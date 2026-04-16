@@ -2612,19 +2612,20 @@ function showProdPanel(rowData, opts) {
         _activos.forEach(function(m, i){
           var bg = (i % 2 === 0) ? '#FFF3BF' : '#FFF8D6';
           var isMetros = (m.k === 'metros');
-          var lblStyle = isMetros ? 'cursor:pointer;' : '';
-          var toggleClick = isMetros ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className===\\\'metros-detail\\\') n.style.display=(n.style.display===\\\'none\\\'?\\\'table-row\\\':\\\'none\\\');"' : '';
+          var isCharolas = (m.k === 'charolas');
+          var isExpandible = isMetros || isCharolas;
+          var lblStyle = isExpandible ? 'cursor:pointer;' : '';
+          var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) n.style.display=(n.style.display===\\\'none\\\'?\\\'table-row\\\':\\\'none\\\');"' : '';
           
           siembraRowsHtml +=
             '<tr style="background:'+bg+';border-bottom:1px solid #E9D98F;">' +
               '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#9a6a20;font-weight:700;">SIEMBRA</td>' +
-              '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+(isMetros?' \u25BE':'')+'</span></td>' +
+              '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+(isExpandible?' \u25BE':'')+'</span></td>' +
               '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
             '</tr>';
             
           if (isMetros && DATA.metros_acumulados) {
             var mRows = DATA.metros_acumulados.filter(function(r){ 
-              // _wkKey tiene el formato 2616. Nos aseguramos que sea Int.
               return parseInt(r.semana_fin) === parseInt(_wkKey) && (!ranchFilter || r.rancho === ranchFilter); 
             });
             if (mRows.length > 0) {
@@ -2656,6 +2657,42 @@ function showProdPanel(rowData, opts) {
               }
               var wksTxt = availableWks.length > 0 ? availableWks.join(', ') : 'Ninguna';
               siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semana ' + _wkKey + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt + '</i></td></tr>';
+            }
+          }
+
+          if (isCharolas && DATA.plantas_metros) {
+            var cRows = DATA.plantas_metros.filter(function(r){ 
+              return parseInt(r.semana_fin) === parseInt(_wkKey) && (!ranchFilter || r.rancho === ranchFilter); 
+            });
+            if (cRows.length > 0) {
+              var tbl2 = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
+                '<thead><tr>' +
+                  (!ranchFilter ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Rancho</th>' : '') +
+                  '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
+                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Plantas</th>' +
+                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Metros</th>' +
+                '</tr></thead><tbody>';
+              cRows.forEach(function(cr){
+                tbl2 += '<tr>' +
+                  (!ranchFilter ? '<td style="color:#8a4b08;padding:2px 4px;">'+cr.rancho+'</td>' : '') +
+                  '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+cr.flor+'</td>' +
+                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+cr.plantas.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+cr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+                '</tr>';
+              });
+              tbl2 += '</tbody></table>';
+              siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl2+'</td></tr>';
+            } else {
+              var availableWks2 = [];
+              if (DATA.plantas_metros) {
+                var wks2 = {};
+                DATA.plantas_metros.forEach(function(x){
+                  if (!ranchFilter || x.rancho === ranchFilter) wks2[x.semana_fin] = true;
+                });
+                availableWks2 = Object.keys(wks2).sort();
+              }
+              var wksTxt2 = availableWks2.length > 0 ? availableWks2.join(', ') : 'Ninguna';
+              siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semana ' + _wkKey + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt2 + '</i></td></tr>';
             }
           }
         });
