@@ -50,6 +50,10 @@ SHAREPOINT_URL_WEEKLY = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
     "jesus_sandoval_cfbc_co/IQDToQpctdBlT4g2Lnc3B4uQAd-6shpssYiNVQabTkdd3ts?e=tei184"
 )
+SHAREPOINT_URL_WEEKLY_2026 = (
+    "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
+    "jesus_sandoval_cfbc_co/IQDTUEARFMLjR6MB40jc3pY5AX_1LvzWsyXdBLdhxxvpqEE?e=nXDscu"
+)
 
 # Índices de columna (0-based) dentro de cada hoja WEEKLY####
 # Usados como FALLBACK si no se detecta encabezado dinámico
@@ -1553,10 +1557,11 @@ def _extraer_detalle_weekly() -> dict:
         ...
       }
     """
-    bio = _descargar_excel(SHAREPOINT_URL_WEEKLY, "Excel WEEKLY detalle")
-    if bio is None:
-        print("⚠️ No se pudo descargar el Excel WEEKLY. detalle_weekly quedará vacío.")
-        return {}
+    # Fuentes WEEKLY: histórico + 2026 (misma estructura, se combinan)
+    _WEEKLY_SOURCES = [
+        (SHAREPOINT_URL_WEEKLY,      "Excel WEEKLY histórico"),
+        (SHAREPOINT_URL_WEEKLY_2026, "Excel WEEKLY 2026"),
+    ]
 
     result: dict = {}
 
@@ -1572,13 +1577,18 @@ def _extraer_detalle_weekly() -> dict:
         except (ValueError, TypeError):
             return 0.0
 
-    try:
-        xls = pd.ExcelFile(bio)
+    def _procesar_xls(xls, label: str) -> None:
+        """Procesa todas las hojas WEEKLY#### de un ExcelFile y acumula en result."""
         for sheet in xls.sheet_names:
             m = re.match(r"WEEKLY(\d{4})", sheet.strip().upper())
             if not m:
                 continue
             wk_code = int(m.group(1))
+
+            # Si ya fue cargado por otra fuente, no sobreescribir
+            if wk_code in result:
+                print(f"   ⏭️  WEEKLY{wk_code} ya existe ({label}), se omite")
+                continue
 
             try:
                 df = pd.read_excel(xls, sheet_name=sheet, header=None).fillna("")
@@ -1601,6 +1611,7 @@ def _extraer_detalle_weekly() -> dict:
                     "tallos_cos":  [],   # se llena después del loop (por rancho)
                     "tallos_proc": [],   # EXPORTACION + MUESTRAS
                     "tallos_comp": [],
+                    "tallos_desp": [],   # EXPORTACION + MUESTRAS (igual que tallos_proc)
                     "tallos_des":  [],
                     "inv_final":   [],
                 }
@@ -1609,7 +1620,6 @@ def _extraer_detalle_weekly() -> dict:
                     if len(row) <= c["flor"]:
                         continue
                     flor = str(row.iloc[c["flor"]]).strip()
-                    # Saltar filas sin flor, encabezados y totales
                     if (
                         not flor
                         or flor in ("0", "nan", "")
@@ -1618,53 +1628,61 @@ def _extraer_detalle_weekly() -> dict:
                     ):
                         continue
 
-                    inv_ini  = _safe(row, c["ini"])
-                    comp     = _safe(row, c["comp"])
-                    export   = _safe(row, c["export"])
-                    muest    = _safe(row, c["muest"])
-                    des      = _safe(row, c["des"])
-                    inv_fin  = _safe(row, c["inv_fin"])
-                    proc     = export + muest   # TALLOS PROC. TOTALES = EXPORTACION + MUESTRAS
+                    inv_ini = _safe(row, c["ini"])
+                    comp    = _safe(row, c["comp"])
+                    export  = _safe(row, c["export"])
+                    muest   = _safe(row, c["muest"])
+                    des     = _safe(row, c["des"])
+                    inv_fin = _safe(row, c["inv_fin"])
+                    proc    = export + muest   # TALLOS PROC. TOTALES = EXPORTACION + MUESTRAS
 
                     for key, val in [
                         ("inv_inicial", inv_ini),
                         ("tallos_proc", proc),
                         ("tallos_comp", comp),
+                        ("tallos_desp", proc),
                         ("tallos_des",  des),
                         ("inv_final",   inv_fin),
                     ]:
                         if val != 0.0:
                             wk_data[key].append({"flor": flor, "valor": val})
 
-                    # Acumular por rancho (tallos_cos)
                     for col_idx, ranch_name in _RANCH_COLS:
                         ranch_totals[ranch_name] += _safe(row, col_idx)
 
-                # TALLOS COSECHADOS: detalle por rancho
                 wk_data["tallos_cos"] = [
                     {"rancho": name, "valor": val}
                     for name, val in ranch_totals.items()
                     if val != 0.0
                 ]
 
-                result[wk_code]       = wk_data
-                result[str(wk_code)]  = wk_data
-                print(f"   ✅ WEEKLY{wk_code}: "
+                result[wk_code]      = wk_data
+                result[str(wk_code)] = wk_data
+                print(f"   ✅ WEEKLY{wk_code} [{label}]: "
                       f"inv_ini={len(wk_data['inv_inicial'])} "
                       f"cos={len(wk_data['tallos_cos'])} ranchos "
                       f"proc={len(wk_data['tallos_proc'])} "
                       f"comp={len(wk_data['tallos_comp'])} "
-                      f"des={len(wk_data['tallos_des'])} "
+                      f"desp={len(wk_data['tallos_desp'])} "
                       f"des={len(wk_data['tallos_des'])} "
                       f"inv_fin={len(wk_data['inv_final'])} filas")
 
             except Exception as e:
-                print(f"   ⚠️ Error leyendo hoja {sheet}: {e}")
+                print(f"   ⚠️ Error leyendo hoja {sheet} [{label}]: {e}")
 
-    except Exception as e:
-        print(f"❌ Error abriendo Excel WEEKLY: {e}")
+    for url, label in _WEEKLY_SOURCES:
+        bio = _descargar_excel(url, label)
+        if bio is None:
+            print(f"⚠️ No se pudo descargar {label} — se continúa con las demás fuentes.")
+            continue
+        try:
+            xls = pd.ExcelFile(bio)
+            print(f"📥 Procesando {label} ({len(xls.sheet_names)} hojas)...")
+            _procesar_xls(xls, label)
+        except Exception as e:
+            print(f"❌ Error abriendo {label}: {e}")
 
-    print(f"✅ detalle_weekly: {len(result)//2} semanas cargadas")
+    print(f"✅ detalle_weekly: {len(result)//2} semanas cargadas en total")
     return result
 
 
