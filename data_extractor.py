@@ -132,7 +132,8 @@ def _detectar_columnas_weekly(df) -> dict:
         "cec":  _WK_COL_CEC,  "ram": _WK_COL_RAM,
         "isa":  _WK_COL_ISA,  "chr": _WK_COL_CHR,
         "c25":  _WK_COL_C25,
-        "comp_cols": [_WK_COL_COMP],   # lista, no índice único
+        "comp_cols":  [_WK_COL_COMP],   # lista de índices, no índice único
+        "comp_names": ["COMPRAS"],       # nombre legible por cada col en comp_cols
         "export": _WK_COL_EXPORT, "muest": _WK_COL_MUEST,
         "des":  _WK_COL_DES,  "inv_fin": _WK_COL_INV_FIN,
     }
@@ -241,9 +242,10 @@ def _detectar_columnas_weekly(df) -> dict:
                       f"{[(c, best_vals[c]) for c, _ in excluidas]}")
 
             if comp_cols:
-                cols["comp_cols"] = comp_cols
+                cols["comp_cols"]  = comp_cols
+                cols["comp_names"] = [best_vals[c].upper() for c in comp_cols]
                 print(f"   💰 COMPRAS A TERCEROS: {len(comp_cols)} proveedore(s) → "
-                      f"cols {comp_cols} ({[best_vals[c] for c in comp_cols]})")
+                      f"cols {comp_cols} ({cols['comp_names']})")
             else:
                 print(f"   ⚠️ COMPRAS A TERCEROS grupo encontrado pero sin columnas de proveedor — fallback")
         else:
@@ -1724,17 +1726,25 @@ def _extraer_detalle_weekly() -> dict:
                         continue
 
                     inv_ini = _safe(row, c["ini"])
-                    comp    = sum(_safe(row, col) for col in c["comp_cols"])  # suma todos los proveedores
                     export  = _safe(row, c["export"])
                     muest   = _safe(row, c["muest"])
                     des     = _safe(row, c["des"])
                     inv_fin = _safe(row, c["inv_fin"])
                     proc    = export + muest   # TALLOS PROC. TOTALES = EXPORTACION + MUESTRAS
 
+                    # tallos_comp: un registro por proveedor (col) con su nombre
+                    _prov_names = c.get("comp_names", ["COMPRAS"] * len(c["comp_cols"]))
+                    for col_idx, prov_name in zip(c["comp_cols"], _prov_names):
+                        val = _safe(row, col_idx)
+                        if val != 0.0:
+                            wk_data["tallos_comp"].append(
+                                {"flor": flor, "proveedor": prov_name, "valor": val}
+                            )
+                    comp = sum(_safe(row, col) for col in c["comp_cols"])  # total (para compatibilidad)
+
                     for key, val in [
                         ("inv_inicial", inv_ini),
                         ("tallos_proc", proc),
-                        ("tallos_comp", comp),
                         ("tallos_desp", proc),
                         ("tallos_des",  des),
                         ("inv_final",   inv_fin),
