@@ -1599,9 +1599,8 @@ def _extraer_detalle_weekly() -> dict:
                 wk_data: dict = {
                     "inv_inicial": [],
                     "tallos_cos":  [],   # se llena después del loop (por rancho)
-                    "tallos_proc": [],
+                    "tallos_proc": [],   # EXPORTACION + MUESTRAS
                     "tallos_comp": [],
-                    "tallos_desp": [],
                     "tallos_des":  [],
                     "inv_final":   [],
                 }
@@ -1620,19 +1619,17 @@ def _extraer_detalle_weekly() -> dict:
                         continue
 
                     inv_ini  = _safe(row, c["ini"])
-                    rec_sum  = sum(_safe(row, c[k]) for k in ["cec", "ram", "isa", "chr", "c25"])
                     comp     = _safe(row, c["comp"])
                     export   = _safe(row, c["export"])
                     muest    = _safe(row, c["muest"])
                     des      = _safe(row, c["des"])
                     inv_fin  = _safe(row, c["inv_fin"])
-                    desp     = export + muest
+                    proc     = export + muest   # TALLOS PROC. TOTALES = EXPORTACION + MUESTRAS
 
                     for key, val in [
                         ("inv_inicial", inv_ini),
-                        ("tallos_proc", rec_sum),
+                        ("tallos_proc", proc),
                         ("tallos_comp", comp),
-                        ("tallos_desp", desp),
                         ("tallos_des",  des),
                         ("inv_final",   inv_fin),
                     ]:
@@ -1657,7 +1654,7 @@ def _extraer_detalle_weekly() -> dict:
                       f"cos={len(wk_data['tallos_cos'])} ranchos "
                       f"proc={len(wk_data['tallos_proc'])} "
                       f"comp={len(wk_data['tallos_comp'])} "
-                      f"desp={len(wk_data['tallos_desp'])} "
+                      f"des={len(wk_data['tallos_des'])} "
                       f"des={len(wk_data['tallos_des'])} "
                       f"inv_fin={len(wk_data['inv_final'])} filas")
 
