@@ -1551,6 +1551,9 @@ def _extraer_detalle_weekly() -> dict:
 
     print(f"✅ detalle_weekly: {len(result)//2} semanas cargadas")
     return result
+
+
+def get_datos() -> dict:
     """
     - Hojas WK  → Excel principal en SharePoint
     - Hojas PR  → Excel secundario en SharePoint
