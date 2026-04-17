@@ -1490,8 +1490,19 @@ def _extraer_detalle_weekly() -> dict:
             try:
                 df = pd.read_excel(xls, sheet_name=sheet, header=None).fillna("")
 
+                # Columnas de recepción por rancho (para TALLOS COSECHADOS)
+                _RANCH_COLS = [
+                    (_WK_COL_CEC, "CECILIA"),
+                    (_WK_COL_RAM, "RAMONA"),
+                    (_WK_COL_ISA, "ISABELA"),
+                    (_WK_COL_CHR, "CRISTINA"),
+                    (_WK_COL_C25, "CECILIA 25"),
+                ]
+                ranch_totals = {name: 0.0 for _, name in _RANCH_COLS}
+
                 wk_data: dict = {
                     "inv_inicial": [],
+                    "tallos_cos":  [],   # se llena después del loop (por rancho)
                     "tallos_proc": [],
                     "tallos_comp": [],
                     "tallos_desp": [],
@@ -1533,10 +1544,22 @@ def _extraer_detalle_weekly() -> dict:
                         if val != 0.0:
                             wk_data[key].append({"flor": flor, "valor": val})
 
+                    # Acumular por rancho (tallos_cos)
+                    for col_idx, ranch_name in _RANCH_COLS:
+                        ranch_totals[ranch_name] += _safe(row, col_idx)
+
+                # TALLOS COSECHADOS: detalle por rancho
+                wk_data["tallos_cos"] = [
+                    {"rancho": name, "valor": val}
+                    for name, val in ranch_totals.items()
+                    if val != 0.0
+                ]
+
                 result[wk_code]       = wk_data
                 result[str(wk_code)]  = wk_data
                 print(f"   ✅ WEEKLY{wk_code}: "
                       f"inv_ini={len(wk_data['inv_inicial'])} "
+                      f"cos={len(wk_data['tallos_cos'])} ranchos "
                       f"proc={len(wk_data['tallos_proc'])} "
                       f"comp={len(wk_data['tallos_comp'])} "
                       f"desp={len(wk_data['tallos_desp'])} "
