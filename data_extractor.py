@@ -80,19 +80,23 @@ _WK_COL_NAMES = {
     "isa":     ["isabela", "isa"],
     "chr":     ["cristina", "chr"],
     "c25":     ["cecilia 25", "cec 25", "c25"],
-    "comp":    ["damian", "pras a terc", "comprados", "compras", "pras"],
     "export":  ["exportacion", "exportación", "exportacion", "export"],
     "muest":   ["muestras", "muestra", "sample"],
     "des":     ["desechos", "desechados", "descarte"],
     "inv_fin": ["inv. final", "inventario final", "inv final", "inv.final", "calculo", "inv.final calculo"],
 }
 
+# Palabras clave para detectar la fila de encabezados de GRUPO
+_WK_GROUP_KEYS = [
+    "recepcion de flor", "recepcion flor",
+    "compras a terceros", "compras terceros",
+]
+
 def _norm_cell(s: str) -> str:
     """Normaliza una celda: minúsculas, sin acentos, sin espacios/puntos extra."""
     s = s.lower().strip()
     for a, b in [("á","a"),("é","e"),("í","i"),("ó","o"),("ú","u"),("ü","u"),("ñ","n")]:
         s = s.replace(a, b)
-    # colapsar espacios y quitar puntos
     s = re.sub(r'[\s.]+', ' ', s).strip()
     return s
 
@@ -105,31 +109,49 @@ def _celda_coincide(cell_norm: str, keywords: list) -> bool:
         kw_norm = _norm_cell(kw)
         if cell_norm == kw_norm:
             return True
-        # Permite prefijo seguido de espacio: "inv final calculo" empieza con "inv final"
         if cell_norm.startswith(kw_norm + " "):
             return True
     return False
 
 def _detectar_columnas_weekly(df) -> dict:
     """
-    Busca la fila de encabezado real en un DataFrame de hoja WEEKLY####
-    usando matching exacto (no substring), y elige la fila con MÁS coincidencias
-    dentro de las primeras 15 filas.
-    Si no encuentra suficientes columnas, usa los índices fijos como fallback.
+    Detecta dinámicamente los índices de columna en una hoja WEEKLY####.
+
+    Estrategia de dos filas:
+      · row_g — fila de encabezados de GRUPO ("RECEPCION DE FLOR", "COMPRAS A TERCEROS")
+                Permite determinar el rango de columnas de cada grupo.
+      · row_h — fila de encabezados INDIVIDUALES ("FLOR", "CECILIA", "EXPORTACION"…)
+                Permite mapear columnas fijas por nombre exacto.
+
+    Para COMPRAS A TERCEROS se retorna 'comp_cols': lista de todos los índices de columna
+    bajo ese encabezado de grupo, sin importar cuántos proveedores haya.
+    Si no se detecta el grupo, se usa el fallback de columna única.
     """
     fallbacks = {
         "flor": _WK_COL_FLOR, "ini": _WK_COL_INI,
         "cec":  _WK_COL_CEC,  "ram": _WK_COL_RAM,
         "isa":  _WK_COL_ISA,  "chr": _WK_COL_CHR,
-        "c25":  _WK_COL_C25,  "comp": _WK_COL_COMP,
+        "c25":  _WK_COL_C25,
+        "comp_cols": [_WK_COL_COMP],   # lista, no índice único
         "export": _WK_COL_EXPORT, "muest": _WK_COL_MUEST,
         "des":  _WK_COL_DES,  "inv_fin": _WK_COL_INV_FIN,
     }
 
-    best_row_idx  = None
-    best_hits     = 0
-    best_vals     = []
+    # ── 1. Buscar fila de grupos (row_g) ──────────────────────────────────────
+    row_g_idx  = None
+    row_g_norm = []
+    for row_idx in range(min(10, len(df))):
+        fila_norm = [_norm_cell(str(v)) for v in df.iloc[row_idx]]
+        if any(any(gk in cell for gk in _WK_GROUP_KEYS) for cell in fila_norm if cell):
+            row_g_idx  = row_idx
+            row_g_norm = fila_norm
+            print(f"   📋 Fila de grupos detectada en fila {row_g_idx}")
+            break
 
+    # ── 2. Buscar fila de encabezados individuales (row_h): la de más hits exactos ──
+    best_row_idx = None
+    best_hits    = 0
+    best_vals    = []
     for row_idx in range(min(15, len(df))):
         fila = [_norm_cell(str(v)) for v in df.iloc[row_idx]]
         hits = sum(
@@ -137,28 +159,59 @@ def _detectar_columnas_weekly(df) -> dict:
             any(_celda_coincide(cell, kws) for kws in _WK_COL_NAMES.values())
         )
         if hits > best_hits:
-            best_hits     = hits
-            best_row_idx  = row_idx
-            best_vals     = fila
+            best_hits    = hits
+            best_row_idx = row_idx
+            best_vals    = fila
 
-    # Requerir al menos 4 columnas reconocidas para confiar en la detección
     if best_hits < 4:
-        print(f"   ⚠️ Encabezado WEEKLY no detectado (mejor fila={best_row_idx}, hits={best_hits}) — usando índices fijos")
+        print(f"   ⚠️ Encabezado WEEKLY no detectado (hits={best_hits}) — usando índices fijos")
         return fallbacks
 
-    print(f"   ✅ Encabezado WEEKLY detectado en fila {best_row_idx} con {best_hits} columnas reconocidas")
+    print(f"   ✅ Encabezado individual detectado en fila {best_row_idx} ({best_hits} columnas)")
 
-    cols = dict(fallbacks)  # partir de fallbacks; se sobreescriben solo los encontrados
+    # ── 3. Mapear columnas fijas desde row_h ──────────────────────────────────
+    cols = dict(fallbacks)
     for clave, keywords in _WK_COL_NAMES.items():
         for col_idx, cell in enumerate(best_vals):
             if cell and _celda_coincide(cell, keywords):
                 cols[clave] = col_idx
                 break
 
-    # Log
-    for clave in cols:
-        origen = "✓ detectado" if cols[clave] != fallbacks[clave] else "  fallback"
-        print(f"      {origen}  {clave:10s} → col {cols[clave]}")
+    # ── 4. Detectar rango de COMPRAS A TERCEROS desde row_g ───────────────────
+    if row_g_idx is not None:
+        comp_start = None
+        for col_idx, cell in enumerate(row_g_norm):
+            if cell and "compras" in cell:
+                comp_start = col_idx
+                break
+
+        if comp_start is not None:
+            # El grupo termina donde aparece la siguiente celda no-vacía en row_g
+            comp_end = len(row_g_norm)
+            for col_idx in range(comp_start + 1, len(row_g_norm)):
+                if row_g_norm[col_idx]:
+                    comp_end = col_idx
+                    break
+
+            # comp_cols = todas las columnas en row_h dentro del rango con encabezado no vacío
+            comp_cols = [
+                col_idx for col_idx in range(comp_start, comp_end)
+                if col_idx < len(best_vals) and best_vals[col_idx]
+            ]
+            if comp_cols:
+                cols["comp_cols"] = comp_cols
+                print(f"   💰 COMPRAS A TERCEROS: cols {comp_cols} "
+                      f"({[best_vals[c] for c in comp_cols]})")
+            else:
+                print(f"   ⚠️ COMPRAS A TERCEROS grupo encontrado pero sin columnas — fallback")
+        else:
+            print(f"   ⚠️ No se encontró 'COMPRAS A TERCEROS' en row_g — fallback col única")
+
+    # Log columnas fijas
+    fixed_keys = ["flor","ini","cec","ram","isa","chr","c25","export","muest","des","inv_fin"]
+    for clave in fixed_keys:
+        origen = "✓" if cols[clave] != fallbacks[clave] else "~"
+        print(f"      {origen} {clave:10s} → col {cols[clave]}")
 
     return cols
 
@@ -1629,7 +1682,7 @@ def _extraer_detalle_weekly() -> dict:
                         continue
 
                     inv_ini = _safe(row, c["ini"])
-                    comp    = _safe(row, c["comp"])
+                    comp    = sum(_safe(row, col) for col in c["comp_cols"])  # suma todos los proveedores
                     export  = _safe(row, c["export"])
                     muest   = _safe(row, c["muest"])
                     des     = _safe(row, c["des"])
