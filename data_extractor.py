@@ -178,6 +178,32 @@ def _detectar_columnas_weekly(df) -> dict:
                 break
 
     # ── 4. Detectar rango de COMPRAS A TERCEROS desde row_g ───────────────────
+    #
+    # PROBLEMA CONOCIDO: EXPORTACION, MUESTRAS, DESECHOS e INV.FINAL no tienen
+    # encabezado de grupo en row_g — quedan como celdas vacías. Eso hace que
+    # comp_end llegue hasta el final de la fila capturando esas columnas también.
+    #
+    # SOLUCIÓN: después de acotar el rango por row_g, se filtran las columnas
+    # cuyos nombres en row_h coincidan con cualquier campo "fijo" conocido
+    # (export, muest, des, inv_fin, flor, ini, rancho, etc.).
+    # Así el código es 100 % dinámico: acepta N proveedores nuevos en COMPRAS A
+    # TERCEROS sin tocar nada, y nunca arrastra columnas que no corresponden.
+    #
+    # Palabras clave que identifican columnas que NO son proveedores de compra:
+    _NON_COMP_KEYWORDS = [
+        kw
+        for key in ["flor", "ini", "cec", "ram", "isa", "chr", "c25",
+                    "export", "muest", "des", "inv_fin"]
+        for kw in _WK_COL_NAMES.get(key, [])
+    ] + [
+        # términos adicionales que pueden aparecer como encabezado individual
+        "calculo", "fisico", "inv. final fisico", "inv. final calculo",
+        "total", "desechados", "desechos", "descarte",
+        "exportacion", "exportación", "muestras", "muestra",
+        "inv. inicial", "inv inicial", "inventario inicial",
+        "inv. final", "inv final", "inventario final",
+    ]
+
     if row_g_idx is not None:
         comp_start = None
         for col_idx, cell in enumerate(row_g_norm):
@@ -186,24 +212,40 @@ def _detectar_columnas_weekly(df) -> dict:
                 break
 
         if comp_start is not None:
-            # El grupo termina donde aparece la siguiente celda no-vacía en row_g
+            # Límite superior: próxima celda no-vacía en row_g (otro grupo)
             comp_end = len(row_g_norm)
             for col_idx in range(comp_start + 1, len(row_g_norm)):
                 if row_g_norm[col_idx]:
                     comp_end = col_idx
                     break
 
-            # comp_cols = todas las columnas en row_h dentro del rango con encabezado no vacío
-            comp_cols = [
-                col_idx for col_idx in range(comp_start, comp_end)
-                if col_idx < len(best_vals) and best_vals[col_idx]
-            ]
+            # comp_cols = columnas en row_h dentro del rango con encabezado no vacío
+            # EXCLUYENDO cualquier columna cuyo nombre coincida con un campo fijo conocido
+            comp_cols = []
+            excluidas = []
+            for col_idx in range(comp_start, comp_end):
+                if col_idx >= len(best_vals) or not best_vals[col_idx]:
+                    continue
+                cell_norm = best_vals[col_idx]   # ya está normalizado
+                # ¿Coincide con algún campo que NO es un proveedor?
+                es_no_comp = any(
+                    _celda_coincide(cell_norm, [kw]) for kw in _NON_COMP_KEYWORDS
+                )
+                if es_no_comp:
+                    excluidas.append((col_idx, cell_norm))
+                else:
+                    comp_cols.append(col_idx)
+
+            if excluidas:
+                print(f"   🚫 COMPRAS A TERCEROS — columnas excluidas (no son proveedores): "
+                      f"{[(c, best_vals[c]) for c, _ in excluidas]}")
+
             if comp_cols:
                 cols["comp_cols"] = comp_cols
-                print(f"   💰 COMPRAS A TERCEROS: cols {comp_cols} "
-                      f"({[best_vals[c] for c in comp_cols]})")
+                print(f"   💰 COMPRAS A TERCEROS: {len(comp_cols)} proveedore(s) → "
+                      f"cols {comp_cols} ({[best_vals[c] for c in comp_cols]})")
             else:
-                print(f"   ⚠️ COMPRAS A TERCEROS grupo encontrado pero sin columnas — fallback")
+                print(f"   ⚠️ COMPRAS A TERCEROS grupo encontrado pero sin columnas de proveedor — fallback")
         else:
             print(f"   ⚠️ No se encontró 'COMPRAS A TERCEROS' en row_g — fallback col única")
 
