@@ -45,6 +45,26 @@ SHAREPOINT_URL_SIEMBRA_DETALLE = (
     "IQBI78e0rcjORJ_X5CCr_wIPATLI-hk9D99Sxj-h08Z41Zc?e=hdFeqi"
 )
 
+# Detalle semanal de inventario / tallos (hojas WEEKLY####)
+SHAREPOINT_URL_WEEKLY = (
+    "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
+    "jesus_sandoval_cfbc_co/IQDToQpctdBlT4g2Lnc3B4uQAd-6shpssYiNVQabTkdd3ts?e=tei184"
+)
+
+# Índices de columna (0-based) dentro de cada hoja WEEKLY####
+_WK_COL_FLOR    = 5   # F  — Variedad de flor
+_WK_COL_INI     = 6   # G  — INV. INICIAL
+_WK_COL_CEC     = 7   # H  — Recepción CECILIA
+_WK_COL_RAM     = 8   # I  — Recepción RAMONA
+_WK_COL_ISA     = 9   # J  — Recepción ISABELA
+_WK_COL_CHR     = 10  # K  — Recepción CRISTINA
+_WK_COL_C25     = 11  # L  — Recepción CECILIA 25
+_WK_COL_COMP    = 14  # O  — PRAS A TERC (DAMIAN) = Tallos Comprados
+_WK_COL_EXPORT  = 18  # S  — Exportación
+_WK_COL_MUEST   = 19  # T  — Muestras
+_WK_COL_DES     = 21  # V  — Desechos = Tallos Desechados
+_WK_COL_INV_FIN = 22  # W  — INV. FINAL Cálculo
+
 # ─── Constantes ───────────────────────────────────────────────────────────────
 RANCH_CONFIG = {
     "Prop-RM":     {"color": "#047857", "codes": ["VIV"], "keywords": ["PROP"]},
@@ -1412,7 +1432,125 @@ def _extraer_plantas_metros() -> list:
     return result
 
 
-def get_datos() -> dict:
+def _extraer_detalle_weekly() -> dict:
+    """
+    Lee el Excel de detalle semanal (hojas WEEKLY####) desde SharePoint.
+
+    Columnas relevantes (0-based):
+      F(5)  FLOR             → clave de agrupación
+      G(6)  INV.INICIAL      → inv_inicial
+      H-L   Recepción/rancho → tallos_proc (suma)
+      O(14) PRAS A TERC      → tallos_comp
+      S(18) EXPORTACIÓN      → parte de tallos_desp
+      T(19) MUESTRAS         → parte de tallos_desp
+      V(21) DESECHOS         → tallos_des
+      W(22) INV.FINAL calc.  → inv_final
+
+    Retorna:
+      {
+        2552: {
+          'inv_inicial': [{'flor': 'CELOSIA', 'valor': 110}, ...],
+          'tallos_proc': [...],
+          'tallos_comp': [...],
+          'tallos_desp': [...],
+          'tallos_des':  [...],
+          'inv_final':   [...],
+        },
+        '2552': <misma referencia>,
+        ...
+      }
+    """
+    bio = _descargar_excel(SHAREPOINT_URL_WEEKLY, "Excel WEEKLY detalle")
+    if bio is None:
+        print("⚠️ No se pudo descargar el Excel WEEKLY. detalle_weekly quedará vacío.")
+        return {}
+
+    result: dict = {}
+
+    def _safe(row, col_idx: int) -> float:
+        """Extrae valor numérico seguro de una fila pandas."""
+        if col_idx >= len(row):
+            return 0.0
+        v = row.iloc[col_idx]
+        if v is None or v == "":
+            return 0.0
+        try:
+            return float(str(v).replace(",", "").replace("$", "").strip())
+        except (ValueError, TypeError):
+            return 0.0
+
+    try:
+        xls = pd.ExcelFile(bio)
+        for sheet in xls.sheet_names:
+            m = re.match(r"WEEKLY(\d{4})", sheet.strip().upper())
+            if not m:
+                continue
+            wk_code = int(m.group(1))
+
+            try:
+                df = pd.read_excel(xls, sheet_name=sheet, header=None).fillna("")
+
+                wk_data: dict = {
+                    "inv_inicial": [],
+                    "tallos_proc": [],
+                    "tallos_comp": [],
+                    "tallos_desp": [],
+                    "tallos_des":  [],
+                    "inv_final":   [],
+                }
+
+                for _, row in df.iterrows():
+                    if len(row) <= _WK_COL_FLOR:
+                        continue
+                    flor = str(row.iloc[_WK_COL_FLOR]).strip()
+                    # Saltar filas sin flor, encabezados y totales
+                    if (
+                        not flor
+                        or flor in ("0", "nan", "")
+                        or flor.upper() in ("FLOR", "TOTAL", "TOTALES")
+                        or re.match(r"^(SEMANA|INVENTARIO|TOTAL)", flor.upper())
+                    ):
+                        continue
+
+                    inv_ini  = _safe(row, _WK_COL_INI)
+                    rec_sum  = sum(_safe(row, c) for c in [_WK_COL_CEC, _WK_COL_RAM,
+                                                            _WK_COL_ISA, _WK_COL_CHR, _WK_COL_C25])
+                    comp     = _safe(row, _WK_COL_COMP)
+                    export   = _safe(row, _WK_COL_EXPORT)
+                    muest    = _safe(row, _WK_COL_MUEST)
+                    des      = _safe(row, _WK_COL_DES)
+                    inv_fin  = _safe(row, _WK_COL_INV_FIN)
+                    desp     = export + muest
+
+                    for key, val in [
+                        ("inv_inicial", inv_ini),
+                        ("tallos_proc", rec_sum),
+                        ("tallos_comp", comp),
+                        ("tallos_desp", desp),
+                        ("tallos_des",  des),
+                        ("inv_final",   inv_fin),
+                    ]:
+                        if val != 0.0:
+                            wk_data[key].append({"flor": flor, "valor": val})
+
+                result[wk_code]       = wk_data
+                result[str(wk_code)]  = wk_data
+                print(f"   ✅ WEEKLY{wk_code}: "
+                      f"inv_ini={len(wk_data['inv_inicial'])} "
+                      f"proc={len(wk_data['tallos_proc'])} "
+                      f"comp={len(wk_data['tallos_comp'])} "
+                      f"desp={len(wk_data['tallos_desp'])} "
+                      f"des={len(wk_data['tallos_des'])} "
+                      f"inv_fin={len(wk_data['inv_final'])} filas")
+
+            except Exception as e:
+                print(f"   ⚠️ Error leyendo hoja {sheet}: {e}")
+
+    except Exception as e:
+        print(f"❌ Error abriendo Excel WEEKLY: {e}")
+
+    print(f"✅ detalle_weekly: {len(result)//2} semanas cargadas")
+    return result
     """
     - Hojas WK  → Excel principal en SharePoint
     - Hojas PR  → Excel secundario en SharePoint
@@ -1528,6 +1666,12 @@ def get_datos() -> dict:
         print("🔍 LEYENDO PLANTAS-METROS (CHAROLAS SEMBRADAS)")
         print("=" * 60)
         resultado["plantas_metros"] = _extraer_plantas_metros()
+
+        # 9. Leer detalle semanal de inventario/tallos (WEEKLY####)
+        print("\n" + "=" * 60)
+        print("🔍 LEYENDO DETALLE WEEKLY (INV/TALLOS POR FLOR)")
+        print("=" * 60)
+        resultado["detalle_weekly"] = _extraer_detalle_weekly()
 
     return resultado
 
