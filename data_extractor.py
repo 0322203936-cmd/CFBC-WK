@@ -52,6 +52,7 @@ SHAREPOINT_URL_WEEKLY = (
 )
 
 # Índices de columna (0-based) dentro de cada hoja WEEKLY####
+# Usados como FALLBACK si no se detecta encabezado dinámico
 _WK_COL_FLOR    = 5   # F  — Variedad de flor
 _WK_COL_INI     = 6   # G  — INV. INICIAL
 _WK_COL_CEC     = 7   # H  — Recepción CECILIA
@@ -64,6 +65,70 @@ _WK_COL_EXPORT  = 18  # S  — Exportación
 _WK_COL_MUEST   = 19  # T  — Muestras
 _WK_COL_DES     = 21  # V  — Desechos = Tallos Desechados
 _WK_COL_INV_FIN = 22  # W  — INV. FINAL Cálculo
+
+# Nombres de columna a buscar dinámicamente en el encabezado de cada hoja WEEKLY####
+# Cada entrada: clave interna → lista de posibles nombres en el Excel (sin importar mayúsculas)
+_WK_COL_NAMES = {
+    "flor":    ["flor", "variedad", "flower", "nombre"],
+    "ini":     ["inv. inicial", "inventario inicial", "inv inicial", "inicial"],
+    "cec":     ["cecilia", "cec"],
+    "ram":     ["ramona", "ram"],
+    "isa":     ["isabela", "isa"],
+    "chr":     ["cristina", "chr"],
+    "c25":     ["cecilia 25", "cec 25", "c25"],
+    "comp":    ["pras a terc", "comprados", "compras", "damian", "pras"],
+    "export":  ["exportacion", "exportación", "export"],
+    "muest":   ["muestra", "muestras", "sample"],
+    "des":     ["desechos", "desechados", "des", "descarte"],
+    "inv_fin": ["inv. final", "inventario final", "inv final", "final"],
+}
+
+def _detectar_columnas_weekly(df) -> dict:
+    """
+    Busca la fila de encabezado en un DataFrame de hoja WEEKLY####
+    y retorna un dict {clave: índice_columna}.
+    Si no encuentra alguna columna por nombre, usa el índice fijo como fallback.
+    """
+    fallbacks = {
+        "flor": _WK_COL_FLOR, "ini": _WK_COL_INI,
+        "cec":  _WK_COL_CEC,  "ram": _WK_COL_RAM,
+        "isa":  _WK_COL_ISA,  "chr": _WK_COL_CHR,
+        "c25":  _WK_COL_C25,  "comp": _WK_COL_COMP,
+        "export": _WK_COL_EXPORT, "muest": _WK_COL_MUEST,
+        "des":  _WK_COL_DES,  "inv_fin": _WK_COL_INV_FIN,
+    }
+
+    # Buscar fila de encabezado: primera fila que contenga al menos 3 palabras clave conocidas
+    todas_palabras = {w for vals in _WK_COL_NAMES.values() for w in vals}
+    header_row_idx = None
+    header_vals    = []
+    for row_idx in range(min(15, len(df))):
+        fila = [str(v).strip().lower() for v in df.iloc[row_idx]]
+        hits = sum(1 for cell in fila if any(p in cell for p in todas_palabras))
+        if hits >= 3:
+            header_row_idx = row_idx
+            header_vals    = fila
+            break
+
+    if header_row_idx is None:
+        print("   ⚠️ No se detectó fila de encabezado en hoja WEEKLY — usando índices fijos")
+        return fallbacks
+
+    print(f"   ✅ Encabezado detectado en fila {header_row_idx}: {[v for v in header_vals if v]}")
+
+    cols = dict(fallbacks)  # empezar con fallbacks
+    for clave, posibles in _WK_COL_NAMES.items():
+        for col_idx, cell in enumerate(header_vals):
+            if any(p in cell for p in posibles):
+                cols[clave] = col_idx
+                break
+
+    # Log de columnas detectadas vs fallback
+    for clave in cols:
+        origen = "detectado" if cols[clave] != fallbacks[clave] else "fallback"
+        print(f"      {clave:10s} → col {cols[clave]} ({origen})")
+
+    return cols
 
 # ─── Constantes ───────────────────────────────────────────────────────────────
 RANCH_CONFIG = {
@@ -1490,13 +1555,16 @@ def _extraer_detalle_weekly() -> dict:
             try:
                 df = pd.read_excel(xls, sheet_name=sheet, header=None).fillna("")
 
+                # Detectar columnas dinámicamente por nombre de encabezado
+                c = _detectar_columnas_weekly(df)
+
                 # Columnas de recepción por rancho (para TALLOS COSECHADOS)
                 _RANCH_COLS = [
-                    (_WK_COL_CEC, "CECILIA"),
-                    (_WK_COL_RAM, "RAMONA"),
-                    (_WK_COL_ISA, "ISABELA"),
-                    (_WK_COL_CHR, "CRISTINA"),
-                    (_WK_COL_C25, "CECILIA 25"),
+                    (c["cec"], "CECILIA"),
+                    (c["ram"], "RAMONA"),
+                    (c["isa"], "ISABELA"),
+                    (c["chr"], "CRISTINA"),
+                    (c["c25"], "CECILIA 25"),
                 ]
                 ranch_totals = {name: 0.0 for _, name in _RANCH_COLS}
 
@@ -1511,9 +1579,9 @@ def _extraer_detalle_weekly() -> dict:
                 }
 
                 for _, row in df.iterrows():
-                    if len(row) <= _WK_COL_FLOR:
+                    if len(row) <= c["flor"]:
                         continue
-                    flor = str(row.iloc[_WK_COL_FLOR]).strip()
+                    flor = str(row.iloc[c["flor"]]).strip()
                     # Saltar filas sin flor, encabezados y totales
                     if (
                         not flor
@@ -1523,14 +1591,13 @@ def _extraer_detalle_weekly() -> dict:
                     ):
                         continue
 
-                    inv_ini  = _safe(row, _WK_COL_INI)
-                    rec_sum  = sum(_safe(row, c) for c in [_WK_COL_CEC, _WK_COL_RAM,
-                                                            _WK_COL_ISA, _WK_COL_CHR, _WK_COL_C25])
-                    comp     = _safe(row, _WK_COL_COMP)
-                    export   = _safe(row, _WK_COL_EXPORT)
-                    muest    = _safe(row, _WK_COL_MUEST)
-                    des      = _safe(row, _WK_COL_DES)
-                    inv_fin  = _safe(row, _WK_COL_INV_FIN)
+                    inv_ini  = _safe(row, c["ini"])
+                    rec_sum  = sum(_safe(row, c[k]) for k in ["cec", "ram", "isa", "chr", "c25"])
+                    comp     = _safe(row, c["comp"])
+                    export   = _safe(row, c["export"])
+                    muest    = _safe(row, c["muest"])
+                    des      = _safe(row, c["des"])
+                    inv_fin  = _safe(row, c["inv_fin"])
                     desp     = export + muest
 
                     for key, val in [
