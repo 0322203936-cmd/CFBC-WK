@@ -2727,7 +2727,9 @@ function showProdPanel(rowData, opts) {
           var bg = (i % 2 === 0) ? '#FFF3BF' : '#FFF8D6';
           var isMetros = (m.k === 'metros');
           var isCharolas = (m.k === 'charolas');
-          var isExpandible = isMetros || isCharolas;
+          var _WEEKLY_KEYS = ['inv_inicial','tallos_des','tallos_comp','tallos_desp','inv_final','tallos_proc'];
+          var isWeeklyDetail = _WEEKLY_KEYS.indexOf(m.k) >= 0;
+          var isExpandible = isMetros || isCharolas || isWeeklyDetail;
           var lblStyle = isExpandible ? 'cursor:pointer;' : '';
           var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) n.style.display=(n.style.display===\\\'none\\\'?\\\'table-row\\\':\\\'none\\\');"' : '';
           
@@ -2807,6 +2809,51 @@ function showProdPanel(rowData, opts) {
               }
               var wksTxt2 = availableWks2.length > 0 ? availableWks2.join(', ') : 'Ninguna';
               siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semana ' + _wkKey + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt2 + '</i></td></tr>';
+            }
+          }
+
+          // ── Detalle WEEKLY#### (inv/tallos por variedad de flor) ──────────
+          if (isWeeklyDetail && DATA.detalle_weekly) {
+            var _wkSrcW = DATA.detalle_weekly[_wkKey] || DATA.detalle_weekly[String(_wkKey)] || null;
+            var _wdRows = _wkSrcW ? (_wkSrcW[m.k] || []) : [];
+            // Filtrar ceros
+            _wdRows = _wdRows.filter(function(r){ return r.valor && r.valor !== 0; });
+            // Etiquetas legibles para el encabezado de la columna de valor
+            var _wdColLabels = {
+              inv_inicial: 'Tallos',
+              tallos_proc: 'Tallos Recibidos',
+              tallos_comp: 'Tallos',
+              tallos_desp: 'Tallos',
+              tallos_des:  'Tallos',
+              inv_final:   'Tallos'
+            };
+            var _wdColLbl = _wdColLabels[m.k] || 'Valor';
+            if (_wdRows.length > 0) {
+              var _wdTotal = _wdRows.reduce(function(s,r){ return s + (r.valor||0); }, 0);
+              var tblW = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
+                '<thead><tr>' +
+                  '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
+                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">'+_wdColLbl+'</th>' +
+                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">%</th>' +
+                '</tr></thead><tbody>';
+              _wdRows.forEach(function(wr){
+                var pct = _wdTotal > 0 ? ((wr.valor/_wdTotal)*100).toFixed(1) : '—';
+                tblW += '<tr>' +
+                  '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+wr.flor+'</td>' +
+                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+Number(wr.valor).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
+                  '<td style="text-align:right;color:#64748b;padding:2px 4px;font-size:8px;">'+pct+'%</td>' +
+                '</tr>';
+              });
+              // Fila de total
+              tblW += '<tr style="border-top:1px solid #E9D98F;">' +
+                '<td style="color:#9a6a20;padding:2px 4px;font-weight:700;font-size:8px;">TOTAL</td>' +
+                '<td style="text-align:right;color:#0f172a;padding:2px 4px;font-weight:700;">'+Number(_wdTotal).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
+                '<td></td>' +
+              '</tr>';
+              tblW += '</tbody></table>';
+              siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tblW+'</td></tr>';
+            } else {
+              siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin detalle disponible para semana '+_wkKey+' en Excel WEEKLY.</i></td></tr>';
             }
           }
         });
