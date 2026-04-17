@@ -67,27 +67,51 @@ _WK_COL_DES     = 21  # V  — Desechos = Tallos Desechados
 _WK_COL_INV_FIN = 22  # W  — INV. FINAL Cálculo
 
 # Nombres de columna a buscar dinámicamente en el encabezado de cada hoja WEEKLY####
-# Cada entrada: clave interna → lista de posibles nombres en el Excel (sin importar mayúsculas)
+# Cada entrada: clave interna → lista de posibles nombres en el Excel (sin importar mayúsculas/acentos)
 _WK_COL_NAMES = {
     "flor":    ["flor", "variedad", "flower", "nombre"],
-    "ini":     ["inv. inicial", "inventario inicial", "inv inicial", "inicial"],
+    "ini":     ["inv. inicial", "inventario inicial", "inv inicial", "inv.inicial"],
     "cec":     ["cecilia", "cec"],
     "ram":     ["ramona", "ram"],
     "isa":     ["isabela", "isa"],
     "chr":     ["cristina", "chr"],
     "c25":     ["cecilia 25", "cec 25", "c25"],
-    "comp":    ["pras a terc", "comprados", "compras", "damian", "pras"],
-    "export":  ["exportacion", "exportación", "export"],
-    "muest":   ["muestra", "muestras", "sample"],
-    "des":     ["desechos", "desechados", "des", "descarte"],
-    "inv_fin": ["inv. final", "inventario final", "inv final", "final"],
+    "comp":    ["damian", "pras a terc", "comprados", "compras", "pras"],
+    "export":  ["exportacion", "exportación", "exportacion", "export"],
+    "muest":   ["muestras", "muestra", "sample"],
+    "des":     ["desechos", "desechados", "descarte"],
+    "inv_fin": ["inv. final", "inventario final", "inv final", "inv.final", "calculo", "inv.final calculo"],
 }
+
+def _norm_cell(s: str) -> str:
+    """Normaliza una celda: minúsculas, sin acentos, sin espacios/puntos extra."""
+    s = s.lower().strip()
+    for a, b in [("á","a"),("é","e"),("í","i"),("ó","o"),("ú","u"),("ü","u"),("ñ","n")]:
+        s = s.replace(a, b)
+    # colapsar espacios y quitar puntos
+    s = re.sub(r'[\s.]+', ' ', s).strip()
+    return s
+
+def _celda_coincide(cell_norm: str, keywords: list) -> bool:
+    """
+    Devuelve True si la celda normalizada coincide EXACTAMENTE con alguna keyword.
+    Evita falsos positivos como 'recepcion de flor' → 'flor'.
+    """
+    for kw in keywords:
+        kw_norm = _norm_cell(kw)
+        if cell_norm == kw_norm:
+            return True
+        # Permite prefijo seguido de espacio: "inv final calculo" empieza con "inv final"
+        if cell_norm.startswith(kw_norm + " "):
+            return True
+    return False
 
 def _detectar_columnas_weekly(df) -> dict:
     """
-    Busca la fila de encabezado en un DataFrame de hoja WEEKLY####
-    y retorna un dict {clave: índice_columna}.
-    Si no encuentra alguna columna por nombre, usa el índice fijo como fallback.
+    Busca la fila de encabezado real en un DataFrame de hoja WEEKLY####
+    usando matching exacto (no substring), y elige la fila con MÁS coincidencias
+    dentro de las primeras 15 filas.
+    Si no encuentra suficientes columnas, usa los índices fijos como fallback.
     """
     fallbacks = {
         "flor": _WK_COL_FLOR, "ini": _WK_COL_INI,
@@ -98,35 +122,39 @@ def _detectar_columnas_weekly(df) -> dict:
         "des":  _WK_COL_DES,  "inv_fin": _WK_COL_INV_FIN,
     }
 
-    # Buscar fila de encabezado: primera fila que contenga al menos 3 palabras clave conocidas
-    todas_palabras = {w for vals in _WK_COL_NAMES.values() for w in vals}
-    header_row_idx = None
-    header_vals    = []
-    for row_idx in range(min(15, len(df))):
-        fila = [str(v).strip().lower() for v in df.iloc[row_idx]]
-        hits = sum(1 for cell in fila if any(p in cell for p in todas_palabras))
-        if hits >= 3:
-            header_row_idx = row_idx
-            header_vals    = fila
-            break
+    best_row_idx  = None
+    best_hits     = 0
+    best_vals     = []
 
-    if header_row_idx is None:
-        print("   ⚠️ No se detectó fila de encabezado en hoja WEEKLY — usando índices fijos")
+    for row_idx in range(min(15, len(df))):
+        fila = [_norm_cell(str(v)) for v in df.iloc[row_idx]]
+        hits = sum(
+            1 for cell in fila if cell and
+            any(_celda_coincide(cell, kws) for kws in _WK_COL_NAMES.values())
+        )
+        if hits > best_hits:
+            best_hits     = hits
+            best_row_idx  = row_idx
+            best_vals     = fila
+
+    # Requerir al menos 4 columnas reconocidas para confiar en la detección
+    if best_hits < 4:
+        print(f"   ⚠️ Encabezado WEEKLY no detectado (mejor fila={best_row_idx}, hits={best_hits}) — usando índices fijos")
         return fallbacks
 
-    print(f"   ✅ Encabezado detectado en fila {header_row_idx}: {[v for v in header_vals if v]}")
+    print(f"   ✅ Encabezado WEEKLY detectado en fila {best_row_idx} con {best_hits} columnas reconocidas")
 
-    cols = dict(fallbacks)  # empezar con fallbacks
-    for clave, posibles in _WK_COL_NAMES.items():
-        for col_idx, cell in enumerate(header_vals):
-            if any(p in cell for p in posibles):
+    cols = dict(fallbacks)  # partir de fallbacks; se sobreescriben solo los encontrados
+    for clave, keywords in _WK_COL_NAMES.items():
+        for col_idx, cell in enumerate(best_vals):
+            if cell and _celda_coincide(cell, keywords):
                 cols[clave] = col_idx
                 break
 
-    # Log de columnas detectadas vs fallback
+    # Log
     for clave in cols:
-        origen = "detectado" if cols[clave] != fallbacks[clave] else "fallback"
-        print(f"      {clave:10s} → col {cols[clave]} ({origen})")
+        origen = "✓ detectado" if cols[clave] != fallbacks[clave] else "  fallback"
+        print(f"      {origen}  {clave:10s} → col {cols[clave]}")
 
     return cols
 
