@@ -250,7 +250,7 @@ else:
       /* ── HEADER NATIVO: columnas de Streamlit que contienen #cfbc-brand ── */
       div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) {
           background: #7B1C1C !important;
-          border-bottom: 3px solid #16a34a !important;
+          border-bottom: none !important;
           min-height: 36px !important;
           max-height: 36px !important;
           padding: 0 10px !important;
@@ -573,7 +573,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 /* ── PRODUCTOS PANEL ─────────────────────────── */
 #prodPanel { 
-  display: none; background: #fdfdfd; border: 1px solid #cbd5e1; border-top: 2px solid #0f172a;
+  display: none; background: #fdfdfd; border: 1px solid #cbd5e1; border-top: 2px solid #7B1C1C;
   box-shadow: 0 4px 12px rgba(0,0,0,0.06);
   margin: 5px 0 0 0; width: 100%; overflow: hidden;
 }
@@ -2929,7 +2929,7 @@ function showProdPanel(rowData, opts) {
   }
 
   panelHtml =
-    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #4472C4; display:block; background:#fff;">' +
+    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #7B1C1C; display:block; background:#fff;">' +
       '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
         '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
       '</div>' +
