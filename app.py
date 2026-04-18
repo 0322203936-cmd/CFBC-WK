@@ -2594,230 +2594,59 @@ function renderManoObra() {
       bodyHtml+='</tr>';
     }
 
-    if (grp.label === 'MANEJO PLANTA' && DATA.siembra_data) {
+    if ((grp.label === 'MANEJO PLANTA' || grp.label === 'MIPE / MIRFE') && DATA.siembra_data) {
       var tcPin='padding:3px 8px;position:sticky;z-index:1;background:#f0fdf4;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;white-space:nowrap;';
       var tcStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;color:#15803d;font-weight:600;background:#f0fdf4;';
       
-      // FILA: METROS DE SIEMBRA
-      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="METROS DE SIEMBRA">';
-      bodyHtml+='<td style="'+tcPin+'left:0;padding-left:20px;color:#166534;font-size:11px"><span style="color:#22c55e;font-size:9px;margin-right:4px;">🌱</span>METROS DE SIEMBRA</td>';
-      var wkTcTotalMetros = {};
-      var wKeyOrderedMetros = [];
-      activeRanches.forEach(function(rn){
-        weekKeys.forEach(function(key){
-          var pw=key.split('-');
-          var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
-          var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
-          var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
-          var targetRn = revMap[rn] || rn;
-          var sRow = sData[targetRn] || sData[rn] || {};
-          var v = sRow['metros'] || 0;
-          wkTcTotalMetros[key] = (wkTcTotalMetros[key]||0) + v;
-          if(wKeyOrderedMetros.indexOf(key)===-1) wKeyOrderedMetros.push(key);
-          if(!v||v===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-          else { bodyHtml+='<td style="'+tcStyle+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
-        });
-        var wkTcDiff = 0;
-        if (weekKeys.length > 0) {
-          var fw = weekKeys[0], lw = weekKeys[weekKeys.length-1];
-          var getV = function(key) {
-            var pw=key.split('-');
-            var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
-            var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
-            var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
-            var targetRn = revMap[rn] || rn;
-            var sRow = sData[targetRn] || sData[rn] || {};
-            return sRow['metros'] || 0;
-          };
-          wkTcDiff = Math.abs(getV(lw) - getV(fw));
-        }
-        if(!wkTcDiff||wkTcDiff===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-        else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
-      });
-      if(showTotal) {
-        wKeyOrderedMetros.forEach(function(key){
-          var v = wkTcTotalMetros[key]||0;
-          var borderLeft = (wKeyOrderedMetros[0]===key) ? 'border-left:3px solid #86efac;' : '';
-          var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
-          if(!v||v===0) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
-          else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
-        });
-        var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
-        var gtDif = 0;
-        if(wKeyOrderedMetros.length > 0) {
-          gtDif = Math.abs((wkTcTotalMetros[wKeyOrderedMetros[wKeyOrderedMetros.length-1]]||0) - (wkTcTotalMetros[wKeyOrderedMetros[0]]||0));
-        }
-        if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-        else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
-      }
-      bodyHtml+='</tr>';
+      var metrics = [
+        { key: 'metros', title: 'METROS DE SIEMBRA', maxDecimals: 0, minDecimals: 0 },
+        { key: 'hectareas', title: 'HECTAREAS EN SIEMBRA', maxDecimals: 4, minDecimals: 2 }
+      ];
 
-      // FILA: HECTAREAS EN SIEMBRA
-      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="HECTAREAS EN SIEMBRA">';
-      bodyHtml+='<td style="'+tcPin+'left:0;padding-left:20px;color:#166534;font-size:11px"><span style="color:#22c55e;font-size:9px;margin-right:4px;">🌱</span>HECTAREAS EN SIEMBRA</td>';
-      var wkTcTotalHectareas = {};
-      var wKeyOrderedHectareas = [];
-      activeRanches.forEach(function(rn){
-        weekKeys.forEach(function(key){
-          var pw=key.split('-');
-          var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
-          var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
-          var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
-          var targetRn = revMap[rn] || rn;
-          var sRow = sData[targetRn] || sData[rn] || {};
-          var v = sRow['hectareas'] || 0;
-          wkTcTotalHectareas[key] = (wkTcTotalHectareas[key]||0) + v;
-          if(wKeyOrderedHectareas.indexOf(key)===-1) wKeyOrderedHectareas.push(key);
-          if(!v||v===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-          else { bodyHtml+='<td style="'+tcStyle+'">'+Number(v).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:4})+'</td>'; }
-        });
-        var wkTcDiff = 0;
-        if (weekKeys.length > 0) {
-          var fw = weekKeys[0], lw = weekKeys[weekKeys.length-1];
-          var getV = function(key) {
-            var pw=key.split('-');
+      metrics.forEach(function(m) {
+        bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="'+m.title+'">';
+        bodyHtml+='<td style="'+tcPin+'left:0;padding-left:20px;color:#166534;font-size:11px"><span style="color:#22c55e;font-size:9px;margin-right:4px;">🌱</span>'+m.title+'</td>';
+        
+        var wkTcTotal = {};
+        var fw = weekKeys[0], lw = weekKeys[weekKeys.length-1];
+        
+        var getV = function(rn, k) {
+            var pw = k.split('-');
             var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
             var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
-            var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
-            var targetRn = revMap[rn] || rn;
-            var sRow = sData[targetRn] || sData[rn] || {};
-            return sRow['hectareas'] || 0;
-          };
-          wkTcDiff = Math.abs(getV(lw) - getV(fw));
-        }
-        if(!wkTcDiff||wkTcDiff===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-        else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:4})+'</td>'; }
-      });
-      if(showTotal) {
-        wKeyOrderedHectareas.forEach(function(key){
-          var v = wkTcTotalHectareas[key]||0;
-          var borderLeft = (wKeyOrderedHectareas[0]===key) ? 'border-left:3px solid #86efac;' : '';
-          var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
-          if(!v||v===0) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
-          else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:4})+'</td>'; }
-        });
-        var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
-        var gtDif = 0;
-        if(wKeyOrderedHectareas.length > 0) {
-          gtDif = Math.abs((wkTcTotalHectareas[wKeyOrderedHectareas[wKeyOrderedHectareas.length-1]]||0) - (wkTcTotalHectareas[wKeyOrderedHectareas[0]]||0));
-        }
-        if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-        else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:4})+'</td>'; }
-      }
-      bodyHtml+='</tr>';
-    }
+            var targetRn = ({'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'})[rn] || rn;
+            return (sData[targetRn] || sData[rn] || {})[m.key] || 0;
+        };
 
-    if (grp.label === 'MIPE / MIRFE' && DATA.siembra_data) {
-      var tcPin='padding:3px 8px;position:sticky;z-index:1;background:#f0fdf4;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;white-space:nowrap;';
-      var tcStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;color:#15803d;font-weight:600;background:#f0fdf4;';
-      
-      // FILA: METROS DE SIEMBRA
-      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="METROS DE SIEMBRA">';
-      bodyHtml+='<td style="'+tcPin+'left:0;padding-left:20px;color:#166534;font-size:11px"><span style="color:#22c55e;font-size:9px;margin-right:4px;">🌱</span>METROS DE SIEMBRA</td>';
-      var wkTcTotalMetros = {};
-      var wKeyOrderedMetros = [];
-      activeRanches.forEach(function(rn){
-        weekKeys.forEach(function(key){
-          var pw=key.split('-');
-          var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
-          var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
-          var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
-          var targetRn = revMap[rn] || rn;
-          var sRow = sData[targetRn] || sData[rn] || {};
-          var v = sRow['metros'] || 0;
-          wkTcTotalMetros[key] = (wkTcTotalMetros[key]||0) + v;
-          if(wKeyOrderedMetros.indexOf(key)===-1) wKeyOrderedMetros.push(key);
-          if(!v||v===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-          else { bodyHtml+='<td style="'+tcStyle+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+        activeRanches.forEach(function(rn){
+          weekKeys.forEach(function(key){
+            var v = getV(rn, key);
+            wkTcTotal[key] = (wkTcTotal[key]||0) + v;
+            if(!v) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
+            else { bodyHtml+='<td style="'+tcStyle+'">'+Number(v).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
+          });
+          var wkTcDiff = 0;
+          if (weekKeys.length > 0) wkTcDiff = Math.abs(getV(rn, lw) - getV(rn, fw));
+          if(!wkTcDiff) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
+          else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
         });
-        var wkTcDiff = 0;
-        if (weekKeys.length > 0) {
-          var fw = weekKeys[0], lw = weekKeys[weekKeys.length-1];
-          var getV = function(key) {
-            var pw=key.split('-');
-            var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
-            var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
-            var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
-            var targetRn = revMap[rn] || rn;
-            var sRow = sData[targetRn] || sData[rn] || {};
-            return sRow['metros'] || 0;
-          };
-          wkTcDiff = Math.abs(getV(lw) - getV(fw));
-        }
-        if(!wkTcDiff||wkTcDiff===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-        else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
-      });
-      if(showTotal) {
-        wKeyOrderedMetros.forEach(function(key){
-          var v = wkTcTotalMetros[key]||0;
-          var borderLeft = (wKeyOrderedMetros[0]===key) ? 'border-left:3px solid #86efac;' : '';
-          var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
-          if(!v||v===0) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
-          else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
-        });
-        var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
-        var gtDif = 0;
-        if(wKeyOrderedMetros.length > 0) {
-          gtDif = Math.abs((wkTcTotalMetros[wKeyOrderedMetros[wKeyOrderedMetros.length-1]]||0) - (wkTcTotalMetros[wKeyOrderedMetros[0]]||0));
-        }
-        if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-        else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
-      }
-      bodyHtml+='</tr>';
 
-      // FILA: HECTAREAS EN SIEMBRA
-      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="HECTAREAS EN SIEMBRA">';
-      bodyHtml+='<td style="'+tcPin+'left:0;padding-left:20px;color:#166534;font-size:11px"><span style="color:#22c55e;font-size:9px;margin-right:4px;">🌱</span>HECTAREAS EN SIEMBRA</td>';
-      var wkTcTotalHectareas = {};
-      var wKeyOrderedHectareas = [];
-      activeRanches.forEach(function(rn){
-        weekKeys.forEach(function(key){
-          var pw=key.split('-');
-          var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
-          var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
-          var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
-          var targetRn = revMap[rn] || rn;
-          var sRow = sData[targetRn] || sData[rn] || {};
-          var v = sRow['hectareas'] || 0;
-          wkTcTotalHectareas[key] = (wkTcTotalHectareas[key]||0) + v;
-          if(wKeyOrderedHectareas.indexOf(key)===-1) wKeyOrderedHectareas.push(key);
-          if(!v||v===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-          else { bodyHtml+='<td style="'+tcStyle+'">'+Number(v).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:4})+'</td>'; }
-        });
-        var wkTcDiff = 0;
-        if (weekKeys.length > 0) {
-          var fw = weekKeys[0], lw = weekKeys[weekKeys.length-1];
-          var getV = function(key) {
-            var pw=key.split('-');
-            var wkk = ((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
-            var sData = DATA.siembra_data[wkk] || DATA.siembra_data[String(wkk)] || {};
-            var revMap = {'Ramona':'Campo-RM', 'Poscosecha':'PosCo-RM', 'Propagacion':'Prop-RM'};
-            var targetRn = revMap[rn] || rn;
-            var sRow = sData[targetRn] || sData[rn] || {};
-            return sRow['hectareas'] || 0;
-          };
-          wkTcDiff = Math.abs(getV(lw) - getV(fw));
+        if(showTotal) {
+          weekKeys.forEach(function(key){
+            var v = wkTcTotal[key]||0;
+            var borderLeft = (weekKeys[0]===key) ? 'border-left:3px solid #86efac;' : '';
+            var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
+            if(!v) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
+            else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
+          });
+          var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
+          var gtDif = 0;
+          if(weekKeys.length > 0) gtDif = Math.abs((wkTcTotal[lw]||0) - (wkTcTotal[fw]||0));
+          if(!gtDif) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
+          else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
         }
-        if(!wkTcDiff||wkTcDiff===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-        else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:4})+'</td>'; }
+        bodyHtml+='</tr>';
       });
-      if(showTotal) {
-        wKeyOrderedHectareas.forEach(function(key){
-          var v = wkTcTotalHectareas[key]||0;
-          var borderLeft = (wKeyOrderedHectareas[0]===key) ? 'border-left:3px solid #86efac;' : '';
-          var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
-          if(!v||v===0) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
-          else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:4})+'</td>'; }
-        });
-        var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
-        var gtDif = 0;
-        if(wKeyOrderedHectareas.length > 0) {
-          gtDif = Math.abs((wkTcTotalHectareas[wKeyOrderedHectareas[wKeyOrderedHectareas.length-1]]||0) - (wkTcTotalHectareas[wKeyOrderedHectareas[0]]||0));
-        }
-        if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-        else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:4})+'</td>'; }
-      }
-      bodyHtml+='</tr>';
     }
 
   });
