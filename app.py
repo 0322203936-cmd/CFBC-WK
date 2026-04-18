@@ -1469,7 +1469,7 @@ function renderRancho() {
   var f=state.fromWeek, t=state.toWeek;
   var cur=state.currency;
   var activeRanches = getActiveRanches();
-  var showTotal = state.activeRanches.indexOf('Todos')>-1;
+  var showTotal = true;
 
   var matCats=DATA.categories.filter(function(c){
     return c!=='COSTO SERVICIOS'&&c!=='COSTO MANO DE OBRA';
@@ -2017,7 +2017,7 @@ function renderServicios() {
       return Object.keys(weekMap[key]||{}).some(function(k){return k.endsWith('__r__'+rn)&&weekMap[key][k]>0;});
     });
   });
-  var showTotal = state.activeRanches.indexOf('Todos')>-1;
+  var showTotal = true;
 
   // ── Sin datos ─────────────────────────────────────────
   if (!weekKeys.length || !orderedSubcats.length) {
@@ -2287,7 +2287,7 @@ function renderManoObra() {
     if (state.activeRanches.indexOf('Todos')<0 && allowedRanches.indexOf(rn) < 0) return;
     if (activeRanches.indexOf(rn) < 0) activeRanches.push(rn);
   });
-  var showTotal = state.activeRanches.indexOf('Todos') > -1;
+  var showTotal = true;
 
   function shortLabel(sc){
     return sc.replace('Nómina Prod. ','').replace('Nómina Op. ','')
