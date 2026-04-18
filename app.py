@@ -2679,8 +2679,15 @@ var _prodViewsData = []; // guarda {rowData, opts} para re-renderizar al cambiar
 
 function abrirProdGlobal() {
   if (state.cat === 'COSTO SERVICIOS' || state.cat === 'COSTO MANO DE OBRA') return;
-  var yr = DATA.years[DATA.years.length - 1]; 
-  showProdPanel({_cat:state.cat, _year:yr, _fromWeek:state.fromWeek, _toWeek:state.toWeek}, {ranch: 'Multi'});
+  
+  _prodViews = [];
+  _prodViewsData = [];
+
+  var activeYrs = DATA.years.filter(function(y) { return state.activeYears[y]; }).sort(function(a, b) { return b - a; }); 
+
+  activeYrs.forEach(function(yr) {
+    showProdPanel({_cat:state.cat, _year:yr, _fromWeek:state.fromWeek, _toWeek:state.toWeek}, {ranch: 'Multi'});
+  });
 }
 
 window.filterProdRows = function(el) {
