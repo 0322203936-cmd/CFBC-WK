@@ -43,7 +43,7 @@ if st.session_state.show_auto:
       section[data-testid="stSidebar"] { display: none !important; }
 
       .auto-eyebrow {
-        color: #4472C4;
+        color: #7B1C1C;
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 1.2px;
@@ -84,7 +84,7 @@ if st.session_state.show_auto:
         line-height: 1.35;
       }
       .auto-card-kicker {
-        color: #4472C4;
+        color: #7B1C1C;
         font-size: 10px;
         font-weight: 800;
         letter-spacing: 1px;
@@ -1513,7 +1513,7 @@ function renderRancho() {
     var col=RANCH_COLORS[rn]||'#888';
     h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
   });
-  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #4472C4;background:#9DC3E6">TOTAL '+sym+'</th>';
+  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #7B1C1C;background:#9DC3E6">TOTAL '+sym+'</th>';
   h1+='</tr>';
 
   // ── Header nivel 2: por año → semanas + DIF, luego DIF años ───────────────
@@ -1533,7 +1533,7 @@ function renderRancho() {
     });
     if(nYrs>=2){
       var y0=String(yrs[0]).slice(2), yn=String(yrs[nYrs-1]).slice(2);
-      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #4472C4;background:#9DC3E6">'+yn+'−'+y0+'</th>';
+      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #7B1C1C;background:#9DC3E6">'+yn+'−'+y0+'</th>';
     }
     return s;
   }
@@ -1576,7 +1576,7 @@ function renderRancho() {
     if(nYrs>=2){
       var v0=rnKey!==null?(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key].total||0);
       var vn=rnKey!==null?(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key][rnKey]||0):(ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key].total||0);
-      s+=cell(vn-v0, true, true, '2px solid #4472C4', cat.fmt);
+      s+=cell(vn-v0, true, true, '2px solid #7B1C1C', cat.fmt);
     }
     return s;
   }
@@ -1634,7 +1634,7 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
     var col=RANCH_COLORS[rn]||'#888';
     h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
   });
-  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #4472C4;background:#9DC3E6">TOTAL</th>';
+  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #7B1C1C;background:#9DC3E6">TOTAL</th>';
   h1+='</tr>';
 
   // Header nivel 2
@@ -1654,7 +1654,7 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
     });
     if(nYrs>=2){
       var y0=String(yrs[0]).slice(2), yn=String(yrs[nYrs-1]).slice(2);
-      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #4472C4;background:#9DC3E6">'+yn+'−'+y0+'</th>';
+      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #7B1C1C;background:#9DC3E6">'+yn+'−'+y0+'</th>';
     }
     return s;
   }
@@ -1713,7 +1713,7 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
       var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
       var v0 = r0yr[cat.key]||0;
       var vn = rNyr[cat.key]||0;
-      s+=cell(vn-v0, true, '2px solid #4472C4', cat.fmt);
+      s+=cell(vn-v0, true, '2px solid #7B1C1C', cat.fmt);
     }
     return s;
   }
@@ -1760,7 +1760,7 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRan
     var col=RANCH_COLORS[rn]||'#888';
     h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
   });
-  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #4472C4;background:#9DC3E6">TOTAL</th>';
+  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #7B1C1C;background:#9DC3E6">TOTAL</th>';
   h1+='</tr>';
 
   // Header nivel 2
@@ -1780,7 +1780,7 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRan
     });
     if(nYrs>=2){
       var y0=String(yrs[0]).slice(2), yn=String(yrs[nYrs-1]).slice(2);
-      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #4472C4;background:#9DC3E6">'+yn+'−'+y0+'</th>';
+      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #7B1C1C;background:#9DC3E6">'+yn+'−'+y0+'</th>';
     }
     return s;
   }
@@ -1839,7 +1839,7 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRan
       var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
       var v0 = r0yr[cat.key]||0;
       var vn = rNyr[cat.key]||0;
-      s+=cell(vn-v0, true, '2px solid #4472C4', cat.fmt);
+      s+=cell(vn-v0, true, '2px solid #7B1C1C', cat.fmt);
     }
     return s;
   }
@@ -2021,7 +2021,7 @@ function renderServicios() {
     var col=RANCH_COLORS[rn]||'#888';
     h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
   });
-  if(showTotal) h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #4472C4;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
+  if(showTotal) h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #7B1C1C;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
   h1+='</tr>';
 
   // ── Header nivel 2: por cada rancho → [wk labels... | DIF] + TOTAL group ──
@@ -2101,7 +2101,7 @@ function renderServicios() {
     if(showTotal) {
       weekKeys.forEach(function(key){
         var v=scByWk[key];
-        bodyHtml+='<td style="'+totCellStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+        bodyHtml+='<td style="'+totCellStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
       });
       var scDif=Math.abs((scByWk[weekKeys[weekKeys.length-1]]||0)-(scByWk[weekKeys[0]]||0));
       bodyHtml+='<td style="'+totCellStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(scDif?fmt(scDif):'—')+'</td>';
@@ -2126,7 +2126,7 @@ function renderServicios() {
   if(showTotal) {
     weekKeys.forEach(function(key){
       var v=grandTotWk[key]||0;
-      bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+      bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
     });
     var gtDif=Math.abs((grandTotWk[weekKeys[weekKeys.length-1]]||0)-(grandTotWk[weekKeys[0]]||0));
     bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
@@ -2315,7 +2315,7 @@ function renderManoObra() {
     var col=MO_RANCH_COLORS[rn]||RANCH_COLORS[rn]||'#374151';
     h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
   });
-  if(showTotal) h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #4472C4;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
+  if(showTotal) h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #7B1C1C;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
   h1+='</tr>';
 
   // HEADER nivel 2: [por cada rancho: wk labels... | DIF] + TOTAL group
@@ -2419,7 +2419,7 @@ function renderManoObra() {
     if(showTotal) {
       weekKeys.forEach(function(key){
         var v=activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][key]||0);},0);
-        bodyHtml+='<td style="'+grpTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+        bodyHtml+='<td style="'+grpTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
       });
       var grpTotDif=Math.abs(
         activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[weekKeys.length-1]]||0);},0)-
@@ -2448,7 +2448,7 @@ function renderManoObra() {
       if(showTotal) {
         weekKeys.forEach(function(key){
           var v=activeRanches.reduce(function(s,rn){return s+(sc.hcByRnWk[rn][key]||0);},0);
-          bodyHtml+='<td style="'+scTotHcStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+          bodyHtml+='<td style="'+scTotHcStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
         });
         bodyHtml+='<td style="'+scTotHcStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(sc.hcTotal?fmtHcDiff(sc.hcTotal):'—')+'</td>';
       }
@@ -2602,7 +2602,7 @@ function renderManoObra() {
   if(showTotal) {
     weekKeys.forEach(function(key){
       var v=grandCostWk[key]||0;
-      bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmt(v):'—')+'</td>';
+      bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
     });
     var gtDif=Math.abs((grandCostWk[weekKeys[weekKeys.length-1]]||0)-(grandCostWk[weekKeys[0]]||0));
     bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
@@ -2623,7 +2623,7 @@ function renderManoObra() {
   if(showTotal) {
     weekKeys.forEach(function(key){
       var v=grandHcWk[key]||0;
-      bodyHtml+='<td style="'+totHcTotStyle+(weekKeys[0]===key?'border-left:3px solid #4472C4;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+      bodyHtml+='<td style="'+totHcTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
     });
     bodyHtml+='<td style="'+totHcTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">—</td>';
   }
@@ -2930,7 +2930,7 @@ function showProdPanel(rowData, opts) {
 
   panelHtml =
     '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #7B1C1C; display:block; background:#fff;">' +
-      '<div style="background:#4472C4; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
+      '<div style="background:#7B1C1C; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
         '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
       '</div>' +
       productSection +
@@ -3076,7 +3076,7 @@ except ImportError:
 
 if not st.session_state.show_auto:
     # ==== MODO DASHBOARD ====
-    # Header nativo de Streamlit — mismo color #4472C4, botones reales sin trucos de z-index
+    # Header nativo de Streamlit — mismo color #7B1C1C, botones reales sin trucos de z-index
     col_brand, col_reload, col_auto = st.columns([10, 1, 1])
     with col_brand:
         st.markdown('<span id="cfbc-brand">CFBC &#9656; CONTROL SEMANAL</span>', unsafe_allow_html=True)
