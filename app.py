@@ -2735,10 +2735,22 @@ function showProdPanel(rowData, opts) {
   var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
   var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
   var ranchFilter=opts.ranch||null;
-  if (ranchFilter === 'Multi') ranchFilter = null;
-  else if (!ranchFilter && state.activeRanches.indexOf('Todos')<0) ranchFilter = state.activeRanches[0];
+  if (ranchFilter === 'Multi') {
+    if (state.activeRanches.indexOf('Todos') >= 0) ranchFilter = null;
+    else if (state.activeRanches.length === 1) ranchFilter = state.activeRanches[0];
+    else ranchFilter = null;
+  } else if (!ranchFilter && state.activeRanches.indexOf('Todos')<0) {
+    ranchFilter = state.activeRanches[0];
+  }
   if (!cat||!yr) return;
   var hideProducts = false;
+
+  var isRanchAllowed = function(rn) {
+    var rawRn = rn.replace('Prop-RM','Propagacion').replace('PosCo-RM','Poscosecha').replace('Campo-RM','Ramona');
+    if (ranchFilter) return rn === ranchFilter || rawRn === ranchFilter;
+    if (state.activeRanches.indexOf('Todos') > -1) return true;
+    return state.activeRanches.indexOf(rn) > -1 || state.activeRanches.indexOf(rawRn) > -1;
+  };
 
   var isMant=cat==='MANTENIMIENTO', isMatEmp=cat==='MATERIAL DE EMPAQUE', isMatVeg=cat==='MATERIAL VEGETAL';
   var isMirfe=cat===CAT_MIRFE, isMipe=cat===CAT_MIPE;
@@ -2759,7 +2771,7 @@ function showProdPanel(rowData, opts) {
       var weekD=ds[wkCodeShort]||ds[String(wkCodeShort)]||ds[wkCodeLong]||ds[String(wkCodeLong)];
       if (!weekD) continue;
       Object.keys(weekD).forEach(function(ranch){
-        if (ranchFilter&&ranch!==ranchFilter) return;
+        if (!isRanchAllowed(ranch)) return;
         var byTipo=weekD[ranch];
         Object.keys(byTipo).forEach(function(tipo){
           if (tipoFilter&&tipo!==tipoFilter) return;
@@ -2825,7 +2837,7 @@ function showProdPanel(rowData, opts) {
             
           if (isMetros && DATA.metros_acumulados) {
             var mRows = DATA.metros_acumulados.filter(function(r){ 
-              return parseInt(r.semana_fin) === parseInt(_wkKey) && (!ranchFilter || r.rancho === ranchFilter); 
+              return parseInt(r.semana_fin) === parseInt(_wkKey) && isRanchAllowed(r.rancho); 
             });
             if (mRows.length > 0) {
               var tbl = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
@@ -2850,7 +2862,7 @@ function showProdPanel(rowData, opts) {
               if (DATA.metros_acumulados) {
                 var wks = {};
                 DATA.metros_acumulados.forEach(function(x){
-                  if (!ranchFilter || x.rancho === ranchFilter) wks[x.semana_fin] = true;
+                  if (isRanchAllowed(x.rancho)) wks[x.semana_fin] = true;
                 });
                 availableWks = Object.keys(wks).sort();
               }
@@ -2861,7 +2873,7 @@ function showProdPanel(rowData, opts) {
 
           if (isCharolas && DATA.plantas_metros) {
             var cRows = DATA.plantas_metros.filter(function(r){ 
-              return parseInt(r.semana_fin) === parseInt(_wkKey) && (!ranchFilter || r.rancho === ranchFilter); 
+              return parseInt(r.semana_fin) === parseInt(_wkKey) && isRanchAllowed(r.rancho); 
             });
             if (cRows.length > 0) {
               var tbl2 = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
@@ -2886,7 +2898,7 @@ function showProdPanel(rowData, opts) {
               if (DATA.plantas_metros) {
                 var wks2 = {};
                 DATA.plantas_metros.forEach(function(x){
-                  if (!ranchFilter || x.rancho === ranchFilter) wks2[x.semana_fin] = true;
+                  if (isRanchAllowed(x.rancho)) wks2[x.semana_fin] = true;
                 });
                 availableWks2 = Object.keys(wks2).sort();
               }
