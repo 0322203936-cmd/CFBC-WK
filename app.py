@@ -621,6 +621,8 @@ APP_HTML_BODY = """
     <div class="tb-sep"></div>
     <span class="tb-label">Años</span>
     <div id="yearChips" style="display:flex;gap:3px"></div>
+    <div class="tb-sep" id="sepVerProd" style="display:none"></div>
+    <button class="tb-btn" id="btnVerProd" onclick="abrirProdGlobal()" style="display:none; color:#16a34a; border-color:#16a34a;" title="Ver desglose del rango seleccionado">🔍 VER PRODUCTOS</button>
   </div>
 
   <!-- VIEW TABS -->
@@ -991,6 +993,15 @@ function inicializar() {
   var vtSrv = document.getElementById('vtServicios');
   var _isSrvCat = (state.cat === 'COSTO SERVICIOS' || state.cat === 'COSTO MANO DE OBRA');
   if (vtSrv) vtSrv.style.display = _isSrvCat ? '' : 'none';
+
+  // Ocultar/Mostrar Boton "Ver Productos"
+  var btnProd = document.getElementById('btnVerProd');
+  var sepProd = document.getElementById('sepVerProd');
+  if (btnProd && sepProd) {
+    if (_isSrvCat) { btnProd.style.display = 'none'; sepProd.style.display = 'none'; }
+    else { btnProd.style.display = ''; sepProd.style.display = ''; }
+  }
+
   renderView();
 
   document.getElementById('loader').style.display = 'none';
@@ -1102,6 +1113,13 @@ function onCatChange(val) {
   });
   var vtSrv = document.getElementById('vtServicios');
   if (vtSrv) vtSrv.style.display = isSrvCat ? '' : 'none';
+
+  var btnProd = document.getElementById('btnVerProd');
+  var sepProd = document.getElementById('sepVerProd');
+  if (btnProd && sepProd) {
+    if (isSrvCat) { btnProd.style.display = 'none'; sepProd.style.display = 'none'; }
+    else { btnProd.style.display = ''; sepProd.style.display = ''; }
+  }
 
   if (isSrvCat && state.view !== 'servicios') {
     setView('servicios');
@@ -2659,12 +2677,59 @@ function onMainCellClick(evt) {
 var _prodViews = [];
 var _prodViewsData = []; // guarda {rowData, opts} para re-renderizar al cambiar moneda
 
+function abrirProdGlobal() {
+  if (state.cat === 'COSTO SERVICIOS' || state.cat === 'COSTO MANO DE OBRA') return;
+  var yr = DATA.years[DATA.years.length - 1]; 
+  showProdPanel({_cat:state.cat, _year:yr, _fromWeek:state.fromWeek, _toWeek:state.toWeek}, {ranch: 'Multi'});
+}
+
+window.filterProdRows = function(el) {
+  if (!el) return;
+  var term = el.value ? el.value.toLowerCase() : '';
+  var panel = el.closest('.prod-panel-wrapper');
+  if (!panel) return;
+  var rows = panel.querySelectorAll('.pt-prod-row');
+  var nuevoTotal = 0;
+  for(var i=0; i<rows.length; i++){
+    var p = rows[i].getAttribute('data-prod') || '';
+    if (term === '' || p.indexOf(term) > -1) {
+      if(rows[i].style.display === 'none'){
+        rows[i].style.display = '';
+        nuevoTotal += parseFloat(rows[i].getAttribute('data-costo')||0);
+      } else {
+        nuevoTotal += parseFloat(rows[i].getAttribute('data-costo')||0);
+      }
+    } else {
+      if(rows[i].style.display === ''){
+        rows[i].style.display = 'none';
+      }
+    }
+  }
+  // recalcular el TOTAL (MXN u USD)
+  var metaSpan = panel.querySelector('.gasto-total-val');
+  if (metaSpan) {
+     var _isUSD = window._prodIsUSD;
+     var _TC = window._prodTC || 19;
+     var convTotal = _isUSD ? nuevoTotal/_TC : nuevoTotal;
+     if(convTotal === 0){
+        metaSpan.innerHTML = _isUSD ? '$0.00' : '$0';
+     } else {
+        var neg = convTotal < 0, s = Math.abs(convTotal);
+        var txt = _isUSD 
+           ? (neg?'-$':'$') + s.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+           : fmt(nuevoTotal);
+        metaSpan.innerHTML = txt;
+     }
+  }
+};
+
 function showProdPanel(rowData, opts) {
   opts=opts||{};
   var cat=rowData._cat, yr=rowData._year, wn=rowData._week;
   var fromW=rowData._fromWeek||wn, toW=rowData._toWeek||wn;
   var ranchFilter=opts.ranch||null;
-  if (!ranchFilter && state.activeRanches.indexOf('Todos')<0) ranchFilter = state.activeRanches[0];
+  if (ranchFilter === 'Multi') ranchFilter = null;
+  else if (!ranchFilter && state.activeRanches.indexOf('Todos')<0) ranchFilter = state.activeRanches[0];
   if (!cat||!yr) return;
   var hideProducts = false;
 
@@ -2903,10 +2968,12 @@ function showProdPanel(rowData, opts) {
     var _wkCode = ((yr % 100) * 100) + wkStart;
     var _TC = (_wkCode >= 2502 && _wkCode <= 2520) ? 20 : 19; // tipo de cambio MXN → USD
     var _isUSD = state.currency === 'usd';
+    window._prodTC = _TC;
+    window._prodIsUSD = _isUSD;
     var _conv = function(mxn){ return _isUSD ? mxn / _TC : mxn; };
     var _fmtG = function(mxn){
       var v = _conv(mxn);
-      if (!v || isNaN(v)) return '';
+      if (!v || isNaN(v)) return '$0';
       var neg = v < 0, s = Math.abs(v);
       var str = _isUSD
         ? (neg?'-$':'$') + s.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
@@ -2916,10 +2983,14 @@ function showProdPanel(rowData, opts) {
     var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = hideProducts
       ? 'Solo resumen de siembra'
-      : ('Gasto: <b style="color:#16a34a">'+_fmtG(total)+'</b>' + (_isUSD ? ' <span style="font-size:9px;color:#94a3b8;">USD @$'+_TC+'</span>' : ''));
+      : ('Gasto: <b style="color:#16a34a" class="gasto-total-val">'+_fmtG(total)+'</b>' + (_isUSD ? ' <span style="font-size:9px;color:#94a3b8;">USD @$'+_TC+'</span>' : ''));
+      
+    var searchHtml = hideProducts ? '' : '<input type="text" class="prod-filter-input" placeholder="Buscar producto..." style="padding:3px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; width:180px; margin-left:20px" oninput="filterProdRows(this)">';
+
     productSection =
-      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:flex-start; align-items:center;">' +
-        '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
+      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:6px 10px; display:flex; justify-content:space-between; align-items:center;">' +
+        '<span style="font-size:11px; color:#475569;">'+panelMeta+'</span>' +
+        searchHtml +
       '</div>' +
       '<div style="overflow-x:auto; scrollbar-width:thin;">' +
         '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
@@ -2933,7 +3004,8 @@ function showProdPanel(rowData, opts) {
     if (!hideProducts && rows.length > 0) {
       rows.forEach(function(r,i){
         var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
-        productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
+        var safeProdName = r.producto ? r.producto.replace(/"/g,'&quot;').toLowerCase() : '';
+        productSection += '<tr class="pt-prod-row" data-prod="'+safeProdName+'" data-costo="'+r.gasto+'" style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
           '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
           '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
           '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
@@ -2950,7 +3022,7 @@ function showProdPanel(rowData, opts) {
   }
 
   panelHtml =
-    '<div style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #7B1C1C; display:block; background:#fff;">' +
+    '<div class="prod-panel-wrapper" style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #7B1C1C; display:block; background:#fff;">' +
       '<div style="background:#7B1C1C; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
         '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
       '</div>' +
