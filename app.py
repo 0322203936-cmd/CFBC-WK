@@ -2892,10 +2892,22 @@ function showProdPanel(rowData, opts) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">EN PROCESO DE SER CARGADO</div>';
   } else {
     if (!hideProducts) rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
+    var _TC = 19; // tipo de cambio MXN → USD
+    var _isUSD = state.currency === 'usd';
+    var _conv = function(mxn){ return _isUSD ? mxn / _TC : mxn; };
+    var _fmtG = function(mxn){
+      var v = _conv(mxn);
+      if (!v || isNaN(v)) return '';
+      var neg = v < 0, s = Math.abs(v);
+      var str = _isUSD
+        ? (neg?'-$':'$') + s.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+        : fmt(mxn);
+      return str;
+    };
     var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = hideProducts
       ? 'Solo resumen de siembra'
-      : ('Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>');
+      : ('Gasto: <b style="color:#16a34a">'+_fmtG(total)+'</b>' + (_isUSD ? ' <span style="font-size:9px;color:#94a3b8;">USD @$19</span>' : ''));
     productSection =
       '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:flex-start; align-items:center;">' +
         '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
@@ -2906,7 +2918,7 @@ function showProdPanel(rowData, opts) {
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
-            '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO</th>' +
+            '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO '+(_isUSD?'USD':'MXN')+'</th>' +
           '</tr></thead><tbody>' +
           siembraRowsHtml;
     if (!hideProducts && rows.length > 0) {
@@ -2916,7 +2928,7 @@ function showProdPanel(rowData, opts) {
           '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
           '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
           '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
-          '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+fmt(r.gasto)+'</td>' +
+          '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+_fmtG(r.gasto)+'</td>' +
           '</tr>';
       });
     } else {
