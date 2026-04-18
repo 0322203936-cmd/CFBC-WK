@@ -693,7 +693,7 @@ try {
 // =======================================================
 var RANCH_ORDER  = (DATA && DATA.config) ? DATA.config.ranch_order : [];
 var RANCH_COLORS = (DATA && DATA.config) ? DATA.config.ranch_colors : {};
-var YEAR_COLORS = {2021:'#0ea5e9',2022:'#d97706',2023:'#16a34a',2024:'#9333ea',2025:'#f97316',2026:'#dc2626'};
+var YEAR_COLORS = {2021:'#0e7490',2022:'#d97706',2023:'#16a34a',2024:'#9333ea',2025:'#f97316',2026:'#dc2626'};
 var CAT_MIRFE = 'FERTILIZANTES';
 var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 
