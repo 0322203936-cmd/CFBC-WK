@@ -2692,7 +2692,10 @@ function showProdPanel(rowData, opts) {
   }
 
   var rangeText=wkStart===wkEnd?(wFmt(wkStart)+' · '+yr):(wFmt(wkStart)+'→'+wFmt(wkEnd)+' · '+yr);
-  var panelTitle = cat+' &#9656; '+rangeText+(ranchFilter?' · '+ranchFilter:'');
+  // Formato: YYSS - CATEGORÍA - RANCHO  (ej: 2615 - MATERIAL VEGETAL - PROP-RM)
+  var _yyss = String(yr).slice(2) + String(wkStart).padStart(2,'0');
+  var _wkLabel = wkStart===wkEnd ? _yyss : (String(yr).slice(2)+String(wkStart).padStart(2,'0')+'→'+String(yr).slice(2)+String(wkEnd).padStart(2,'0'));
+  var panelTitle = _wkLabel + ' - ' + cat + (ranchFilter ? ' - ' + ranchFilter.toUpperCase() : '');
   
   var panelHtml = '';
 
