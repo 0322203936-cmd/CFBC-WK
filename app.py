@@ -2900,7 +2900,8 @@ function showProdPanel(rowData, opts) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">EN PROCESO DE SER CARGADO</div>';
   } else {
     if (!hideProducts) rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
-    var _TC = 19; // tipo de cambio MXN → USD
+    var _wkCode = ((yr % 100) * 100) + wkStart;
+    var _TC = (_wkCode >= 2502 && _wkCode <= 2520) ? 20 : 19; // tipo de cambio MXN → USD
     var _isUSD = state.currency === 'usd';
     var _conv = function(mxn){ return _isUSD ? mxn / _TC : mxn; };
     var _fmtG = function(mxn){
@@ -2915,7 +2916,7 @@ function showProdPanel(rowData, opts) {
     var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = hideProducts
       ? 'Solo resumen de siembra'
-      : ('Gasto: <b style="color:#16a34a">'+_fmtG(total)+'</b>' + (_isUSD ? ' <span style="font-size:9px;color:#94a3b8;">USD @$19</span>' : ''));
+      : ('Gasto: <b style="color:#16a34a">'+_fmtG(total)+'</b>' + (_isUSD ? ' <span style="font-size:9px;color:#94a3b8;">USD @$'+_TC+'</span>' : ''));
     productSection =
       '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:flex-start; align-items:center;">' +
         '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
