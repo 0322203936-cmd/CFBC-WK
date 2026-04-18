@@ -2897,7 +2897,7 @@ function showProdPanel(rowData, opts) {
       ? 'Solo resumen de siembra'
       : ('Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>');
     productSection =
-      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:flex-end; align-items:center;">' +
+      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:flex-start; align-items:center;">' +
         '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
       '</div>' +
       '<div style="overflow-x:auto; scrollbar-width:thin;">' +
