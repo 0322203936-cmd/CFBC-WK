@@ -1996,14 +1996,18 @@ def _construir_hoja_wk(ws, nombre_hoja: str):
 
     # ── Fila 3 ───────────────────────────────────────────────────────────
     code = nombre_hoja[2:] if nombre_hoja.upper().startswith("WK") else nombre_hoja
+    try:
+        _tc = 20 if 2502 <= int(code) <= 2520 else 19
+    except (ValueError, TypeError):
+        _tc = 19
     ws["B3"].value = code
     ws["B3"].font  = _f(bold=True)
     ws["B3"].fill  = fill_lime
     ws["B3"].alignment = _al("center")
-    ws["C3"].value = 19;  ws["C3"].font = _f(bold=True)
+    ws["C3"].value = _tc;  ws["C3"].font = _f(bold=True)
     ws["C3"].border = _bdr(bottom=medium)
     ws["D3"].value = " tipo de cambio"; ws["D3"].font = _f(bold=True)
-    ws["L3"].value = 19;  ws["L3"].font = _f(bold=True)
+    ws["L3"].value = _tc;  ws["L3"].font = _f(bold=True)
     ws["M3"].value = "  tipo de cambio "; ws["M3"].font = _f(bold=True)
 
     # ── Fila 4 ───────────────────────────────────────────────────────────
@@ -2738,11 +2742,16 @@ def crear_hoja_wk(nombre_hoja: str, tenant_id: str, client_id: str, client_secre
             celdas.append({"address": addr, "value": val})
 
         # Encabezados
+        _code = nombre[2:] if str(nombre).upper().startswith("WK") else str(nombre)
+        try:
+            _tc = 20 if 2502 <= int(_code) <= 2520 else 19
+        except (ValueError, TypeError):
+            _tc = 19
         c("B1", "CENTRO FLORICULTOR DE BAJA CALIFORNIA, S.A. DE C.V. ")
         c("B2", "SEMANA DE CALCULO - Mexico")
         c("B3", nombre)
-        c("C3", 19); c("D3", " tipo de cambio")
-        c("L3", 19); c("M3", "  tipo de cambio ")
+        c("C3", _tc); c("D3", " tipo de cambio")
+        c("L3", _tc); c("M3", "  tipo de cambio ")
         c("B4", "Del ___ al ___ de ________ 20__")
         c("C5", "(MXN) Pesos Mexicanos")
         c("L5", "US Dollars")
