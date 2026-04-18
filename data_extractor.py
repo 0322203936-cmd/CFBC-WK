@@ -1705,13 +1705,14 @@ def _extraer_detalle_weekly() -> dict:
 
                 wk_data: dict = {
                     "inv_inicial": [],
-                    "tallos_cos":  [],   # se llena después del loop (por rancho)
+                    "tallos_cos":  [],   # por flor (suma de todas las columnas de rancho)
                     "tallos_proc": [],   # EXPORTACION + MUESTRAS
                     "tallos_comp": [],
                     "tallos_desp": [],   # EXPORTACION + MUESTRAS (igual que tallos_proc)
                     "tallos_des":  [],
                     "inv_final":   [],
                 }
+                cos_por_flor: dict = {}   # flor -> total cosechado
 
                 for _, row in df.iterrows():
                     if len(row) <= c["flor"]:
@@ -1752,12 +1753,16 @@ def _extraer_detalle_weekly() -> dict:
                         if val != 0.0:
                             wk_data[key].append({"flor": flor, "valor": val})
 
+                    # tallos_cos: acumular por flor (suma de todas las columnas de rancho)
                     for col_idx, ranch_name in _RANCH_COLS:
                         ranch_totals[ranch_name] += _safe(row, col_idx)
+                        val = _safe(row, col_idx)
+                        if val != 0.0:
+                            cos_por_flor[flor] = cos_por_flor.get(flor, 0.0) + val
 
                 wk_data["tallos_cos"] = [
-                    {"rancho": name, "valor": val}
-                    for name, val in ranch_totals.items()
+                    {"flor": flor, "valor": round(val, 0)}
+                    for flor, val in cos_por_flor.items()
                     if val != 0.0
                 ]
 
