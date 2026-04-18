@@ -2895,10 +2895,9 @@ function showProdPanel(rowData, opts) {
     var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = hideProducts
       ? 'Solo resumen de siembra'
-      : ('Reg: <b>'+rows.length+'</b> &nbsp;|&nbsp; Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>');
+      : ('Gasto: <b style="color:#16a34a">'+fmt(total)+'</b>');
     productSection =
-      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">' +
-        '<span style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">DETALLE DE PRODUCTOS</span>' +
+      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:flex-end; align-items:center;">' +
         '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
       '</div>' +
       '<div style="overflow-x:auto; scrollbar-width:thin;">' +
