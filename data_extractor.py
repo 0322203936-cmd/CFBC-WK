@@ -1694,12 +1694,13 @@ def _extraer_detalle_weekly() -> dict:
                 c = _detectar_columnas_weekly(df)
 
                 # Columnas de recepción por rancho (para TALLOS COSECHADOS)
+                # Nombres normalizados para coincidir con el sistema
                 _RANCH_COLS = [
-                    (c["cec"], "CECILIA"),
-                    (c["ram"], "RAMONA"),
-                    (c["isa"], "ISABELA"),
-                    (c["chr"], "CRISTINA"),
-                    (c["c25"], "CECILIA 25"),
+                    (c["cec"], "Cecilia"),
+                    (c["ram"], "Campo-RM"),
+                    (c["isa"], "Isabela"),
+                    (c["chr"], "Christina"),
+                    (c["c25"], "Cecilia 25"),
                 ]
                 ranch_totals = {name: 0.0 for _, name in _RANCH_COLS}
 
@@ -1712,7 +1713,7 @@ def _extraer_detalle_weekly() -> dict:
                     "tallos_des":  [],
                     "inv_final":   [],
                 }
-                cos_por_flor: dict = {}   # flor -> total cosechado
+                cos_por_flor: dict = {}   # (flor, rancho) -> valor
 
                 for _, row in df.iterrows():
                     if len(row) <= c["flor"]:
@@ -1753,17 +1754,18 @@ def _extraer_detalle_weekly() -> dict:
                         if val != 0.0:
                             wk_data[key].append({"flor": flor, "valor": val})
 
-                    # tallos_cos: acumular por flor (suma de todas las columnas de rancho)
+                    # tallos_cos: acumular por flor+rancho individualmente
                     for col_idx, ranch_name in _RANCH_COLS:
-                        ranch_totals[ranch_name] += _safe(row, col_idx)
                         val = _safe(row, col_idx)
+                        ranch_totals[ranch_name] += val
                         if val != 0.0:
-                            cos_por_flor[flor] = cos_por_flor.get(flor, 0.0) + val
+                            key2 = (flor, ranch_name)
+                            cos_por_flor[key2] = cos_por_flor.get(key2, 0.0) + val
 
                 wk_data["tallos_cos"] = [
-                    {"flor": flor, "valor": round(val, 0)}
-                    for flor, val in cos_por_flor.items()
-                    if val != 0.0
+                    {"flor": f, "rancho": rn, "valor": round(v, 0)}
+                    for (f, rn), v in cos_por_flor.items()
+                    if v != 0.0
                 ]
 
                 result[wk_code]      = wk_data
