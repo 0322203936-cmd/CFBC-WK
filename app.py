@@ -249,7 +249,7 @@ else:
 
       /* ── HEADER NATIVO: columnas de Streamlit que contienen #cfbc-brand ── */
       div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) {
-          background: #4472C4 !important;
+          background: #7B1C1C !important;
           border-bottom: 3px solid #16a34a !important;
           min-height: 36px !important;
           max-height: 36px !important;
