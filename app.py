@@ -3002,7 +3002,7 @@ function showProdPanel(rowData, opts) {
     var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
     var panelMeta = hideProducts
       ? 'Solo resumen de siembra'
-      : ('Gasto: <b style="color:#16a34a" class="gasto-total-val">'+_fmtG(total)+'</b>' + (_isUSD ? ' <span style="font-size:9px;color:#94a3b8;">USD @$'+_TC+'</span>' : ''));
+      : ('Gasto: <b style="color:#16a34a" class="gasto-total-val">'+_fmtG(total)+'</b>');
       
     var searchHtml = hideProducts ? '' : '<input type="text" class="prod-filter-input" placeholder="Buscar producto..." style="padding:3px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; width:180px; margin-left:20px" oninput="filterProdRows(this)">';
 
