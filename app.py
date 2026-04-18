@@ -2892,33 +2892,7 @@ function showProdPanel(rowData, opts) {
     }
   }
 
-  // --- NUEVO: Filtro de producto y total general ---
-  var productFilter = '';
-  if (!hideProducts && rows.length > 0) {
-    productFilter = '<div style="padding:6px 8px 2px 8px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; gap:8px;">'
-      + '<label for="prodSearch" style="font-size:10px; color:#475569; font-weight:600;">Buscar producto:</label>'
-      + '<input id="prodSearch" type="text" style="font-size:10px; padding:2px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:120px;" placeholder="Nombre o parte..." oninput="filtrarProductosPanel(this.value)">'
-      + '<span id="prodTotalLabel" style="margin-left:auto; font-size:11px; color:#16a34a; font-weight:700;"></span>'
-      + '</div>';
-  }
-
-  // --- Lógica de filtrado y total general ---
-  var _wkCode = ((yr % 100) * 100) + wkStart;
-  var _TC = (_wkCode >= 2502 && _wkCode <= 2520) ? 20 : 19; // tipo de cambio MXN → USD
-  var _isUSD = state.currency === 'usd';
-  var _conv = function(mxn){ return _isUSD ? mxn / _TC : mxn; };
-  var _fmtG = function(mxn){
-    var v = _conv(mxn);
-    if (!v || isNaN(v)) return '';
-    var neg = v < 0, s = Math.abs(v);
-    var str = _isUSD
-      ? (neg?'-$':'$') + s.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-      : fmt(mxn);
-    return str;
-  };
-  var totalGeneral = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
-
-  // --- Renderizado de tabla con filtro ---
+  // ── Zona 2: Tabla de productos ────────────────────────────────────
   var productSection = '';
   if (hideProducts && !siembraRowsHtml) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Detalle de productos no disponible para MATERIAL VEGETAL.</div>';
@@ -2926,25 +2900,44 @@ function showProdPanel(rowData, opts) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">EN PROCESO DE SER CARGADO</div>';
   } else {
     if (!hideProducts) rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
+    var _wkCode = ((yr % 100) * 100) + wkStart;
+    var _TC = (_wkCode >= 2502 && _wkCode <= 2520) ? 20 : 19; // tipo de cambio MXN → USD
+    var _isUSD = state.currency === 'usd';
+    var _conv = function(mxn){ return _isUSD ? mxn / _TC : mxn; };
+    var _fmtG = function(mxn){
+      var v = _conv(mxn);
+      if (!v || isNaN(v)) return '';
+      var neg = v < 0, s = Math.abs(v);
+      var str = _isUSD
+        ? (neg?'-$':'$') + s.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+        : fmt(mxn);
+      return str;
+    };
+    var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
+    var panelMeta = hideProducts
+      ? 'Solo resumen de siembra'
+      : ('Gasto: <b style="color:#16a34a">'+_fmtG(total)+'</b>' + (_isUSD ? ' <span style="font-size:9px;color:#94a3b8;">USD @$'+_TC+'</span>' : ''));
     productSection =
-      productFilter +
+      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:4px 8px; display:flex; justify-content:flex-start; align-items:center;">' +
+        '<span style="font-size:10px; color:#475569;">'+panelMeta+'</span>' +
+      '</div>' +
       '<div style="overflow-x:auto; scrollbar-width:thin;">' +
-        '<table id="prodPanelTable" style="font-size:10px; width:100%; border-collapse:collapse;">' +
+        '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
           '<thead><tr style="position:sticky;top:0;z-index:1;">' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
             '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
             '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO '+(_isUSD?'USD':'MXN')+'</th>' +
-          '</tr></thead><tbody id="prodPanelTbody">' +
+          '</tr></thead><tbody>' +
           siembraRowsHtml;
     if (!hideProducts && rows.length > 0) {
       rows.forEach(function(r,i){
         var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
-        productSection += '<tr class="prodRow" style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
+        productSection += '<tr style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
           '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
-          '<td class="prodNameCell" style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
+          '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
           '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
-          '<td class="prodGastoCell" style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+_fmtG(r.gasto)+'</td>' +
+          '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+_fmtG(r.gasto)+'</td>' +
           '</tr>';
       });
     } else {
@@ -2954,30 +2947,6 @@ function showProdPanel(rowData, opts) {
         '</tr>';
     }
     productSection += '</tbody></table></div>';
-  }
-
-  // --- Script para filtro y total ---
-  if (!hideProducts && rows.length > 0) {
-    productSection += '<script>\n'
-      + 'function filtrarProductosPanel(q) {\n'
-      + '  q = (q||"").toLowerCase();\n'
-      + '  var trs = document.querySelectorAll("#prodPanelTable .prodRow");\n'
-      + '  var total = 0;\n'
-      + '  trs.forEach(function(tr) {\n'
-      + '    var prod = tr.querySelector(".prodNameCell").textContent.toLowerCase();\n'
-      + '    var match = !q || prod.indexOf(q) !== -1;\n'
-      + '    tr.style.display = match ? "" : "none";\n'
-      + '    if (match) {\n'
-      + '      var gastoCell = tr.querySelector(".prodGastoCell");\n'
-      + '      var val = gastoCell ? gastoCell.textContent.replace(/[^\d.-]/g, "") : "0";\n'
-      + '      total += parseFloat(val)||0;\n'
-      + '    }\n'
-      + '  });\n'
-      + '  var label = document.getElementById("prodTotalLabel");\n'
-      + '  if (label) label.innerHTML = q ? "Total producto: <b>"+total.toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2})+"</b>" : "Total general: <b>'+_fmtG(totalGeneral)+'</b>";\n'
-      + '}\n'
-      + 'setTimeout(function(){ filtrarProductosPanel(""); }, 100);\n'
-      + '</script>';
   }
 
   panelHtml =
