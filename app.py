@@ -2818,8 +2818,7 @@ function showProdPanel(rowData, opts) {
             var _wdRows = _wkSrcW ? (_wkSrcW[m.k] || []) : [];
             // Filtrar ceros
             _wdRows = _wdRows.filter(function(r){ return r.valor && r.valor !== 0; });
-            // ¿Es detalle por rancho (tallos_cos) o por proveedor (tallos_comp) o por flor?
-            var _isByRancho   = false; // tallos_cos ahora muestra por Variedad (Flor) igual que los demás
+            // tallos_cos muestra igual que los demás: Flor + Cantidad + %
             var _isByProveedor = (m.k === 'tallos_comp');
             // Etiquetas legibles para el encabezado de la columna de valor
             var _wdColLabels = {
@@ -2832,12 +2831,11 @@ function showProdPanel(rowData, opts) {
               inv_final:   'Tallos'
             };
             var _wdColLbl = _wdColLabels[m.k] || 'Valor';
-            var _wdGroupLbl = _isByRancho ? 'Rancho' : 'Variedad (Flor)';
             if (_wdRows.length > 0) {
               var _wdTotal = _wdRows.reduce(function(s,r){ return s + (r.valor||0); }, 0);
               var tblW = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
                 '<thead><tr>' +
-                  '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">'+_wdGroupLbl+'</th>' +
+                  '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
                   '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">'+_wdColLbl+'</th>' +
                   (_isByProveedor
                     ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Proveedor</th>'
@@ -2845,17 +2843,15 @@ function showProdPanel(rowData, opts) {
                   ) +
                 '</tr></thead><tbody>';
               _wdRows.forEach(function(wr){
-                var label = _isByRancho ? (wr.rancho || '') : (wr.flor || '');
                 var terceraCelda = _isByProveedor
                   ? '<td style="color:#2563eb;padding:2px 4px;font-size:8px;font-weight:600;">'+(wr.proveedor||'—')+'</td>'
                   : (function(){ var pct = _wdTotal > 0 ? ((wr.valor/_wdTotal)*100).toFixed(1) : '—'; return '<td style="text-align:right;color:#64748b;padding:2px 4px;font-size:8px;">'+pct+'%</td>'; })();
                 tblW += '<tr>' +
-                  '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+label+'</td>' +
+                  '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+(wr.flor||'')+'</td>' +
                   '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+Number(wr.valor).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
                   terceraCelda +
                 '</tr>';
               });
-              // Fila de total
               tblW += '<tr style="border-top:1px solid #E9D98F;">' +
                 '<td style="color:#9a6a20;padding:2px 4px;font-weight:700;font-size:8px;">TOTAL</td>' +
                 '<td style="text-align:right;color:#0f172a;padding:2px 4px;font-weight:700;">'+Number(_wdTotal).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
