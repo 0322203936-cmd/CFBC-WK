@@ -2818,6 +2818,16 @@ function showProdPanel(rowData, opts) {
             var _wdRows = _wkSrcW ? (_wkSrcW[m.k] || []) : [];
             // Filtrar ceros
             _wdRows = _wdRows.filter(function(r){ return r.valor && r.valor !== 0; });
+            // tallos_cos: filtrar por rancho seleccionado; si es Todos, agrupar por flor
+            if (m.k === 'tallos_cos') {
+              if (ranchFilter) {
+                _wdRows = _wdRows.filter(function(r){ return r.rancho === ranchFilter; });
+              } else {
+                var _cosMap = {};
+                _wdRows.forEach(function(r){ _cosMap[r.flor] = (_cosMap[r.flor]||0) + r.valor; });
+                _wdRows = Object.keys(_cosMap).map(function(f){ return {flor:f, valor:_cosMap[f]}; });
+              }
+            }
             // tallos_cos muestra igual que los demás: Flor + Cantidad + %
             var _isByProveedor = (m.k === 'tallos_comp');
             // Etiquetas legibles para el encabezado de la columna de valor
