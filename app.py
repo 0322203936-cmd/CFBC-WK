@@ -3188,6 +3188,12 @@ try:
 except ImportError:
     _autofill_nomina_disponible = False
 
+try:
+    from data_extractor import autorrellenar_siembra_wk
+    _autofill_siembra_disponible = True
+except ImportError:
+    _autofill_siembra_disponible = False
+
 if not st.session_state.show_auto:
     # ==== MODO DASHBOARD ====
     # Header nativo de Streamlit — mismo color #7B1C1C, botones reales sin trucos de z-index
@@ -3471,6 +3477,82 @@ else:
                         st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
                     except Exception as e:
                         st.error(f"Error inesperado: {e}")
+
+    with st.container():
+        st.markdown(
+            '''
+            <div id="auto-card-fill-siembra-shell"></div>
+            <div class="auto-card-kicker">Post-creación · Siembra</div>
+            <div class="auto-section-title">Autorrellenar metros y charolas</div>
+            <div class="auto-section-note">Llena por rancho las filas de Metros de Siembra (fila 91) y Número de Charolas Sembradas (fila 89) sumando los datos desde el Excel de Siembra Detalle.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
+
+        if not _autofill_siembra_disponible:
+            st.error("La función `autorrellenar_siembra_wk` no está disponible en data_extractor.py")
+        else:
+            siem_sel_col, siem_manual_col, siem_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+            with siem_sel_col:
+                if available_weeks:
+                    siem_wk_sel = st.selectbox(
+                        "WK disponible",
+                        options=available_weeks,
+                        format_func=lambda c: f"WK{c}",
+                        key="autofill_siembra_wk_sel",
+                    )
+                    siem_week_code = siem_wk_sel
+                else:
+                    siem_week_code = ""
+            with siem_manual_col:
+                siem_week_manual = st.text_input(
+                    "O captura WK",
+                    placeholder="2615",
+                    max_chars=4,
+                    key="autofill_siembra_wk_manual",
+                ).strip()
+                if siem_week_manual:
+                    siem_week_code = siem_week_manual
+            with siem_info_col:
+                siem_fill_label = f"WK{siem_week_code}" if siem_week_code else "Sin WK"
+                st.markdown(
+                    f'''<div class="auto-card-kicker">Acción</div>
+                    <div class="auto-card-title">{siem_fill_label}</div>
+                    <div class="auto-card-note">Escribe en fila 89 y 91.</div>''',
+                    unsafe_allow_html=True,
+                )
+
+            if st.button(
+                f"Autorrellenar siembra {'— WK' + siem_week_code if siem_week_code else ''}",
+                type="primary",
+                use_container_width=True,
+                key="btn_autofill_siembra",
+                disabled=not bool(siem_week_code),
+            ):
+                if not (siem_week_code.isdigit() and len(siem_week_code) == 4):
+                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2615).")
+                else:
+                    try:
+                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                        client_secret = st.secrets["sharepoint"]["client_secret"]
+                        with st.spinner(f"Autorrellenando siembra en WK{siem_week_code}..."):
+                            res_siem = autorrellenar_siembra_wk(
+                                week_code=siem_week_code,
+                                tenant_id=tenant_id,
+                                client_id=client_id_sp,
+                                client_secret=client_secret,
+                            )
+                        if res_siem.get("ok"):
+                            st.success(res_siem.get("mensaje", "Siembra autorrellenada correctamente."))
+                            st.cache_data.clear()
+                        else:
+                            st.error(res_siem.get("error", "No se pudo automatizar la siembra."))
+                    except KeyError as e:
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                    except Exception as e:
+                        st.error(f"Error inesperado: {e}")
+
 
     with st.container():
         st.markdown(
