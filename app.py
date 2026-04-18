@@ -2889,7 +2889,7 @@ function showProdPanel(rowData, opts) {
   if (hideProducts && !siembraRowsHtml) {
     productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Detalle de productos no disponible para MATERIAL VEGETAL.</div>';
   } else if (rows.length === 0 && !siembraRowsHtml) {
-    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">Sin registros de producto para este período.</div>';
+    productSection = '<div style="padding:12px 10px; color:#94a3b8; font-size:11px; text-align:center;">EN PROCESO DE SER CARGADO</div>';
   } else {
     if (!hideProducts) rows.sort(function(a,b){return Math.abs(b.gasto) - Math.abs(a.gasto);});
     var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
@@ -2922,7 +2922,7 @@ function showProdPanel(rowData, opts) {
     } else {
       productSection +=
         '<tr style="background:#ffffff;border-bottom:1px solid #f1f5f9;">' +
-          '<td colspan="4" style="padding:8px 6px;color:#94a3b8;font-size:10px;text-align:center;">Sin registros de producto para este período.</td>' +
+          '<td colspan="4" style="padding:8px 6px;color:#94a3b8;font-size:10px;text-align:center;">EN PROCESO DE SER CARGADO</td>' +
         '</tr>';
     }
     productSection += '</tbody></table></div>';
