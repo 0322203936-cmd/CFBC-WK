@@ -645,6 +645,10 @@ try:
     # Mostrar métricas en desarrollo
     if st.session_state.get('show_performance', False):
         st.success(f"✅ Datos cargados en {load_time:.2f}s")
+        
+except Exception as e:
+    st.error(f"❌ Error crítico en procesamiento de datos: {e}")
+    data_json = compress_data_for_frontend(fallback_data_load())
 
 # Sistema de actualizaciones incrementales
 def check_incremental_updates():
