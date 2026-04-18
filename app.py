@@ -1116,6 +1116,13 @@ function setCurrency(cur) {
   document.getElementById('btnUSD').className='tb-btn'+(cur==='usd'?' active':'');
   document.getElementById('btnMXN').className='tb-btn'+(cur==='mxn'?' active':'');
   renderView();
+  // Re-renderizar paneles de detalle si hay alguno abierto
+  if (_prodViewsData.length > 0) {
+    _prodViews = [];
+    var _savedData = _prodViewsData.slice();
+    _prodViewsData = [];
+    _savedData.forEach(function(d){ showProdPanel(d.rowData, d.opts); });
+  }
 }
 function toggleYear(y) {
   var active = DATA.years.filter(function(yr){return state.activeYears[yr];});
@@ -2650,6 +2657,7 @@ function onMainCellClick(evt) {
 // PRODUCTOS SUBPANEL
 // =======================================================
 var _prodViews = [];
+var _prodViewsData = []; // guarda {rowData, opts} para re-renderizar al cambiar moneda
 
 function showProdPanel(rowData, opts) {
   opts=opts||{};
@@ -2950,8 +2958,10 @@ function showProdPanel(rowData, opts) {
   
   if (_prodViews.indexOf(panelHtml) === -1) {
     _prodViews.push(panelHtml);
+    _prodViewsData.push({rowData:rowData, opts:opts||{}});
     if (_prodViews.length > 2) {
       _prodViews.shift(); // keep max 2 side-by-side
+      _prodViewsData.shift();
     }
   }
   
