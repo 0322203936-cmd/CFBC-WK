@@ -24,7 +24,7 @@ SHAREPOINT_URL_WK = (
 # Archivo secundario: hojas PR####, MP####, ME####
 SHAREPOINT_URL_PR = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "jesus_sandoval_cfbc_co/IQCecMwUnigFQa1m-0AYEw-rAcDdYtnvXcPBELJi4oSstRc?e=iYLNTK"
+    "jesus_sandoval_cfbc_co/IQCecMwUnigFQa1m-0AYEw-rAcDdYtnvXcPBELJi4oSstRc?e=9vbjA7"
 )
 
 # Conteo de personal (Mano de Obra)
@@ -4319,3 +4319,146 @@ def insertar_hojas_pr_me_mp(
         resultado["MV"] = {"ok": None, "msg": "⏭️ MV — no se subió archivo"}
 
     return resultado
+
+
+def autorrellenar_siembra_wk(week_code: str, tenant_id: str, client_id: str, client_secret: str) -> dict:
+    """
+    Autorrellena las filas de siembra en una hoja WK####:
+    - Fila 89: NUMERO DE CHAROLAS SEMBRADAS (desde Plantas-Metros)
+    - Fila 91: METROS DE SIEMBRA (desde Mtrs Acumulados)
+    """
+    import base64 as _b64
+
+    code = _normalizar_week_code(week_code)
+    if not (code.isdigit() and len(code) == 4):
+        return {"ok": False, "error": "El código de semana debe ser exactamente 4 dígitos (ej: 2614)."}
+
+    nombre_hoja = f"WK{code}"
+    code_int = int(code)
+
+    metros_data = _extraer_metros_acumulados()
+    plantas_data = _extraer_plantas_metros()
+
+    totales_metros = {rn: 0.0 for rn in WK_MXN_RANCH_COLS}
+    totales_charolas = {rn: 0.0 for rn in WK_MXN_RANCH_COLS}
+    usados_m = 0
+    usados_p = 0
+
+    for item in metros_data:
+        if item.get("semana_fin") == code_int:
+            rn = item.get("rancho")
+            if rn in totales_metros:
+                totales_metros[rn] += float(item.get("metros", 0.0))
+                usados_m += 1
+
+    for item in plantas_data:
+        if item.get("semana_fin") == code_int:
+            rn = item.get("rancho")
+            if rn in totales_charolas:
+                totales_charolas[rn] += float(item.get("plantas", 0.0))
+                usados_p += 1
+
+    if usados_m == 0 and usados_p == 0:
+        return {"ok": False, "error": f"No se encontraron datos de siembra para la semana {code_int}."}
+
+    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    token_resp = requests.post(token_url, data={
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "scope": "https://graph.microsoft.com/.default",
+    }, timeout=20)
+    if token_resp.status_code != 200:
+        return {"ok": False, "error": f"Error obteniendo token: {token_resp.text[:300]}"}
+
+    token = token_resp.json().get("access_token")
+    hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    encoded = _b64.b64encode(SHAREPOINT_URL_WK.encode()).decode().rstrip("=")
+    encoded = "u!" + encoded.replace("/", "_").replace("+", "-")
+    res = requests.get(
+        f"https://graph.microsoft.com/v1.0/shares/{encoded}/driveItem",
+        headers=hdrs_json,
+        timeout=20,
+    )
+    if res.status_code != 200:
+        return {"ok": False, "error": f"No se pudo resolver el archivo WK: {res.text[:300]}"}
+
+    item = res.json()
+    drive_id = item.get("parentReference", {}).get("driveId")
+    item_id = item.get("id")
+    if not drive_id or not item_id:
+        return {"ok": False, "error": "No se pudo obtener driveId o itemId del Excel WK."}
+
+    wb_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
+    sess_resp = requests.post(
+        f"{wb_url}/createSession",
+        headers=hdrs_json,
+        json={"persistChanges": True},
+        timeout=30,
+    )
+    if sess_resp.status_code not in (200, 201):
+        return {"ok": False, "error": f"Error abriendo sesión del workbook WK: {sess_resp.text[:300]}"}
+
+    session_id = sess_resp.json().get("id")
+    hdrs = {**hdrs_json, "workbook-session-id": session_id}
+
+    try:
+        sheets_resp = requests.get(f"{wb_url}/worksheets", headers=hdrs, timeout=20)
+        if sheets_resp.status_code != 200:
+            return {"ok": False, "error": f"Error listando hojas WK: {sheets_resp.text[:300]}"}
+
+        target_sheet = None
+        normalized_target = nombre_hoja.replace(" ", "").upper()
+        for ws in sheets_resp.json().get("value", []):
+            ws_name = str(ws.get("name", "")).strip()
+            if ws_name.replace(" ", "").upper() == normalized_target:
+                target_sheet = ws_name
+                break
+
+        if not target_sheet:
+            return {"ok": False, "error": f"La hoja '{nombre_hoja}' no existe en el Excel WK."}
+
+        # Escribir Charolas (fila 89)
+        values_charolas = [[totales_charolas.get(rn, 0.0) for rn in WK_MXN_RANCH_COLS]]
+        patch_resp1 = requests.patch(
+            f"{wb_url}/worksheets/{target_sheet}/range(address='E89:K89')",
+            headers=hdrs,
+            json={"values": values_charolas},
+            timeout=30,
+        )
+        if patch_resp1.status_code in (200, 201):
+            requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E89:K89')/format",
+                headers=hdrs, json={"numberFormat": "#,##0"}, timeout=20,
+            )
+            requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E89:K89')/format/font",
+                headers=hdrs, json={"color": "#000000", "bold": True, "name": "Arial"}, timeout=20,
+            )
+
+        # Escribir Metros (fila 91)
+        values_metros = [[totales_metros.get(rn, 0.0) for rn in WK_MXN_RANCH_COLS]]
+        patch_resp2 = requests.patch(
+            f"{wb_url}/worksheets/{target_sheet}/range(address='E91:K91')",
+            headers=hdrs,
+            json={"values": values_metros},
+            timeout=30,
+        )
+        if patch_resp2.status_code in (200, 201):
+            requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E91:K91')/format",
+                headers=hdrs, json={"numberFormat": "#,##0"}, timeout=20,
+            )
+            requests.patch(
+                f"{wb_url}/worksheets/{target_sheet}/range(address='E91:K91')/format/font",
+                headers=hdrs, json={"color": "#000000", "bold": True, "name": "Arial"}, timeout=20,
+            )
+
+    finally:
+        requests.post(f"{wb_url}/closeSession", headers=hdrs, timeout=20)
+
+    return {
+        "ok": True,
+        "mensaje": f"✅ Siembra autorrellenada en '{nombre_hoja}'. Charolas (fil 89): {usados_p} cols sumadas. Metros (fil 91): {usados_m} cols sumadas.",
+    }
