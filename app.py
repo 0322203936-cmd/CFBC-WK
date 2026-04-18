@@ -2458,8 +2458,9 @@ function renderManoObra() {
     if (grp.label === 'CORTE' && DATA.siembra_data) {
       var tcPin='padding:3px 8px;position:sticky;z-index:1;background:#f0fdf4;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;white-space:nowrap;';
       var tcStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;color:#15803d;font-weight:600;background:#f0fdf4;';
-      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="TALLOS COSECHADOS">';
-      bodyHtml+='<td style="'+tcPin+'left:0;padding-left:20px;color:#166534;font-size:11px"><span style="color:#22c55e;font-size:9px;margin-right:4px;">🌱</span>TALLOS COSECHADOS</td>';
+      var tcDetailId = 'tc_detail_'+grpIdx;
+      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="Clic en etiqueta para ver detalle por rancho y flor">';
+      bodyHtml+='<td style="'+tcPin+'left:0;padding-left:20px;color:#166534;font-size:11px;cursor:pointer;" onclick="(function(){var d=document.getElementById(\''+tcDetailId+'\');if(d){d.style.display=(d.style.display===\'none\'?\'table-row\':\'none\');}})()"><span style="color:#22c55e;font-size:9px;margin-right:4px;">🌱</span>TALLOS COSECHADOS <span style="font-size:9px;color:#15803d;opacity:0.7;">▾ ver por flor</span></td>';
       var wkTcTotal = {};
       var wKeyOrdered = [];
       activeRanches.forEach(function(rn){
@@ -2510,6 +2511,74 @@ function renderManoObra() {
         else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       }
       bodyHtml+='</tr>';
+
+      // ── Fila detalle TALLOS COSECHADOS por rancho y flor ──────────────────
+      (function(){
+        if (!DATA.detalle_weekly) {
+          bodyHtml+='<tr id="'+tcDetailId+'" class="mo_grp_'+grpIdx+'" style="display:none;"><td colspan="100" style="padding:8px 16px;background:#f0fdf4;color:#9a6a20;font-size:11px;">Sin detalle por flor disponible.</td></tr>';
+          return;
+        }
+        var _rows = {};
+        weekKeys.forEach(function(key){
+          var pw=key.split('-');
+          var wkk=((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
+          var wkSrc=DATA.detalle_weekly[wkk]||DATA.detalle_weekly[String(wkk)]||null;
+          if (!wkSrc) return;
+          var wdRows=wkSrc['tallos_cos']||[];
+          wdRows.forEach(function(wr){
+            var rancho=wr.rancho||'Sin Rancho';
+            var flor=wr.flor||'Sin Flor';
+            var rk=rancho+'|||'+flor;
+            if (!_rows[rk]) _rows[rk]={rancho:rancho,flor:flor,byWeek:{},total:0};
+            _rows[rk].byWeek[key]=(_rows[rk].byWeek[key]||0)+(wr.valor||0);
+            _rows[rk].total+=(wr.valor||0);
+          });
+        });
+        var rowArr=Object.keys(_rows).map(function(k){return _rows[k];}).sort(function(a,b){
+          if(a.rancho!==b.rancho) return a.rancho.localeCompare(b.rancho,'es');
+          return a.flor.localeCompare(b.flor,'es');
+        });
+        var _detHtml='';
+        if (!rowArr.length) {
+          _detHtml='<div style="padding:8px 10px;color:#9a6a20;font-size:11px;">Sin detalle por flor para la(s) semana(s) seleccionada(s).</div>';
+        } else {
+          var thS='padding:4px 8px;background:#d1fae5;color:#065f46;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid #6ee7b7;white-space:nowrap;text-align:right;';
+          var thL=thS+'text-align:left;';
+          var thead='<tr><th style="'+thL+'border-right:1px solid #6ee7b7;">Rancho</th><th style="'+thL+'border-right:2px solid #34d399;">Flor</th>';
+          weekKeys.forEach(function(key){
+            var d=key.split('-'); var lbl=String(d[0]).slice(2)+String(d[1]).padStart(2,'0');
+            thead+='<th style="'+thS+'border-right:1px solid #a7f3d0;">'+lbl+'</th>';
+          });
+          thead+='<th style="'+thS+'border-left:2px solid #34d399;">Total</th></tr>';
+          var weekTotals={}, grandTotal=0;
+          weekKeys.forEach(function(k){weekTotals[k]=0;});
+          var tbody=''; var prevRancho=null;
+          rowArr.forEach(function(r,i){
+            var bg=(i%2===0)?'#f0fdf4':'#ffffff';
+            var isNew=r.rancho!==prevRancho; prevRancho=r.rancho;
+            tbody+='<tr style="background:'+bg+';border-bottom:1px solid #d1fae5;">';
+            tbody+='<td style="padding:3px 8px;color:#047857;font-weight:'+(isNew?'700':'400')+';white-space:nowrap;font-size:11px;border-right:1px solid #d1fae5;">'+(isNew?r.rancho:'')+'</td>';
+            tbody+='<td style="padding:3px 8px;color:#1e3a5f;white-space:nowrap;font-size:11px;border-right:2px solid #a7f3d0;">'+r.flor+'</td>';
+            weekKeys.forEach(function(key){
+              var v=r.byWeek[key]||0; weekTotals[key]+=v;
+              tbody+='<td style="padding:3px 8px;text-align:right;font-size:11px;color:'+(v?'#0f172a':'#ccc')+';font-weight:'+(v?'600':'400')+';border-right:1px solid #d1fae5;">'+(v?Number(v).toLocaleString('es-MX',{maximumFractionDigits:0}):'—')+'</td>';
+            });
+            grandTotal+=r.total;
+            tbody+='<td style="padding:3px 8px;text-align:right;font-weight:700;color:#065f46;font-size:11px;border-left:2px solid #34d399;">'+Number(r.total).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td></tr>';
+          });
+          // Fila TOTAL
+          tbody+='<tr style="background:#d1fae5;border-top:2px solid #34d399;"><td style="padding:4px 8px;color:#065f46;font-size:11px;font-weight:700;border-right:1px solid #a7f3d0;" colspan="2">TOTAL</td>';
+          weekKeys.forEach(function(key){
+            var v=weekTotals[key];
+            tbody+='<td style="padding:4px 8px;text-align:right;color:#065f46;font-size:11px;font-weight:700;border-right:1px solid #a7f3d0;">'+(v?Number(v).toLocaleString('es-MX',{maximumFractionDigits:0}):'—')+'</td>';
+          });
+          tbody+='<td style="padding:4px 8px;text-align:right;color:#065f46;font-size:11px;font-weight:800;border-left:2px solid #34d399;">'+Number(grandTotal).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td></tr>';
+          _detHtml='<div style="padding:8px 12px 12px 32px;background:#ecfdf5;border-bottom:2px solid #34d399;">'+
+            '<div style="font-size:10px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📊 Tallos Cosechados — por Rancho y Flor</div>'+
+            '<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:11px;font-family:Calibri,sans-serif;min-width:400px;"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div></div>';
+        }
+        bodyHtml+='<tr id="'+tcDetailId+'" class="mo_grp_'+grpIdx+'" style="display:none;"><td colspan="100" style="padding:0;">'+_detHtml+'</td></tr>';
+      })();
     }
 
     if (grp.label === 'TRASPLANTE' && DATA.siembra_data) {
