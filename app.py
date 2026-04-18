@@ -2111,7 +2111,8 @@ function renderServicios() {
 
     var tdPin='padding:3px 8px;position:sticky;z-index:1;background:#fff;border-bottom:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;font-size:11px;';
     bodyHtml+='<tr class="pt-row">';
-    bodyHtml+='<td style="'+tdPin+'left:0;color:#1e3a5f;font-weight:700">'+sc+'</td>';
+    var displayLabel = (sc === 'RO, TEL, RTA.Alim') ? 'COMBUSTIBLE' : sc;
+    bodyHtml+='<td style="'+tdPin+'left:0;color:#1e3a5f;font-weight:700">'+displayLabel+'</td>';
     activeRanches.forEach(function(rn){
       weekKeys.forEach(function(key){
         var v=scByRnWk[rn][key];
