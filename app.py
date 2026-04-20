@@ -2484,10 +2484,10 @@ function renderManoObra() {
     // ── Fila $/TALLO, $/METRO o $/CHAROLA — Costo Unitario ─────────────────
     // Solo para grupos que tienen una métrica real como denominador
     var _utGroupMap = {
-      'CORTE':          {key:'tallos_cos', label:'$/TALLO',  title:'Costo Unitario por Tallo Cosechado: '},
-      'TRASPLANTE':     {key:'charolas',   label:'$/CHAROLA', title:'Costo Unitario por Charola Sembrada: '},
-      'MANEJO PLANTA':  {key:'metros',     label:'$/METRO',   title:'Costo Unitario por Metro de Siembra: '},
-      'MIPE / MIRFE':   {key:'metros',     label:'$/METRO',   title:'Costo Unitario por Metro de Siembra: '}
+      'CORTE':          {key:'tallos_cos', label:'$/UNIT',  title:'Costo Unitario por Tallo Cosechado: '},
+      'TRASPLANTE':     {key:'charolas',   label:'$/UNIT',  title:'Costo Unitario por Charola Sembrada: '},
+      'MANEJO PLANTA':  {key:'metros',     label:'$/UNIT',  title:'Costo Unitario por Metro de Siembra: '},
+      'MIPE / MIRFE':   {key:'metros',     label:'$/UNIT',  title:'Costo Unitario por Metro de Siembra: '}
     };
     var _utConf = _utGroupMap[grp.label];
     if (_utConf && DATA.siembra_data) {
