@@ -2481,12 +2481,19 @@ function renderManoObra() {
       bodyHtml+='</tr>';
     });
 
-    // ── Fila $/TALLO o $/METRO — Costo Unitario ──────────────────────────────
-    if (DATA.siembra_data) {
-      var _usaMetros = (grp.label === 'MANEJO PLANTA' || grp.label === 'MIPE / MIRFE');
-      var _utDenomKey = _usaMetros ? 'metros' : 'tallos_cos';
-      var _utLabel = _usaMetros ? '$/METRO' : '$/TALLO';
-      var _utTitle = _usaMetros ? 'Costo Unitario por Metro de Siembra: ' : 'Costo Unitario por Tallo Cosechado: ';
+    // ── Fila $/TALLO, $/METRO o $/CHAROLA — Costo Unitario ─────────────────
+    // Solo para grupos que tienen una métrica real como denominador
+    var _utGroupMap = {
+      'CORTE':          {key:'tallos_cos', label:'$/TALLO',  title:'Costo Unitario por Tallo Cosechado: '},
+      'TRASPLANTE':     {key:'charolas',   label:'$/CHAROLA', title:'Costo Unitario por Charola Sembrada: '},
+      'MANEJO PLANTA':  {key:'metros',     label:'$/METRO',   title:'Costo Unitario por Metro de Siembra: '},
+      'MIPE / MIRFE':   {key:'metros',     label:'$/METRO',   title:'Costo Unitario por Metro de Siembra: '}
+    };
+    var _utConf = _utGroupMap[grp.label];
+    if (_utConf && DATA.siembra_data) {
+      var _utDenomKey = _utConf.key;
+      var _utLabel = _utConf.label;
+      var _utTitle = _utConf.title;
       var utPin='padding:3px 8px;position:sticky;z-index:1;background:#fffbeb;border-bottom:1px solid #fde68a;border-right:1px solid #fde68a;white-space:nowrap;';
       var utStyle='padding:3px 6px;border-bottom:1px solid #fde68a;border-right:1px solid #fde68a;text-align:right;color:#92400e;font-weight:600;background:#fffbeb;';
       bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="'+_utTitle+grp.label+'">';
