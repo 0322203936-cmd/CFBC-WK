@@ -2436,9 +2436,9 @@ function renderManoObra() {
         bodyHtml+=cellGrp(grpByRnWk[rn][key]);
       });
       var firstKey=weekKeys[0], lastKey=weekKeys[weekKeys.length-1];
-      var costDif=Math.abs((grpByRnWk[rn][lastKey]||0)-(grpByRnWk[rn][firstKey]||0));
+      var costDif=(grpByRnWk[rn][lastKey]||0)-(grpByRnWk[rn][firstKey]||0);
       var grpDifStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700';
-      bodyHtml+='<td style="'+grpDifStyle+'">'+(costDif?fmt(costDif):'—')+'</td>';
+      bodyHtml+='<td style="'+grpDifStyle+'">'+(costDif?(costDif>0?'+':'')+fmt(costDif):'—')+'</td>';
     });
     // Celdas TOTAL por semana (suma todos los ranchos)
     var grpTotStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:#9DC3E6;color:#1e3a5f;font-weight:700;border-left:1px solid #8EA9C1;';
@@ -2447,11 +2447,11 @@ function renderManoObra() {
         var v=activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][key]||0);},0);
         bodyHtml+='<td style="'+grpTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
       });
-      var grpTotDif=Math.abs(
+      var grpTotDif=
         activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[weekKeys.length-1]]||0);},0)-
         activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[0]]||0);},0)
-      );
-      bodyHtml+='<td style="'+grpTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(grpTotDif?fmt(grpTotDif):'—')+'</td>';
+      ;
+      bodyHtml+='<td style="'+grpTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(grpTotDif?(grpTotDif>0?'+':'')+fmt(grpTotDif):'—')+'</td>';
     }
     bodyHtml+='</tr>';
 
@@ -2574,10 +2574,10 @@ function renderManoObra() {
             var sRow = sData[targetRn] || sData[rn] || {};
             return sRow['tallos_cos'] || 0;
           };
-          wkTcDiff = Math.abs(getV(lw) - getV(fw));
+          wkTcDiff = getV(lw) - getV(fw);
         }
         if(!wkTcDiff||wkTcDiff===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-        else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+        else { bodyHtml+='<td style="'+tcStyle+'">'+(wkTcDiff>0?'+':'')+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       });
       if(showTotal) {
         wKeyOrdered.forEach(function(key){
@@ -2590,10 +2590,10 @@ function renderManoObra() {
         var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
         var gtDif = 0;
         if(wKeyOrdered.length > 0) {
-          gtDif = Math.abs((wkTcTotal[wKeyOrdered[wKeyOrdered.length-1]]||0) - (wkTcTotal[wKeyOrdered[0]]||0));
+          gtDif = (wkTcTotal[wKeyOrdered[wKeyOrdered.length-1]]||0) - (wkTcTotal[wKeyOrdered[0]]||0);
         }
         if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-        else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+        else { bodyHtml+='<td style="'+gtStyle+'">'+(gtDif>0?'+':'')+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       }
       bodyHtml+='</tr>';
     }
@@ -2631,10 +2631,10 @@ function renderManoObra() {
             var sRow = sData[targetRn] || sData[rn] || {};
             return sRow['charolas'] || 0;
           };
-          wkTcDiff = Math.abs(getV(lw) - getV(fw));
+          wkTcDiff = getV(lw) - getV(fw);
         }
         if(!wkTcDiff||wkTcDiff===0) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-        else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+        else { bodyHtml+='<td style="'+tcStyle+'">'+(wkTcDiff>0?'+':'')+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       });
       if(showTotal) {
         wKeyOrdered.forEach(function(key){
@@ -2647,10 +2647,10 @@ function renderManoObra() {
         var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
         var gtDif = 0;
         if(wKeyOrdered.length > 0) {
-          gtDif = Math.abs((wkTcTotal[wKeyOrdered[wKeyOrdered.length-1]]||0) - (wkTcTotal[wKeyOrdered[0]]||0));
+          gtDif = (wkTcTotal[wKeyOrdered[wKeyOrdered.length-1]]||0) - (wkTcTotal[wKeyOrdered[0]]||0);
         }
         if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-        else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+        else { bodyHtml+='<td style="'+gtStyle+'">'+(gtDif>0?'+':'')+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       }
       bodyHtml+='</tr>';
     }
@@ -2687,9 +2687,9 @@ function renderManoObra() {
             else { bodyHtml+='<td style="'+tcStyle+'">'+Number(v).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
           });
           var wkTcDiff = 0;
-          if (weekKeys.length > 0) wkTcDiff = Math.abs(getV(rn, lw) - getV(rn, fw));
+          if (weekKeys.length > 0) wkTcDiff = getV(rn, lw) - getV(rn, fw);
           if(!wkTcDiff) { bodyHtml+='<td style="'+tcStyle+'color:#86efac">—</td>'; }
-          else { bodyHtml+='<td style="'+tcStyle+'">'+Number(wkTcDiff).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
+          else { bodyHtml+='<td style="'+tcStyle+'">'+(wkTcDiff>0?'+':'')+Number(wkTcDiff).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
         });
 
         if(showTotal) {
@@ -2702,9 +2702,9 @@ function renderManoObra() {
           });
           var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
           var gtDif = 0;
-          if(weekKeys.length > 0) gtDif = Math.abs((wkTcTotal[lw]||0) - (wkTcTotal[fw]||0));
+          if(weekKeys.length > 0) gtDif = (wkTcTotal[lw]||0) - (wkTcTotal[fw]||0);
           if(!gtDif) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-          else { bodyHtml+='<td style="'+gtStyle+'">'+Number(gtDif).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
+          else { bodyHtml+='<td style="'+gtStyle+'">'+(gtDif>0?'+':'')+Number(gtDif).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
         }
         bodyHtml+='</tr>';
       });
@@ -2736,8 +2736,8 @@ function renderManoObra() {
       var v=grandByRnWk[rn][key]||0;
       bodyHtml+='<td style="'+totStyle+'">'+(v?fmt(v):'—')+'</td>';
     });
-    var rnDif=Math.abs((grandByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(grandByRnWk[rn][weekKeys[0]]||0));
-    bodyHtml+='<td style="'+totStyle+'border-left:1px solid #aaa">'+(rnDif?fmt(rnDif):'—')+'</td>';
+    var rnDif=(grandByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(grandByRnWk[rn][weekKeys[0]]||0);
+    bodyHtml+='<td style="'+totStyle+'border-left:1px solid #aaa">'+(rnDif?(rnDif>0?'+':'')+fmt(rnDif):'—')+'</td>';
   });
   var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
   if(showTotal) {
@@ -2745,8 +2745,8 @@ function renderManoObra() {
       var v=grandCostWk[key]||0;
       bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
     });
-    var gtDif=Math.abs((grandCostWk[weekKeys[weekKeys.length-1]]||0)-(grandCostWk[weekKeys[0]]||0));
-    bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
+    var gtDif=(grandCostWk[weekKeys[weekKeys.length-1]]||0)-(grandCostWk[weekKeys[0]]||0);
+    bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?(gtDif>0?'+':'')+fmt(gtDif):'—')+'</td>';
   }
   bodyHtml+='</tr>';
 
