@@ -3140,6 +3140,7 @@ function showProdPanel(rowData, opts) {
         '<tr style="background:#ffffff;border-bottom:1px solid #EEE3B8;">' +
           '<td colspan="4" style="padding:2px 0;"></td>' +
         '</tr>';
+    }
   }
 
   // ── Zona 2: Tabla de productos ────────────────────────────────────
