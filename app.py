@@ -2481,6 +2481,55 @@ function renderManoObra() {
       bodyHtml+='</tr>';
     });
 
+    // ── Fila $/TALLO — Costo Unitario por Tallo Cosechado ──────────────────
+    if (DATA.siembra_data) {
+      var utPin='padding:3px 8px;position:sticky;z-index:1;background:#fffbeb;border-bottom:1px solid #fde68a;border-right:1px solid #fde68a;white-space:nowrap;';
+      var utStyle='padding:3px 6px;border-bottom:1px solid #fde68a;border-right:1px solid #fde68a;text-align:right;color:#92400e;font-weight:600;background:#fffbeb;';
+      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="Costo Unitario por Tallo Cosechado: '+grp.label+'">';
+      bodyHtml+='<td style="'+utPin+'left:0;padding-left:20px;color:#92400e;font-size:11px"><span style="color:#f59e0b;font-size:9px;margin-right:4px;">💲</span>$/TALLO</td>';
+      var _utCostByWk={}, _utTallosByWk={};
+      weekKeys.forEach(function(k){ _utCostByWk[k]=0; _utTallosByWk[k]=0; });
+      activeRanches.forEach(function(rn){
+        var _firstCpt=0, _lastCpt=0;
+        weekKeys.forEach(function(key, wi){
+          var cost=grpByRnWk[rn][key]||0;
+          var pw=key.split('-');
+          var wkk=((parseInt(pw[0])%100)*100)+parseInt(pw[1]);
+          var sData=DATA.siembra_data[wkk]||DATA.siembra_data[String(wkk)]||{};
+          var targetRn=({'Ramona':'Campo-RM','Poscosecha':'PosCo-RM','Propagacion':'Prop-RM'})[rn]||rn;
+          var sRow=sData[targetRn]||sData[rn]||{};
+          var tallos=sRow['tallos_cos']||0;
+          var cpt=(tallos>0)?cost/tallos:0;
+          _utCostByWk[key]+=cost; _utTallosByWk[key]+=tallos;
+          if(wi===0) _firstCpt=cpt;
+          _lastCpt=cpt;
+          if(!cpt){bodyHtml+='<td style="'+utStyle+'color:#fcd34d">—</td>';}
+          else{bodyHtml+='<td style="'+utStyle+'">$'+cpt.toFixed(2)+'</td>';}
+        });
+        var _utDif=_lastCpt-_firstCpt;
+        var _utDifStyle=utStyle+'border-left:1px solid #fbbf24;';
+        if(!_utDif||Math.abs(_utDif)<0.005){bodyHtml+='<td style="'+_utDifStyle+'color:#fcd34d">—</td>';}
+        else{var _utCl=_utDif>0?'#dc2626':'#16a34a'; bodyHtml+='<td style="'+_utDifStyle+'color:'+_utCl+'">'+(_utDif>0?'+':'')+_utDif.toFixed(2)+'</td>';}
+      });
+      if(showTotal){
+        var _firstTotCpt=0, _lastTotCpt=0;
+        var utTotStyle='padding:3px 6px;border-bottom:1px solid #fde68a;border-right:1px solid #fde68a;text-align:right;background:#fef3c7;color:#92400e;font-weight:700;';
+        weekKeys.forEach(function(key, wi){
+          var cost=_utCostByWk[key]||0;
+          var tallos=_utTallosByWk[key]||0;
+          var cpt=(tallos>0)?cost/tallos:0;
+          if(wi===0) _firstTotCpt=cpt;
+          _lastTotCpt=cpt;
+          bodyHtml+='<td style="'+utTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( cpt?'$'+cpt.toFixed(2):'—')+'</td>';
+        });
+        var _totUtDif=_lastTotCpt-_firstTotCpt;
+        var _totUtDifStyle=utTotStyle+'border-left:1px solid #fbbf24;background:#fde68a;';
+        if(!_totUtDif||Math.abs(_totUtDif)<0.005){bodyHtml+='<td style="'+_totUtDifStyle+'color:#fcd34d">—</td>';}
+        else{var _totUtCl=_totUtDif>0?'#dc2626':'#16a34a'; bodyHtml+='<td style="'+_totUtDifStyle+'color:'+_totUtCl+'">'+(_totUtDif>0?'+':'')+_totUtDif.toFixed(2)+'</td>';}
+      }
+      bodyHtml+='</tr>';
+    }
+
     if (grp.label === 'CORTE' && DATA.siembra_data) {
       var tcPin='padding:3px 8px;position:sticky;z-index:1;background:#f0fdf4;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;white-space:nowrap;';
       var tcStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;color:#15803d;font-weight:600;background:#f0fdf4;';
