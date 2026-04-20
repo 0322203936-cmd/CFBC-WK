@@ -2928,168 +2928,218 @@ function showProdPanel(rowData, opts) {
     {k:'hectareas',    lbl:'HECT\u00c1REAS'},
   ];
   if (DATA.siembra_data) {
-    var _wkKey = ((yr%100)*100) + wkStart;
-    var _wkSrc = DATA.siembra_data[_wkKey] || DATA.siembra_data[String(_wkKey)] || null;
-    if (_wkSrc) {
+    // ── Agregar siembra_data de TODAS las semanas en el rango ──────────
+    var _yyBase = (yr % 100) * 100;
+    var _aggSiembra = {};  // {metricKey: valorSumado}
+    var _wkKeysInRange = [];
+    for (var _wk = wkStart; _wk <= wkEnd; _wk++) {
+      var _wkKey = _yyBase + _wk;
+      _wkKeysInRange.push(_wkKey);
+      var _wkSrc = DATA.siembra_data[_wkKey] || DATA.siembra_data[String(_wkKey)] || null;
+      if (!_wkSrc) continue;
       var _sRow = ranchFilter ? (_wkSrc[ranchFilter] || _wkSrc['TOTAL'] || {}) : (_wkSrc['TOTAL'] || {});
-      var _activos = _allMetas.filter(function(m){ var v=_sRow[m.k]; return v!==undefined&&v!==null&&v!==''&&v!==0; });
-      if (_activos.length > 0) {
-        _activos.forEach(function(m, i){
-          var bg = (i % 2 === 0) ? '#FFF3BF' : '#FFF8D6';
-          var isMetros = (m.k === 'metros');
-          var isCharolas = (m.k === 'charolas');
-          var _WEEKLY_KEYS = ['inv_inicial','tallos_cos','tallos_des','tallos_comp','tallos_desp','inv_final','tallos_proc'];
-          var isWeeklyDetail = _WEEKLY_KEYS.indexOf(m.k) >= 0;
-          var isExpandible = isMetros || isCharolas || isWeeklyDetail;
-          var lblStyle = isExpandible ? 'cursor:pointer;' : '';
-          var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) n.style.display=(n.style.display===\\\'none\\\'?\\\'table-row\\\':\\\'none\\\');"' : '';
-          
-          siembraRowsHtml +=
-            '<tr style="background:'+bg+';border-bottom:1px solid #E9D98F;">' +
-              '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#9a6a20;font-weight:700;">SIEMBRA</td>' +
-              '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+(isExpandible?' \u25BE':'')+'</span></td>' +
-              '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+Number(_sRow[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
-            '</tr>';
-            
-          if (isMetros && DATA.metros_acumulados) {
-            var mRows = DATA.metros_acumulados.filter(function(r){ 
-              return parseInt(r.semana_fin) === parseInt(_wkKey) && isRanchAllowed(r.rancho); 
-            });
-            if (mRows.length > 0) {
-              var tbl = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
-                '<thead><tr>' +
-                  (!ranchFilter ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Rancho</th>' : '') +
-                  '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
-                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Metros</th>' +
-                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Plantas Acum.</th>' +
-                '</tr></thead><tbody>';
-              mRows.forEach(function(mr){
-                tbl += '<tr>' +
-                  (!ranchFilter ? '<td style="color:#8a4b08;padding:2px 4px;">'+mr.rancho+'</td>' : '') +
-                  '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+mr.flor+'</td>' +
-                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+mr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
-                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+mr.pla_acum.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
-                '</tr>';
-              });
-              tbl += '</tbody></table>';
-              siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl+'</td></tr>';
-            } else {
-              var availableWks = [];
-              if (DATA.metros_acumulados) {
-                var wks = {};
-                DATA.metros_acumulados.forEach(function(x){
-                  if (isRanchAllowed(x.rancho)) wks[x.semana_fin] = true;
-                });
-                availableWks = Object.keys(wks).sort();
-              }
-              var wksTxt = availableWks.length > 0 ? availableWks.join(', ') : 'Ninguna';
-              siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semana ' + _wkKey + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt + '</i></td></tr>';
-            }
-          }
-
-          if (isCharolas && DATA.plantas_metros) {
-            var cRows = DATA.plantas_metros.filter(function(r){ 
-              return parseInt(r.semana_fin) === parseInt(_wkKey) && isRanchAllowed(r.rancho); 
-            });
-            if (cRows.length > 0) {
-              var tbl2 = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
-                '<thead><tr>' +
-                  (!ranchFilter ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Rancho</th>' : '') +
-                  '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
-                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Plantas</th>' +
-                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Metros</th>' +
-                '</tr></thead><tbody>';
-              cRows.forEach(function(cr){
-                tbl2 += '<tr>' +
-                  (!ranchFilter ? '<td style="color:#8a4b08;padding:2px 4px;">'+cr.rancho+'</td>' : '') +
-                  '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+cr.flor+'</td>' +
-                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+cr.plantas.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
-                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+cr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
-                '</tr>';
-              });
-              tbl2 += '</tbody></table>';
-              siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl2+'</td></tr>';
-            } else {
-              var availableWks2 = [];
-              if (DATA.plantas_metros) {
-                var wks2 = {};
-                DATA.plantas_metros.forEach(function(x){
-                  if (isRanchAllowed(x.rancho)) wks2[x.semana_fin] = true;
-                });
-                availableWks2 = Object.keys(wks2).sort();
-              }
-              var wksTxt2 = availableWks2.length > 0 ? availableWks2.join(', ') : 'Ninguna';
-              siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semana ' + _wkKey + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt2 + '</i></td></tr>';
-            }
-          }
-
-          // ── Detalle WEEKLY#### (inv/tallos por variedad de flor) ──────────
-          if (isWeeklyDetail && DATA.detalle_weekly) {
-            var _wkSrcW = DATA.detalle_weekly[_wkKey] || DATA.detalle_weekly[String(_wkKey)] || null;
-            var _wdRows = _wkSrcW ? (_wkSrcW[m.k] || []) : [];
-            // Filtrar ceros
-            _wdRows = _wdRows.filter(function(r){ return r.valor && r.valor !== 0; });
-            // tallos_cos: filtrar por rancho seleccionado; si es Todos, agrupar por flor
-            if (m.k === 'tallos_cos') {
-              if (ranchFilter) {
-                _wdRows = _wdRows.filter(function(r){ return r.rancho === ranchFilter; });
-              } else {
-                var _cosMap = {};
-                _wdRows.forEach(function(r){ _cosMap[r.flor] = (_cosMap[r.flor]||0) + r.valor; });
-                _wdRows = Object.keys(_cosMap).map(function(f){ return {flor:f, valor:_cosMap[f]}; });
-              }
-            }
-            // tallos_cos muestra igual que los demás: Flor + Cantidad + %
-            var _isByProveedor = (m.k === 'tallos_comp');
-            // Etiquetas legibles para el encabezado de la columna de valor
-            var _wdColLabels = {
-              inv_inicial: 'Tallos',
-              tallos_cos:  'Tallos Cosechados',
-              tallos_proc: 'Tallos Recibidos',
-              tallos_comp: 'Tallos',
-              tallos_desp: 'Tallos',
-              tallos_des:  'Tallos',
-              inv_final:   'Tallos'
-            };
-            var _wdColLbl = _wdColLabels[m.k] || 'Valor';
-            if (_wdRows.length > 0) {
-              var _wdTotal = _wdRows.reduce(function(s,r){ return s + (r.valor||0); }, 0);
-              var tblW = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
-                '<thead><tr>' +
-                  '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
-                  '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">'+_wdColLbl+'</th>' +
-                  (_isByProveedor
-                    ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Proveedor</th>'
-                    : '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">%</th>'
-                  ) +
-                '</tr></thead><tbody>';
-              _wdRows.forEach(function(wr){
-                var terceraCelda = _isByProveedor
-                  ? '<td style="color:#2563eb;padding:2px 4px;font-size:8px;font-weight:600;">'+(wr.proveedor||'—')+'</td>'
-                  : (function(){ var pct = _wdTotal > 0 ? ((wr.valor/_wdTotal)*100).toFixed(1) : '—'; return '<td style="text-align:right;color:#64748b;padding:2px 4px;font-size:8px;">'+pct+'%</td>'; })();
-                tblW += '<tr>' +
-                  '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+(wr.flor||'')+'</td>' +
-                  '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+Number(wr.valor).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
-                  terceraCelda +
-                '</tr>';
-              });
-              tblW += '<tr style="border-top:1px solid #E9D98F;">' +
-                '<td style="color:#9a6a20;padding:2px 4px;font-weight:700;font-size:8px;">TOTAL</td>' +
-                '<td style="text-align:right;color:#0f172a;padding:2px 4px;font-weight:700;">'+Number(_wdTotal).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
-                '<td></td>' +
-              '</tr>';
-              tblW += '</tbody></table>';
-              siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tblW+'</td></tr>';
-            } else {
-              siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin detalle disponible para semana '+_wkKey+' en Excel WEEKLY.</i></td></tr>';
-            }
-          }
-        });
-          '<tr style="background:#ffffff;border-bottom:1px solid #EEE3B8;">' +
-            '<td colspan="4" style="padding:2px 0;"></td>' +
-          '</tr>';
-      }
+      _allMetas.forEach(function(m) {
+        var v = _sRow[m.k];
+        if (v !== undefined && v !== null && v !== '' && v !== 0) {
+          _aggSiembra[m.k] = (_aggSiembra[m.k] || 0) + Number(v);
+        }
+      });
     }
+    var _isRange = (wkStart !== wkEnd);
+    var _activos = _allMetas.filter(function(m){ var v=_aggSiembra[m.k]; return v!==undefined&&v!==null&&v!==0; });
+    if (_activos.length > 0) {
+      _activos.forEach(function(m, i){
+        var bg = (i % 2 === 0) ? '#FFF3BF' : '#FFF8D6';
+        var isMetros = (m.k === 'metros');
+        var isCharolas = (m.k === 'charolas');
+        var _WEEKLY_KEYS = ['inv_inicial','tallos_cos','tallos_des','tallos_comp','tallos_desp','inv_final','tallos_proc'];
+        var isWeeklyDetail = _WEEKLY_KEYS.indexOf(m.k) >= 0;
+        var isExpandible = isMetros || isCharolas || isWeeklyDetail;
+        var lblStyle = isExpandible ? 'cursor:pointer;' : '';
+        var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) n.style.display=(n.style.display===\\\'none\\\'?\\\'table-row\\\':\\\'none\\\');"' : '';
+        
+        siembraRowsHtml +=
+          '<tr style="background:'+bg+';border-bottom:1px solid #E9D98F;">' +
+            '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#9a6a20;font-weight:700;">SIEMBRA</td>' +
+            '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+(isExpandible?' \u25BE':'')+'</span></td>' +
+            '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+Number(_aggSiembra[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+          '</tr>';
+          
+        if (isMetros && DATA.metros_acumulados) {
+          var mRows = DATA.metros_acumulados.filter(function(r){ 
+            var sf = parseInt(r.semana_fin);
+            return _wkKeysInRange.indexOf(sf) >= 0 && isRanchAllowed(r.rancho); 
+          });
+          // Si es rango, agrupar por rancho+flor y sumar metros/plantas
+          if (_isRange && mRows.length > 0) {
+            var _mAgr = {};
+            mRows.forEach(function(mr) {
+              var k = (mr.rancho||'') + '||' + (mr.flor||'');
+              if (!_mAgr[k]) _mAgr[k] = {rancho:mr.rancho, flor:mr.flor, metros:0, pla_acum:0};
+              _mAgr[k].metros += mr.metros || 0;
+              _mAgr[k].pla_acum += mr.pla_acum || 0;
+            });
+            mRows = Object.keys(_mAgr).map(function(k){ return _mAgr[k]; });
+          }
+          if (mRows.length > 0) {
+            var tbl = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
+              '<thead><tr>' +
+                (!ranchFilter ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Rancho</th>' : '') +
+                '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
+                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Metros</th>' +
+                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Plantas Acum.</th>' +
+              '</tr></thead><tbody>';
+            mRows.forEach(function(mr){
+              tbl += '<tr>' +
+                (!ranchFilter ? '<td style="color:#8a4b08;padding:2px 4px;">'+mr.rancho+'</td>' : '') +
+                '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+mr.flor+'</td>' +
+                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+mr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+mr.pla_acum.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+              '</tr>';
+            });
+            tbl += '</tbody></table>';
+            siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl+'</td></tr>';
+          } else {
+            var availableWks = [];
+            if (DATA.metros_acumulados) {
+              var wks = {};
+              DATA.metros_acumulados.forEach(function(x){
+                if (isRanchAllowed(x.rancho)) wks[x.semana_fin] = true;
+              });
+              availableWks = Object.keys(wks).sort();
+            }
+            var wksTxt = availableWks.length > 0 ? availableWks.join(', ') : 'Ninguna';
+            siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semanas ' + _wkKeysInRange.join(',') + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt + '</i></td></tr>';
+          }
+        }
+
+        if (isCharolas && DATA.plantas_metros) {
+          var cRows = DATA.plantas_metros.filter(function(r){ 
+            var sf = parseInt(r.semana_fin);
+            return _wkKeysInRange.indexOf(sf) >= 0 && isRanchAllowed(r.rancho); 
+          });
+          // Si es rango, agrupar por rancho+flor y sumar
+          if (_isRange && cRows.length > 0) {
+            var _cAgr = {};
+            cRows.forEach(function(cr) {
+              var k = (cr.rancho||'') + '||' + (cr.flor||'');
+              if (!_cAgr[k]) _cAgr[k] = {rancho:cr.rancho, flor:cr.flor, plantas:0, metros:0};
+              _cAgr[k].plantas += cr.plantas || 0;
+              _cAgr[k].metros += cr.metros || 0;
+            });
+            cRows = Object.keys(_cAgr).map(function(k){ return _cAgr[k]; });
+          }
+          if (cRows.length > 0) {
+            var tbl2 = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
+              '<thead><tr>' +
+                (!ranchFilter ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Rancho</th>' : '') +
+                '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
+                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Plantas</th>' +
+                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Metros</th>' +
+              '</tr></thead><tbody>';
+            cRows.forEach(function(cr){
+              tbl2 += '<tr>' +
+                (!ranchFilter ? '<td style="color:#8a4b08;padding:2px 4px;">'+cr.rancho+'</td>' : '') +
+                '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+cr.flor+'</td>' +
+                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+cr.plantas.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+cr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+              '</tr>';
+            });
+            tbl2 += '</tbody></table>';
+            siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl2+'</td></tr>';
+          } else {
+            var availableWks2 = [];
+            if (DATA.plantas_metros) {
+              var wks2 = {};
+              DATA.plantas_metros.forEach(function(x){
+                if (isRanchAllowed(x.rancho)) wks2[x.semana_fin] = true;
+              });
+              availableWks2 = Object.keys(wks2).sort();
+            }
+            var wksTxt2 = availableWks2.length > 0 ? availableWks2.join(', ') : 'Ninguna';
+            siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semanas ' + _wkKeysInRange.join(',') + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt2 + '</i></td></tr>';
+          }
+        }
+
+        // ── Detalle WEEKLY#### (inv/tallos por variedad de flor) ──────────
+        // Agregar datos de TODAS las semanas en el rango
+        if (isWeeklyDetail && DATA.detalle_weekly) {
+          var _wdRows = [];
+          _wkKeysInRange.forEach(function(_wkK) {
+            var _wkSrcW = DATA.detalle_weekly[_wkK] || DATA.detalle_weekly[String(_wkK)] || null;
+            if (_wkSrcW && _wkSrcW[m.k]) {
+              _wkSrcW[m.k].forEach(function(r) {
+                if (r.valor && r.valor !== 0) _wdRows.push(r);
+              });
+            }
+          });
+          // tallos_cos: filtrar por rancho seleccionado; si es Todos, agrupar por flor
+          if (m.k === 'tallos_cos') {
+            if (ranchFilter) {
+              _wdRows = _wdRows.filter(function(r){ return r.rancho === ranchFilter; });
+            }
+            // Siempre agrupar por flor (sumar valores de múltiples semanas)
+            var _cosMap = {};
+            _wdRows.forEach(function(r){ _cosMap[r.flor] = (_cosMap[r.flor]||0) + r.valor; });
+            _wdRows = Object.keys(_cosMap).map(function(f){ return {flor:f, valor:_cosMap[f]}; });
+          } else if (_isRange) {
+            // Para otros campos en rango, agrupar por flor sumando valores
+            var _agrMap = {};
+            _wdRows.forEach(function(r) {
+              var k = r.flor + (r.proveedor ? '||' + r.proveedor : '');
+              if (!_agrMap[k]) _agrMap[k] = {flor:r.flor, valor:0, proveedor:r.proveedor||null};
+              _agrMap[k].valor += r.valor;
+            });
+            _wdRows = Object.keys(_agrMap).map(function(k){ return _agrMap[k]; });
+          }
+          var _isByProveedor = (m.k === 'tallos_comp');
+          // Etiquetas legibles para el encabezado de la columna de valor
+          var _wdColLabels = {
+            inv_inicial: 'Tallos',
+            tallos_cos:  'Tallos Cosechados',
+            tallos_proc: 'Tallos Recibidos',
+            tallos_comp: 'Tallos',
+            tallos_desp: 'Tallos',
+            tallos_des:  'Tallos',
+            inv_final:   'Tallos'
+          };
+          var _wdColLbl = _wdColLabels[m.k] || 'Valor';
+          if (_wdRows.length > 0) {
+            var _wdTotal = _wdRows.reduce(function(s,r){ return s + (r.valor||0); }, 0);
+            var tblW = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
+              '<thead><tr>' +
+                '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
+                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">'+_wdColLbl+'</th>' +
+                (_isByProveedor
+                  ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Proveedor</th>'
+                  : '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">%</th>'
+                ) +
+              '</tr></thead><tbody>';
+            _wdRows.forEach(function(wr){
+              var terceraCelda = _isByProveedor
+                ? '<td style="color:#2563eb;padding:2px 4px;font-size:8px;font-weight:600;">'+(wr.proveedor||'—')+'</td>'
+                : (function(){ var pct = _wdTotal > 0 ? ((wr.valor/_wdTotal)*100).toFixed(1) : '—'; return '<td style="text-align:right;color:#64748b;padding:2px 4px;font-size:8px;">'+pct+'%</td>'; })();
+              tblW += '<tr>' +
+                '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+(wr.flor||'')+'</td>' +
+                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+Number(wr.valor).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
+                terceraCelda +
+              '</tr>';
+            });
+            tblW += '<tr style="border-top:1px solid #E9D98F;">' +
+              '<td style="color:#9a6a20;padding:2px 4px;font-weight:700;font-size:8px;">TOTAL</td>' +
+              '<td style="text-align:right;color:#0f172a;padding:2px 4px;font-weight:700;">'+Number(_wdTotal).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
+              '<td></td>' +
+            '</tr>';
+            tblW += '</tbody></table>';
+            siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tblW+'</td></tr>';
+          } else {
+            siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin detalle disponible para semanas '+_wkKeysInRange.join(',')+' en Excel WEEKLY.</i></td></tr>';
+          }
+        }
+      });
+        '<tr style="background:#ffffff;border-bottom:1px solid #EEE3B8;">' +
+          '<td colspan="4" style="padding:2px 0;"></td>' +
+        '</tr>';
   }
 
   // ── Zona 2: Tabla de productos ────────────────────────────────────
