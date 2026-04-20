@@ -2481,14 +2481,18 @@ function renderManoObra() {
       bodyHtml+='</tr>';
     });
 
-    // ── Fila $/TALLO — Costo Unitario por Tallo Cosechado ──────────────────
+    // ── Fila $/TALLO o $/METRO — Costo Unitario ──────────────────────────────
     if (DATA.siembra_data) {
+      var _usaMetros = (grp.label === 'MANEJO PLANTA' || grp.label === 'MIPE / MIRFE');
+      var _utDenomKey = _usaMetros ? 'metros' : 'tallos_cos';
+      var _utLabel = _usaMetros ? '$/METRO' : '$/TALLO';
+      var _utTitle = _usaMetros ? 'Costo Unitario por Metro de Siembra: ' : 'Costo Unitario por Tallo Cosechado: ';
       var utPin='padding:3px 8px;position:sticky;z-index:1;background:#fffbeb;border-bottom:1px solid #fde68a;border-right:1px solid #fde68a;white-space:nowrap;';
       var utStyle='padding:3px 6px;border-bottom:1px solid #fde68a;border-right:1px solid #fde68a;text-align:right;color:#92400e;font-weight:600;background:#fffbeb;';
-      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="Costo Unitario por Tallo Cosechado: '+grp.label+'">';
-      bodyHtml+='<td style="'+utPin+'left:0;padding-left:20px;color:#92400e;font-size:11px"><span style="color:#f59e0b;font-size:9px;margin-right:4px;">💲</span>$/TALLO</td>';
-      var _utCostByWk={}, _utTallosByWk={};
-      weekKeys.forEach(function(k){ _utCostByWk[k]=0; _utTallosByWk[k]=0; });
+      bodyHtml+='<tr class="pt-row mo_grp_'+grpIdx+'" style="display:none;" title="'+_utTitle+grp.label+'">';
+      bodyHtml+='<td style="'+utPin+'left:0;padding-left:20px;color:#92400e;font-size:11px"><span style="color:#f59e0b;font-size:9px;margin-right:4px;">💲</span>'+_utLabel+'</td>';
+      var _utCostByWk={}, _utDenomByWk={};
+      weekKeys.forEach(function(k){ _utCostByWk[k]=0; _utDenomByWk[k]=0; });
       activeRanches.forEach(function(rn){
         var _firstCpt=0, _lastCpt=0;
         weekKeys.forEach(function(key, wi){
@@ -2498,9 +2502,9 @@ function renderManoObra() {
           var sData=DATA.siembra_data[wkk]||DATA.siembra_data[String(wkk)]||{};
           var targetRn=({'Ramona':'Campo-RM','Poscosecha':'PosCo-RM','Propagacion':'Prop-RM'})[rn]||rn;
           var sRow=sData[targetRn]||sData[rn]||{};
-          var tallos=sRow['tallos_cos']||0;
-          var cpt=(tallos>0)?cost/tallos:0;
-          _utCostByWk[key]+=cost; _utTallosByWk[key]+=tallos;
+          var denom=sRow[_utDenomKey]||0;
+          var cpt=(denom>0)?cost/denom:0;
+          _utCostByWk[key]+=cost; _utDenomByWk[key]+=denom;
           if(wi===0) _firstCpt=cpt;
           _lastCpt=cpt;
           if(!cpt){bodyHtml+='<td style="'+utStyle+'color:#fcd34d">—</td>';}
@@ -2516,8 +2520,8 @@ function renderManoObra() {
         var utTotStyle='padding:3px 6px;border-bottom:1px solid #fde68a;border-right:1px solid #fde68a;text-align:right;background:#fef3c7;color:#92400e;font-weight:700;';
         weekKeys.forEach(function(key, wi){
           var cost=_utCostByWk[key]||0;
-          var tallos=_utTallosByWk[key]||0;
-          var cpt=(tallos>0)?cost/tallos:0;
+          var denom=_utDenomByWk[key]||0;
+          var cpt=(denom>0)?cost/denom:0;
           if(wi===0) _firstTotCpt=cpt;
           _lastTotCpt=cpt;
           bodyHtml+='<td style="'+utTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( cpt?'$'+cpt.toFixed(2):'—')+'</td>';
