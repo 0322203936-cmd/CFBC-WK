@@ -1122,6 +1122,7 @@ function onCatChange(val) {
   }
 
   if (isSrvCat && state.view !== 'servicios') {
+    _prodViews = []; _prodViewsData = [];
     setView('servicios');
   } else if (!isSrvCat && state.view === 'servicios') {
     setView('comparativo');
@@ -1134,8 +1135,9 @@ function setCurrency(cur) {
   document.getElementById('btnUSD').className='tb-btn'+(cur==='usd'?' active':'');
   document.getElementById('btnMXN').className='tb-btn'+(cur==='mxn'?' active':'');
   renderView();
-  // Re-renderizar paneles de detalle si hay alguno abierto
-  if (_prodViewsData.length > 0) {
+  // Re-renderizar paneles de detalle solo si la categoría actual los soporta
+  var isSrvCat = (state.cat === 'COSTO SERVICIOS' || state.cat === 'COSTO MANO DE OBRA');
+  if (_prodViewsData.length > 0 && !isSrvCat) {
     _prodViews = [];
     var _savedData = _prodViewsData.slice();
     _prodViewsData = [];
