@@ -2946,17 +2946,15 @@ function showProdPanel(rowData, opts) {
       });
     }
     var _isRange = (wkStart !== wkEnd);
-    var _hasAnySiembra = _allMetas.some(function(m){ var v=_aggSiembra[m.k]; return v!==undefined&&v!==null&&v!==0; });
-    if (_hasAnySiembra) {
-      _allMetas.forEach(function(m, i){
-        var _metaVal = _aggSiembra[m.k];
-        var _hasValue = _metaVal!==undefined&&_metaVal!==null&&_metaVal!==0;
+    var _activos = _allMetas.filter(function(m){ var v=_aggSiembra[m.k]; return v!==undefined&&v!==null&&v!==0; });
+    if (_activos.length > 0) {
+      _activos.forEach(function(m, i){
         var bg = (i % 2 === 0) ? '#FFF3BF' : '#FFF8D6';
         var isMetros = (m.k === 'metros');
         var isCharolas = (m.k === 'charolas');
         var _WEEKLY_KEYS = ['inv_inicial','tallos_cos','tallos_des','tallos_comp','tallos_desp','inv_final','tallos_proc'];
         var isWeeklyDetail = _WEEKLY_KEYS.indexOf(m.k) >= 0;
-        var isExpandible = _hasValue && (isMetros || isCharolas || isWeeklyDetail);
+        var isExpandible = isMetros || isCharolas || isWeeklyDetail;
         var lblStyle = isExpandible ? 'cursor:pointer;' : '';
         var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) n.style.display=(n.style.display===\\\'none\\\'?\\\'table-row\\\':\\\'none\\\');"' : '';
         
@@ -2964,7 +2962,7 @@ function showProdPanel(rowData, opts) {
           '<tr style="background:'+bg+';border-bottom:1px solid #E9D98F;">' +
             '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#9a6a20;font-weight:700;">SIEMBRA</td>' +
             '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+(isExpandible?' \u25BE':'')+'</span></td>' +
-            '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+(_hasValue ? Number(_metaVal).toLocaleString('es-MX',{maximumFractionDigits:2}) : '—')+'</td>' +
+            '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+Number(_aggSiembra[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
           '</tr>';
           
         if (isMetros && DATA.metros_acumulados) {
