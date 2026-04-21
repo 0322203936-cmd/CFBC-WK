@@ -2966,21 +2966,39 @@ function showProdPanel(rowData, opts) {
           '</tr>';
           
         if (isMetros && DATA.metros_acumulados) {
-          var mRows = DATA.metros_acumulados.filter(function(r){ 
-            var sf = parseInt(r.semana_fin);
-            return _wkKeysInRange.indexOf(sf) >= 0 && isRanchAllowed(r.rancho); 
+          var _globalMetros = {};
+          var activeYrs = DATA.years.filter(function(y) { return state.activeYears[y]; });
+          activeYrs.forEach(function(aYr) {
+            for (var w = wkStart; w <= wkEnd; w++) {
+              var aWkKey = ((aYr % 100) * 100) + w;
+              DATA.metros_acumulados.forEach(function(r){
+                if (parseInt(r.semana_fin) === aWkKey && isRanchAllowed(r.rancho)) {
+                  var k = (r.rancho||'') + '||' + (r.flor||'');
+                  _globalMetros[k] = {rancho:r.rancho, flor:r.flor};
+                }
+              });
+            }
           });
-          // Si es rango, agrupar por rancho+flor y sumar metros/plantas
-          if (_isRange && mRows.length > 0) {
-            var _mAgr = {};
-            mRows.forEach(function(mr) {
+          var _mAgr = {};
+          Object.keys(_globalMetros).forEach(function(k){
+            _mAgr[k] = {rancho:_globalMetros[k].rancho, flor:_globalMetros[k].flor, metros:0, pla_acum:0};
+          });
+          DATA.metros_acumulados.forEach(function(mr){
+            var sf = parseInt(mr.semana_fin);
+            if (_wkKeysInRange.indexOf(sf) >= 0 && isRanchAllowed(mr.rancho)) {
               var k = (mr.rancho||'') + '||' + (mr.flor||'');
-              if (!_mAgr[k]) _mAgr[k] = {rancho:mr.rancho, flor:mr.flor, metros:0, pla_acum:0};
-              _mAgr[k].metros += mr.metros || 0;
-              _mAgr[k].pla_acum += mr.pla_acum || 0;
-            });
-            mRows = Object.keys(_mAgr).map(function(k){ return _mAgr[k]; });
-          }
+              if (_mAgr[k]) {
+                _mAgr[k].metros += (mr.metros || 0);
+                _mAgr[k].pla_acum += (mr.pla_acum || 0);
+              }
+            }
+          });
+          var mRows = Object.keys(_mAgr).map(function(k){ return _mAgr[k]; });
+          mRows.sort(function(a,b) {
+            var rCmp = (a.rancho||'').localeCompare(b.rancho||'');
+            if (rCmp !== 0) return rCmp;
+            return (a.flor||'').localeCompare(b.flor||'');
+          });
           if (mRows.length > 0) {
             var tbl = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
               '<thead><tr>' +
@@ -3014,21 +3032,39 @@ function showProdPanel(rowData, opts) {
         }
 
         if (isCharolas && DATA.plantas_metros) {
-          var cRows = DATA.plantas_metros.filter(function(r){ 
-            var sf = parseInt(r.semana_fin);
-            return _wkKeysInRange.indexOf(sf) >= 0 && isRanchAllowed(r.rancho); 
+          var _globalCharolas = {};
+          var activeYrs = DATA.years.filter(function(y) { return state.activeYears[y]; });
+          activeYrs.forEach(function(aYr) {
+            for (var w = wkStart; w <= wkEnd; w++) {
+              var aWkKey = ((aYr % 100) * 100) + w;
+              DATA.plantas_metros.forEach(function(r){
+                if (parseInt(r.semana_fin) === aWkKey && isRanchAllowed(r.rancho)) {
+                  var k = (r.rancho||'') + '||' + (r.flor||'');
+                  _globalCharolas[k] = {rancho:r.rancho, flor:r.flor};
+                }
+              });
+            }
           });
-          // Si es rango, agrupar por rancho+flor y sumar
-          if (_isRange && cRows.length > 0) {
-            var _cAgr = {};
-            cRows.forEach(function(cr) {
+          var _cAgr = {};
+          Object.keys(_globalCharolas).forEach(function(k){
+            _cAgr[k] = {rancho:_globalCharolas[k].rancho, flor:_globalCharolas[k].flor, plantas:0, metros:0};
+          });
+          DATA.plantas_metros.forEach(function(cr){
+            var sf = parseInt(cr.semana_fin);
+            if (_wkKeysInRange.indexOf(sf) >= 0 && isRanchAllowed(cr.rancho)) {
               var k = (cr.rancho||'') + '||' + (cr.flor||'');
-              if (!_cAgr[k]) _cAgr[k] = {rancho:cr.rancho, flor:cr.flor, plantas:0, metros:0};
-              _cAgr[k].plantas += cr.plantas || 0;
-              _cAgr[k].metros += cr.metros || 0;
-            });
-            cRows = Object.keys(_cAgr).map(function(k){ return _cAgr[k]; });
-          }
+              if (_cAgr[k]) {
+                _cAgr[k].plantas += (cr.plantas || 0);
+                _cAgr[k].metros += (cr.metros || 0);
+              }
+            }
+          });
+          var cRows = Object.keys(_cAgr).map(function(k){ return _cAgr[k]; });
+          cRows.sort(function(a,b) {
+            var rCmp = (a.rancho||'').localeCompare(b.rancho||'');
+            if (rCmp !== 0) return rCmp;
+            return (a.flor||'').localeCompare(b.flor||'');
+          });
           if (cRows.length > 0) {
             var tbl2 = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
               '<thead><tr>' +
@@ -3064,34 +3100,44 @@ function showProdPanel(rowData, opts) {
         // ── Detalle WEEKLY#### (inv/tallos por variedad de flor) ──────────
         // Agregar datos de TODAS las semanas en el rango
         if (isWeeklyDetail && DATA.detalle_weekly) {
-          var _wdRows = [];
+          var _globalKeys = {};
+          var activeYrs = DATA.years.filter(function(y) { return state.activeYears[y]; });
+          activeYrs.forEach(function(aYr) {
+            for (var w = wkStart; w <= wkEnd; w++) {
+              var aWkKey = ((aYr % 100) * 100) + w;
+              var wSrc = DATA.detalle_weekly[aWkKey] || DATA.detalle_weekly[String(aWkKey)];
+              if (wSrc && wSrc[m.k]) {
+                wSrc[m.k].forEach(function(r) {
+                  if (m.k === 'tallos_cos' && ranchFilter && r.rancho !== ranchFilter) return;
+                  var k = (m.k === 'tallos_cos') ? r.flor : (r.flor + (r.proveedor ? '||' + r.proveedor : ''));
+                  _globalKeys[k] = { flor: r.flor, proveedor: r.proveedor || null };
+                });
+              }
+            }
+          });
+
+          var _agrMap = {};
+          Object.keys(_globalKeys).forEach(function(k){
+            _agrMap[k] = {flor: _globalKeys[k].flor, valor: 0, proveedor: _globalKeys[k].proveedor};
+          });
+
           _wkKeysInRange.forEach(function(_wkK) {
             var _wkSrcW = DATA.detalle_weekly[_wkK] || DATA.detalle_weekly[String(_wkK)] || null;
             if (_wkSrcW && _wkSrcW[m.k]) {
               _wkSrcW[m.k].forEach(function(r) {
-                if (r.valor && r.valor !== 0) _wdRows.push(r);
+                if (m.k === 'tallos_cos' && ranchFilter && r.rancho !== ranchFilter) return;
+                var k = (m.k === 'tallos_cos') ? r.flor : (r.flor + (r.proveedor ? '||' + r.proveedor : ''));
+                if (_agrMap[k]) _agrMap[k].valor += (r.valor || 0);
               });
             }
           });
-          // tallos_cos: filtrar por rancho seleccionado; si es Todos, agrupar por flor
-          if (m.k === 'tallos_cos') {
-            if (ranchFilter) {
-              _wdRows = _wdRows.filter(function(r){ return r.rancho === ranchFilter; });
-            }
-            // Siempre agrupar por flor (sumar valores de múltiples semanas)
-            var _cosMap = {};
-            _wdRows.forEach(function(r){ _cosMap[r.flor] = (_cosMap[r.flor]||0) + r.valor; });
-            _wdRows = Object.keys(_cosMap).map(function(f){ return {flor:f, valor:_cosMap[f]}; });
-          } else if (_isRange) {
-            // Para otros campos en rango, agrupar por flor sumando valores
-            var _agrMap = {};
-            _wdRows.forEach(function(r) {
-              var k = r.flor + (r.proveedor ? '||' + r.proveedor : '');
-              if (!_agrMap[k]) _agrMap[k] = {flor:r.flor, valor:0, proveedor:r.proveedor||null};
-              _agrMap[k].valor += r.valor;
-            });
-            _wdRows = Object.keys(_agrMap).map(function(k){ return _agrMap[k]; });
-          }
+
+          var _wdRows = Object.keys(_agrMap).map(function(k){ return _agrMap[k]; });
+          _wdRows.sort(function(a,b) {
+            var fCmp = (a.flor||'').localeCompare(b.flor||'');
+            if (fCmp !== 0) return fCmp;
+            return (a.proveedor||'').localeCompare(b.proveedor||'');
+          });
           var _isByProveedor = (m.k === 'tallos_comp');
           // Etiquetas legibles para el encabezado de la columna de valor
           var _wdColLabels = {
