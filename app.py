@@ -2037,6 +2037,12 @@ function renderServicios() {
   var nWeeks = weekKeys.length;
   var nColsPerRanch = nWeeks + 1; // semanas + SUB
 
+  // TOTAL: una columna por año (suma del rango) + DIF si hay 2 años
+  var totYears = [];
+  weekKeys.forEach(function(key){ var yr=weekMap[key]._year; if(totYears.indexOf(yr)<0) totYears.push(yr); });
+  totYears.sort(function(a,b){return a-b;});
+  var nColsTotal = totYears.length + (totYears.length >= 2 ? 1 : 0);
+
   var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
   var thPin =thBase+'position:sticky;top:0;z-index:4;';
   var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
@@ -2048,10 +2054,10 @@ function renderServicios() {
     var col=RANCH_COLORS[rn]||'#888';
     h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
   });
-  if(showTotal) h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #7B1C1C;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
+  if(showTotal) h1+='<th colspan="'+nColsTotal+'" style="'+thScroll+'border-left:3px solid #7B1C1C;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
   h1+='</tr>';
 
-  // ── Header nivel 2: por cada rancho → [wk labels... | DIF] + TOTAL group ──
+  // ── Header nivel 2: por cada rancho → [wk labels... | DIF] + TOTAL group (por año) ──
   var h2='<tr>';
   activeRanches.forEach(function(){
     weekKeys.forEach(function(key){
@@ -2063,13 +2069,14 @@ function renderServicios() {
     h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">DIF</th>';
   });
   if(showTotal) {
-    weekKeys.forEach(function(key){
-      var d=weekMap[key];
-      var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
-      var col=YEAR_COLORS[d._year]||'#888';
-      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:70px;background:#EAF3FF">'+lbl+'</th>';
+    totYears.forEach(function(yr, i){
+      var col=YEAR_COLORS[yr]||'#888';
+      var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : 'border-left:1px solid var(--pt-hdr-border);';
+      h2+='<th style="'+thScroll+lb+'font-size:9px;color:'+col+';min-width:90px;background:#EAF3FF">'+yr+'</th>';
     });
-    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
+    if(totYears.length >= 2) {
+      h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
+    }
   }
   h2+='</tr>';
 
@@ -2124,15 +2131,21 @@ function renderServicios() {
       var rnDif=(scByRnWk[rn][weekKeys[weekKeys.length-1]]||0)-(scByRnWk[rn][weekKeys[0]]||0);
       bodyHtml+=cell(rnDif||0,true,'#1e3a5f');
     });
-    // Celdas TOTAL por semana
+    // Celdas TOTAL por año (suma del rango)
     var totCellStyle='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;background:#EAF3FF;font-weight:700;color:#1e3a5f;';
     if(showTotal) {
-      weekKeys.forEach(function(key){
-        var v=scByWk[key];
-        bodyHtml+='<td style="'+totCellStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
+      var scByYr={};
+      totYears.forEach(function(yr){ scByYr[yr]=0; });
+      weekKeys.forEach(function(k){ var yr=weekMap[k]._year; scByYr[yr]=(scByYr[yr]||0)+(scByWk[k]||0); });
+      totYears.forEach(function(yr, i){
+        var v=scByYr[yr]||0;
+        var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+        bodyHtml+='<td style="'+totCellStyle+lb+'">'+( v?fmt(v):'—')+'</td>';
       });
-      var scDif=Math.abs((scByWk[weekKeys[weekKeys.length-1]]||0)-(scByWk[weekKeys[0]]||0));
-      bodyHtml+='<td style="'+totCellStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(scDif?fmt(scDif):'—')+'</td>';
+      if(totYears.length >= 2) {
+        var scDifYr=(scByYr[totYears[totYears.length-1]]||0)-(scByYr[totYears[0]]||0);
+        bodyHtml+='<td style="'+totCellStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(scDifYr?(scDifYr>0?'+':'')+fmt(scDifYr):'—')+'</td>';
+      }
     }
     bodyHtml+='</tr>';
   });
@@ -2152,12 +2165,18 @@ function renderServicios() {
   });
   var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
   if(showTotal) {
-    weekKeys.forEach(function(key){
-      var v=grandTotWk[key]||0;
-      bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
+    var grandTotYr={};
+    totYears.forEach(function(yr){ grandTotYr[yr]=0; });
+    weekKeys.forEach(function(k){ var yr=weekMap[k]._year; grandTotYr[yr]=(grandTotYr[yr]||0)+(grandTotWk[k]||0); });
+    totYears.forEach(function(yr, i){
+      var v=grandTotYr[yr]||0;
+      var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+      bodyHtml+='<td style="'+totTotStyle+lb+'">'+( v?fmt(v):'—')+'</td>';
     });
-    var gtDif=Math.abs((grandTotWk[weekKeys[weekKeys.length-1]]||0)-(grandTotWk[weekKeys[0]]||0));
-    bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?fmt(gtDif):'—')+'</td>';
+    if(totYears.length >= 2) {
+      var gtDifYr=(grandTotYr[totYears[totYears.length-1]]||0)-(grandTotYr[totYears[0]]||0);
+      bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDifYr?(gtDifYr>0?'+':'')+fmt(gtDifYr):'—')+'</td>';
+    }
   }
   bodyHtml+='</tr>';
 
@@ -2333,6 +2352,12 @@ function renderManoObra() {
   var nWeeks = weekKeys.length;
   var nColsPerRanch = nWeeks + 1; // semanas + SUB
 
+  // TOTAL: una columna por año (suma del rango) + DIF si hay 2 años
+  var totYears = [];
+  weekKeys.forEach(function(key){ var yr=weekMap[key]._year; if(totYears.indexOf(yr)<0) totYears.push(yr); });
+  totYears.sort(function(a,b){return a-b;});
+  var nColsTotal = totYears.length + (totYears.length >= 2 ? 1 : 0);
+
   var thBase='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid var(--pt-hdr-border);white-space:nowrap;';
   var thPin=thBase+'position:sticky;top:0;z-index:4;';
   var thScroll=thBase+'position:sticky;top:0;z-index:3;text-align:right;';
@@ -2343,10 +2368,10 @@ function renderManoObra() {
     var col=MO_RANCH_COLORS[rn]||RANCH_COLORS[rn]||'#374151';
     h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:2px solid #8EA9C1;text-align:center;color:'+col+'">'+rn+'</th>';
   });
-  if(showTotal) h1+='<th colspan="'+nColsPerRanch+'" style="'+thScroll+'border-left:3px solid #7B1C1C;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
+  if(showTotal) h1+='<th colspan="'+nColsTotal+'" style="'+thScroll+'border-left:3px solid #7B1C1C;text-align:center;background:#9DC3E6;color:#1e3a5f">TOTAL</th>';
   h1+='</tr>';
 
-  // HEADER nivel 2: [por cada rancho: wk labels... | DIF] + TOTAL group
+  // HEADER nivel 2: [por cada rancho: wk labels... | DIF] + TOTAL group (por año)
   var h2='<tr>';
   activeRanches.forEach(function(){
     weekKeys.forEach(function(key){
@@ -2357,15 +2382,16 @@ function renderManoObra() {
     });
     h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#BDD7EE">DIF</th>';
   });
-  // Sub-headers del grupo TOTAL
+  // Sub-headers del grupo TOTAL (un encabezado por año)
   if(showTotal) {
-    weekKeys.forEach(function(key){
-      var d=weekMap[key];
-      var lbl=String(d._year).slice(2)+String(d._week).padStart(2,'0');
-      var col=YEAR_COLORS[d._year]||'#888';
-      h2+='<th style="'+thScroll+'border-left:1px solid var(--pt-hdr-border);font-size:9px;color:'+col+';min-width:70px;background:#EAF3FF">'+lbl+'</th>';
+    totYears.forEach(function(yr, i){
+      var col=YEAR_COLORS[yr]||'#888';
+      var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : 'border-left:1px solid var(--pt-hdr-border);';
+      h2+='<th style="'+thScroll+lb+'font-size:9px;color:'+col+';min-width:90px;background:#EAF3FF">'+yr+'</th>';
     });
-    h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
+    if(totYears.length >= 2) {
+      h2+='<th style="'+thScroll+'border-left:1px solid #aaa;font-size:9px;min-width:70px;background:#9DC3E6">DIF</th>';
+    }
   }
   h2+='</tr>';
 
@@ -2442,18 +2468,25 @@ function renderManoObra() {
       var grpDifStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:var(--pt-grp-bg);color:#fff;font-weight:700';
       bodyHtml+='<td style="'+grpDifStyle+'">'+(costDif?(costDif>0?'+':'')+fmt(costDif):'—')+'</td>';
     });
-    // Celdas TOTAL por semana (suma todos los ranchos)
+    // Celdas TOTAL por año (suma del rango, todos los ranchos)
     var grpTotStyle='padding:3px 6px;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;background:#9DC3E6;color:#1e3a5f;font-weight:700;border-left:1px solid #8EA9C1;';
     if(showTotal) {
+      var grpByYr={};
+      totYears.forEach(function(yr){ grpByYr[yr]=0; });
       weekKeys.forEach(function(key){
+        var yr=weekMap[key]._year;
         var v=activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][key]||0);},0);
-        bodyHtml+='<td style="'+grpTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
+        grpByYr[yr]=(grpByYr[yr]||0)+v;
       });
-      var grpTotDif=
-        activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[weekKeys.length-1]]||0);},0)-
-        activeRanches.reduce(function(s,rn){return s+(grpByRnWk[rn][weekKeys[0]]||0);},0)
-      ;
-      bodyHtml+='<td style="'+grpTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(grpTotDif?(grpTotDif>0?'+':'')+fmt(grpTotDif):'—')+'</td>';
+      totYears.forEach(function(yr, i){
+        var v=grpByYr[yr]||0;
+        var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+        bodyHtml+='<td style="'+grpTotStyle+lb+'">'+( v?fmt(v):'—')+'</td>';
+      });
+      if(totYears.length >= 2) {
+        var grpTotDif=(grpByYr[totYears[totYears.length-1]]||0)-(grpByYr[totYears[0]]||0);
+        bodyHtml+='<td style="'+grpTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(grpTotDif?(grpTotDif>0?'+':'')+fmt(grpTotDif):'—')+'</td>';
+      }
     }
     bodyHtml+='</tr>';
 
@@ -2471,14 +2504,24 @@ function renderManoObra() {
         var cellStyle = 'padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;color:#1e3a5f;font-weight:700;';
         bodyHtml+='<td style="'+cellStyle+'">'+(sc.hcByRn[rn]?fmtHcDiff(sc.hcByRn[rn]):'—')+'</td>';
       });
-      // Celdas TOTAL HC por semana
+      // Celdas TOTAL HC por año (última semana del año = snapshot de headcount)
       var scTotHcStyle='padding:3px 6px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;background:#EAF3FF;color:#1e3a5f;font-weight:700;';
       if(showTotal) {
-        weekKeys.forEach(function(key){
-          var v=activeRanches.reduce(function(s,rn){return s+(sc.hcByRnWk[rn][key]||0);},0);
-          bodyHtml+='<td style="'+scTotHcStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+        var scHcByYr={};
+        totYears.forEach(function(yr){
+          var lastKeyOfYr=null;
+          weekKeys.forEach(function(k){ if(weekMap[k]._year===yr) lastKeyOfYr=k; });
+          scHcByYr[yr]=lastKeyOfYr ? activeRanches.reduce(function(s,rn){return s+(sc.hcByRnWk[rn][lastKeyOfYr]||0);},0) : 0;
         });
-        bodyHtml+='<td style="'+scTotHcStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(sc.hcTotal?fmtHcDiff(sc.hcTotal):'—')+'</td>';
+        totYears.forEach(function(yr, i){
+          var v=scHcByYr[yr]||0;
+          var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+          bodyHtml+='<td style="'+scTotHcStyle+lb+'">'+( v?fmtHc(v):'—')+'</td>';
+        });
+        if(totYears.length >= 2) {
+          var scHcDifYr=(scHcByYr[totYears[totYears.length-1]]||0)-(scHcByYr[totYears[0]]||0);
+          bodyHtml+='<td style="'+scTotHcStyle+'border-left:1px solid #aaa;background:#9DC3E6">'+(scHcDifYr?fmtHcDiff(scHcDifYr):'—')+'</td>';
+        }
       }
       bodyHtml+='</tr>';
     });
@@ -2743,12 +2786,18 @@ function renderManoObra() {
   });
   var totTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
   if(showTotal) {
-    weekKeys.forEach(function(key){
-      var v=grandCostWk[key]||0;
-      bodyHtml+='<td style="'+totTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmt(v):'—')+'</td>';
+    var grandCostYr={};
+    totYears.forEach(function(yr){ grandCostYr[yr]=0; });
+    weekKeys.forEach(function(k){ var yr=weekMap[k]._year; grandCostYr[yr]=(grandCostYr[yr]||0)+(grandCostWk[k]||0); });
+    totYears.forEach(function(yr, i){
+      var v=grandCostYr[yr]||0;
+      var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+      bodyHtml+='<td style="'+totTotStyle+lb+'">'+( v?fmt(v):'—')+'</td>';
     });
-    var gtDif=(grandCostWk[weekKeys[weekKeys.length-1]]||0)-(grandCostWk[weekKeys[0]]||0);
-    bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDif?(gtDif>0?'+':'')+fmt(gtDif):'—')+'</td>';
+    if(totYears.length >= 2) {
+      var gtDifYr=(grandCostYr[totYears[totYears.length-1]]||0)-(grandCostYr[totYears[0]]||0);
+      bodyHtml+='<td style="'+totTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtDifYr?(gtDifYr>0?'+':'')+fmt(gtDifYr):'—')+'</td>';
+    }
   }
   bodyHtml+='</tr>';
 
@@ -2764,11 +2813,21 @@ function renderManoObra() {
   });
   var totHcTotStyle='padding:4px 8px;background:#9DC3E6;font-weight:700;border-bottom:1px solid #ddd;border-right:1px solid #ccc;text-align:right;color:#1e3a5f;';
   if(showTotal) {
-    weekKeys.forEach(function(key){
-      var v=grandHcWk[key]||0;
-      bodyHtml+='<td style="'+totHcTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( v?fmtHc(v):'—')+'</td>';
+    var grandHcYr={};
+    totYears.forEach(function(yr){
+      var lastKeyOfYr=null;
+      weekKeys.forEach(function(k){ if(weekMap[k]._year===yr) lastKeyOfYr=k; });
+      grandHcYr[yr]=lastKeyOfYr ? grandHcWk[lastKeyOfYr]||0 : 0;
     });
-    bodyHtml+='<td style="'+totHcTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">—</td>';
+    totYears.forEach(function(yr, i){
+      var v=grandHcYr[yr]||0;
+      var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+      bodyHtml+='<td style="'+totHcTotStyle+lb+'">'+( v?fmtHc(v):'—')+'</td>';
+    });
+    if(totYears.length >= 2) {
+      var gtHcDifYr=(grandHcYr[totYears[totYears.length-1]]||0)-(grandHcYr[totYears[0]]||0);
+      bodyHtml+='<td style="'+totHcTotStyle+'border-left:1px solid #aaa;background:#7EB3D4">'+(gtHcDifYr?fmtHcDiff(gtHcDifYr):'—')+'</td>';
+    }
   }
   bodyHtml+='</tr>';
 
