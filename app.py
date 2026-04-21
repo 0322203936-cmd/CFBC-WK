@@ -2949,20 +2949,21 @@ function showProdPanel(rowData, opts) {
     var _activos = _allMetas.filter(function(m){ var v=_aggSiembra[m.k]; return v!==undefined&&v!==null&&v!==0; });
     if (_activos.length > 0) {
       _activos.forEach(function(m, i){
-        var bg = (i % 2 === 0) ? '#FFF3BF' : '#FFF8D6';
+        var bg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
         var isMetros = (m.k === 'metros');
         var isCharolas = (m.k === 'charolas');
         var _WEEKLY_KEYS = ['inv_inicial','tallos_cos','tallos_des','tallos_comp','tallos_desp','inv_final','tallos_proc'];
         var isWeeklyDetail = _WEEKLY_KEYS.indexOf(m.k) >= 0;
         var isExpandible = isMetros || isCharolas || isWeeklyDetail;
-        var lblStyle = isExpandible ? 'cursor:pointer;' : '';
-        var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) n.style.display=(n.style.display===\\\'none\\\'?\\\'table-row\\\':\\\'none\\\');"' : '';
+        var lblStyle = isExpandible ? 'cursor:pointer; color:#1e293b; transition: color 0.15s;' : 'color:#475569;';
+        var expandIcon = isExpandible ? '<span style="color:#94a3b8; font-size:9px; margin-left:6px; user-select:none;">▼</span>' : '';
+        var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) { var isHidden = n.style.display===\\\'none\\\'; n.style.display=(isHidden?\\\'table-row\\\':\\\'none\\\'); this.querySelector(\\\'span\\\').innerHTML=isHidden?\\\'▲\\\':\\\'▼\\\'; }"' : '';
         
         siembraRowsHtml +=
-          '<tr style="background:'+bg+';border-bottom:1px solid #E9D98F;">' +
-            '<td style="padding:3px 6px;white-space:nowrap;font-size:9px;color:#9a6a20;font-weight:700;">SIEMBRA</td>' +
-            '<td colspan="2" style="padding:3px 6px;color:#8a4b08;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+(isExpandible?' \u25BE':'')+'</span></td>' +
-            '<td style="padding:3px 6px;text-align:right;font-weight:800;color:#0f172a;">'+Number(_aggSiembra[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+          '<tr style="background:'+bg+';border-bottom:1px solid #e2e8f0; transition: background 0.2s;">' +
+            '<td style="padding:6px 10px;white-space:nowrap;width:1%;"><span style="background:#e2e8f0;color:#475569;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.5px;">SIEMBRA</span></td>' +
+            '<td colspan="2" style="padding:6px 10px;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+expandIcon+'</span></td>' +
+            '<td style="padding:6px 10px;text-align:right;font-weight:700;color:#0f172a;font-size:11px;">'+Number(_aggSiembra[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
           '</tr>';
           
         if (isMetros && DATA.metros_acumulados) {
@@ -2987,23 +2988,23 @@ function showProdPanel(rowData, opts) {
             return (a.flor||'').localeCompare(b.flor||'');
           });
           if (mRows.length > 0) {
-            var tbl = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
+            var tbl = '<table style="width:100%; border-collapse:collapse; font-size:10px; font-family:var(--font-sans, sans-serif);">' +
               '<thead><tr>' +
-                (!ranchFilter ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Rancho</th>' : '') +
-                '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
-                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Metros</th>' +
-                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Plantas Acum.</th>' +
+                (!ranchFilter ? '<th style="text-align:left;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Rancho</th>' : '') +
+                '<th style="text-align:left;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Variedad (Flor)</th>' +
+                '<th style="text-align:right;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Metros</th>' +
+                '<th style="text-align:right;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Plantas Acum.</th>' +
               '</tr></thead><tbody>';
             mRows.forEach(function(mr){
-              tbl += '<tr>' +
-                (!ranchFilter ? '<td style="color:#8a4b08;padding:2px 4px;">'+mr.rancho+'</td>' : '') +
-                '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+mr.flor+'</td>' +
-                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+mr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
-                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+mr.pla_acum.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+              tbl += '<tr style="border-bottom:1px solid #f1f5f9; background:#ffffff;">' +
+                (!ranchFilter ? '<td style="color:#64748b;padding:6px 8px;font-weight:500;">'+mr.rancho+'</td>' : '') +
+                '<td style="color:#334155;padding:6px 8px;font-weight:600;">'+mr.flor+'</td>' +
+                '<td style="text-align:right;color:#1e293b;padding:6px 8px;font-weight:500;">'+mr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+                '<td style="text-align:right;color:#1e293b;padding:6px 8px;font-weight:500;">'+mr.pla_acum.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
               '</tr>';
             });
             tbl += '</tbody></table>';
-            siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl+'</td></tr>';
+            siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#ffffff; border-bottom:1px solid #e2e8f0;"><td colspan="4" style="padding:0;"><div style="border-left:3px solid #3b82f6; margin-left:24px; padding:8px 12px; background:#f8fafc; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">'+tbl+'</div></td></tr>';
           } else {
             var availableWks = [];
             if (DATA.metros_acumulados) {
@@ -3014,7 +3015,7 @@ function showProdPanel(rowData, opts) {
               availableWks = Object.keys(wks).sort();
             }
             var wksTxt = availableWks.length > 0 ? availableWks.join(', ') : 'Ninguna';
-            siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semanas ' + _wkKeysInRange.join(',') + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt + '</i></td></tr>';
+            siembraRowsHtml += '<tr class="metros-detail" style="display:none; background:#ffffff; border-bottom:1px solid #e2e8f0;"><td colspan="4" style="padding:12px 24px; color:#64748b; font-size:10px; font-style:italic;">Sin datos para semanas ' + _wkKeysInRange.join(',') + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt + '</td></tr>';
           }
         }
 
@@ -3040,23 +3041,23 @@ function showProdPanel(rowData, opts) {
             return (a.flor||'').localeCompare(b.flor||'');
           });
           if (cRows.length > 0) {
-            var tbl2 = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
+            var tbl2 = '<table style="width:100%; border-collapse:collapse; font-size:10px; font-family:var(--font-sans, sans-serif);">' +
               '<thead><tr>' +
-                (!ranchFilter ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Rancho</th>' : '') +
-                '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
-                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Plantas</th>' +
-                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Metros</th>' +
+                (!ranchFilter ? '<th style="text-align:left;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Rancho</th>' : '') +
+                '<th style="text-align:left;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Variedad (Flor)</th>' +
+                '<th style="text-align:right;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Plantas</th>' +
+                '<th style="text-align:right;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Metros</th>' +
               '</tr></thead><tbody>';
             cRows.forEach(function(cr){
-              tbl2 += '<tr>' +
-                (!ranchFilter ? '<td style="color:#8a4b08;padding:2px 4px;">'+cr.rancho+'</td>' : '') +
-                '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+cr.flor+'</td>' +
-                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+cr.plantas.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
-                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+cr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+              tbl2 += '<tr style="border-bottom:1px solid #f1f5f9; background:#ffffff;">' +
+                (!ranchFilter ? '<td style="color:#64748b;padding:6px 8px;font-weight:500;">'+cr.rancho+'</td>' : '') +
+                '<td style="color:#334155;padding:6px 8px;font-weight:600;">'+cr.flor+'</td>' +
+                '<td style="text-align:right;color:#1e293b;padding:6px 8px;font-weight:500;">'+cr.plantas.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+                '<td style="text-align:right;color:#1e293b;padding:6px 8px;font-weight:500;">'+cr.metros.toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
               '</tr>';
             });
             tbl2 += '</tbody></table>';
-            siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tbl2+'</td></tr>';
+            siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#ffffff; border-bottom:1px solid #e2e8f0;"><td colspan="4" style="padding:0;"><div style="border-left:3px solid #10b981; margin-left:24px; padding:8px 12px; background:#f8fafc; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">'+tbl2+'</div></td></tr>';
           } else {
             var availableWks2 = [];
             if (DATA.plantas_metros) {
@@ -3067,7 +3068,7 @@ function showProdPanel(rowData, opts) {
               availableWks2 = Object.keys(wks2).sort();
             }
             var wksTxt2 = availableWks2.length > 0 ? availableWks2.join(', ') : 'Ninguna';
-            siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin datos para semanas ' + _wkKeysInRange.join(',') + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt2 + '</i></td></tr>';
+            siembraRowsHtml += '<tr class="charolas-detail" style="display:none; background:#ffffff; border-bottom:1px solid #e2e8f0;"><td colspan="4" style="padding:12px 24px; color:#64748b; font-size:10px; font-style:italic;">Sin datos para semanas ' + _wkKeysInRange.join(',') + '. Semanas registradas en Excel para ' + (ranchFilter||'Todos') + ': ' + wksTxt2 + '</td></tr>';
           }
         }
 
@@ -3121,39 +3122,40 @@ function showProdPanel(rowData, opts) {
           var _wdColLbl = _wdColLabels[m.k] || 'Valor';
           if (_wdRows.length > 0) {
             var _wdTotal = _wdRows.reduce(function(s,r){ return s + (r.valor||0); }, 0);
-            var tblW = '<table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:2px;">' +
+            var tblW = '<table style="width:100%; border-collapse:collapse; font-size:10px; font-family:var(--font-sans, sans-serif);">' +
               '<thead><tr>' +
-                '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Variedad (Flor)</th>' +
-                '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">'+_wdColLbl+'</th>' +
+                '<th style="text-align:left;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Variedad (Flor)</th>' +
+                '<th style="text-align:right;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">'+_wdColLbl+'</th>' +
                 (_isByProveedor
-                  ? '<th style="text-align:left;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">Proveedor</th>'
-                  : '<th style="text-align:right;color:#9a6a20;padding:2px 4px;border-bottom:1px solid #E9D98F;">%</th>'
+                  ? '<th style="text-align:left;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">Proveedor</th>'
+                  : '<th style="text-align:right;color:#64748b;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:0.5px;">%</th>'
                 ) +
               '</tr></thead><tbody>';
             _wdRows.forEach(function(wr){
               var terceraCelda = _isByProveedor
-                ? '<td style="color:#2563eb;padding:2px 4px;font-size:8px;font-weight:600;">'+(wr.proveedor||'—')+'</td>'
-                : (function(){ var pct = _wdTotal > 0 ? ((wr.valor/_wdTotal)*100).toFixed(1) : '—'; return '<td style="text-align:right;color:#64748b;padding:2px 4px;font-size:8px;">'+pct+'%</td>'; })();
-              tblW += '<tr>' +
-                '<td style="color:#8a4b08;padding:2px 4px;font-weight:600;">'+(wr.flor||'')+'</td>' +
-                '<td style="text-align:right;color:#0f172a;padding:2px 4px;">'+Number(wr.valor).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
+                ? '<td style="color:#64748b;padding:6px 8px;font-size:9px;font-weight:500;">'+(wr.proveedor||'—')+'</td>'
+                : (function(){ var pct = _wdTotal > 0 ? ((wr.valor/_wdTotal)*100).toFixed(1) : '—'; return '<td style="text-align:right;color:#94a3b8;padding:6px 8px;font-size:9px;">'+pct+'%</td>'; })();
+              tblW += '<tr style="border-bottom:1px solid #f1f5f9; background:#ffffff;">' +
+                '<td style="color:#334155;padding:6px 8px;font-weight:600;">'+(wr.flor||'')+'</td>' +
+                '<td style="text-align:right;color:#1e293b;padding:6px 8px;font-weight:500;">'+Number(wr.valor).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
                 terceraCelda +
               '</tr>';
             });
-            tblW += '<tr style="border-top:1px solid #E9D98F;">' +
-              '<td style="color:#9a6a20;padding:2px 4px;font-weight:700;font-size:8px;">TOTAL</td>' +
-              '<td style="text-align:right;color:#0f172a;padding:2px 4px;font-weight:700;">'+Number(_wdTotal).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
+            tblW += '<tr style="border-top:2px solid #cbd5e1; background:#f8fafc;">' +
+              '<td style="color:#475569;padding:6px 8px;font-weight:700;font-size:9px;text-transform:uppercase;">Total</td>' +
+              '<td style="text-align:right;color:#1e293b;padding:6px 8px;font-weight:700;font-size:11px;">'+Number(_wdTotal).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>' +
               '<td></td>' +
             '</tr>';
             tblW += '</tbody></table>';
-            siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 6px 6px 15px;">'+tblW+'</td></tr>';
+            siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#ffffff; border-bottom:1px solid #e2e8f0;"><td colspan="4" style="padding:0;"><div style="border-left:3px solid #6366f1; margin-left:24px; padding:8px 12px; background:#f8fafc; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">'+tblW+'</div></td></tr>';
           } else {
-            siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#FFFDF2; border-bottom:1px solid #E9D98F;"><td colspan="4" style="padding:4px 15px; color:#9a6a20; font-size:9px;"><i>Sin detalle disponible para semanas '+_wkKeysInRange.join(',')+' en Excel WEEKLY.</i></td></tr>';
+            siembraRowsHtml += '<tr class="weekly-detail weekly-detail-'+m.k+'" style="display:none; background:#ffffff; border-bottom:1px solid #e2e8f0;"><td colspan="4" style="padding:12px 24px; color:#64748b; font-size:10px; font-style:italic;">Sin detalle disponible para semanas '+_wkKeysInRange.join(',')+' en Excel WEEKLY.</td></tr>';
           }
         }
       });
-        '<tr style="background:#ffffff;border-bottom:1px solid #EEE3B8;">' +
-          '<td colspan="4" style="padding:2px 0;"></td>' +
+      siembraRowsHtml += 
+        '<tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">' +
+          '<td colspan="4" style="padding:4px 0;"></td>' +
         '</tr>';
     }
   }
