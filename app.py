@@ -2568,20 +2568,23 @@ function renderManoObra() {
         else{var _utCl=_utDif>0?'#dc2626':'#16a34a'; bodyHtml+='<td style="'+_utDifStyle+'color:'+_utCl+'">'+(_utDif>0?'+':'')+_utDif.toFixed(2)+'</td>';}
       });
       if(showTotal){
-        var _firstTotCpt=0, _lastTotCpt=0;
         var utTotStyle='padding:3px 6px;border-bottom:1px solid #fde68a;border-right:1px solid #fde68a;text-align:right;background:#fef3c7;color:#92400e;font-weight:700;';
-        weekKeys.forEach(function(key, wi){
-          var cost=_utCostByWk[key]||0;
-          var denom=_utDenomByWk[key]||0;
-          var cpt=(denom>0)?cost/denom:0;
-          if(wi===0) _firstTotCpt=cpt;
-          _lastTotCpt=cpt;
-          bodyHtml+='<td style="'+utTotStyle+(weekKeys[0]===key?'border-left:3px solid #7B1C1C;':'')+'">'+( cpt?'$'+cpt.toFixed(2):'—')+'</td>';
+        var _utCostYr={}, _utDenomYr={};
+        totYears.forEach(function(yr){ _utCostYr[yr]=0; _utDenomYr[yr]=0; });
+        weekKeys.forEach(function(key){ var yr=weekMap[key]._year; _utCostYr[yr]+=(_utCostByWk[key]||0); _utDenomYr[yr]+=(_utDenomByWk[key]||0); });
+        totYears.forEach(function(yr, i){
+          var cpt=(_utDenomYr[yr]>0)?_utCostYr[yr]/_utDenomYr[yr]:0;
+          var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+          bodyHtml+='<td style="'+utTotStyle+lb+'">'+( cpt?'$'+cpt.toFixed(2):'—')+'</td>';
         });
-        var _totUtDif=_lastTotCpt-_firstTotCpt;
-        var _totUtDifStyle=utTotStyle+'border-left:1px solid #fbbf24;background:#fde68a;';
-        if(!_totUtDif||Math.abs(_totUtDif)<0.005){bodyHtml+='<td style="'+_totUtDifStyle+'color:#fcd34d">—</td>';}
-        else{var _totUtCl=_totUtDif>0?'#dc2626':'#16a34a'; bodyHtml+='<td style="'+_totUtDifStyle+'color:'+_totUtCl+'">'+(_totUtDif>0?'+':'')+_totUtDif.toFixed(2)+'</td>';}
+        if(totYears.length >= 2) {
+          var cpt0=(_utDenomYr[totYears[0]]>0)?_utCostYr[totYears[0]]/_utDenomYr[totYears[0]]:0;
+          var cptN=(_utDenomYr[totYears[totYears.length-1]]>0)?_utCostYr[totYears[totYears.length-1]]/_utDenomYr[totYears[totYears.length-1]]:0;
+          var _totUtDif=cptN-cpt0;
+          var _totUtDifStyle=utTotStyle+'border-left:1px solid #fbbf24;background:#fde68a;';
+          if(!_totUtDif||Math.abs(_totUtDif)<0.005){bodyHtml+='<td style="'+_totUtDifStyle+'color:#fcd34d">—</td>';}
+          else{var _totUtCl=_totUtDif>0?'#dc2626':'#16a34a'; bodyHtml+='<td style="'+_totUtDifStyle+'color:'+_totUtCl+'">'+(_totUtDif>0?'+':'')+_totUtDif.toFixed(2)+'</td>';}
+        }
       }
       bodyHtml+='</tr>';
     }
@@ -2625,20 +2628,22 @@ function renderManoObra() {
         else { bodyHtml+='<td style="'+tcStyle+'">'+(wkTcDiff>0?'+':'')+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       });
       if(showTotal) {
-        wKeyOrdered.forEach(function(key){
-          var v = wkTcTotal[key]||0;
-          var borderLeft = (wKeyOrdered[0]===key) ? 'border-left:3px solid #86efac;' : '';
-          var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
-          if(!v||v===0) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
-          else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
-        });
+        var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
         var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
-        var gtDif = 0;
-        if(wKeyOrdered.length > 0) {
-          gtDif = (wkTcTotal[wKeyOrdered[wKeyOrdered.length-1]]||0) - (wkTcTotal[wKeyOrdered[0]]||0);
+        var tcTotByYr={};
+        totYears.forEach(function(yr){ tcTotByYr[yr]=0; });
+        wKeyOrdered.forEach(function(key){ var yr=weekMap[key]._year; tcTotByYr[yr]=(tcTotByYr[yr]||0)+(wkTcTotal[key]||0); });
+        totYears.forEach(function(yr, i){
+          var v=tcTotByYr[yr]||0;
+          var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+          if(!v) { bodyHtml+='<td style="'+tcTotHcStyle+lb+'">—</td>'; }
+          else { bodyHtml+='<td style="'+tcTotHcStyle+lb+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+        });
+        if(totYears.length >= 2) {
+          var gtDif=(tcTotByYr[totYears[totYears.length-1]]||0)-(tcTotByYr[totYears[0]]||0);
+          if(!gtDif) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
+          else { bodyHtml+='<td style="'+gtStyle+'">'+(gtDif>0?'+':'')+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
         }
-        if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-        else { bodyHtml+='<td style="'+gtStyle+'">'+(gtDif>0?'+':'')+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       }
       bodyHtml+='</tr>';
     }
@@ -2682,20 +2687,22 @@ function renderManoObra() {
         else { bodyHtml+='<td style="'+tcStyle+'">'+(wkTcDiff>0?'+':'')+Number(wkTcDiff).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       });
       if(showTotal) {
-        wKeyOrdered.forEach(function(key){
-          var v = wkTcTotal[key]||0;
-          var borderLeft = (wKeyOrdered[0]===key) ? 'border-left:3px solid #86efac;' : '';
-          var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
-          if(!v||v===0) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
-          else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
-        });
+        var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
         var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
-        var gtDif = 0;
-        if(wKeyOrdered.length > 0) {
-          gtDif = (wkTcTotal[wKeyOrdered[wKeyOrdered.length-1]]||0) - (wkTcTotal[wKeyOrdered[0]]||0);
+        var cTotByYr={};
+        totYears.forEach(function(yr){ cTotByYr[yr]=0; });
+        wKeyOrdered.forEach(function(key){ var yr=weekMap[key]._year; cTotByYr[yr]=(cTotByYr[yr]||0)+(wkTcTotal[key]||0); });
+        totYears.forEach(function(yr, i){
+          var v=cTotByYr[yr]||0;
+          var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+          if(!v) { bodyHtml+='<td style="'+tcTotHcStyle+lb+'">—</td>'; }
+          else { bodyHtml+='<td style="'+tcTotHcStyle+lb+'">'+Number(v).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
+        });
+        if(totYears.length >= 2) {
+          var gtDif=(cTotByYr[totYears[totYears.length-1]]||0)-(cTotByYr[totYears[0]]||0);
+          if(!gtDif) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
+          else { bodyHtml+='<td style="'+gtStyle+'">'+(gtDif>0?'+':'')+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
         }
-        if(!gtDif||gtDif===0) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-        else { bodyHtml+='<td style="'+gtStyle+'">'+(gtDif>0?'+':'')+Number(gtDif).toLocaleString('es-MX',{maximumFractionDigits:0})+'</td>'; }
       }
       bodyHtml+='</tr>';
     }
@@ -2738,18 +2745,22 @@ function renderManoObra() {
         });
 
         if(showTotal) {
-          weekKeys.forEach(function(key){
-            var v = wkTcTotal[key]||0;
-            var borderLeft = (weekKeys[0]===key) ? 'border-left:3px solid #86efac;' : '';
-            var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
-            if(!v) { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">—</td>'; }
-            else { bodyHtml+='<td style="'+tcTotHcStyle+borderLeft+'">'+Number(v).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
-          });
+          var tcTotHcStyle = 'padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#dcfce7;color:#166534;font-weight:700;';
           var gtStyle='padding:3px 6px;border-bottom:1px solid #dcfce7;border-right:1px solid #dcfce7;text-align:right;background:#bbf7d0;color:#166534;font-weight:700;border-left:1px solid #86efac;';
-          var gtDif = 0;
-          if(weekKeys.length > 0) gtDif = (wkTcTotal[lw]||0) - (wkTcTotal[fw]||0);
-          if(!gtDif) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
-          else { bodyHtml+='<td style="'+gtStyle+'">'+(gtDif>0?'+':'')+Number(gtDif).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
+          var mTotByYr={};
+          totYears.forEach(function(yr){ mTotByYr[yr]=0; });
+          weekKeys.forEach(function(key){ var yr=weekMap[key]._year; mTotByYr[yr]=(mTotByYr[yr]||0)+(wkTcTotal[key]||0); });
+          totYears.forEach(function(yr, i){
+            var v=mTotByYr[yr]||0;
+            var lb = i===0 ? 'border-left:3px solid #7B1C1C;' : '';
+            if(!v) { bodyHtml+='<td style="'+tcTotHcStyle+lb+'">—</td>'; }
+            else { bodyHtml+='<td style="'+tcTotHcStyle+lb+'">'+Number(v).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
+          });
+          if(totYears.length >= 2) {
+            var gtDif=(mTotByYr[totYears[totYears.length-1]]||0)-(mTotByYr[totYears[0]]||0);
+            if(!gtDif) { bodyHtml+='<td style="'+gtStyle+'">—</td>'; }
+            else { bodyHtml+='<td style="'+gtStyle+'">'+(gtDif>0?'+':'')+Number(gtDif).toLocaleString('es-MX',{minimumFractionDigits:m.minDecimals, maximumFractionDigits:m.maxDecimals})+'</td>'; }
+          }
         }
         bodyHtml+='</tr>';
       });
