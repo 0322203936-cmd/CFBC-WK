@@ -4113,20 +4113,28 @@ def autorrellenar_conteo_marlen(
     client_secret: str,
 ) -> dict:
     """
-    Lee el archivo TT Nómina (Excel con el detalle de trabajadores por finca/departamento)
-    y escribe los conteos en la hoja "Conteo" del SharePoint de Marlen, en las filas
-    correspondientes a la semana indicada.
+    Lee la hoja TEMP del archivo TT Nómina (header en fila 7, columna DEPARTAMENTO
+    con formato '{ACTIVIDAD} {FINCA}') y escribe los conteos en la hoja "Conteo"
+    del SharePoint de Marlen para la semana indicada.
 
-    Lógica:
-      1. Lee el TT Nómina → cuenta empleados por (FINCA/UBICACIÓN, DEPARTAMENTO/ÁREA).
-      2. Descarga la hoja "Conteo" de SharePoint para encontrar la posición de cada celda.
-      3. Para cada fila de la hoja Conteo cuyo Sem == week_code, busca el conteo y lo escribe.
+    Fase actual: solo ISABELA.
 
-    El TT Nómina puede tener distintos nombres de columna; se detectan automáticamente
-    buscando variantes de FINCA/RANCHO/UBICACIÓN y DEPARTAMENTO/ÁREA.
+    Mapeo DEPARTAMENTO → ÁREA del Conteo:
+      CORTE ISABELA          → CORTE
+      TRANSPLANTE ISABELA    → TRASPLANTE
+      MANEJO ISABELA         → MANEJO PLANTA
+      HOOPS ISABELA          → HOOPS
+      MIPE ISABELA  \
+      MIRFE ISABELA  }       → MIPE / MIRFE  (sumados)
+      CAMERO ISABELA \
+      TRACTORISTA ISABELA }  → TRACTORES/CAMEROS (sumados)
+      VELADOR ISABELA        → VELADORES
+      SOLDADOR ISABELA       → SOLDADORES
+      CHOFER ISABELA         → TRANSPORTE
     """
     import base64 as _b64
     from io import BytesIO as _BytesIO
+    from collections import defaultdict
 
     code = str(week_code).strip()
     if not (code.isdigit() and len(code) == 4):
@@ -4134,7 +4142,25 @@ def autorrellenar_conteo_marlen(
 
     code_int = int(code)
 
-    # ── 1. Leer TT Nómina y contar por (ubicacion, area) ─────────────────
+    # ── Mapa prefijo TT → ÁREA exacta en la hoja Conteo ──────────────────
+    _PREFIX_TO_AREA = {
+        "CORTE":        "CORTE",
+        "TRANSPLANTE":  "TRASPLANTE",
+        "MANEJO":       "MANEJO PLANTA",
+        "HOOPS":        "HOOPS",
+        "MIPE":         "MIPE / MIRFE",
+        "MIRFE":        "MIPE / MIRFE",
+        "CAMERO":       "TRACTORES/CAMEROS",
+        "TRACTORISTA":  "TRACTORES/CAMEROS",
+        "VELADOR":      "VELADORES",
+        "SOLDADOR":     "SOLDADORES",
+        "CHOFER":       "TRANSPORTE",
+    }
+    # Ubicación que procesamos en esta fase
+    _FINCA_ACTIVA = "ISABELA"
+    _UBIC_CONTEO  = "ISABELA"   # valor exacto en columna UBICACIÓN de la hoja Conteo
+
+    # ── 1. Leer TT Nómina — hoja TEMP, header=7 ──────────────────────────
     try:
         if hasattr(tt_file, "read"):
             raw = tt_file.read()
@@ -4146,153 +4172,45 @@ def autorrellenar_conteo_marlen(
         else:
             raw = tt_file.getvalue()
 
-        df_tt = pd.read_excel(_BytesIO(raw), header=None).fillna("")
-
-        # Detectar fila de encabezados buscando FINCA/RANCHO + DEPARTAMENTO/ÁREA
-        _FINCA_KW = {"FINCA", "RANCHO", "UBICACION", "UBICACIÓN", "PLANTA", "CAMPO"}
-        _DEPT_KW  = {"DEPARTAMENTO", "DEPTO", "ÁREA", "AREA", "PUESTO", "CATEGORIA", "CATEGORÍA"}
-
-        header_row = None
-        for i in range(min(15, len(df_tt))):
-            cols_up = {str(v).strip().upper() for v in df_tt.iloc[i].values if str(v).strip()}
-            if cols_up & _FINCA_KW and cols_up & _DEPT_KW:
-                header_row = i
-                break
-
-        if header_row is None:
-            # Intentar con la primera fila que tenga más de 3 celdas no vacías
-            for i in range(min(10, len(df_tt))):
-                non_empty = sum(1 for v in df_tt.iloc[i].values if str(v).strip())
-                if non_empty >= 3:
-                    header_row = i
-                    break
-            if header_row is None:
-                return {"ok": False, "error": "No se encontró fila de encabezados en el TT Nómina."}
-
-        df_tt.columns = [str(v).strip().upper() for v in df_tt.iloc[header_row].values]
-        df_tt = df_tt.iloc[header_row + 1:].copy()
-        df_tt = df_tt[df_tt.apply(lambda r: any(str(v).strip() for v in r), axis=1)]
-
-        hdrs_tt = list(df_tt.columns)
-
-        def _pick_col(keywords):
-            for kw in keywords:
-                if kw in hdrs_tt:
-                    return kw
-            for h in hdrs_tt:
-                for kw in keywords:
-                    if kw in h:
-                        return h
-            return None
-
-        col_finca = _pick_col(["FINCA", "RANCHO", "UBICACION", "UBICACIÓN", "PLANTA"])
-        col_dept  = _pick_col(["DEPARTAMENTO", "DEPTO", "ÁREA", "AREA", "PUESTO"])
-
-        if not col_finca or not col_dept:
-            return {
-                "ok": False,
-                "error": (
-                    f"No se encontraron columnas de Finca/Rancho ({col_finca}) "
-                    f"o Departamento/Área ({col_dept}) en el TT Nómina. "
-                    f"Columnas detectadas: {hdrs_tt[:15]}"
-                ),
-            }
-
-        # Reusar mapas existentes de norm_ranch + _AREA_MAP de _extraer_conteo_marlen
-        _AREA_MAP_CONTEO = {
-            "ING. Y ADMON.": "Ing. Y Admon.", "ING Y ADMON": "Ing. Y Admon.",
-            "SUPERVISORES": "Supervisores", "CORTE": "Corte",
-            "TRASPLANTE": "Trasplante", "TRANSPLANTE": "Trasplante",
-            "MANEJO PLANTA": "Manejo Planta", "CONSOLIDACIÓN": "Consolidacion",
-            "CONSOLIDACION": "Consolidacion", "SIEMBRA": "Siembra",
-            "MOV. CHAROLAS": "Mov. Charolas", "MOV CHAROLAS": "Mov. Charolas",
-            "RIEGO": "Riego", "PHLOX": "Phlox", "HOOPS": "Hoops",
-            "MIPE / MIRFE": "Mipe / Mirfe", "MIPE/MIRFE": "Mipe / Mirfe",
-            "MIPE Y MIRFE": "Mipe / Mirfe",
-            "TRACTORES/CAMEROS": "Tractores/Cameros",
-            "TRACTORES Y CAMEROS": "Tractores/Cameros",
-            "VELADORES": "Veladores", "SOLDADORES": "Soldadores",
-            "TRANSPORTE": "Transporte", "ADMON POSCO": "Admon Posco",
-            "ADMON. POSCO": "Admon Posco",
-            "ALM. UPC Y EMPAQUE": "Alm. Upc Y Empaque",
-            "ALM UPC Y EMPAQUE": "Alm. Upc Y Empaque",
-            "PROD. PÁTINA Y REC": "Prod. Pátina Y Rec",
-            "PROD PATINA Y REC": "Prod. Pátina Y Rec",
-        }
-
-        _UBIC_MAP_CONTEO = {
-            "PROPAGACION": "PROPAGACION", "PROPAGACIÓN": "PROPAGACION",
-            "VIV": "PROPAGACION", "VIVERO": "PROPAGACION",
-            "ADMINISTRACION": "ADMINISTRACION", "ADMINISTRACIÓN": "ADMINISTRACION",
-            "POSCOSECHA": "POSCOSECHA", "POSCO": "POSCOSECHA",
-            "RAMONA": "RAMONA",
-            "ISABELA": "ISABELA", "ISABELLA": "ISABELA",
-            "CHRISTINA": "CHRISTINA", "CRISTINA": "CHRISTINA",
-            "CECILIA 25": "CECILIA 25", "CECILIA25": "CECILIA 25",
-            "CECILIA": "CECILIA",
-        }
-
-        conteos: dict = {}  # (ubicacion_norm, area_norm) → count
-        omitidos = 0
-
-        for _, row in df_tt.iterrows():
-            finca_raw = re.sub(r'\s+', ' ', str(row[col_finca]).strip().upper())
-            dept_raw  = re.sub(r'\s+', ' ', str(row[col_dept]).strip().upper())
-
-            if not finca_raw or finca_raw in ("NAN", ""):
-                continue
-
-            # Normalizar ubicación
-            ubic = _UBIC_MAP_CONTEO.get(finca_raw)
-            if not ubic:
-                for k, v in _UBIC_MAP_CONTEO.items():
-                    if k in finca_raw:
-                        ubic = v
-                        break
-            # Último recurso: usar norm_ranch
-            if not ubic:
-                rn = norm_ranch(finca_raw)
-                _NR_TO_UBIC = {
-                    "Prop-RM": "PROPAGACION", "PosCo-RM": "POSCOSECHA",
-                    "Campo-RM": "RAMONA", "Isabela": "ISABELA",
-                    "Christina": "CHRISTINA", "Cecilia": "CECILIA",
-                    "Cecilia 25": "CECILIA 25",
-                }
-                ubic = _NR_TO_UBIC.get(rn)
-
-            if not ubic:
-                omitidos += 1
-                continue
-
-            # Normalizar área
-            area = _AREA_MAP_CONTEO.get(dept_raw)
-            if not area:
-                for k, v in _AREA_MAP_CONTEO.items():
-                    if k in dept_raw:
-                        area = v
-                        break
-            if not area:
-                area = dept_raw  # usar tal cual
-
-            key = (ubic, area)
-            conteos[key] = conteos.get(key, 0) + 1
-
-        if not conteos:
-            return {
-                "ok": False,
-                "error": (
-                    f"No se encontraron registros válidos en el TT Nómina. "
-                    f"Revisa que las columnas '{col_finca}' y '{col_dept}' tengan datos. "
-                    f"Omitidos sin finca: {omitidos}."
-                ),
-            }
-
-        print(f"✅ TT Nómina: {sum(conteos.values())} empleados en {len(conteos)} combinaciones ubicación/área")
-
+        df_tt = pd.read_excel(_BytesIO(raw), sheet_name="TEMP", header=7).fillna("")
     except Exception as e:
-        return {"ok": False, "error": f"Error leyendo el TT Nómina: {e}"}
+        return {"ok": False, "error": f"No se pudo leer la hoja TEMP del TT Nómina: {e}"}
 
-    # ── 2. Descargar hoja "Conteo" de SharePoint para mapear posición de celdas ──
+    if "DEPARTAMENTO" not in df_tt.columns:
+        return {
+            "ok": False,
+            "error": f"No se encontró la columna DEPARTAMENTO en la hoja TEMP. Columnas: {list(df_tt.columns)[:10]}",
+        }
+
+    # Filtrar solo filas de ISABELA
+    mask_isa = df_tt["DEPARTAMENTO"].str.contains(_FINCA_ACTIVA, na=False)
+    df_isa   = df_tt[mask_isa].copy()
+
+    if df_isa.empty:
+        return {"ok": False, "error": f"No se encontraron empleados de {_FINCA_ACTIVA} en la hoja TEMP."}
+
+    # Contar por área
+    conteos: dict = defaultdict(int)
+    sin_map = []
+
+    for dept in df_isa["DEPARTAMENTO"]:
+        prefix = str(dept).replace(_FINCA_ACTIVA, "").strip().upper()
+        area   = _PREFIX_TO_AREA.get(prefix)
+        if area:
+            conteos[area] += 1
+        else:
+            sin_map.append(dept)
+
+    print(f"✅ TT Nómina — {_FINCA_ACTIVA}: {len(df_isa)} empleados → {len(conteos)} áreas")
+    for area, cnt in sorted(conteos.items()):
+        print(f"   {area:30s} → {cnt}")
+    if sin_map:
+        print(f"   ⚠️  Sin mapear: {sin_map}")
+
+    if not conteos:
+        return {"ok": False, "error": f"Ningún departamento de {_FINCA_ACTIVA} pudo mapearse a un área conocida."}
+
+    # ── 2. Descargar hoja Conteo para mapear posición de cada celda ───────
     archivo_conteo = _descargar_excel(SHAREPOINT_URL_CONTEO_MARLEN, "Conteo Marlen")
     if archivo_conteo is None:
         return {"ok": False, "error": "No se pudo descargar el archivo Conteo de SharePoint."}
@@ -4311,26 +4229,29 @@ def autorrellenar_conteo_marlen(
             break
 
     if header_idx is None:
-        return {"ok": False, "error": "No se encontró fila de encabezados en la hoja 'Conteo'."}
+        return {"ok": False, "error": "No se encontró la fila de encabezados en la hoja 'Conteo'."}
 
     hdrs_c = [str(v).strip().upper() for v in df_c.iloc[header_idx].values]
 
-    def _col_idx(keywords):
+    def _ci(keywords):
         for kw in keywords:
             if kw in hdrs_c:
                 return hdrs_c.index(kw)
         return None
 
-    ci_sem   = _col_idx(["SEM", "SEMANA"])
-    ci_ubic  = _col_idx(["UBICACIÓN", "UBICACION"])
-    ci_area  = _col_idx(["ÁREA / DEPARTAMENTO", "AREA / DEPARTAMENTO",
-                          "ÁREA/DEPARTAMENTO", "AREA/DEPARTAMENTO", "ÁREA", "AREA"])
-    ci_cont  = _col_idx(["CONTEO"])
+    ci_sem  = _ci(["SEM", "SEMANA"])
+    ci_ubic = _ci(["UBICACIÓN", "UBICACION"])
+    ci_area = _ci(["ÁREA / DEPARTAMENTO", "AREA / DEPARTAMENTO",
+                   "ÁREA/DEPARTAMENTO",   "AREA/DEPARTAMENTO", "ÁREA", "AREA"])
+    ci_cont = _ci(["CONTEO"])
 
     if any(c is None for c in [ci_sem, ci_ubic, ci_area, ci_cont]):
-        return {"ok": False, "error": f"Columnas faltantes en 'Conteo': sem={ci_sem} ubic={ci_ubic} area={ci_area} conteo={ci_cont}"}
+        return {
+            "ok": False,
+            "error": f"Columnas faltantes: sem={ci_sem} ubic={ci_ubic} area={ci_area} conteo={ci_cont}",
+        }
 
-    # Índice de columna Excel → letra (A=1, B=2, …)
+    # Columna Excel (letra) donde va el CONTEO
     def _col_letter(n):
         s = ""
         while n > 0:
@@ -4338,70 +4259,60 @@ def autorrellenar_conteo_marlen(
             s = chr(65 + r) + s
         return s
 
-    cont_col_letter = _col_letter(ci_cont + 1)  # +1 porque openpyxl es 1-based
+    cont_col_letter = _col_letter(ci_cont + 1)
 
-    # Mapear filas: (sem, ubicacion_up, area_up) → número de fila Excel (1-based)
-    filas_a_escribir = []  # [(excel_row_1based, conteo_value)]
+    # Recorrer filas de la hoja Conteo buscando ISABELA + semana + área
+    filas_a_escribir = []   # [(excel_row_1based, valor)]
+
     for i in range(header_idx + 1, len(df_c)):
         row = df_c.iloc[i].values
-        sem_raw  = str(row[ci_sem]).strip()  if ci_sem  < len(row) else ""
-        ubic_raw = re.sub(r'\s+', ' ', str(row[ci_ubic]).strip().upper()) if ci_ubic < len(row) else ""
-        area_raw = re.sub(r'\s+', ' ', str(row[ci_area]).strip().upper()) if ci_area < len(row) else ""
 
+        sem_raw  = str(row[ci_sem]).strip()  if ci_sem  < len(row) else ""
+        ubic_raw = str(row[ci_ubic]).strip().upper() if ci_ubic < len(row) else ""
+        area_raw = str(row[ci_area]).strip().upper() if ci_area < len(row) else ""
+
+        # Filtrar por semana e ISABELA
         try:
-            sem_val = int(float(sem_raw))
+            if int(float(sem_raw)) != code_int:
+                continue
         except (ValueError, TypeError):
             continue
 
-        if sem_val != code_int:
+        if _UBIC_CONTEO not in ubic_raw:
             continue
 
         # Normalizar área para buscar en conteos
-        area_norm = _AREA_MAP_CONTEO.get(area_raw)
-        if not area_norm:
-            for k, v in _AREA_MAP_CONTEO.items():
-                if k in area_raw:
-                    area_norm = v
-                    break
-        if not area_norm:
-            area_norm = area_raw
+        area_norm = re.sub(r"[\s/]+", " ", area_raw).strip()
+        valor = conteos.get(area_norm, 0)
 
-        ubic_norm = _UBIC_MAP_CONTEO.get(ubic_raw)
-        if not ubic_norm:
-            for k, v in _UBIC_MAP_CONTEO.items():
-                if k in ubic_raw:
-                    ubic_norm = v
-                    break
-        if not ubic_norm:
-            ubic_norm = ubic_raw
-
-        valor = conteos.get((ubic_norm, area_norm), 0)
-        excel_row = i + 1  # pandas 0-based → Excel 1-based
-        filas_a_escribir.append((excel_row, valor))
+        excel_row = i + 1   # pandas 0-based → Excel 1-based
+        filas_a_escribir.append((excel_row, area_norm, valor))
 
     if not filas_a_escribir:
         return {
             "ok": False,
             "error": (
-                f"No se encontraron filas para la semana {code_int} en la hoja 'Conteo'. "
-                f"Verifica que la columna Sem tenga el valor {code_int}."
+                f"No se encontraron filas ISABELA con semana {code_int} en la hoja 'Conteo'. "
+                f"Verifica que la columna Sem tenga el valor {code_int} y UBICACIÓN = ISABELA."
             ),
         }
 
-    print(f"✅ Filas a actualizar en 'Conteo': {len(filas_a_escribir)}")
+    print(f"✅ Filas ISABELA a actualizar: {len(filas_a_escribir)}")
+    for row, area, val in filas_a_escribir:
+        print(f"   Fila {row} | {area:30s} → {val}")
 
-    # ── 3. Autenticar y escribir en SharePoint via Graph API ─────────────
+    # ── 3. Autenticar con Microsoft Graph y escribir ───────────────────────
     token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
     token_resp = requests.post(token_url, data={
-        "grant_type": "client_credentials",
-        "client_id": client_id,
+        "grant_type":    "client_credentials",
+        "client_id":     client_id,
         "client_secret": client_secret,
-        "scope": "https://graph.microsoft.com/.default",
+        "scope":         "https://graph.microsoft.com/.default",
     }, timeout=20)
     if token_resp.status_code != 200:
         return {"ok": False, "error": f"Error obteniendo token: {token_resp.text[:300]}"}
 
-    token = token_resp.json().get("access_token")
+    token     = token_resp.json().get("access_token")
     hdrs_json = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     encoded = _b64.b64encode(SHAREPOINT_URL_CONTEO_MARLEN.encode()).decode().rstrip("=")
@@ -4419,7 +4330,7 @@ def autorrellenar_conteo_marlen(
     if not drive_id or not item_id:
         return {"ok": False, "error": "No se pudo obtener driveId/itemId del archivo Conteo."}
 
-    wb_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
+    wb_url    = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/workbook"
     sess_resp = requests.post(
         f"{wb_url}/createSession",
         headers=hdrs_json, json={"persistChanges": True}, timeout=30,
@@ -4428,28 +4339,27 @@ def autorrellenar_conteo_marlen(
         return {"ok": False, "error": f"Error abriendo sesión: {sess_resp.text[:300]}"}
 
     session_id = sess_resp.json().get("id")
-    hdrs = {**hdrs_json, "workbook-session-id": session_id}
+    hdrs       = {**hdrs_json, "workbook-session-id": session_id}
 
     escritas = 0
     errores  = []
     try:
-        for excel_row, valor in filas_a_escribir:
-            addr = f"{cont_col_letter}{excel_row}"
+        for excel_row, area, valor in filas_a_escribir:
+            addr    = f"{cont_col_letter}{excel_row}"
             patch_r = requests.patch(
-                f"{wb_url}/worksheets/Conteo/range(address='{addr}')",
+                f"{wb_url}/worksheets/Conteo/range(address=\'{addr}\')",
                 headers=hdrs,
                 json={"values": [[valor]]},
                 timeout=20,
             )
             if patch_r.status_code in (200, 201):
                 escritas += 1
-                # Formato número entero
                 requests.patch(
-                    f"{wb_url}/worksheets/Conteo/range(address='{addr}')/format",
+                    f"{wb_url}/worksheets/Conteo/range(address=\'{addr}\')/format",
                     headers=hdrs, json={"numberFormat": "#,##0"}, timeout=10,
                 )
             else:
-                errores.append(f"Fila {excel_row}: {patch_r.text[:100]}")
+                errores.append(f"Fila {excel_row} ({area}): {patch_r.text[:100]}")
     finally:
         requests.post(f"{wb_url}/closeSession", headers=hdrs, timeout=20)
 
@@ -4459,12 +4369,13 @@ def autorrellenar_conteo_marlen(
             "error": f"Se escribieron {escritas}/{len(filas_a_escribir)} celdas. Errores: {'; '.join(errores[:3])}",
         }
 
+    total_empleados = sum(conteos.values())
     return {
         "ok": True,
         "mensaje": (
-            f"✅ Conteo WK{code} actualizado: {escritas} celdas escritas en la hoja 'Conteo'. "
-            f"Empleados contados: {sum(conteos.values())} en {len(conteos)} combinaciones área/ubicación. "
-            f"(Omitidos sin finca reconocida: {omitidos})"
+            f"✅ Conteo ISABELA WK{code} actualizado: {escritas} celdas escritas. "
+            f"{total_empleados} empleados en {len(conteos)} áreas."
+            + (f" Sin mapear: {sin_map}" if sin_map else "")
         ),
     }
 
