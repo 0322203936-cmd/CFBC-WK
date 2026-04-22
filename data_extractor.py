@@ -4141,6 +4141,11 @@ def autorrellenar_conteo_marlen(
 
     code_int = int(code)
 
+    # ── Normalización de área (consistente en build y lookup) ─────────────
+    def _norm_area(s: str) -> str:
+        """Normaliza nombre de área: upper, colapsa espacios+slashes a espacio."""
+        return re.sub(r"[\s/]+", " ", str(s).upper()).strip()
+
     # ── Mapa prefijo TT → ÁREA exacta en hoja Conteo ─────────────────────
     _PREFIX_TO_AREA = {
         "CORTE":        "CORTE",
@@ -4155,6 +4160,8 @@ def autorrellenar_conteo_marlen(
         "SOLDADOR":     "SOLDADORES",
         "CHOFER":       "TRANSPORTE",
     }
+    # Pre-normalizar los valores para que el lookup sea consistente
+    _PREFIX_TO_AREA_NORM = {k: _norm_area(v) for k, v in _PREFIX_TO_AREA.items()}
 
     # ── Config de fincas: (palabras_a_filtrar, palabras_a_excluir, strips, ubic_conteo) ──
     # Orden importa: CECILIA 25 antes de CECILIA para que el strip sea correcto
@@ -4169,7 +4176,7 @@ def autorrellenar_conteo_marlen(
         {
             "label":    "CECILIA",
             "include":  ["CECILIA"],
-            "exclude":  ["CECILIA 25"],   # evitar doble conteo
+            "exclude":  ["CECILIA 25"],
             "strips":   ["CECILIA"],
             "ubic":     "CECILIA",
         },
@@ -4193,6 +4200,13 @@ def autorrellenar_conteo_marlen(
             "exclude":  [],
             "strips":   ["CHRISTINA", "CRHISTINA"],
             "ubic":     "CHRISTINA",
+        },
+        {
+            "label":    "POSCOSECHA",
+            "include":  ["POSCOSECHA"],
+            "exclude":  [],
+            "strips":   ["POSCOSECHA"],
+            "ubic":     "POSCOSECHA",
         },
     ]
 
@@ -4248,11 +4262,18 @@ def autorrellenar_conteo_marlen(
                 prefix = prefix.replace(s, "").strip()
             prefix = prefix.strip()
 
-            area = _PREFIX_TO_AREA.get(prefix)
-            if area:
-                conteos[(cfg["ubic"], area)] += 1
+            area_norm = _PREFIX_TO_AREA_NORM.get(prefix)
+            if area_norm:
+                conteos[(cfg["ubic"].upper(), area_norm)] += 1
             else:
                 sin_map.append(f"{cfg['label']}:{dept}")
+
+    # ── ADMON standalone → ADMINISTRACION / ING. Y ADMON. ─────────────────
+    admon_mask = dept_col == "ADMON"
+    admon_count = int(admon_mask.sum())
+    if admon_count:
+        conteos[("ADMINISTRACION", _norm_area("ING. Y ADMON."))] += admon_count
+        print(f"   ✅ ADMINISTRACION (ADMON): {admon_count} empleados")
 
     if not conteos:
         return {"ok": False, "error": "No se encontraron empleados para ninguna finca activa en el TT."}
@@ -4314,7 +4335,7 @@ def autorrellenar_conteo_marlen(
     cont_col_letter = _col_letter(ci_cont + 1)
 
     # Recorrer filas Conteo buscando semana + fincas activas
-    ubics_activas = {cfg["ubic"].upper() for cfg in _FINCAS}
+    ubics_activas = {cfg["ubic"].upper() for cfg in _FINCAS} | {"ADMINISTRACION", "PROPAGACION"}
     filas_a_escribir = []   # [(excel_row, ubic, area, valor)]
 
     for i in range(header_idx + 1, len(df_c)):
@@ -4333,8 +4354,8 @@ def autorrellenar_conteo_marlen(
         if ubic_raw not in ubics_activas:
             continue
 
-        # Normalizar área para buscar en conteos
-        area_norm = re.sub(r"[\s/]+", " ", area_raw).strip()
+        # Normalizar área igual que como se construyeron las claves de conteos
+        area_norm = _norm_area(area_raw)
         valor     = conteos.get((ubic_raw, area_norm), 0)
         excel_row = i + 1
         filas_a_escribir.append((excel_row, ubic_raw, area_norm, valor))
