@@ -3940,14 +3940,52 @@ else:
                 )
 
             st.markdown("<div id='auto-upload-tt'></div>", unsafe_allow_html=True)
-            tt_uploaded = st.file_uploader(
-                f"Subir TT Nómina{' · WK' + cont_week_code if cont_week_code else ''}",
-                type=["xlsx", "xls"],
-                key="upload_tt_nomina",
-                help="Archivo Excel de tiempo y asistencia (TT Nómina) exportado del sistema de nómina. Se usará para contar el personal por área y ubicación.",
-            )
-            if tt_uploaded:
-                st.caption(f"✅ {tt_uploaded.name}  ·  {round(tt_uploaded.size / 1024, 1)} KB")
+            tt_col, posco_col, vivero_col = st.columns([1, 1, 1], gap="medium")
+
+            with tt_col:
+                st.markdown(
+                    '''<div class="auto-mini-title">TT Nómina</div>
+                    <div class="auto-mini-note">Archivo principal de tiempo y asistencia</div>''',
+                    unsafe_allow_html=True,
+                )
+                tt_uploaded = st.file_uploader(
+                    f"Subir TT Nómina{' · WK' + cont_week_code if cont_week_code else ''}",
+                    type=["xlsx", "xls"],
+                    key="upload_tt_nomina",
+                    help="Archivo Excel TT Nómina exportado del sistema.",
+                )
+                if tt_uploaded:
+                    st.caption(f"✅ {tt_uploaded.name}  ·  {round(tt_uploaded.size / 1024, 1)} KB")
+
+            with posco_col:
+                st.markdown(
+                    '''<div class="auto-mini-title">Nómina Posco</div>
+                    <div class="auto-mini-note">Nómina de Poscosecha · opcional</div>''',
+                    unsafe_allow_html=True,
+                )
+                posco_uploaded = st.file_uploader(
+                    f"Subir Nómina Posco{' · WK' + cont_week_code if cont_week_code else ''}",
+                    type=["xlsx", "xls"],
+                    key="upload_nomina_posco",
+                    help="Archivo Excel de nómina de Poscosecha.",
+                )
+                if posco_uploaded:
+                    st.caption(f"✅ {posco_uploaded.name}  ·  {round(posco_uploaded.size / 1024, 1)} KB")
+
+            with vivero_col:
+                st.markdown(
+                    '''<div class="auto-mini-title">Nómina Vivero</div>
+                    <div class="auto-mini-note">Nómina de Propagación · opcional</div>''',
+                    unsafe_allow_html=True,
+                )
+                vivero_uploaded = st.file_uploader(
+                    f"Subir Nómina Vivero{' · WK' + cont_week_code if cont_week_code else ''}",
+                    type=["xlsx", "xls"],
+                    key="upload_nomina_vivero",
+                    help="Archivo Excel de nómina de Vivero / Propagación.",
+                )
+                if vivero_uploaded:
+                    st.caption(f"✅ {vivero_uploaded.name}  ·  {round(vivero_uploaded.size / 1024, 1)} KB")
 
             _cont_hay_archivo = tt_uploaded is not None
             _cont_hay_semana  = bool(cont_week_code)
@@ -3974,6 +4012,8 @@ else:
                                 tenant_id     = tenant_id,
                                 client_id     = client_id_sp,
                                 client_secret = client_secret,
+                                posco_file    = posco_uploaded  if posco_uploaded  else None,
+                                vivero_file   = vivero_uploaded if vivero_uploaded else None,
                             )
                         if res_cont.get("ok"):
                             st.success(res_cont.get("mensaje", "Conteo actualizado correctamente."))
