@@ -2067,9 +2067,11 @@ def get_datos() -> dict:
         print("=" * 60)
         
         # ── Fuente 1: Conteo Marlen (hoja "Conteo", formato nuevo YYWW) ──────
-        marlen_data_raw = _extraer_conteo_marlen()
-        marlen_data = [r for r in marlen_data_raw if r.get("hc_total", 0) > 0]
-        marlen_keys = {(r["year"], r["week"]) for r in marlen_data}
+        # TEMPORAL: Marlen deshabilitado mientras se termina el Excel
+        # marlen_data_raw = _extraer_conteo_marlen()
+        # marlen_data = [r for r in marlen_data_raw if r.get("hc_total", 0) > 0]
+        marlen_data = []
+        marlen_keys = set()
 
         # ── Fuente 2: Conteo antiguo BD (sólo semanas que Marlen no cubre) ───
         conteo_data_raw = _extraer_mano_obra_conteo()
