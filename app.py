@@ -26,54 +26,269 @@ def toggle_auto():
     st.session_state.show_auto = not st.session_state.show_auto
 
 if st.session_state.show_auto:
-    # CSS para el Panel de Automatización (Ancho y con márgenes limpios)
+    # CSS para el Panel de Automatizacion estilo consola administrativa
     st.markdown('''
     <style>
       #MainMenu, header, footer { display: none !important; }
       .stApp {
         background:
-          radial-gradient(circle at top left, rgba(68,114,196,0.10), transparent 28%),
-          linear-gradient(180deg, #eef3f8 0%, #f7f9fc 100%);
+          linear-gradient(180deg, #edf1f5 0%, #e4e9ef 100%);
       }
       .block-container {
-        padding: 1.35rem 1.35rem 1.75rem !important;
-        max-width: 1260px !important;
+        padding: 1rem !important;
+        max-width: 100% !important;
       }
-      [data-testid="stVerticalBlock"] { gap: 0.75rem !important; }
+      .stMainBlockContainer {
+        padding-top: 0 !important;
+      }
+      [data-testid="stVerticalBlock"] { gap: 0.9rem !important; }
       section[data-testid="stSidebar"] { display: none !important; }
+
+      div[data-testid="stHorizontalBlock"]:has(#auto-topbar-left) {
+        background: linear-gradient(180deg, #2f3c4b 0%, #263240 100%) !important;
+        border: 1px solid #1f2933 !important;
+        border-radius: 16px !important;
+        padding: 0.65rem 0.8rem !important;
+        align-items: center !important;
+        box-shadow: 0 10px 28px rgba(22, 34, 48, 0.20) !important;
+        gap: 0.55rem !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-topbar-left),
+      div[data-testid="stColumn"]:has(#auto-topbar-reload),
+      div[data-testid="stColumn"]:has(#auto-topbar-back) {
+        display: flex !important;
+        align-items: center !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-topbar-left) {
+        min-height: 58px !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-topbar-reload) div[data-testid="stButton"],
+      div[data-testid="stColumn"]:has(#auto-topbar-back) div[data-testid="stButton"] {
+        width: 100% !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-topbar-reload) button,
+      div[data-testid="stColumn"]:has(#auto-topbar-back) button {
+        min-height: 40px !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(255,255,255,0.18) !important;
+        background: rgba(255,255,255,0.08) !important;
+        color: #ffffff !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-topbar-reload) button:hover,
+      div[data-testid="stColumn"]:has(#auto-topbar-back) button:hover {
+        background: rgba(255,255,255,0.18) !important;
+      }
+
+      .auto-topbar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+      }
+      .auto-topbar-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.08);
+        color: #ffffff;
+        font-size: 18px;
+        font-weight: 800;
+      }
+      .auto-topbar-kicker {
+        color: #9eb0c6;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1.1px;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+      }
+      .auto-topbar-title {
+        color: #ffffff;
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 1.05;
+      }
+      .auto-topbar-subtitle {
+        color: #b8c6d8;
+        font-size: 11px;
+        margin-top: 2px;
+      }
+
+      div[data-testid="stColumn"]:has(#auto-sidebar-shell) {
+        background: linear-gradient(180deg, #2d3745 0%, #24303c 100%) !important;
+        border: 1px solid #1f2933 !important;
+        border-radius: 22px !important;
+        box-shadow: 0 16px 34px rgba(22, 34, 48, 0.18) !important;
+        padding: 1.2rem 1rem 1rem 1rem !important;
+        min-height: calc(100vh - 128px) !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-main-shell) {
+        min-width: 0 !important;
+      }
+      div[data-testid="stVerticalBlock"]:has(#auto-hero-shell),
+      div[data-testid="stColumn"]:has(#auto-stat-1),
+      div[data-testid="stColumn"]:has(#auto-stat-2),
+      div[data-testid="stColumn"]:has(#auto-stat-3),
+      div[data-testid="stColumn"]:has(#auto-stat-4),
+      div[data-testid="stColumn"]:has(#auto-card-download),
+      div[data-testid="stColumn"]:has(#auto-card-create),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-mv-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-siembra-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-nomina-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-conteo-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-upload-shell),
+      div[data-testid="stColumn"]:has(#auto-upload-pr),
+      div[data-testid="stColumn"]:has(#auto-upload-mp),
+      div[data-testid="stColumn"]:has(#auto-upload-me),
+      div[data-testid="stColumn"]:has(#auto-upload-mv),
+      div[data-testid="stColumn"]:has(#auto-upload-tt) {
+        background: rgba(255,255,255,0.97) !important;
+        border: 1px solid #d5dde7 !important;
+        border-radius: 20px !important;
+        box-shadow: 0 14px 30px rgba(31, 45, 61, 0.08) !important;
+      }
+      div[data-testid="stVerticalBlock"]:has(#auto-hero-shell) {
+        padding: 1.25rem 1.35rem 1.1rem 1.35rem !important;
+        margin-bottom: 0.1rem !important;
+      }
+      div[data-testid="stColumn"]:has(#auto-stat-1),
+      div[data-testid="stColumn"]:has(#auto-stat-2),
+      div[data-testid="stColumn"]:has(#auto-stat-3),
+      div[data-testid="stColumn"]:has(#auto-stat-4),
+      div[data-testid="stColumn"]:has(#auto-card-download),
+      div[data-testid="stColumn"]:has(#auto-card-create),
+      div[data-testid="stColumn"]:has(#auto-upload-pr),
+      div[data-testid="stColumn"]:has(#auto-upload-mp),
+      div[data-testid="stColumn"]:has(#auto-upload-me),
+      div[data-testid="stColumn"]:has(#auto-upload-mv),
+      div[data-testid="stColumn"]:has(#auto-upload-tt) {
+        padding: 1rem 1rem 0.95rem 1rem !important;
+      }
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-mv-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-siembra-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-nomina-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-conteo-shell),
+      div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
+        padding: 1rem 1rem 0.95rem 1rem !important;
+      }
+
+      .auto-sidebar-logo {
+        width: 62px;
+        height: 62px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #ffffff 0%, #e7edf4 100%);
+        color: #7B1C1C;
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        margin-bottom: 1rem;
+      }
+      .auto-sidebar-caption {
+        color: #dfe7f0;
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: 0.3rem;
+      }
+      .auto-sidebar-note {
+        color: #aebccc;
+        font-size: 12px;
+        line-height: 1.45;
+        margin-bottom: 1rem;
+      }
+      .auto-sidebar-group {
+        color: #7f93aa;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 1.1px;
+        text-transform: uppercase;
+        margin: 1rem 0 0.45rem 0;
+      }
+      .auto-nav-item {
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        background: rgba(255,255,255,0.04);
+        color: #edf3f9;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 0.72rem 0.85rem;
+        margin-bottom: 0.45rem;
+      }
+      .auto-nav-item-active {
+        background: linear-gradient(135deg, rgba(123,28,28,0.95) 0%, rgba(164,56,56,0.92) 100%);
+        border-color: rgba(255,255,255,0.14);
+      }
+      .auto-sidebar-metric {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.6rem 0.05rem;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        color: #dfe7f0;
+        font-size: 12px;
+      }
+      .auto-sidebar-metric strong {
+        color: #ffffff;
+        font-size: 13px;
+      }
 
       .auto-eyebrow {
         color: #7B1C1C;
-        font-size: 11px;
-        font-weight: 700;
+        font-size: 10px;
+        font-weight: 800;
         letter-spacing: 1.2px;
         text-transform: uppercase;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
       }
       .auto-title {
-        color: #163152;
-        font-size: 30px;
+        color: #1c2c3f;
+        font-size: 31px;
         font-weight: 800;
-        line-height: 1.05;
-        margin: 0 0 8px 0;
+        line-height: 1.08;
+        margin: 0 0 0.45rem 0;
       }
       .auto-subtitle {
-        color: #5f6f84;
+        color: #5c6c7e;
         font-size: 13px;
         line-height: 1.5;
-        margin: 0;
+        margin: 0 0 0.9rem 0;
+        max-width: 900px;
+      }
+      .auto-hero-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+      .auto-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.42rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid #dce4ee;
+        background: #f7f9fc;
+        color: #3c4d61;
+        font-size: 11px;
+        font-weight: 700;
       }
       .auto-stat-label {
         color: #7a8798;
         font-size: 10px;
-        font-weight: 700;
+        font-weight: 800;
         letter-spacing: 1px;
         text-transform: uppercase;
         margin-bottom: 8px;
       }
       .auto-stat-value {
-        color: #163152;
-        font-size: 22px;
+        color: #1c2c3f;
+        font-size: 24px;
         font-weight: 800;
         line-height: 1;
         margin-bottom: 6px;
@@ -92,7 +307,7 @@ if st.session_state.show_auto:
         margin-bottom: 6px;
       }
       .auto-card-title {
-        color: #163152;
+        color: #1c2c3f;
         font-size: 19px;
         font-weight: 800;
         margin-bottom: 4px;
@@ -104,7 +319,7 @@ if st.session_state.show_auto:
         margin-bottom: 10px;
       }
       .auto-section-title {
-        color: #163152;
+        color: #1c2c3f;
         font-size: 22px;
         font-weight: 800;
         margin: 6px 0 2px 0;
@@ -116,7 +331,7 @@ if st.session_state.show_auto:
         margin: 0 0 10px 0;
       }
       .auto-mini-title {
-        color: #163152;
+        color: #1c2c3f;
         font-size: 15px;
         font-weight: 800;
         margin-bottom: 2px;
@@ -126,69 +341,11 @@ if st.session_state.show_auto:
         font-size: 11px;
         margin-bottom: 8px;
       }
-
-      div[data-testid="stHorizontalBlock"]:has(#auto-hero-left) {
-        align-items: stretch !important;
-        gap: 0.8rem !important;
-      }
-      div[data-testid="stColumn"]:has(#auto-hero-left),
-      div[data-testid="stColumn"]:has(#auto-hero-right),
-      div[data-testid="stColumn"]:has(#auto-stat-1),
-      div[data-testid="stColumn"]:has(#auto-stat-2),
-      div[data-testid="stColumn"]:has(#auto-stat-3),
-      div[data-testid="stColumn"]:has(#auto-stat-4),
-      div[data-testid="stColumn"]:has(#auto-card-download),
-      div[data-testid="stColumn"]:has(#auto-card-create),
-      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell),
-      div[data-testid="stColumn"]:has(#auto-upload-pr),
-      div[data-testid="stColumn"]:has(#auto-upload-mp),
-      div[data-testid="stColumn"]:has(#auto-upload-me),
-      div[data-testid="stColumn"]:has(#auto-upload-mv),
-      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-conteo-shell),
-      div[data-testid="stColumn"]:has(#auto-upload-tt),
-      div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
-        background: rgba(255,255,255,0.96) !important;
-        border: 1px solid #dbe4ef !important;
-        border-radius: 18px !important;
-        box-shadow: 0 10px 28px rgba(20,40,70,0.06) !important;
-      }
-      div[data-testid="stColumn"]:has(#auto-hero-left),
-      div[data-testid="stColumn"]:has(#auto-hero-right),
-      div[data-testid="stColumn"]:has(#auto-stat-1),
-      div[data-testid="stColumn"]:has(#auto-stat-2),
-      div[data-testid="stColumn"]:has(#auto-stat-3),
-      div[data-testid="stColumn"]:has(#auto-stat-4),
-      div[data-testid="stColumn"]:has(#auto-card-download),
-      div[data-testid="stColumn"]:has(#auto-card-create),
-      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell),
-      div[data-testid="stColumn"]:has(#auto-upload-pr),
-      div[data-testid="stColumn"]:has(#auto-upload-mp),
-      div[data-testid="stColumn"]:has(#auto-upload-me),
-      div[data-testid="stColumn"]:has(#auto-upload-mv),
-      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-conteo-shell),
-      div[data-testid="stColumn"]:has(#auto-upload-tt) {
-        padding: 1rem 1rem 0.9rem 1rem !important;
-      }
-      div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
-        padding: 1rem 1rem 0.95rem 1rem !important;
-        margin-top: 0.15rem !important;
-      }
-      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-shell) {
-        padding: 1rem 1rem 0.95rem 1rem !important;
-        margin-top: 0.05rem !important;
-      }
-      div[data-testid="stColumn"]:has(#auto-hero-right) {
-        display: flex !important;
-        align-items: stretch !important;
-      }
-      div[data-testid="stColumn"]:has(#auto-hero-right) > div {
-        width: 100% !important;
-      }
       div[data-testid="stColumn"]:has(#auto-stat-1),
       div[data-testid="stColumn"]:has(#auto-stat-2),
       div[data-testid="stColumn"]:has(#auto-stat-3),
       div[data-testid="stColumn"]:has(#auto-stat-4) {
-        min-height: 110px !important;
+        min-height: 118px !important;
       }
       div[data-testid="stColumn"]:has(#auto-upload-pr),
       div[data-testid="stColumn"]:has(#auto-upload-mp),
@@ -197,15 +354,44 @@ if st.session_state.show_auto:
         min-height: 100% !important;
       }
 
-      div[data-testid="stButton"] button,
-      div[data-testid="stDownloadButton"] button {
-        border-radius: 12px !important;
-        min-height: 42px !important;
+      div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+        gap: 0.55rem !important;
+        margin-bottom: 1rem !important;
+        border-bottom: 1px solid #d7dee7 !important;
+        padding-left: 0.15rem !important;
+      }
+      div[data-testid="stTabs"] button[role="tab"] {
+        height: 40px !important;
+        border-radius: 12px 12px 0 0 !important;
+        border: 1px solid #d7dee7 !important;
+        border-bottom: none !important;
+        background: #f5f7fa !important;
+        color: #4f6277 !important;
+        padding: 0 1rem !important;
         font-size: 12px !important;
         font-weight: 700 !important;
       }
+      div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        background: #ffffff !important;
+        color: #1c2c3f !important;
+        box-shadow: inset 0 3px 0 #7B1C1C !important;
+      }
+
+      div[data-testid="stButton"] button,
+      div[data-testid="stDownloadButton"] button {
+        border-radius: 12px !important;
+        min-height: 44px !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+      }
+      div[data-testid="stButton"] button[kind="primary"],
+      div[data-testid="stDownloadButton"] button[kind="primary"] {
+        background: linear-gradient(180deg, #6f94bc 0%, #55799f 100%) !important;
+        border: 1px solid #4d6d8f !important;
+        color: #ffffff !important;
+      }
       div[data-testid="stFileUploaderDropzone"] {
-        padding: 0.85rem 0.95rem !important;
+        padding: 0.95rem 1rem !important;
         border-radius: 14px !important;
         background: #f8fbff !important;
         border: 1px dashed #bfd0e4 !important;
@@ -223,6 +409,12 @@ if st.session_state.show_auto:
       div[data-testid="stSelectbox"] > div,
       div[data-testid="stTextInput"] > div {
         margin-top: 0.1rem !important;
+      }
+      div[data-baseweb="select"] > div,
+      div[data-testid="stTextInput"] input {
+        border-radius: 12px !important;
+        border: 1px solid #d5dde7 !important;
+        background: #fbfcfe !important;
       }
       div[data-testid="stAlert"] {
         border-radius: 14px !important;
@@ -3478,753 +3670,836 @@ if not st.session_state.show_auto:
     components.html(html_final, height=4000, scrolling=False)
 
 else:
-    # ==== MODO PANEL DE AUTOMATIZACIÓN ====
+    # ==== MODO PANEL DE AUTOMATIZACION ====
     try:
         _sp_cfg = st.secrets["sharepoint"]
         _secrets_ok = all(k in _sp_cfg for k in ["tenant_id", "client_id", "client_secret"])
     except Exception:
         _secrets_ok = False
 
-    hero_left, hero_right = st.columns([7, 1.6], gap="small")
-    with hero_left:
+    active_modules = sum([
+        _crear_disponible,
+        _subir_disponible,
+        _autofill_disponible,
+        _autofill_mv_disponible,
+        _autofill_siembra_disponible,
+        _autofill_nomina_disponible,
+        _autofill_conteo_disponible,
+    ])
+    latest_week = f"WK{available_weeks[0]}" if available_weeks else "Sin semanas"
+
+    top_brand, top_reload, top_back = st.columns([8.2, 1.05, 1.2], gap="small")
+    with top_brand:
         st.markdown(
             '''
-            <div id="auto-hero-left"></div>
+            <div id="auto-topbar-left"></div>
+            <div class="auto-topbar-wrap">
+                <div class="auto-topbar-icon">≡</div>
+                <div>
+                    <div class="auto-topbar-kicker">CFBC Console</div>
+                    <div class="auto-topbar-title">Panel de Automatizacion</div>
+                    <div class="auto-topbar-subtitle">SharePoint, cargas semanales y procesos automáticos en una sola vista</div>
+                </div>
+            </div>
+            ''',
+            unsafe_allow_html=True,
+        )
+    with top_reload:
+        st.markdown('<div id="auto-topbar-reload"></div>', unsafe_allow_html=True)
+        if st.button("Recargar", key="btn_auto_reload", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
+    with top_back:
+        st.markdown('<div id="auto-topbar-back"></div>', unsafe_allow_html=True)
+        st.button(
+            "Dashboard",
+            key="btn_auto_dashboard",
+            type="secondary",
+            on_click=toggle_auto,
+            use_container_width=True,
+        )
+
+    side_col, main_col = st.columns([1.15, 4.85], gap="medium")
+
+    with side_col:
+        st.markdown(
+            f'''
+            <div id="auto-sidebar-shell"></div>
+            <div class="auto-sidebar-logo">CFBC</div>
+            <div class="auto-sidebar-caption">Automation Console</div>
+            <div class="auto-sidebar-note">Centro Floricultor de Baja California. Panel operativo para hojas WK, cargas SharePoint y rutinas de autorrelleno.</div>
+
+            <div class="auto-sidebar-group">Vista actual</div>
+            <div class="auto-nav-item auto-nav-item-active">Panel Auto</div>
+
+            <div class="auto-sidebar-group">Modulos</div>
+            <div class="auto-nav-item">Gestion WK</div>
+            <div class="auto-nav-item">Autorrellenos</div>
+            <div class="auto-nav-item">Conteo</div>
+            <div class="auto-nav-item">Carga de archivos</div>
+
+            <div class="auto-sidebar-group">Estado</div>
+            <div class="auto-sidebar-metric"><span>Semanas detectadas</span><strong>{len(available_weeks)}</strong></div>
+            <div class="auto-sidebar-metric"><span>Ultima semana</span><strong>{latest_week}</strong></div>
+            <div class="auto-sidebar-metric"><span>Modulos activos</span><strong>{active_modules}</strong></div>
+            <div class="auto-sidebar-metric"><span>Credenciales</span><strong>{'OK' if _secrets_ok else 'Pend.'}</strong></div>
+            ''',
+            unsafe_allow_html=True,
+        )
+
+    with main_col:
+        st.markdown(
+            f'''
+            <div id="auto-main-shell"></div>
+            <div id="auto-hero-shell"></div>
             <div class="auto-eyebrow">Centro Floricultor de Baja California</div>
-            <div class="auto-title">Panel Auto</div>
-            <div class="auto-subtitle">Operaciones de descarga, creación y carga de hojas SharePoint con una vista más compacta, clara y ejecutiva.</div>
+            <div class="auto-title">Centro de operaciones automaticas</div>
+            <div class="auto-subtitle">Administra la descarga, creacion, carga y relleno de hojas WK desde una interfaz mas limpia, modular y ejecutiva. Todo el flujo queda agrupado por tipo de operacion para trabajar mas rapido y con menos errores.</div>
+            <div class="auto-hero-badges">
+                <span class="auto-hero-badge">SharePoint / Graph</span>
+                <span class="auto-hero-badge">Credenciales: {'OK' if _secrets_ok else 'Pendiente'}</span>
+                <span class="auto-hero-badge">Semana mas reciente: {latest_week}</span>
+                <span class="auto-hero-badge">Modulos listos: {active_modules}</span>
+            </div>
             ''',
             unsafe_allow_html=True,
         )
-    with hero_right:
-        st.markdown('<div id="auto-hero-right"></div>', unsafe_allow_html=True)
-        st.button("⬅ Dashboard", type="secondary", on_click=toggle_auto, use_container_width=True)
 
-    stat_cols = st.columns(4, gap="small")
-    stat_values = [
-        ("auto-stat-1", str(len(available_weeks)), "Semanas detectadas", "Base disponible para operaciones WK."),
-        ("auto-stat-2", "Lista" if _crear_disponible else "Off", "Crear WK", "Plantilla oficial lista para alta manual."),
-        ("auto-stat-3", "Lista" if _subir_disponible else "Off", "Carga PR/MP/ME", "Inserción automática al libro principal."),
-        ("auto-stat-4", "OK" if _secrets_ok else "Pend.", "Credenciales", "Estado de acceso a SharePoint / Graph."),
-    ]
-    for col, (marker, value, label, note) in zip(stat_cols, stat_values):
-        with col:
-            st.markdown(
-                f'''<div id="{marker}"></div>
-                <div class="auto-stat-label">{label}</div>
-                <div class="auto-stat-value">{value}</div>
-                <div class="auto-stat-note">{note}</div>''',
-                unsafe_allow_html=True,
-            )
+        stat_cols = st.columns(4, gap="small")
+        stat_values = [
+            ("auto-stat-1", str(len(available_weeks)), "Semanas detectadas", "Base disponible para operaciones WK."),
+            ("auto-stat-2", "Lista" if _crear_disponible else "Off", "Crear WK", "Plantilla oficial lista para alta manual."),
+            ("auto-stat-3", "Lista" if _subir_disponible else "Off", "Carga PR/MP/ME", "Insercion automatica al libro principal."),
+            ("auto-stat-4", "OK" if _secrets_ok else "Pend.", "Credenciales", "Estado de acceso a SharePoint / Graph."),
+        ]
+        for col, (marker, value, label, note) in zip(stat_cols, stat_values):
+            with col:
+                st.markdown(
+                    f'''<div id="{marker}"></div>
+                    <div class="auto-stat-label">{label}</div>
+                    <div class="auto-stat-value">{value}</div>
+                    <div class="auto-stat-note">{note}</div>''',
+                    unsafe_allow_html=True,
+                )
 
-    col_down, col_create = st.columns(2, gap="medium")
+        tab_wk, tab_autofill, tab_conteo, tab_upload = st.tabs([
+            "Gestion WK",
+            "Autorrellenos",
+            "Conteo",
+            "Carga de archivos",
+        ])
 
-    with col_down:
-        st.markdown(
-            '''
-            <div id="auto-card-download"></div>
-            <div class="auto-card-kicker">Operación WK</div>
-            <div class="auto-card-title">Descargar hoja semanal</div>
-            <div class="auto-card-note">Prepara un archivo individual con el formato oficial para revisión o descarga inmediata.</div>
-            ''',
-            unsafe_allow_html=True,
-        )
-        if available_weeks:
-            selected_wk = st.selectbox(
-                "Semana disponible",
-                options=available_weeks,
-                format_func=lambda c: f"WK{c}",
-                key="auto_download_wk",
-            )
+        with tab_wk:
+            col_down, col_create = st.columns(2, gap="medium")
 
-            if st.button("Preparar archivo XLSX", use_container_width=True, key="btn_prepare_wk"):
-                with st.spinner(f"Conectando con SharePoint y preparando WK{selected_wk}..."):
-                    xlsx_bytes = get_sheet_xlsx(selected_wk)
-                if xlsx_bytes:
-                    st.success("Archivo listo para descarga.")
-                    st.download_button(
-                        label=f"Descargar WK{selected_wk}.xlsx",
-                        data=xlsx_bytes,
-                        file_name=f"WK{selected_wk}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            with col_down:
+                st.markdown(
+                    '''
+                    <div id="auto-card-download"></div>
+                    <div class="auto-card-kicker">Operacion WK</div>
+                    <div class="auto-card-title">Descargar hoja semanal</div>
+                    <div class="auto-card-note">Prepara un archivo individual con el formato oficial para revision o descarga inmediata.</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                if available_weeks:
+                    selected_wk = st.selectbox(
+                        "Semana disponible",
+                        options=available_weeks,
+                        format_func=lambda c: f"WK{c}",
+                        key="auto_download_wk",
+                    )
+
+                    if st.button("Preparar archivo XLSX", use_container_width=True, key="btn_prepare_wk"):
+                        with st.spinner(f"Conectando con SharePoint y preparando WK{selected_wk}..."):
+                            xlsx_bytes = get_sheet_xlsx(selected_wk)
+                        if xlsx_bytes:
+                            st.success("Archivo listo para descarga.")
+                            st.download_button(
+                                label=f"Descargar WK{selected_wk}.xlsx",
+                                data=xlsx_bytes,
+                                file_name=f"WK{selected_wk}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                type="primary",
+                                use_container_width=True,
+                            )
+                        else:
+                            st.error(f"No se encontro WK{selected_wk} en el servidor.")
+                else:
+                    st.warning("No hay semanas disponibles para descargar.")
+
+            with col_create:
+                st.markdown(
+                    '''
+                    <div id="auto-card-create"></div>
+                    <div class="auto-card-kicker">Alta manual</div>
+                    <div class="auto-card-title">Crear nueva hoja WK</div>
+                    <div class="auto-card-note">Genera una hoja en blanco con celdas, formulas y formato corporativo directamente en SharePoint.</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+                if _crear_disponible:
+                    nuevo_nombre = st.text_input(
+                        "Codigo de hoja",
+                        placeholder="WK2518",
+                        key="auto_new_wk_name",
+                    ).strip().upper()
+
+                    if st.button("Crear hoja en SharePoint", type="primary", use_container_width=True, key="btn_create_wk"):
+                        if not nuevo_nombre:
+                            st.warning("Escribe el nombre de la hoja.")
+                        elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
+                            st.warning("El formato debe ser exactamente WK#### (ej: WK2518).")
+                        else:
+                            try:
+                                tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                                client_id     = st.secrets["sharepoint"]["client_id"]
+                                client_secret = st.secrets["sharepoint"]["client_secret"]
+                                with st.spinner(f"Escribiendo {nuevo_nombre} via Microsoft Graph API..."):
+                                    resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
+                                if resultado.get("ok"):
+                                    st.success(resultado["mensaje"])
+                                    st.cache_data.clear()
+                                else:
+                                    st.error(resultado["error"])
+                            except KeyError as e:
+                                st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                else:
+                    st.error("La funcion de crear hojas no esta disponible en data_extractor.py")
+
+        with tab_autofill:
+            with st.container():
+                st.markdown(
+                    '''
+                    <div id="auto-card-fill-shell"></div>
+                    <div class="auto-card-kicker">Post-creacion</div>
+                    <div class="auto-section-title">Autorrellenar materiales MN</div>
+                    <div class="auto-section-note">Llena por rancho las filas de FERTILIZANTES, DESINFECCION / PLAGUICIDAS, MANTENIMIENTO y MATERIAL DE EMPAQUE usando PR / MP / ME de la misma semana. Los totales y USD siguen por formula.</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+
+                if not _autofill_disponible:
+                    st.error("La funcion `autorrellenar_materiales_wk` no esta disponible en data_extractor.py")
+                else:
+                    fill_sel_col, fill_manual_col, fill_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+                    with fill_sel_col:
+                        if available_weeks:
+                            fill_wk_sel = st.selectbox(
+                                "WK disponible",
+                                options=available_weeks,
+                                format_func=lambda c: f"WK{c}",
+                                key="autofill_wk_sel",
+                            )
+                            fill_week_code = fill_wk_sel
+                        else:
+                            fill_week_code = ""
+                    with fill_manual_col:
+                        fill_week_manual = st.text_input(
+                            "O captura WK",
+                            placeholder="2614",
+                            max_chars=4,
+                            key="autofill_wk_manual",
+                        ).strip()
+                        if fill_week_manual:
+                            fill_week_code = fill_week_manual
+                    with fill_info_col:
+                        fill_label = f"WK{fill_week_code}" if fill_week_code else "Sin WK"
+                        st.markdown(
+                            f'''<div class="auto-card-kicker">Accion</div>
+                            <div class="auto-card-title">{fill_label}</div>
+                            <div class="auto-card-note">Usa este paso despues de crear y revisar la hoja.</div>''',
+                            unsafe_allow_html=True,
+                        )
+
+                    if st.button(
+                        f"Autorrellenar materiales {'— WK' + fill_week_code if fill_week_code else ''}",
                         type="primary",
                         use_container_width=True,
-                    )
-                else:
-                    st.error(f"No se encontró WK{selected_wk} en el servidor.")
-        else:
-            st.warning("No hay semanas disponibles para descargar.")
-
-    with col_create:
-        st.markdown(
-            '''
-            <div id="auto-card-create"></div>
-            <div class="auto-card-kicker">Alta manual</div>
-            <div class="auto-card-title">Crear nueva hoja WK</div>
-            <div class="auto-card-note">Genera una hoja en blanco con celdas, fórmulas y formato corporativo directamente en SharePoint.</div>
-            ''',
-            unsafe_allow_html=True,
-        )
-        if _crear_disponible:
-            nuevo_nombre = st.text_input(
-                "Código de hoja",
-                placeholder="WK2518",
-                key="auto_new_wk_name",
-            ).strip().upper()
-
-            if st.button("Crear hoja en SharePoint", type="primary", use_container_width=True, key="btn_create_wk"):
-                if not nuevo_nombre:
-                    st.warning("Escribe el nombre de la hoja.")
-                elif not nuevo_nombre.startswith("WK") or len(nuevo_nombre) != 6:
-                    st.warning("El formato debe ser exactamente WK#### (ej: WK2518).")
-                else:
-                    try:
-                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                        client_id     = st.secrets["sharepoint"]["client_id"]
-                        client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Escribiendo {nuevo_nombre} vía Microsoft Graph API..."):
-                            resultado = crear_hoja_wk(nuevo_nombre, tenant_id, client_id, client_secret)
-                        if resultado.get("ok"):
-                            st.success(resultado["mensaje"])
-                            st.cache_data.clear()
+                        key="btn_autofill_materials",
+                        disabled=not bool(fill_week_code),
+                    ):
+                        if not (fill_week_code.isdigit() and len(fill_week_code) == 4):
+                            st.warning("El codigo de semana debe ser exactamente 4 digitos (ej: 2614).")
                         else:
-                            st.error(resultado["error"])
-                    except KeyError as e:
-                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
-        else:
-            st.error("La función de crear hojas no está disponible en data_extractor.py")
+                            try:
+                                tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                                client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                                client_secret = st.secrets["sharepoint"]["client_secret"]
+                                with st.spinner(f"Autorrellenando materiales en WK{fill_week_code}..."):
+                                    res_fill = autorrellenar_materiales_wk(
+                                        week_code=fill_week_code,
+                                        tenant_id=tenant_id,
+                                        client_id=client_id_sp,
+                                        client_secret=client_secret,
+                                    )
+                                if res_fill.get("ok"):
+                                    st.success(res_fill.get("mensaje", "Materiales autorrellenados correctamente."))
+                                    st.cache_data.clear()
+                                else:
+                                    st.error(res_fill.get("error", "No se pudo autorrellenar la WK."))
+                            except KeyError as e:
+                                st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                            except Exception as e:
+                                st.error(f"Error inesperado: {e}")
 
-    with st.container():
-        st.markdown(
-            '''
-            <div id="auto-card-fill-shell"></div>
-            <div class="auto-card-kicker">Post-creación</div>
-            <div class="auto-section-title">Autorrellenar materiales MN</div>
-            <div class="auto-section-note">Llena por rancho las filas de FERTILIZANTES, DESINFECCION / PLAGUICIDAS, MANTENIMIENTO y MATERIAL DE EMPAQUE usando PR / MP / ME de la misma semana. Los totales y USD siguen por fórmula.</div>
-            ''',
-            unsafe_allow_html=True,
-        )
-
-        if not _autofill_disponible:
-            st.error("La función `autorrellenar_materiales_wk` no está disponible en data_extractor.py")
-        else:
-            fill_sel_col, fill_manual_col, fill_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
-            with fill_sel_col:
-                if available_weeks:
-                    fill_wk_sel = st.selectbox(
-                        "WK disponible",
-                        options=available_weeks,
-                        format_func=lambda c: f"WK{c}",
-                        key="autofill_wk_sel",
-                    )
-                    fill_week_code = fill_wk_sel
-                else:
-                    fill_week_code = ""
-            with fill_manual_col:
-                fill_week_manual = st.text_input(
-                    "O captura WK",
-                    placeholder="2614",
-                    max_chars=4,
-                    key="autofill_wk_manual",
-                ).strip()
-                if fill_week_manual:
-                    fill_week_code = fill_week_manual
-            with fill_info_col:
-                fill_label = f"WK{fill_week_code}" if fill_week_code else "Sin WK"
-                st.markdown(
-                    f'''<div class="auto-card-kicker">Acción</div>
-                    <div class="auto-card-title">{fill_label}</div>
-                    <div class="auto-card-note">Usa este paso después de crear y revisar la hoja.</div>''',
-                    unsafe_allow_html=True,
-                )
-
-            if st.button(
-                f"Autorrellenar materiales {'— WK' + fill_week_code if fill_week_code else ''}",
-                type="primary",
-                use_container_width=True,
-                key="btn_autofill_materials",
-                disabled=not bool(fill_week_code),
-            ):
-                if not (fill_week_code.isdigit() and len(fill_week_code) == 4):
-                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2614).")
-                else:
-                    try:
-                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
-                        client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Autorrellenando materiales en WK{fill_week_code}..."):
-                            res_fill = autorrellenar_materiales_wk(
-                                week_code=fill_week_code,
-                                tenant_id=tenant_id,
-                                client_id=client_id_sp,
-                                client_secret=client_secret,
-                            )
-                        if res_fill.get("ok"):
-                            st.success(res_fill.get("mensaje", "Materiales autorrellenados correctamente."))
-                            st.cache_data.clear()
-                        else:
-                            st.error(res_fill.get("error", "No se pudo autorrellenar la WK."))
-                    except KeyError as e:
-                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
-                    except Exception as e:
-                        st.error(f"Error inesperado: {e}")
-
-    with st.container():
-        st.markdown(
-            '''
-            <div id="auto-card-fill-mv-shell"></div>
-            <div class="auto-card-kicker">Post-creación · MV</div>
-            <div class="auto-section-title">Autorrellenar material vegetal</div>
-            <div class="auto-section-note">Llena la fila de MATERIAL VEGETAL (fila 14) por rancho usando la hoja MV#### del Excel fuente. Requiere que ya hayas subido el archivo MV de la semana.</div>
-            ''',
-            unsafe_allow_html=True,
-        )
-
-        if not _autofill_mv_disponible:
-            st.error("La función `autorrellenar_material_vegetal_wk` no está disponible en data_extractor.py")
-        else:
-            mv_fill_sel_col, mv_fill_manual_col, mv_fill_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
-            with mv_fill_sel_col:
-                if available_weeks:
-                    mv_fill_wk_sel = st.selectbox(
-                        "WK disponible",
-                        options=available_weeks,
-                        format_func=lambda c: f"WK{c}",
-                        key="autofill_mv_wk_sel",
-                    )
-                    mv_fill_week_code = mv_fill_wk_sel
-                else:
-                    mv_fill_week_code = ""
-            with mv_fill_manual_col:
-                mv_fill_week_manual = st.text_input(
-                    "O captura WK",
-                    placeholder="2614",
-                    max_chars=4,
-                    key="autofill_mv_wk_manual",
-                ).strip()
-                if mv_fill_week_manual:
-                    mv_fill_week_code = mv_fill_week_manual
-            with mv_fill_info_col:
-                mv_fill_label = f"WK{mv_fill_week_code}" if mv_fill_week_code else "Sin WK"
-                st.markdown(
-                    f'''<div class="auto-card-kicker">Acción</div>
-                    <div class="auto-card-title">{mv_fill_label}</div>
-                    <div class="auto-card-note">Fila 14 · Columnas E→K por rancho.</div>''',
-                    unsafe_allow_html=True,
-                )
-
-            if st.button(
-                f"Autorrellenar material vegetal {'— WK' + mv_fill_week_code if mv_fill_week_code else ''}",
-                type="primary",
-                use_container_width=True,
-                key="btn_autofill_mv",
-                disabled=not bool(mv_fill_week_code),
-            ):
-                if not (mv_fill_week_code.isdigit() and len(mv_fill_week_code) == 4):
-                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2614).")
-                else:
-                    try:
-                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
-                        client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Autorrellenando Material Vegetal en WK{mv_fill_week_code}..."):
-                            res_mv = autorrellenar_material_vegetal_wk(
-                                week_code=mv_fill_week_code,
-                                tenant_id=tenant_id,
-                                client_id=client_id_sp,
-                                client_secret=client_secret,
-                            )
-                        if res_mv.get("ok"):
-                            st.success(res_mv.get("mensaje", "Material Vegetal autorrellenado correctamente."))
-                            st.cache_data.clear()
-                        else:
-                            st.error(res_mv.get("error", "No se pudo autorrellenar Material Vegetal."))
-                    except KeyError as e:
-                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
-                    except Exception as e:
-                        st.error(f"Error inesperado: {e}")
-
-    with st.container():
-        st.markdown(
-            '''
-            <div id="auto-card-fill-siembra-shell"></div>
-            <div class="auto-card-kicker">Post-creación · Siembra</div>
-            <div class="auto-section-title">Autorrellenar metros y charolas</div>
-            <div class="auto-section-note">Llena por rancho las filas de Metros de Siembra (fila 91) y Número de Charolas Sembradas (fila 89) sumando los datos desde el Excel de Siembra Detalle.</div>
-            ''',
-            unsafe_allow_html=True,
-        )
-
-        if not _autofill_siembra_disponible:
-            st.error("La función `autorrellenar_siembra_wk` no está disponible en data_extractor.py")
-        else:
-            siem_sel_col, siem_manual_col, siem_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
-            with siem_sel_col:
-                if available_weeks:
-                    siem_wk_sel = st.selectbox(
-                        "WK disponible",
-                        options=available_weeks,
-                        format_func=lambda c: f"WK{c}",
-                        key="autofill_siembra_wk_sel",
-                    )
-                    siem_week_code = siem_wk_sel
-                else:
-                    siem_week_code = ""
-            with siem_manual_col:
-                siem_week_manual = st.text_input(
-                    "O captura WK",
-                    placeholder="2615",
-                    max_chars=4,
-                    key="autofill_siembra_wk_manual",
-                ).strip()
-                if siem_week_manual:
-                    siem_week_code = siem_week_manual
-            with siem_info_col:
-                siem_fill_label = f"WK{siem_week_code}" if siem_week_code else "Sin WK"
-                st.markdown(
-                    f'''<div class="auto-card-kicker">Acción</div>
-                    <div class="auto-card-title">{siem_fill_label}</div>
-                    <div class="auto-card-note">Escribe en fila 89 y 91.</div>''',
-                    unsafe_allow_html=True,
-                )
-
-            if st.button(
-                f"Autorrellenar siembra {'— WK' + siem_week_code if siem_week_code else ''}",
-                type="primary",
-                use_container_width=True,
-                key="btn_autofill_siembra",
-                disabled=not bool(siem_week_code),
-            ):
-                if not (siem_week_code.isdigit() and len(siem_week_code) == 4):
-                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2615).")
-                else:
-                    try:
-                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
-                        client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Autorrellenando siembra en WK{siem_week_code}..."):
-                            res_siem = autorrellenar_siembra_wk(
-                                week_code=siem_week_code,
-                                tenant_id=tenant_id,
-                                client_id=client_id_sp,
-                                client_secret=client_secret,
-                            )
-                        if res_siem.get("ok"):
-                            st.success(res_siem.get("mensaje", "Siembra autorrellenada correctamente."))
-                            st.cache_data.clear()
-                        else:
-                            st.error(res_siem.get("error", "No se pudo automatizar la siembra."))
-                    except KeyError as e:
-                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
-                    except Exception as e:
-                        st.error(f"Error inesperado: {e}")
-
-
-    with st.container():
-        st.markdown(
-            '''
-            <div id="auto-card-fill-nomina-shell"></div>
-            <div class="auto-card-kicker">Post-creación · Nómina</div>
-            <div class="auto-section-title">Automatizar nómina MN</div>
-            <div class="auto-section-note">Llena por rancho el bloque de nómina WK usando la hoja BD del SharePoint de nómina. Toma la columna MN #### de la semana capturada y suma PLANTA + CONTRATISTA cuando caen en el mismo concepto.</div>
-            ''',
-            unsafe_allow_html=True,
-        )
-
-        if not _autofill_nomina_disponible:
-            st.error("La función `autorrellenar_nomina_wk` no está disponible en data_extractor.py")
-        else:
-            nom_sel_col, nom_manual_col, nom_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
-            with nom_sel_col:
-                if available_weeks:
-                    nom_wk_sel = st.selectbox(
-                        "WK disponible",
-                        options=available_weeks,
-                        format_func=lambda c: f"WK{c}",
-                        key="autofill_nomina_wk_sel",
-                    )
-                    nom_week_code = nom_wk_sel
-                else:
-                    nom_week_code = ""
-            with nom_manual_col:
-                nom_week_manual = st.text_input(
-                    "O captura WK",
-                    placeholder="2615",
-                    max_chars=4,
-                    key="autofill_nomina_wk_manual",
-                ).strip()
-                if nom_week_manual:
-                    nom_week_code = nom_week_manual
-            with nom_info_col:
-                nom_fill_label = f"WK{nom_week_code}" if nom_week_code else "Sin WK"
-                st.markdown(
-                    f'''<div class="auto-card-kicker">Acción</div>
-                    <div class="auto-card-title">{nom_fill_label}</div>
-                    <div class="auto-card-note">Usa la columna MN {nom_week_code or '####'} de la hoja BD y escribe en E→K.</div>''',
-                    unsafe_allow_html=True,
-                )
-
-            if st.button(
-                f"Automatizar nómina {'— WK' + nom_week_code if nom_week_code else ''}",
-                type="primary",
-                use_container_width=True,
-                key="btn_autofill_nomina",
-                disabled=not bool(nom_week_code),
-            ):
-                if not (nom_week_code.isdigit() and len(nom_week_code) == 4):
-                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2615).")
-                else:
-                    try:
-                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
-                        client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Automatizando nómina en WK{nom_week_code}..."):
-                            res_nom = autorrellenar_nomina_wk(
-                                week_code=nom_week_code,
-                                tenant_id=tenant_id,
-                                client_id=client_id_sp,
-                                client_secret=client_secret,
-                            )
-                        if res_nom.get("ok"):
-                            st.success(res_nom.get("mensaje", "Nómina autorrellenada correctamente."))
-                            st.cache_data.clear()
-                        else:
-                            st.error(res_nom.get("error", "No se pudo automatizar la nómina."))
-                    except KeyError as e:
-                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
-                    except Exception as e:
-                        st.error(f"Error inesperado: {e}")
-
-    with st.container():
-        st.markdown(
-            '''
-            <div id="auto-card-fill-conteo-shell"></div>
-            <div class="auto-card-kicker">Conteo de Personal · Marlen</div>
-            <div class="auto-section-title">Autorellenar Conteo</div>
-            <div class="auto-section-note">Sube el archivo <strong>TT Nómina</strong> de la semana y llena automáticamente la hoja "Conteo" en SharePoint con el conteo de trabajadores por área y ubicación.</div>
-            ''',
-            unsafe_allow_html=True,
-        )
-
-        if not _autofill_conteo_disponible:
-            st.error("La función `autorrellenar_conteo_marlen` no está disponible en data_extractor.py")
-        else:
-            cont_sel_col, cont_manual_col, cont_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
-            with cont_sel_col:
-                if available_weeks:
-                    cont_wk_sel = st.selectbox(
-                        "WK disponible",
-                        options=available_weeks,
-                        format_func=lambda c: f"WK{c}",
-                        key="autofill_conteo_wk_sel",
-                    )
-                    cont_week_code = str(cont_wk_sel)
-                else:
-                    cont_week_code = ""
-            with cont_manual_col:
-                cont_week_manual = st.text_input(
-                    "O captura WK",
-                    placeholder="2615",
-                    max_chars=4,
-                    key="autofill_conteo_wk_manual",
-                ).strip()
-                if cont_week_manual:
-                    cont_week_code = cont_week_manual
-            with cont_info_col:
-                cont_fill_label = f"WK{cont_week_code}" if cont_week_code else "Sin WK"
-                st.markdown(
-                    f'''<div class="auto-card-kicker">Semana</div>
-                    <div class="auto-card-title">{cont_fill_label}</div>
-                    <div class="auto-card-note">Se escribirá en la hoja "Conteo" del SharePoint.</div>''',
-                    unsafe_allow_html=True,
-                )
-
-            st.markdown("<div id='auto-upload-tt'></div>", unsafe_allow_html=True)
-            tt_col, posco_col, vivero_col = st.columns([1, 1, 1], gap="medium")
-
-            with tt_col:
-                st.markdown(
-                    '''<div class="auto-mini-title">TT Nómina</div>
-                    <div class="auto-mini-note">Archivo principal de tiempo y asistencia</div>''',
-                    unsafe_allow_html=True,
-                )
-                tt_uploaded = st.file_uploader(
-                    f"Subir TT Nómina{' · WK' + cont_week_code if cont_week_code else ''}",
-                    type=["xlsx", "xls"],
-                    key="upload_tt_nomina",
-                    help="Archivo Excel TT Nómina exportado del sistema.",
-                )
-                if tt_uploaded:
-                    st.caption(f"✅ {tt_uploaded.name}  ·  {round(tt_uploaded.size / 1024, 1)} KB")
-
-            with posco_col:
-                st.markdown(
-                    '''<div class="auto-mini-title">Nómina Posco</div>
-                    <div class="auto-mini-note">Nómina de Poscosecha · opcional</div>''',
-                    unsafe_allow_html=True,
-                )
-                posco_uploaded = st.file_uploader(
-                    f"Subir Nómina Posco{' · WK' + cont_week_code if cont_week_code else ''}",
-                    type=["xlsx", "xls"],
-                    key="upload_nomina_posco",
-                    help="Archivo Excel de nómina de Poscosecha.",
-                )
-                if posco_uploaded:
-                    st.caption(f"✅ {posco_uploaded.name}  ·  {round(posco_uploaded.size / 1024, 1)} KB")
-
-            with vivero_col:
-                st.markdown(
-                    '''<div class="auto-mini-title">Nómina Vivero</div>
-                    <div class="auto-mini-note">Nómina de Propagación · opcional</div>''',
-                    unsafe_allow_html=True,
-                )
-                vivero_uploaded = st.file_uploader(
-                    f"Subir Nómina Vivero{' · WK' + cont_week_code if cont_week_code else ''}",
-                    type=["xlsx", "xls"],
-                    key="upload_nomina_vivero",
-                    help="Archivo Excel de nómina de Vivero / Propagación.",
-                )
-                if vivero_uploaded:
-                    st.caption(f"✅ {vivero_uploaded.name}  ·  {round(vivero_uploaded.size / 1024, 1)} KB")
-
-            _cont_hay_archivo = tt_uploaded is not None
-            _cont_hay_semana  = bool(cont_week_code)
-            _cont_semana_ok   = cont_week_code.isdigit() and len(cont_week_code) == 4 if cont_week_code else False
-
-            if st.button(
-                f"Autorellenar Conteo {'— WK' + cont_week_code if cont_week_code else ''}",
-                type="primary",
-                use_container_width=True,
-                key="btn_autofill_conteo",
-                disabled=not (_cont_hay_archivo and _cont_hay_semana),
-            ):
-                if not _cont_semana_ok:
-                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2615).")
-                else:
-                    try:
-                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
-                        client_secret = st.secrets["sharepoint"]["client_secret"]
-                        with st.spinner(f"Leyendo TT Nómina y actualizando Conteo WK{cont_week_code}..."):
-                            res_cont = autorrellenar_conteo_marlen(
-                                week_code     = cont_week_code,
-                                tt_file       = tt_uploaded,
-                                tenant_id     = tenant_id,
-                                client_id     = client_id_sp,
-                                client_secret = client_secret,
-                                posco_file    = posco_uploaded  if posco_uploaded  else None,
-                                vivero_file   = vivero_uploaded if vivero_uploaded else None,
-                            )
-                        if res_cont.get("ok"):
-                            st.success(res_cont.get("mensaje", "Conteo actualizado correctamente."))
-                            st.cache_data.clear()
-                        else:
-                            st.error(res_cont.get("error", "No se pudo autorellenar el Conteo."))
-                    except KeyError as e:
-                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
-                    except Exception as e:
-                        st.error(f"Error inesperado: {e}")
-
-            if not _cont_hay_semana:
-                st.caption("Selecciona o captura una semana para habilitar.")
-            elif not _cont_hay_archivo:
-                st.caption("Sube el archivo TT Nómina para habilitar.")
-
-    with st.container():
-        st.markdown(
-            '''
-            <div id="auto-upload-shell"></div>
-            <div class="auto-card-kicker">Carga consolidada</div>
-            <div class="auto-section-title">Subir PR / MP / ME / MV</div>
-            <div class="auto-section-note">Carga archivos fuente para una semana de trabajo y crea las hojas correspondientes dentro del Excel principal. ME admite 2 archivos fusionados.</div>
-            ''',
-            unsafe_allow_html=True,
-        )
-
-        if not _subir_disponible:
-            st.error("La función `insertar_hojas_pr_me_mp` no está disponible en data_extractor.py")
-        else:
-            ctrl_sel, ctrl_manual, ctrl_state = st.columns([1.8, 1.1, 0.9], gap="small")
-            with ctrl_sel:
-                if available_weeks:
-                    semana_sel = st.selectbox(
-                        "Semana base",
-                        options=available_weeks,
-                        format_func=lambda c: f"WK{c}",
-                        key="upload_wk_sel",
-                    )
-                    semana_code_upload = semana_sel
-                else:
-                    semana_code_upload = ""
-            with ctrl_manual:
-                semana_manual = st.text_input(
-                    "O captura el código",
-                    placeholder="2518",
-                    max_chars=4,
-                    key="upload_wk_manual",
-                ).strip()
-                if semana_manual:
-                    semana_code_upload = semana_manual
-            with ctrl_state:
-                wk_label = f"WK{semana_code_upload}" if semana_code_upload else "Sin WK"
-                st.markdown(
-                    f'''<div class="auto-card-kicker">Destino</div>
-                    <div class="auto-card-title">{wk_label}</div>
-                    <div class="auto-card-note">Semana objetivo para la inserción.</div>''',
-                    unsafe_allow_html=True,
-                )
-
-            upload_pr_col, upload_mp_col, upload_me_col, upload_mv_col = st.columns([1, 1, 1.15, 1], gap="medium")
-
-            with upload_pr_col:
+            with st.container():
                 st.markdown(
                     '''
-                    <div id="auto-upload-pr"></div>
-                    <div class="auto-mini-title">PR</div>
-                    <div class="auto-mini-note">Plaguicidas / riego</div>
+                    <div id="auto-card-fill-mv-shell"></div>
+                    <div class="auto-card-kicker">Post-creacion · MV</div>
+                    <div class="auto-section-title">Autorrellenar material vegetal</div>
+                    <div class="auto-section-note">Llena la fila de MATERIAL VEGETAL (fila 14) por rancho usando la hoja MV#### del Excel fuente. Requiere que ya hayas subido el archivo MV de la semana.</div>
                     ''',
                     unsafe_allow_html=True,
                 )
-                pr_uploaded = st.file_uploader(
-                    f"Archivo PR{' · WK' + semana_code_upload if semana_code_upload else ''}",
-                    type=["xlsx", "xls"],
-                    key="upload_pr",
-                    help="Un archivo Excel con los datos PR de la semana seleccionada.",
-                )
-                if pr_uploaded:
-                    st.caption(f"OK · {pr_uploaded.name} ({round(pr_uploaded.size/1024,1)} KB)")
 
-            with upload_mp_col:
-                st.markdown(
-                    '''
-                    <div id="auto-upload-mp"></div>
-                    <div class="auto-mini-title">MP</div>
-                    <div class="auto-mini-note">Mantenimiento</div>
-                    ''',
-                    unsafe_allow_html=True,
-                )
-                mp_uploaded = st.file_uploader(
-                    f"Archivo MP{' · WK' + semana_code_upload if semana_code_upload else ''}",
-                    type=["xlsx", "xls"],
-                    key="upload_mp",
-                    help="Un archivo Excel con los datos MP de la semana seleccionada.",
-                )
-                if mp_uploaded:
-                    st.caption(f"OK · {mp_uploaded.name} ({round(mp_uploaded.size/1024,1)} KB)")
-
-            with upload_me_col:
-                st.markdown(
-                    '''
-                    <div id="auto-upload-me"></div>
-                    <div class="auto-mini-title">ME</div>
-                    <div class="auto-mini-note">Material de empaque · 2 archivos opcionales</div>
-                    ''',
-                    unsafe_allow_html=True,
-                )
-                me1_uploaded = st.file_uploader(
-                    "Archivo ME 1",
-                    type=["xlsx", "xls"],
-                    key="upload_me1",
-                    help="Primer archivo Excel ME.",
-                )
-                if me1_uploaded:
-                    st.caption(f"OK · {me1_uploaded.name} ({round(me1_uploaded.size/1024,1)} KB)")
-                me2_uploaded = st.file_uploader(
-                    "Archivo ME 2",
-                    type=["xlsx", "xls"],
-                    key="upload_me2",
-                    help="Segundo archivo Excel ME; se fusiona con el primero en la misma hoja.",
-                )
-                if me2_uploaded:
-                    st.caption(f"OK · {me2_uploaded.name} ({round(me2_uploaded.size/1024,1)} KB)")
-
-            with upload_mv_col:
-                st.markdown(
-                    '''
-                    <div id="auto-upload-mv"></div>
-                    <div class="auto-mini-title">MV</div>
-                    <div class="auto-mini-note">Material Vegetal</div>
-                    ''',
-                    unsafe_allow_html=True,
-                )
-                mv_uploaded = st.file_uploader(
-                    f"Archivo MV{' · WK' + semana_code_upload if semana_code_upload else ''}",
-                    type=["xlsx", "xls"],
-                    key="upload_mv",
-                    help="Un archivo Excel con los datos MV de la semana seleccionada.",
-                )
-                if mv_uploaded:
-                    st.caption(f"OK · {mv_uploaded.name} ({round(mv_uploaded.size/1024,1)} KB)")
-
-            st.markdown("---")
-
-            _hay_archivos  = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded, mv_uploaded])
-            _hay_semana    = bool(semana_code_upload)
-            _semana_valida = semana_code_upload.isdigit() and len(semana_code_upload) == 4
-
-            if st.button(
-                f"Crear hojas en SharePoint {'— WK' + semana_code_upload if semana_code_upload else ''}",
-                type="primary",
-                use_container_width=True,
-                key="btn_subir_pr_me_mp",
-                disabled=not (_hay_archivos and _hay_semana),
-            ):
-                if not _semana_valida:
-                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2613).")
+                if not _autofill_mv_disponible:
+                    st.error("La funcion `autorrellenar_material_vegetal_wk` no esta disponible en data_extractor.py")
                 else:
-                    try:
-                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
-                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
-                        client_secret = st.secrets["sharepoint"]["client_secret"]
+                    mv_fill_sel_col, mv_fill_manual_col, mv_fill_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+                    with mv_fill_sel_col:
+                        if available_weeks:
+                            mv_fill_wk_sel = st.selectbox(
+                                "WK disponible",
+                                options=available_weeks,
+                                format_func=lambda c: f"WK{c}",
+                                key="autofill_mv_wk_sel",
+                            )
+                            mv_fill_week_code = mv_fill_wk_sel
+                        else:
+                            mv_fill_week_code = ""
+                    with mv_fill_manual_col:
+                        mv_fill_week_manual = st.text_input(
+                            "O captura WK",
+                            placeholder="2614",
+                            max_chars=4,
+                            key="autofill_mv_wk_manual",
+                        ).strip()
+                        if mv_fill_week_manual:
+                            mv_fill_week_code = mv_fill_week_manual
+                    with mv_fill_info_col:
+                        mv_fill_label = f"WK{mv_fill_week_code}" if mv_fill_week_code else "Sin WK"
+                        st.markdown(
+                            f'''<div class="auto-card-kicker">Accion</div>
+                            <div class="auto-card-title">{mv_fill_label}</div>
+                            <div class="auto-card-note">Fila 14 · Columnas E→K por rancho.</div>''',
+                            unsafe_allow_html=True,
+                        )
 
-                        tipos_subidos = []
+                    if st.button(
+                        f"Autorrellenar material vegetal {'— WK' + mv_fill_week_code if mv_fill_week_code else ''}",
+                        type="primary",
+                        use_container_width=True,
+                        key="btn_autofill_mv",
+                        disabled=not bool(mv_fill_week_code),
+                    ):
+                        if not (mv_fill_week_code.isdigit() and len(mv_fill_week_code) == 4):
+                            st.warning("El codigo de semana debe ser exactamente 4 digitos (ej: 2614).")
+                        else:
+                            try:
+                                tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                                client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                                client_secret = st.secrets["sharepoint"]["client_secret"]
+                                with st.spinner(f"Autorrellenando Material Vegetal en WK{mv_fill_week_code}..."):
+                                    res_mv = autorrellenar_material_vegetal_wk(
+                                        week_code=mv_fill_week_code,
+                                        tenant_id=tenant_id,
+                                        client_id=client_id_sp,
+                                        client_secret=client_secret,
+                                    )
+                                if res_mv.get("ok"):
+                                    st.success(res_mv.get("mensaje", "Material Vegetal autorrellenado correctamente."))
+                                    st.cache_data.clear()
+                                else:
+                                    st.error(res_mv.get("error", "No se pudo autorrellenar Material Vegetal."))
+                            except KeyError as e:
+                                st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                            except Exception as e:
+                                st.error(f"Error inesperado: {e}")
+
+            with st.container():
+                st.markdown(
+                    '''
+                    <div id="auto-card-fill-siembra-shell"></div>
+                    <div class="auto-card-kicker">Post-creacion · Siembra</div>
+                    <div class="auto-section-title">Autorrellenar metros y charolas</div>
+                    <div class="auto-section-note">Llena por rancho las filas de Metros de Siembra (fila 91) y Numero de Charolas Sembradas (fila 89) sumando los datos desde el Excel de Siembra Detalle.</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+
+                if not _autofill_siembra_disponible:
+                    st.error("La funcion `autorrellenar_siembra_wk` no esta disponible en data_extractor.py")
+                else:
+                    siem_sel_col, siem_manual_col, siem_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+                    with siem_sel_col:
+                        if available_weeks:
+                            siem_wk_sel = st.selectbox(
+                                "WK disponible",
+                                options=available_weeks,
+                                format_func=lambda c: f"WK{c}",
+                                key="autofill_siembra_wk_sel",
+                            )
+                            siem_week_code = siem_wk_sel
+                        else:
+                            siem_week_code = ""
+                    with siem_manual_col:
+                        siem_week_manual = st.text_input(
+                            "O captura WK",
+                            placeholder="2615",
+                            max_chars=4,
+                            key="autofill_siembra_wk_manual",
+                        ).strip()
+                        if siem_week_manual:
+                            siem_week_code = siem_week_manual
+                    with siem_info_col:
+                        siem_fill_label = f"WK{siem_week_code}" if siem_week_code else "Sin WK"
+                        st.markdown(
+                            f'''<div class="auto-card-kicker">Accion</div>
+                            <div class="auto-card-title">{siem_fill_label}</div>
+                            <div class="auto-card-note">Escribe en fila 89 y 91.</div>''',
+                            unsafe_allow_html=True,
+                        )
+
+                    if st.button(
+                        f"Autorrellenar siembra {'— WK' + siem_week_code if siem_week_code else ''}",
+                        type="primary",
+                        use_container_width=True,
+                        key="btn_autofill_siembra",
+                        disabled=not bool(siem_week_code),
+                    ):
+                        if not (siem_week_code.isdigit() and len(siem_week_code) == 4):
+                            st.warning("El codigo de semana debe ser exactamente 4 digitos (ej: 2615).")
+                        else:
+                            try:
+                                tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                                client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                                client_secret = st.secrets["sharepoint"]["client_secret"]
+                                with st.spinner(f"Autorrellenando siembra en WK{siem_week_code}..."):
+                                    res_siem = autorrellenar_siembra_wk(
+                                        week_code=siem_week_code,
+                                        tenant_id=tenant_id,
+                                        client_id=client_id_sp,
+                                        client_secret=client_secret,
+                                    )
+                                if res_siem.get("ok"):
+                                    st.success(res_siem.get("mensaje", "Siembra autorrellenada correctamente."))
+                                    st.cache_data.clear()
+                                else:
+                                    st.error(res_siem.get("error", "No se pudo automatizar la siembra."))
+                            except KeyError as e:
+                                st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                            except Exception as e:
+                                st.error(f"Error inesperado: {e}")
+
+            with st.container():
+                st.markdown(
+                    '''
+                    <div id="auto-card-fill-nomina-shell"></div>
+                    <div class="auto-card-kicker">Post-creacion · Nomina</div>
+                    <div class="auto-section-title">Automatizar nomina MN</div>
+                    <div class="auto-section-note">Llena por rancho el bloque de nomina WK usando la hoja BD del SharePoint de nomina. Toma la columna MN #### de la semana capturada y suma PLANTA + CONTRATISTA cuando caen en el mismo concepto.</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+
+                if not _autofill_nomina_disponible:
+                    st.error("La funcion `autorrellenar_nomina_wk` no esta disponible en data_extractor.py")
+                else:
+                    nom_sel_col, nom_manual_col, nom_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+                    with nom_sel_col:
+                        if available_weeks:
+                            nom_wk_sel = st.selectbox(
+                                "WK disponible",
+                                options=available_weeks,
+                                format_func=lambda c: f"WK{c}",
+                                key="autofill_nomina_wk_sel",
+                            )
+                            nom_week_code = nom_wk_sel
+                        else:
+                            nom_week_code = ""
+                    with nom_manual_col:
+                        nom_week_manual = st.text_input(
+                            "O captura WK",
+                            placeholder="2615",
+                            max_chars=4,
+                            key="autofill_nomina_wk_manual",
+                        ).strip()
+                        if nom_week_manual:
+                            nom_week_code = nom_week_manual
+                    with nom_info_col:
+                        nom_fill_label = f"WK{nom_week_code}" if nom_week_code else "Sin WK"
+                        st.markdown(
+                            f'''<div class="auto-card-kicker">Accion</div>
+                            <div class="auto-card-title">{nom_fill_label}</div>
+                            <div class="auto-card-note">Usa la columna MN {nom_week_code or '####'} de la hoja BD y escribe en E→K.</div>''',
+                            unsafe_allow_html=True,
+                        )
+
+                    if st.button(
+                        f"Automatizar nomina {'— WK' + nom_week_code if nom_week_code else ''}",
+                        type="primary",
+                        use_container_width=True,
+                        key="btn_autofill_nomina",
+                        disabled=not bool(nom_week_code),
+                    ):
+                        if not (nom_week_code.isdigit() and len(nom_week_code) == 4):
+                            st.warning("El codigo de semana debe ser exactamente 4 digitos (ej: 2615).")
+                        else:
+                            try:
+                                tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                                client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                                client_secret = st.secrets["sharepoint"]["client_secret"]
+                                with st.spinner(f"Automatizando nomina en WK{nom_week_code}..."):
+                                    res_nom = autorrellenar_nomina_wk(
+                                        week_code=nom_week_code,
+                                        tenant_id=tenant_id,
+                                        client_id=client_id_sp,
+                                        client_secret=client_secret,
+                                    )
+                                if res_nom.get("ok"):
+                                    st.success(res_nom.get("mensaje", "Nomina autorrellenada correctamente."))
+                                    st.cache_data.clear()
+                                else:
+                                    st.error(res_nom.get("error", "No se pudo automatizar la nomina."))
+                            except KeyError as e:
+                                st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                            except Exception as e:
+                                st.error(f"Error inesperado: {e}")
+
+        with tab_conteo:
+            with st.container():
+                st.markdown(
+                    '''
+                    <div id="auto-card-fill-conteo-shell"></div>
+                    <div class="auto-card-kicker">Conteo de Personal · Marlen</div>
+                    <div class="auto-section-title">Autorellenar Conteo</div>
+                    <div class="auto-section-note">Sube el archivo <strong>TT Nomina</strong> de la semana y llena automaticamente la hoja "Conteo" en SharePoint con el conteo de trabajadores por area y ubicacion.</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+
+                if not _autofill_conteo_disponible:
+                    st.error("La funcion `autorrellenar_conteo_marlen` no esta disponible en data_extractor.py")
+                else:
+                    cont_sel_col, cont_manual_col, cont_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+                    with cont_sel_col:
+                        if available_weeks:
+                            cont_wk_sel = st.selectbox(
+                                "WK disponible",
+                                options=available_weeks,
+                                format_func=lambda c: f"WK{c}",
+                                key="autofill_conteo_wk_sel",
+                            )
+                            cont_week_code = str(cont_wk_sel)
+                        else:
+                            cont_week_code = ""
+                    with cont_manual_col:
+                        cont_week_manual = st.text_input(
+                            "O captura WK",
+                            placeholder="2615",
+                            max_chars=4,
+                            key="autofill_conteo_wk_manual",
+                        ).strip()
+                        if cont_week_manual:
+                            cont_week_code = cont_week_manual
+                    with cont_info_col:
+                        cont_fill_label = f"WK{cont_week_code}" if cont_week_code else "Sin WK"
+                        st.markdown(
+                            f'''<div class="auto-card-kicker">Semana</div>
+                            <div class="auto-card-title">{cont_fill_label}</div>
+                            <div class="auto-card-note">Se escribira en la hoja "Conteo" del SharePoint.</div>''',
+                            unsafe_allow_html=True,
+                        )
+
+                    st.markdown("<div id='auto-upload-tt'></div>", unsafe_allow_html=True)
+                    tt_col, posco_col, vivero_col = st.columns([1, 1, 1], gap="medium")
+
+                    with tt_col:
+                        st.markdown(
+                            '''<div class="auto-mini-title">TT Nomina</div>
+                            <div class="auto-mini-note">Archivo principal de tiempo y asistencia</div>''',
+                            unsafe_allow_html=True,
+                        )
+                        tt_uploaded = st.file_uploader(
+                            f"Subir TT Nomina{' · WK' + cont_week_code if cont_week_code else ''}",
+                            type=["xlsx", "xls"],
+                            key="upload_tt_nomina",
+                            help="Archivo Excel TT Nomina exportado del sistema.",
+                        )
+                        if tt_uploaded:
+                            st.caption(f"OK · {tt_uploaded.name} · {round(tt_uploaded.size / 1024, 1)} KB")
+
+                    with posco_col:
+                        st.markdown(
+                            '''<div class="auto-mini-title">Nomina Posco</div>
+                            <div class="auto-mini-note">Nomina de Poscosecha · opcional</div>''',
+                            unsafe_allow_html=True,
+                        )
+                        posco_uploaded = st.file_uploader(
+                            f"Subir Nomina Posco{' · WK' + cont_week_code if cont_week_code else ''}",
+                            type=["xlsx", "xls"],
+                            key="upload_nomina_posco",
+                            help="Archivo Excel de nomina de Poscosecha.",
+                        )
+                        if posco_uploaded:
+                            st.caption(f"OK · {posco_uploaded.name} · {round(posco_uploaded.size / 1024, 1)} KB")
+
+                    with vivero_col:
+                        st.markdown(
+                            '''<div class="auto-mini-title">Nomina Vivero</div>
+                            <div class="auto-mini-note">Nomina de Propagacion · opcional</div>''',
+                            unsafe_allow_html=True,
+                        )
+                        vivero_uploaded = st.file_uploader(
+                            f"Subir Nomina Vivero{' · WK' + cont_week_code if cont_week_code else ''}",
+                            type=["xlsx", "xls"],
+                            key="upload_nomina_vivero",
+                            help="Archivo Excel de nomina de Vivero / Propagacion.",
+                        )
+                        if vivero_uploaded:
+                            st.caption(f"OK · {vivero_uploaded.name} · {round(vivero_uploaded.size / 1024, 1)} KB")
+
+                    _cont_hay_archivo = tt_uploaded is not None
+                    _cont_hay_semana  = bool(cont_week_code)
+                    _cont_semana_ok   = cont_week_code.isdigit() and len(cont_week_code) == 4 if cont_week_code else False
+
+                    if st.button(
+                        f"Autorellenar Conteo {'— WK' + cont_week_code if cont_week_code else ''}",
+                        type="primary",
+                        use_container_width=True,
+                        key="btn_autofill_conteo",
+                        disabled=not (_cont_hay_archivo and _cont_hay_semana),
+                    ):
+                        if not _cont_semana_ok:
+                            st.warning("El codigo de semana debe ser exactamente 4 digitos (ej: 2615).")
+                        else:
+                            try:
+                                tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                                client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                                client_secret = st.secrets["sharepoint"]["client_secret"]
+                                with st.spinner(f"Leyendo TT Nomina y actualizando Conteo WK{cont_week_code}..."):
+                                    res_cont = autorrellenar_conteo_marlen(
+                                        week_code     = cont_week_code,
+                                        tt_file       = tt_uploaded,
+                                        tenant_id     = tenant_id,
+                                        client_id     = client_id_sp,
+                                        client_secret = client_secret,
+                                        posco_file    = posco_uploaded  if posco_uploaded  else None,
+                                        vivero_file   = vivero_uploaded if vivero_uploaded else None,
+                                    )
+                                if res_cont.get("ok"):
+                                    st.success(res_cont.get("mensaje", "Conteo actualizado correctamente."))
+                                    st.cache_data.clear()
+                                else:
+                                    st.error(res_cont.get("error", "No se pudo autorellenar el Conteo."))
+                            except KeyError as e:
+                                st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                            except Exception as e:
+                                st.error(f"Error inesperado: {e}")
+
+                    if not _cont_hay_semana:
+                        st.caption("Selecciona o captura una semana para habilitar.")
+                    elif not _cont_hay_archivo:
+                        st.caption("Sube el archivo TT Nomina para habilitar.")
+
+        with tab_upload:
+            with st.container():
+                st.markdown(
+                    '''
+                    <div id="auto-upload-shell"></div>
+                    <div class="auto-card-kicker">Carga consolidada</div>
+                    <div class="auto-section-title">Subir PR / MP / ME / MV</div>
+                    <div class="auto-section-note">Carga archivos fuente para una semana de trabajo y crea las hojas correspondientes dentro del Excel principal. ME admite 2 archivos fusionados.</div>
+                    ''',
+                    unsafe_allow_html=True,
+                )
+
+                if not _subir_disponible:
+                    st.error("La funcion `insertar_hojas_pr_me_mp` no esta disponible en data_extractor.py")
+                else:
+                    ctrl_sel, ctrl_manual, ctrl_state = st.columns([1.8, 1.1, 0.9], gap="small")
+                    with ctrl_sel:
+                        if available_weeks:
+                            semana_sel = st.selectbox(
+                                "Semana base",
+                                options=available_weeks,
+                                format_func=lambda c: f"WK{c}",
+                                key="upload_wk_sel",
+                            )
+                            semana_code_upload = semana_sel
+                        else:
+                            semana_code_upload = ""
+                    with ctrl_manual:
+                        semana_manual = st.text_input(
+                            "O captura el codigo",
+                            placeholder="2518",
+                            max_chars=4,
+                            key="upload_wk_manual",
+                        ).strip()
+                        if semana_manual:
+                            semana_code_upload = semana_manual
+                    with ctrl_state:
+                        wk_label = f"WK{semana_code_upload}" if semana_code_upload else "Sin WK"
+                        st.markdown(
+                            f'''<div class="auto-card-kicker">Destino</div>
+                            <div class="auto-card-title">{wk_label}</div>
+                            <div class="auto-card-note">Semana objetivo para la insercion.</div>''',
+                            unsafe_allow_html=True,
+                        )
+
+                    upload_pr_col, upload_mp_col, upload_me_col, upload_mv_col = st.columns([1, 1, 1.15, 1], gap="medium")
+
+                    with upload_pr_col:
+                        st.markdown(
+                            '''
+                            <div id="auto-upload-pr"></div>
+                            <div class="auto-mini-title">PR</div>
+                            <div class="auto-mini-note">Plaguicidas / riego</div>
+                            ''',
+                            unsafe_allow_html=True,
+                        )
+                        pr_uploaded = st.file_uploader(
+                            f"Archivo PR{' · WK' + semana_code_upload if semana_code_upload else ''}",
+                            type=["xlsx", "xls"],
+                            key="upload_pr",
+                            help="Un archivo Excel con los datos PR de la semana seleccionada.",
+                        )
                         if pr_uploaded:
-                            tipos_subidos.append("PR")
+                            st.caption(f"OK · {pr_uploaded.name} ({round(pr_uploaded.size/1024,1)} KB)")
+
+                    with upload_mp_col:
+                        st.markdown(
+                            '''
+                            <div id="auto-upload-mp"></div>
+                            <div class="auto-mini-title">MP</div>
+                            <div class="auto-mini-note">Mantenimiento</div>
+                            ''',
+                            unsafe_allow_html=True,
+                        )
+                        mp_uploaded = st.file_uploader(
+                            f"Archivo MP{' · WK' + semana_code_upload if semana_code_upload else ''}",
+                            type=["xlsx", "xls"],
+                            key="upload_mp",
+                            help="Un archivo Excel con los datos MP de la semana seleccionada.",
+                        )
                         if mp_uploaded:
-                            tipos_subidos.append("MP")
-                        if me1_uploaded or me2_uploaded:
-                            tipos_subidos.append("ME")
+                            st.caption(f"OK · {mp_uploaded.name} ({round(mp_uploaded.size/1024,1)} KB)")
+
+                    with upload_me_col:
+                        st.markdown(
+                            '''
+                            <div id="auto-upload-me"></div>
+                            <div class="auto-mini-title">ME</div>
+                            <div class="auto-mini-note">Material de empaque · 2 archivos opcionales</div>
+                            ''',
+                            unsafe_allow_html=True,
+                        )
+                        me1_uploaded = st.file_uploader(
+                            "Archivo ME 1",
+                            type=["xlsx", "xls"],
+                            key="upload_me1",
+                            help="Primer archivo Excel ME.",
+                        )
+                        if me1_uploaded:
+                            st.caption(f"OK · {me1_uploaded.name} ({round(me1_uploaded.size/1024,1)} KB)")
+                        me2_uploaded = st.file_uploader(
+                            "Archivo ME 2",
+                            type=["xlsx", "xls"],
+                            key="upload_me2",
+                            help="Segundo archivo Excel ME; se fusiona con el primero en la misma hoja.",
+                        )
+                        if me2_uploaded:
+                            st.caption(f"OK · {me2_uploaded.name} ({round(me2_uploaded.size/1024,1)} KB)")
+
+                    with upload_mv_col:
+                        st.markdown(
+                            '''
+                            <div id="auto-upload-mv"></div>
+                            <div class="auto-mini-title">MV</div>
+                            <div class="auto-mini-note">Material Vegetal</div>
+                            ''',
+                            unsafe_allow_html=True,
+                        )
+                        mv_uploaded = st.file_uploader(
+                            f"Archivo MV{' · WK' + semana_code_upload if semana_code_upload else ''}",
+                            type=["xlsx", "xls"],
+                            key="upload_mv",
+                            help="Un archivo Excel con los datos MV de la semana seleccionada.",
+                        )
                         if mv_uploaded:
-                            tipos_subidos.append("MV")
+                            st.caption(f"OK · {mv_uploaded.name} ({round(mv_uploaded.size/1024,1)} KB)")
 
-                        with st.spinner(
-                            f"Conectando con SharePoint y creando hojas {', '.join(tipos_subidos)} para WK{semana_code_upload}..."
-                        ):
-                            res = insertar_hojas_pr_me_mp(
-                                semana_code   = semana_code_upload,
-                                tenant_id     = tenant_id,
-                                client_id     = client_id_sp,
-                                client_secret = client_secret,
-                                pr_file       = pr_uploaded  if pr_uploaded  else None,
-                                mp_file       = mp_uploaded  if mp_uploaded  else None,
-                                me_file1      = me1_uploaded if me1_uploaded else None,
-                                me_file2      = me2_uploaded if me2_uploaded else None,
-                                mv_file       = mv_uploaded  if mv_uploaded  else None,
-                            )
+                    st.markdown("---")
 
-                        hubo_error = False
-                        for tipo in ["PR", "MP", "ME", "MV"]:
-                            info = res.get(tipo, {})
-                            ok   = info.get("ok")
-                            msg  = info.get("msg", "")
-                            if ok is True:
-                                st.success(msg)
-                            elif ok is False:
-                                st.error(msg)
-                                hubo_error = True
+                    _hay_archivos  = any([pr_uploaded, mp_uploaded, me1_uploaded, me2_uploaded, mv_uploaded])
+                    _hay_semana    = bool(semana_code_upload)
+                    _semana_valida = semana_code_upload.isdigit() and len(semana_code_upload) == 4
 
-                        if not hubo_error:
-                            st.cache_data.clear()
-                            st.info("Recarga el dashboard para reflejar los nuevos datos.")
+                    if st.button(
+                        f"Crear hojas en SharePoint {'— WK' + semana_code_upload if semana_code_upload else ''}",
+                        type="primary",
+                        use_container_width=True,
+                        key="btn_subir_pr_me_mp",
+                        disabled=not (_hay_archivos and _hay_semana),
+                    ):
+                        if not _semana_valida:
+                            st.warning("El codigo de semana debe ser exactamente 4 digitos (ej: 2613).")
                         else:
-                            st.warning("Algunos archivos no se pudieron subir. Revisa los mensajes mostrados.")
+                            try:
+                                tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                                client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                                client_secret = st.secrets["sharepoint"]["client_secret"]
 
-                    except KeyError as e:
-                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
-                    except Exception as e:
-                        st.error(f"Error inesperado: {e}")
+                                tipos_subidos = []
+                                if pr_uploaded:
+                                    tipos_subidos.append("PR")
+                                if mp_uploaded:
+                                    tipos_subidos.append("MP")
+                                if me1_uploaded or me2_uploaded:
+                                    tipos_subidos.append("ME")
+                                if mv_uploaded:
+                                    tipos_subidos.append("MV")
 
-            if not _hay_semana:
-                st.caption("Selecciona o captura una semana para habilitar la carga.")
-            elif not _hay_archivos:
-                st.caption("Sube al menos un archivo para habilitar la creación de hojas.")
+                                with st.spinner(
+                                    f"Conectando con SharePoint y creando hojas {', '.join(tipos_subidos)} para WK{semana_code_upload}..."
+                                ):
+                                    res = insertar_hojas_pr_me_mp(
+                                        semana_code   = semana_code_upload,
+                                        tenant_id     = tenant_id,
+                                        client_id     = client_id_sp,
+                                        client_secret = client_secret,
+                                        pr_file       = pr_uploaded  if pr_uploaded  else None,
+                                        mp_file       = mp_uploaded  if mp_uploaded  else None,
+                                        me_file1      = me1_uploaded if me1_uploaded else None,
+                                        me_file2      = me2_uploaded if me2_uploaded else None,
+                                        mv_file       = mv_uploaded  if mv_uploaded  else None,
+                                    )
+
+                                hubo_error = False
+                                for tipo in ["PR", "MP", "ME", "MV"]:
+                                    info = res.get(tipo, {})
+                                    ok   = info.get("ok")
+                                    msg  = info.get("msg", "")
+                                    if ok is True:
+                                        st.success(msg)
+                                    elif ok is False:
+                                        st.error(msg)
+                                        hubo_error = True
+
+                                if not hubo_error:
+                                    st.cache_data.clear()
+                                    st.info("Recarga el dashboard para reflejar los nuevos datos.")
+                                else:
+                                    st.warning("Algunos archivos no se pudieron subir. Revisa los mensajes mostrados.")
+
+                            except KeyError as e:
+                                st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                            except Exception as e:
+                                st.error(f"Error inesperado: {e}")
+
+                    if not _hay_semana:
+                        st.caption("Selecciona o captura una semana para habilitar la carga.")
+                    elif not _hay_archivos:
+                        st.caption("Sube al menos un archivo para habilitar la creacion de hojas.")
