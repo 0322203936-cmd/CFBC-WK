@@ -144,6 +144,8 @@ if st.session_state.show_auto:
       div[data-testid="stColumn"]:has(#auto-upload-mp),
       div[data-testid="stColumn"]:has(#auto-upload-me),
       div[data-testid="stColumn"]:has(#auto-upload-mv),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-conteo-shell),
+      div[data-testid="stColumn"]:has(#auto-upload-tt),
       div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
         background: rgba(255,255,255,0.96) !important;
         border: 1px solid #dbe4ef !important;
@@ -162,7 +164,9 @@ if st.session_state.show_auto:
       div[data-testid="stColumn"]:has(#auto-upload-pr),
       div[data-testid="stColumn"]:has(#auto-upload-mp),
       div[data-testid="stColumn"]:has(#auto-upload-me),
-      div[data-testid="stColumn"]:has(#auto-upload-mv) {
+      div[data-testid="stColumn"]:has(#auto-upload-mv),
+      div[data-testid="stVerticalBlock"]:has(#auto-card-fill-conteo-shell),
+      div[data-testid="stColumn"]:has(#auto-upload-tt) {
         padding: 1rem 1rem 0.9rem 1rem !important;
       }
       div[data-testid="stVerticalBlock"]:has(#auto-upload-shell) {
@@ -3445,6 +3449,12 @@ except ImportError:
     _autofill_nomina_disponible = False
 
 try:
+    from data_extractor import autorrellenar_conteo_marlen
+    _autofill_conteo_disponible = True
+except ImportError:
+    _autofill_conteo_disponible = False
+
+try:
     from data_extractor import autorrellenar_siembra_wk
     _autofill_siembra_disponible = True
 except ImportError:
@@ -3884,6 +3894,101 @@ else:
                         st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
                     except Exception as e:
                         st.error(f"Error inesperado: {e}")
+
+    with st.container():
+        st.markdown(
+            '''
+            <div id="auto-card-fill-conteo-shell"></div>
+            <div class="auto-card-kicker">Conteo de Personal · Marlen</div>
+            <div class="auto-section-title">Autorellenar Conteo</div>
+            <div class="auto-section-note">Sube el archivo <strong>TT Nómina</strong> de la semana y llena automáticamente la hoja "Conteo" en SharePoint con el conteo de trabajadores por área y ubicación.</div>
+            ''',
+            unsafe_allow_html=True,
+        )
+
+        if not _autofill_conteo_disponible:
+            st.error("La función `autorrellenar_conteo_marlen` no está disponible en data_extractor.py")
+        else:
+            cont_sel_col, cont_manual_col, cont_info_col = st.columns([1.7, 1.05, 1.15], gap="small")
+            with cont_sel_col:
+                if available_weeks:
+                    cont_wk_sel = st.selectbox(
+                        "WK disponible",
+                        options=available_weeks,
+                        format_func=lambda c: f"WK{c}",
+                        key="autofill_conteo_wk_sel",
+                    )
+                    cont_week_code = str(cont_wk_sel)
+                else:
+                    cont_week_code = ""
+            with cont_manual_col:
+                cont_week_manual = st.text_input(
+                    "O captura WK",
+                    placeholder="2615",
+                    max_chars=4,
+                    key="autofill_conteo_wk_manual",
+                ).strip()
+                if cont_week_manual:
+                    cont_week_code = cont_week_manual
+            with cont_info_col:
+                cont_fill_label = f"WK{cont_week_code}" if cont_week_code else "Sin WK"
+                st.markdown(
+                    f'''<div class="auto-card-kicker">Semana</div>
+                    <div class="auto-card-title">{cont_fill_label}</div>
+                    <div class="auto-card-note">Se escribirá en la hoja "Conteo" del SharePoint.</div>''',
+                    unsafe_allow_html=True,
+                )
+
+            st.markdown("<div id='auto-upload-tt'></div>", unsafe_allow_html=True)
+            tt_uploaded = st.file_uploader(
+                f"Subir TT Nómina{' · WK' + cont_week_code if cont_week_code else ''}",
+                type=["xlsx", "xls"],
+                key="upload_tt_nomina",
+                help="Archivo Excel de tiempo y asistencia (TT Nómina) exportado del sistema de nómina. Se usará para contar el personal por área y ubicación.",
+            )
+            if tt_uploaded:
+                st.caption(f"✅ {tt_uploaded.name}  ·  {round(tt_uploaded.size / 1024, 1)} KB")
+
+            _cont_hay_archivo = tt_uploaded is not None
+            _cont_hay_semana  = bool(cont_week_code)
+            _cont_semana_ok   = cont_week_code.isdigit() and len(cont_week_code) == 4 if cont_week_code else False
+
+            if st.button(
+                f"Autorellenar Conteo {'— WK' + cont_week_code if cont_week_code else ''}",
+                type="primary",
+                use_container_width=True,
+                key="btn_autofill_conteo",
+                disabled=not (_cont_hay_archivo and _cont_hay_semana),
+            ):
+                if not _cont_semana_ok:
+                    st.warning("El código de semana debe ser exactamente 4 dígitos (ej: 2615).")
+                else:
+                    try:
+                        tenant_id     = st.secrets["sharepoint"]["tenant_id"]
+                        client_id_sp  = st.secrets["sharepoint"]["client_id"]
+                        client_secret = st.secrets["sharepoint"]["client_secret"]
+                        with st.spinner(f"Leyendo TT Nómina y actualizando Conteo WK{cont_week_code}..."):
+                            res_cont = autorrellenar_conteo_marlen(
+                                week_code     = cont_week_code,
+                                tt_file       = tt_uploaded,
+                                tenant_id     = tenant_id,
+                                client_id     = client_id_sp,
+                                client_secret = client_secret,
+                            )
+                        if res_cont.get("ok"):
+                            st.success(res_cont.get("mensaje", "Conteo actualizado correctamente."))
+                            st.cache_data.clear()
+                        else:
+                            st.error(res_cont.get("error", "No se pudo autorellenar el Conteo."))
+                    except KeyError as e:
+                        st.error(f"Falta configurar la credencial en secrets.toml: {e}.")
+                    except Exception as e:
+                        st.error(f"Error inesperado: {e}")
+
+            if not _cont_hay_semana:
+                st.caption("Selecciona o captura una semana para habilitar.")
+            elif not _cont_hay_archivo:
+                st.caption("Sube el archivo TT Nómina para habilitar.")
 
     with st.container():
         st.markdown(
