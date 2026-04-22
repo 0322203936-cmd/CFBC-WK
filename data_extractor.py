@@ -4201,13 +4201,6 @@ def autorrellenar_conteo_marlen(
             "strips":   ["CHRISTINA", "CRHISTINA"],
             "ubic":     "CHRISTINA",
         },
-        {
-            "label":    "POSCOSECHA",
-            "include":  ["POSCOSECHA"],
-            "exclude":  [],
-            "strips":   ["POSCOSECHA"],
-            "ubic":     "POSCOSECHA",
-        },
     ]
 
     # ── 1. Leer hoja TEMP del TT Nómina ──────────────────────────────────
@@ -4335,7 +4328,7 @@ def autorrellenar_conteo_marlen(
     cont_col_letter = _col_letter(ci_cont + 1)
 
     # Recorrer filas Conteo buscando semana + fincas activas
-    ubics_activas = {cfg["ubic"].upper() for cfg in _FINCAS} | {"ADMINISTRACION", "PROPAGACION"}
+    ubics_activas = {cfg["ubic"].upper() for cfg in _FINCAS} | {"ADMINISTRACION"}
     filas_a_escribir = []   # [(excel_row, ubic, area, valor)]
 
     for i in range(header_idx + 1, len(df_c)):
