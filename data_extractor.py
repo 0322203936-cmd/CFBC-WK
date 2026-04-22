@@ -27,10 +27,16 @@ SHAREPOINT_URL_PR = (
     "jesus_sandoval_cfbc_co/IQCecMwUnigFQa1m-0AYEw-rAcDdYtnvXcPBELJi4oSstRc?e=9vbjA7"
 )
 
-# Conteo de personal (Mano de Obra)
+# Conteo de personal (Mano de Obra) — formato anterior
 SHAREPOINT_URL_CONTEO = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
     "anahi_mora_cfbc_co/IQCZHoO8krj-R538RArePPMhAd-aSdBCsF2bPjd7clqUfbE?e=h01Qti"
+)
+
+# Conteo de personal NUEVO — formato Marlen (hoja "Conteo", Sem=YYWW, UBICACIÓN, ÁREA, CONTEO)
+SHAREPOINT_URL_CONTEO_MARLEN = (
+    "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
+    "anahi_mora_cfbc_co/IQCVhuBzeYCZRp39wgxJli7ZAfCYH_KtiWdCB-pS4cqX6h4?e=Tadnwn"
 )
 
 # Nómina detallada (filas 24-59, automatización mano de obra)
@@ -1306,6 +1312,202 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
 
 
 # ─── Punto de entrada público ─────────────────────────────────────────────────
+def _extraer_conteo_marlen() -> list:
+    """
+    Lee la hoja 'Conteo' del Excel de Nómina/Conteo de Marlen en SharePoint.
+
+    Formato esperado de la hoja:
+      Fila 1: "CENTRO FLORICULTOR DE B.C."  (título)
+      Fila 2: "CONTEO DE PERSONAL..."        (subtítulo)
+      Fila 3: vacía
+      Fila 4: encabezados → Sem | UBICACIÓN | ÁREA / DEPARTAMENTO | CONTEO
+      Fila 5+: datos     → 2615 | PROPAGACION | ING. Y ADMON. | 3
+
+    Sem usa el formato YYWW (ej: 2615 = año 2026, semana 15), igual que los códigos WK.
+
+    Retorna lista de registros con el mismo esquema que _extraer_mano_obra_conteo():
+      semana, year, week, date_range, subcat (Área), mxn_total=0, usd_total=0,
+      hc_total, mxn_ranches={}, usd_ranches={}, hc_ranches={rancho: conteo}
+    """
+    # Mapa UBICACIÓN del Excel → nombre de rancho normalizado del sistema
+    _UBICACION_MAP = {
+        "PROPAGACION":   "Propagacion",
+        "PROPAGACIÓN":   "Propagacion",
+        "ADMINISTRACION":"Administracion",
+        "ADMINISTRACIÓN":"Administracion",
+        "POSCOSECHA":    "Poscosecha",
+        "POSCO":         "Poscosecha",
+        "RAMONA":        "Ramona",
+        "ISABELA":       "Isabela",
+        "ISABELLA":      "Isabela",
+        "CHRISTINA":     "Christina",
+        "CRISTINA":      "Christina",
+        "CECILIA 25":    "Cecilia 25",
+        "CECILIA25":     "Cecilia 25",
+        "CECILIA":       "Cecilia",
+    }
+
+    # Mapa ÁREA / DEPARTAMENTO → subcat normalizado (mismo que usa el BD existente)
+    _AREA_MAP = {
+        "ING. Y ADMON.":      "Ing. Y Admon.",
+        "ING Y ADMON":        "Ing. Y Admon.",
+        "SUPERVISORES":       "Supervisores",
+        "CORTE":              "Corte",
+        "TRASPLANTE":         "Trasplante",
+        "TRANSPLANTE":        "Trasplante",
+        "MANEJO PLANTA":      "Manejo P.",
+        "CONSOLIDACIÓN":      "Consolidacion",
+        "CONSOLIDACION":      "Consolidacion",
+        "SIEMBRA":            "Siembra",
+        "MOV. CHAROLAS":      "Mov. Charolas",
+        "MOV CHAROLAS":       "Mov. Charolas",
+        "RIEGO":              "Riego",
+        "PHLOX":              "Phlox",
+        "HOOPS":              "Hoops",
+        "MIPE / MIRFE":       "MIPE Y MIRFE",
+        "MIPE/MIRFE":         "MIPE Y MIRFE",
+        "MIPE Y MIRFE":       "MIPE Y MIRFE",
+        "TRACTORES/CAMEROS":  "Tract. Y Cameros",
+        "TRACTORES Y CAMEROS":"Tract. Y Cameros",
+        "VELADORES":          "Veladores",
+        "SOLDADORES":         "Soldadores",
+        "TRANSPORTE":         "Transporte",
+        "ADMON POSCO":        "Admon Posco",
+        "ADMON. POSCO":       "Admon Posco",
+        "ALM. UPC Y EMPAQUE": "Alm.upc y empaq",
+        "ALM UPC Y EMPAQUE":  "Alm.upc y empaq",
+        "PROD. PÁTINA Y REC": "Prod. Patina y rec",
+        "PROD. PATINA Y REC": "Prod. Patina y rec",
+        "PROD PATINA Y REC":  "Prod. Patina y rec",
+    }
+
+    print(f"📥 Descargando Conteo Marlen desde: {SHAREPOINT_URL_CONTEO_MARLEN}")
+    archivo = _descargar_excel(SHAREPOINT_URL_CONTEO_MARLEN, "Conteo Marlen")
+    if archivo is None:
+        print("⚠️  No se pudo descargar Conteo Marlen — retornando vacío")
+        return []
+    print(f"✅ Descarga OK, tamaño={len(archivo.getvalue())} bytes")
+
+    try:
+        df_raw = pd.read_excel(archivo, sheet_name="Conteo", header=None).fillna("")
+        print(f"✅ Hoja 'Conteo' leída: {df_raw.shape[0]} filas × {df_raw.shape[1]} cols")
+    except Exception as e:
+        print(f"⚠️  Error leyendo hoja 'Conteo': {e}")
+        return []
+
+    # ── Detectar fila de encabezados ──────────────────────────────────────
+    header_idx = None
+    for i in range(min(10, len(df_raw))):
+        row_up = [str(v).strip().upper() for v in df_raw.iloc[i].values]
+        if "SEM" in row_up and ("UBICACIÓN" in row_up or "UBICACION" in row_up):
+            header_idx = i
+            break
+
+    if header_idx is None:
+        print("⚠️  No se encontró fila de encabezados en hoja 'Conteo'")
+        return []
+
+    print(f"   📋 Encabezados detectados en fila {header_idx}")
+
+    # Mapear columnas por nombre
+    hdrs = [str(v).strip().upper() for v in df_raw.iloc[header_idx].values]
+    def _find_col(keywords):
+        for kw in keywords:
+            if kw in hdrs:
+                return hdrs.index(kw)
+        return None
+
+    col_sem   = _find_col(["SEM", "SEMANA"])
+    col_ubic  = _find_col(["UBICACIÓN", "UBICACION"])
+    col_area  = _find_col(["ÁREA / DEPARTAMENTO", "AREA / DEPARTAMENTO",
+                            "ÁREA/DEPARTAMENTO",   "AREA/DEPARTAMENTO",
+                            "ÁREA", "AREA"])
+    col_cont  = _find_col(["CONTEO"])
+
+    missing = [n for n, c in [("Sem", col_sem), ("Ubicación", col_ubic),
+                               ("Área", col_area), ("Conteo", col_cont)] if c is None]
+    if missing:
+        print(f"⚠️  Columnas faltantes en 'Conteo': {missing}")
+        return []
+
+    # ── Leer datos ────────────────────────────────────────────────────────
+    # Acumular por (semana_code, area) → {rancho: conteo_sum}
+    from collections import defaultdict
+    acum: dict = defaultdict(lambda: defaultdict(float))  # (code, area) → {rancho: float}
+
+    for i in range(header_idx + 1, len(df_raw)):
+        row = df_raw.iloc[i].values
+
+        sem_raw  = str(row[col_sem]).strip()  if col_sem  < len(row) else ""
+        ubic_raw = str(row[col_ubic]).strip() if col_ubic < len(row) else ""
+        area_raw = str(row[col_area]).strip() if col_area < len(row) else ""
+        cont_raw = row[col_cont]              if col_cont < len(row) else ""
+
+        # Código de semana: debe ser numérico de 4 dígitos tipo YYWW
+        try:
+            code = int(float(sem_raw))
+        except (ValueError, TypeError):
+            continue
+        if not (1800 <= code <= 9999):  # sanity check
+            continue
+
+        # Normalizar ubicación y área
+        ubic_up = re.sub(r'\s+', ' ', ubic_raw.upper().strip())
+        area_up = re.sub(r'\s+', ' ', area_raw.upper().strip())
+
+        rancho = _UBICACION_MAP.get(ubic_up)
+        if not rancho:
+            # Búsqueda parcial como fallback
+            for k, v in _UBICACION_MAP.items():
+                if k in ubic_up or ubic_up in k:
+                    rancho = v
+                    break
+        if not rancho:
+            continue
+
+        area = _AREA_MAP.get(area_up)
+        if not area:
+            # Búsqueda parcial
+            for k, v in _AREA_MAP.items():
+                if k in area_up:
+                    area = v
+                    break
+        if not area:
+            area = area_raw.strip()  # mantener tal cual si no mapea
+
+        # Conteo numérico
+        try:
+            conteo = float(str(cont_raw).replace(",", "").strip()) if str(cont_raw).strip() not in ("", "nan") else 0.0
+        except (ValueError, TypeError):
+            conteo = 0.0
+
+        acum[(code, area)][rancho] += conteo
+
+    # ── Construir registros ───────────────────────────────────────────────
+    result = []
+    for (code, area), hc_ranches in acum.items():
+        yy   = code // 100
+        ww   = code % 100
+        year = 2000 + yy
+        hc_total = sum(hc_ranches.values())
+        result.append({
+            "semana":      code,
+            "year":        year,
+            "week":        ww,
+            "date_range":  "",
+            "subcat":      area,
+            "mxn_total":   0.0,
+            "usd_total":   0.0,
+            "hc_total":    hc_total,
+            "mxn_ranches": {},
+            "usd_ranches": {},
+            "hc_ranches":  dict(hc_ranches),
+        })
+
+    print(f"✅ Conteo Marlen: {len(result)} registros ({len({r['semana'] for r in result})} semanas)")
+    return result
+
+
 def _extraer_mano_obra_conteo() -> list:
     """
     Lee el Excel de conteo de personal desde SharePoint.
@@ -1864,23 +2066,35 @@ def get_datos() -> dict:
         print("🔍 LEYENDO CONTEO DE PERSONAL (MANO DE OBRA)")
         print("=" * 60)
         
+        # ── Fuente 1: Conteo Marlen (hoja "Conteo", formato nuevo YYWW) ──────
+        marlen_data_raw = _extraer_conteo_marlen()
+        marlen_data = [r for r in marlen_data_raw if r.get("hc_total", 0) > 0]
+        marlen_keys = {(r["year"], r["week"]) for r in marlen_data}
+
+        # ── Fuente 2: Conteo antiguo BD (sólo semanas que Marlen no cubre) ───
         conteo_data_raw = _extraer_mano_obra_conteo()
-        
-        # Filtrar registros vacíos (plantillas en el Excel de conteo sin dinero ni personal)
-        conteo_data = [r for r in conteo_data_raw if r.get("mxn_total", 0) > 0 or r.get("usd_total", 0) > 0 or r.get("hc_total", 0) > 0]
-        conteo_keys = {(r["year"], r["week"]) for r in conteo_data}
-        
+        conteo_data = [
+            r for r in conteo_data_raw
+            if (r.get("mxn_total", 0) > 0 or r.get("usd_total", 0) > 0 or r.get("hc_total", 0) > 0)
+            and (r["year"], r["week"]) not in marlen_keys
+        ]
+        conteo_keys = marlen_keys | {(r["year"], r["week"]) for r in conteo_data}
+
+        # ── Fuente 3: WK Excel (sólo semanas sin conteo de ninguna fuente) ───
         wk_mano_obra = resultado.get("mano_obra_data", [])
-        
-        merged_mano_obra = list(conteo_data)
+        merged_mano_obra = list(marlen_data) + list(conteo_data)
         wk_added_count = 0
         for r in wk_mano_obra:
             if (r["year"], r["week"]) not in conteo_keys:
                 merged_mano_obra.append(r)
                 wk_added_count += 1
-                
+
         resultado["mano_obra_data"] = merged_mano_obra
-        print(f"✅ Merge: {len(conteo_data)} registros reales de Conteo + {wk_added_count} registros de WK Excel (Fallback)")
+        print(
+            f"✅ Merge Conteo: {len(marlen_data)} reg. Marlen "
+            f"+ {len(conteo_data)} reg. BD antiguo "
+            f"+ {wk_added_count} reg. WK Excel (fallback)"
+        )
 
         # CRITICAL: If Week 14 only exists in mano_obra_data, we must inject it into the global lists
         # so the JavaScript frontend (`allWeeks` / `rangeWeeks`) knows this week exists!
