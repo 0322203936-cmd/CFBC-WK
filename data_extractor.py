@@ -4113,6 +4113,8 @@ def autorrellenar_conteo_marlen(
     tenant_id: str,
     client_id: str,
     client_secret: str,
+    posco_file=None,
+    vivero_file=None,
 ) -> dict:
     """
     Lee la hoja TEMP del TT Nómina (header fila 7, columna DEPARTAMENTO = '{ACTIVIDAD} {FINCA}')
