@@ -24,9 +24,8 @@ SHAREPOINT_URL_WK = (
 # Archivo secundario: hojas PR####, MP####, ME####
 SHAREPOINT_URL_PR = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "jesus_sandoval_cfbc_co/IQCecMwUnigFQa1m-0AYEw-rAYPpf_Udm_2QMpNh7Cj5irc?e=B6b0De"
+    "jesus_sandoval_cfbc_co/IQCecMwUnigFQa1m-0AYEw-rAcDdYtnvXcPBELJi4oSstRc?e=bteuTz"
 )
-
 # Conteo de personal (Mano de Obra) — formato anterior
 SHAREPOINT_URL_CONTEO = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
