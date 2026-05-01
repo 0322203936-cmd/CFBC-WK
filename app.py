@@ -1198,6 +1198,47 @@ function applyNewStyle() {
     }
   `;
   document.head.appendChild(style);
+
+  // Reemplazar colores azules "quemados" (hardcoded) en línea con colores neutros
+  function removeBlues(node) {
+    if (node.nodeType !== 1) return;
+    var s = node.getAttribute('style');
+    if (s && /9DC3E6|BDD7EE|EAF3FF|7EB3D4|8EA9C1|1e3a5f/i.test(s)) {
+      s = s.replace(/#9DC3E6/gi, '#e2e8f0') // TOTAL headers
+           .replace(/#BDD7EE/gi, '#f1f5f9') // DIF headers
+           .replace(/#EAF3FF/gi, '#f8fafc') // TOTAL cells
+           .replace(/#7EB3D4/gi, '#cbd5e1') // TOTAL DIF cells
+           .replace(/#8EA9C1/gi, '#cbd5e1') // Borders
+           .replace(/#1e3a5f/gi, '#475569'); // Text color
+      node.setAttribute('style', s);
+    }
+    var children = node.querySelectorAll('[style]');
+    for(var i=0; i<children.length; i++){
+      var cs = children[i].getAttribute('style');
+      if (cs && /9DC3E6|BDD7EE|EAF3FF|7EB3D4|8EA9C1|1e3a5f/i.test(cs)) {
+        cs = cs.replace(/#9DC3E6/gi, '#e2e8f0')
+               .replace(/#BDD7EE/gi, '#f1f5f9')
+               .replace(/#EAF3FF/gi, '#f8fafc')
+               .replace(/#7EB3D4/gi, '#cbd5e1')
+               .replace(/#8EA9C1/gi, '#cbd5e1')
+               .replace(/#1e3a5f/gi, '#475569');
+        children[i].setAttribute('style', cs);
+      }
+    }
+  }
+
+  // Ejecutar inmediatamente en el DOM actual
+  removeBlues(document.body);
+
+  // Observar mutaciones para aplicarlo en tablas generadas dinámicamente
+  var observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      mutation.addedNodes.forEach(function(node) {
+        removeBlues(node);
+      });
+    });
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 }
 
 function inicializar() {
