@@ -1151,11 +1151,11 @@ function applyNewStyle() {
     }
 
     /* Encabezados de tabla Guinda/Vino y texto blanco */
-    /* Encabezados de tabla Guinda/Vino y texto blanco */
     :root {
       --pt-hdr-bg: #6A1E35 !important;
       --pt-hdr-border: #4A1528 !important;
-      --pt-grp-bg: #c0c0c0 !important; /* Gris medio estilo Excel para las filas de grupo (ALMACEN, etc) */
+      --pt-grp-bg: #e6e6e6 !important; /* Gris más bajito (claro) para las filas de grupo */
+      --pt-tot-bg: #cccccc !important; /* Gris más sólido para la fila de TOTAL */
     }
     .pt-table th, .cmp-tbl th {
       background-color: #6A1E35 !important;
