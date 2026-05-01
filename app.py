@@ -547,24 +547,24 @@ data_json = base64.b64encode(
 
 APP_CSS = """<style>
 :root {
-  --navy:   #1e3a5f;
+  --navy:   #334155;
   --green:  #16a34a;
   --red:    #dc2626;
   --amber:  #b45309;
-  --blue:   #2563eb;
-  --border: #d0d0d0;
+  --blue:   #3b82f6;
+  --border: #cbd5e1;
 
-  /* Pivot-table palette — Excel style */
-  --pt-hdr-bg:      #D9E1F2;   /* header de columnas  */
-  --pt-hdr-border:  #8EA9C1;
-  --pt-grp-bg:      #82A1C9;   /* fila de grupo/año - azul más suavizado */
+  /* Pivot-table palette — CFBC Corporativo (Guinda/Neutro) */
+  --pt-hdr-bg:      #6A1E35;   /* header de columnas */
+  --pt-hdr-border:  #4A1528;
+  --pt-grp-bg:      #475569;   /* fila de grupo/año - gris pizarra */
   --pt-grp-fg:      #ffffff;
-  --pt-sub-bg:      #BDD7EE;   /* fila subtotal       */
-  --pt-sub-fg:      #000000;
-  --pt-tot-bg:      #9DC3E6;   /* fila total general  */
-  --pt-tot-fg:      #000000;
-  --pt-row-hover:   #EBF3FB;
-  --pt-cell-border: #BFBFBF;
+  --pt-sub-bg:      #f1f5f9;   /* fila subtotal - gris muy claro */
+  --pt-sub-fg:      #0f172a;
+  --pt-tot-bg:      #e2e8f0;   /* fila total general - gris plata */
+  --pt-tot-fg:      #0f172a;
+  --pt-row-hover:   #f8fafc;
+  --pt-cell-border: #cbd5e1;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
