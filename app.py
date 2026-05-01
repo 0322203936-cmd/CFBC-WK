@@ -1236,14 +1236,32 @@ function applyNewStyle() {
     }
   }
 
+  // Ocultar guiones en celdas vacías para Costo Mano de Obra
+  function removeDashes(node) {
+    if (node.nodeType !== 1) return;
+    if (window.state && window.state.cat !== 'COSTO MANO DE OBRA') return;
+    
+    if (node.tagName === 'TD' && node.innerHTML.trim() === '—') {
+      node.innerHTML = '';
+    }
+    var cells = node.querySelectorAll('td');
+    for(var i=0; i<cells.length; i++) {
+      if (cells[i].innerHTML.trim() === '—') {
+        cells[i].innerHTML = '';
+      }
+    }
+  }
+
   // Ejecutar inmediatamente en el DOM actual
   removeBlues(document.body);
+  removeDashes(document.body);
 
   // Observar mutaciones para aplicarlo en tablas generadas dinámicamente
   var observer = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
       mutation.addedNodes.forEach(function(node) {
         removeBlues(node);
+        removeDashes(node);
       });
     });
   });
