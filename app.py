@@ -445,15 +445,17 @@ else:
 
       /* ── HEADER NATIVO: columnas de Streamlit que contienen #cfbc-brand ── */
       div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) {
-          background: #7B1C1C !important;
+          background: #6A1E35 !important;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.25) !important;
           border-bottom: none !important;
           min-height: 36px !important;
           max-height: 36px !important;
           padding: 0 10px !important;
           align-items: center !important;
-          overflow: hidden !important;
+          overflow: visible !important;
           gap: 4px !important;
           margin: 0 !important;
+          z-index: 999 !important;
       }
       div[data-testid="stHorizontalBlock"]:has(#cfbc-brand) > [data-testid="stColumn"] {
           padding: 0 2px !important;
