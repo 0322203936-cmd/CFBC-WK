@@ -1151,10 +1151,11 @@ function applyNewStyle() {
     }
 
     /* Encabezados de tabla Guinda/Vino y texto blanco */
+    /* Encabezados de tabla Guinda/Vino y texto blanco */
     :root {
       --pt-hdr-bg: #6A1E35 !important;
       --pt-hdr-border: #4A1528 !important;
-      --pt-grp-bg: #f1f5f9 !important; /* Gris claro para el cuerpo de la tabla */
+      --pt-grp-bg: #c0c0c0 !important; /* Gris medio estilo Excel para las filas de grupo (ALMACEN, etc) */
     }
     .pt-table th, .cmp-tbl th {
       background-color: #6A1E35 !important;
@@ -1165,9 +1166,10 @@ function applyNewStyle() {
 
     /* Sobrescribir el texto blanco hardcoded en las filas de Mano de Obra (grupos) */
     .pt-table td[style*="--pt-grp-bg"] {
-      color: #334155 !important;
-      border-right: 1px solid #e2e8f0 !important;
-      border-bottom: 1px solid #e2e8f0 !important;
+      color: #000000 !important;
+      font-weight: 700 !important;
+      border-right: 1px solid #a0a0a0 !important;
+      border-bottom: 1px solid #a0a0a0 !important;
     }
     
     /* Celdas alternas en gris claro (zebra striping) para mayor legibilidad */
