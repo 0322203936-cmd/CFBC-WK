@@ -604,8 +604,8 @@ body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 .toolbar::-webkit-scrollbar { display: none; }
-.tb-label { font-size: 9px; color: #b0b8cc; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
-.tb-sep   { width: 1px; height: 18px; background: rgba(255,255,255,0.15); flex-shrink: 0; }
+.tb-label { font-size: 9px; color: #c8d0e0; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
+.tb-sep   { width: 1px; height: 18px; background: rgba(255,255,255,0.25); flex-shrink: 0; }
 select.tb-sel {
   font-size: 11px; font-family: inherit;
   background: #3a3d50; border: 1px solid #5B1A6E; border-radius: 4px;
@@ -625,12 +625,12 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 .tb-grp .tb-btn:first-child { border-radius: 3px 0 0 3px; }
 .tb-grp .tb-btn:last-child  { border-radius: 0 3px 3px 0; border-right-width: 1px; }
 .week-ctr { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.week-ctr span { font-size: 11px; font-weight: 700; color: var(--navy); min-width: 62px; text-align: center; }
+.week-ctr span { font-size: 11px; font-weight: 700; color: #ffffff; min-width: 62px; text-align: center; }
 .tb-slider  { width: 100px; accent-color: var(--purple-md); cursor: pointer; flex-shrink: 0; }
 .yr-chip {
   font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 3px;
   cursor: pointer; border: 1px solid transparent; background: transparent;
-  transition: all 0.1s; flex-shrink: 0; color: #ccc;
+  transition: all 0.1s; flex-shrink: 0; color: #d0d0d0;
 }
 .yr-chip.on { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.3); }
 
@@ -640,10 +640,10 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
   padding: 3px 10px; align-items: center; gap: 8px; height: 26px; overflow: hidden;
 }
 .range-bar.show { display: flex; }
-.range-val   { font-size: 11px; font-weight: 700; color: var(--navy); min-width: 36px; text-align: center; }
+.range-val   { font-size: 11px; font-weight: 700; color: #ffffff; min-width: 36px; text-align: center; }
 .range-badge {
-  font-size: 10px; background: #e8f5e9; border: 1px solid #a7d7b4;
-  color: var(--green); padding: 1px 8px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
+  font-size: 10px; background: rgba(26,158,74,0.25); border: 1px solid rgba(26,158,74,0.6);
+  color: #6effa0; padding: 1px 8px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
 }
 
 /* ── VIEW TABS ───────────────────────────────── */
@@ -822,7 +822,7 @@ APP_HTML_BODY = """
     <span class="tb-label">Desde</span>
     <span class="range-val" id="fromWeekLabel">W01</span>
     <input type="range" class="tb-slider" id="fromSlider" min="1" max="52" value="1" oninput="onRangeChange()">
-    <span style="color:#aaa;font-size:11px;flex-shrink:0;">→</span>
+    <span style="color:#ffffff;font-size:11px;flex-shrink:0;">→</span>
     <span class="tb-label">Hasta</span>
     <span class="range-val" id="toWeekLabel">W52</span>
     <input type="range" class="tb-slider" id="toSlider" min="1" max="52" value="52" oninput="onRangeChange()">
