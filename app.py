@@ -1117,7 +1117,73 @@ function renderRowDetail(row) {
 // =======================================================
 // INICIALIZAR
 // =======================================================
+function applyNewStyle() {
+  var style = document.createElement('style');
+  style.innerHTML = `
+    /* Efecto Tarjeta / Sombra (Card shadow) */
+    #gridWrap, #comparativoWrap, #prodPanel {
+      background-color: #ffffff !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+      border: 1px solid #e2e8f0 !important;
+      border-top: 4px solid #6A1E35 !important; /* Color Vino/Guinda */
+      margin-top: 15px !important;
+      padding: 5px !important;
+      overflow: hidden !important;
+    }
+
+    /* Encabezados de tabla Guinda/Vino y texto blanco */
+    :root {
+      --pt-hdr-bg: #6A1E35 !important;
+      --pt-hdr-border: #4A1528 !important;
+      --pt-grp-bg: #8c2a4d !important;
+    }
+    .pt-table th, .cmp-tbl th {
+      background-color: #6A1E35 !important;
+      color: #ffffff !important;
+      border: 1px solid #4A1528 !important;
+      font-weight: bold !important;
+    }
+    
+    /* Celdas alternas en gris claro (zebra striping) para mayor legibilidad */
+    .pt-row:nth-child(even) td, .cmp-row:nth-child(even) td {
+      background-color: #f9f9f9 !important;
+    }
+    .pt-row:hover td, .cmp-row:hover td {
+      background-color: #e2e8f0 !important;
+    }
+
+    /* Pestañas (Tabs) con el nuevo color activo */
+    .vtab.active {
+      color: #6A1E35 !important;
+      border-bottom-color: #6A1E35 !important;
+      font-weight: 800 !important;
+    }
+    
+    /* Botones de la barra de herramientas */
+    .tb-btn.active {
+      background: #6A1E35 !important;
+      border-color: #6A1E35 !important;
+      color: #ffffff !important;
+    }
+    
+    /* Clase de alerta azul lista para usarse */
+    .alerta-info-moderna {
+      background-color: #d9edf7 !important;
+      border: 1px solid #bce8f1 !important;
+      color: #31708f !important;
+      padding: 12px 15px !important;
+      border-radius: 4px !important;
+      font-size: 13px !important;
+      margin-bottom: 15px !important;
+      display: block;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function inicializar() {
+  applyNewStyle();
   // prod-link handler
   if (!window._prodLinkBound) {
     document.addEventListener('click', function(e){
