@@ -1154,13 +1154,20 @@ function applyNewStyle() {
     :root {
       --pt-hdr-bg: #6A1E35 !important;
       --pt-hdr-border: #4A1528 !important;
-      --pt-grp-bg: #8c2a4d !important;
+      --pt-grp-bg: #f1f5f9 !important; /* Gris claro para el cuerpo de la tabla */
     }
     .pt-table th, .cmp-tbl th {
       background-color: #6A1E35 !important;
       color: #ffffff !important;
       border: 1px solid #4A1528 !important;
       font-weight: bold !important;
+    }
+
+    /* Sobrescribir el texto blanco hardcoded en las filas de Mano de Obra (grupos) */
+    .pt-table td[style*="--pt-grp-bg"] {
+      color: #334155 !important;
+      border-right: 1px solid #e2e8f0 !important;
+      border-bottom: 1px solid #e2e8f0 !important;
     }
     
     /* Celdas alternas en gris claro (zebra striping) para mayor legibilidad */
