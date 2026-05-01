@@ -365,7 +365,7 @@ if st.session_state.show_auto:
         border-radius: 12px 12px 0 0 !important;
         border: 1px solid #d7dee7 !important;
         border-bottom: none !important;
-        background: #f5f7fa !important;
+        background: #ffffff !important;
         color: #4f6277 !important;
         padding: 0 1rem !important;
         font-size: 12px !important;
@@ -623,7 +623,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 /* ── RANGE BAR ───────────────────────────────── */
 .range-bar {
-  display: none; background: #f4f4f4; border-bottom: 1px solid var(--border);
+  display: none; background: #ffffff; border-bottom: 1px solid var(--border);
   padding: 3px 10px; align-items: center; gap: 8px; height: 26px; overflow: hidden;
 }
 .range-bar.show { display: flex; }
@@ -635,7 +635,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 
 /* ── VIEW TABS ───────────────────────────────── */
 .view-tabs {
-  background: #f8f8f8; border-bottom: 2px solid #d5d5d5;
+  background: #ffffff; border-bottom: 2px solid #d5d5d5;
   display: flex; padding: 0; height: 28px;
 }
 .vtab {
@@ -734,7 +734,7 @@ select.tb-sel:focus { outline: 2px solid var(--green); outline-offset: -1px; }
 /* ── COMPARATIVO TABLE ───────────────────────── */
 #comparativoWrap { display: none; background: #fff; border: 1px solid #d5d5d5; border-top: none; }
 #comparativoWrap.show { display: block; }
-.cmp-stat-strip { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 10px; background: #f4f4f4; border-bottom: 1px solid #d5d5d5; }
+.cmp-stat-strip { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 10px; background: #ffffff; border-bottom: 1px solid #d5d5d5; }
 .cmp-tbl-wrap { overflow-x: auto; scrollbar-width: thin; scrollbar-color: #b0c4d8 transparent; }
 .cmp-tbl-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
 .cmp-tbl-wrap::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
