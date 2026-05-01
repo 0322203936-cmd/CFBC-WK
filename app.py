@@ -1122,8 +1122,8 @@ function renderRowDetail(row) {
 function applyNewStyle() {
   var style = document.createElement('style');
   style.innerHTML = `
-    /* Efecto Tarjeta / Sombra (Card shadow) */
-    #gridWrap, #comparativoWrap, #prodPanel {
+    /* Efecto Tarjeta / Sombra (Card shadow) para tablas principales */
+    #gridWrap, #comparativoWrap {
       background-color: #ffffff !important;
       border-radius: 6px !important;
       box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
@@ -1132,6 +1132,22 @@ function applyNewStyle() {
       margin-top: 15px !important;
       padding: 5px !important;
       overflow: hidden !important;
+    }
+
+    /* Estilo de Tarjeta para las tablas de detalle de abajo (al clickear) */
+    .prod-panel-wrapper {
+      background-color: #ffffff !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+      border: 1px solid #e2e8f0 !important;
+      border-top: none !important; /* El borde superior lo da el header interior */
+      overflow: hidden !important;
+      margin-bottom: 15px !important;
+    }
+    
+    /* Sobrescribir el color rojo/cafe viejo por el nuevo Guinda en los sub-paneles */
+    .prod-panel-wrapper > div:first-child {
+      background-color: #6A1E35 !important;
     }
 
     /* Encabezados de tabla Guinda/Vino y texto blanco */
