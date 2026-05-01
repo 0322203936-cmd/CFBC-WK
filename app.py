@@ -432,7 +432,7 @@ else:
     st.markdown('''
     <style>
       #MainMenu, header, footer { display: none !important; }
-      .stApp { background: #f0f0f0; }
+      .stApp { background: #ffffff; }
       /* Eliminar TODO espacio blanco sobre el header */
       .block-container          { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
       .stMainBlockContainer     { padding: 0 !important; margin: 0 !important; }
@@ -568,10 +568,7 @@ APP_CSS = """<style>
 body {
   font-family: Calibri, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   font-size: 12px;
-  background: #f0f0f0;
-}
-
-/* ── LOADER ─────────────────────────────────── */
+  background: #ffffff;
 #loader {
   position: fixed; inset: 0; background: #fff; z-index: 999;
   display: flex; flex-direction: column; align-items: center;
