@@ -3377,25 +3377,15 @@ function showProdPanel(rowData, opts) {
         var _WEEKLY_KEYS = ['inv_inicial','tallos_cos','tallos_des','tallos_comp','tallos_desp','inv_final','tallos_proc'];
         var isWeeklyDetail = _WEEKLY_KEYS.indexOf(m.k) >= 0;
         var isExpandible = isMetros || isCharolas || isWeeklyDetail;
-        var sbVal = Number(_aggSiembra[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2});
-        var sbBg  = isExpandible ? '#fafbff' : '#fafafa';
-        var sbCur = isExpandible ? 'cursor:pointer;' : '';
-        var sbToggle = isExpandible ? 'onclick="var nx=this.closest(\\\'tr\\\').nextElementSibling;if(nx&&nx.className.indexOf(\\\'detail\\\')>0){var h=nx.style.display===\\\'none\\\';nx.style.display=h?\\\'table-row\\\':\\\'none\\\';var ar=this.querySelector(\\\'[data-si-arrow]\\\');if(ar)ar.textContent=h?\\\'\'▲\\\':\\\'▼\\\';}"' : '';
+        var lblStyle = isExpandible ? 'cursor:pointer; color:#1e293b; transition: color 0.15s;' : 'color:#475569;';
+        var expandIcon = isExpandible ? '<span style="color:#94a3b8; font-size:9px; margin-left:6px; user-select:none;">▼</span>' : '';
+        var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) { var isHidden = n.style.display===\\\'none\\\'; n.style.display=(isHidden?\\\'table-row\\\':\\\'none\\\'); this.querySelector(\\\'span\\\').innerHTML=isHidden?\\\'▲\\\':\\\'▼\\\'; }"' : '';
         
         siembraRowsHtml +=
-          '<tr style="border-bottom:1px solid #e8edf3;">' +
-            '<td colspan="4" style="padding:0;">' +
-              '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+sbBg+';border-left:3px solid #7B1C1C;'+sbCur+'transition:background 0.15s;" '+sbToggle+'>' +
-                '<div style="width:32px;height:32px;background:linear-gradient(135deg,#7B1C1C,#a03050);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-                  '<span style="color:#fff;font-size:8px;font-weight:900;">SB</span>' +
-                '</div>' +
-                '<div style="flex:1;min-width:0;">' +
-                  '<div style="font-size:8px;font-weight:700;color:#9B3050;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;">'+m.lbl+'</div>' +
-                  '<div style="font-size:16px;font-weight:800;color:#0f172a;line-height:1;font-family:monospace;">'+sbVal+'</div>' +
-                '</div>' +
-                (isExpandible ? '<span data-si-arrow style="color:#7B1C1C;font-size:13px;flex-shrink:0;">▼</span>' : '') +
-              '</div>' +
-            '</td>' +
+          '<tr style="background:'+bg+';border-bottom:1px solid #e2e8f0; transition: background 0.2s;">' +
+            '<td style="padding:6px 10px;white-space:nowrap;width:1%;"><span style="background:#e2e8f0;color:#475569;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.5px;">SIEMBRA</span></td>' +
+            '<td colspan="2" style="padding:6px 10px;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+expandIcon+'</span></td>' +
+            '<td style="padding:6px 10px;text-align:right;font-weight:700;color:#0f172a;font-size:11px;">'+Number(_aggSiembra[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
           '</tr>';
           
         if (isMetros && DATA.metros_acumulados) {
