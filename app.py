@@ -3379,20 +3379,22 @@ function showProdPanel(rowData, opts) {
         var isExpandible = isMetros || isCharolas || isWeeklyDetail;
         var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) { var isHidden = n.style.display===\\\'none\\\'; n.style.display=(isHidden?\\\'table-row\\\':\\\'none\\\'); var arr=this.querySelector(\\\'.si-arrow\\\'); if(arr){arr.style.transform=isHidden?\\\'rotate(180deg)\\\':\\\'rotate(0deg)\\\';} }"' : '';
         var formattedVal = Number(_aggSiembra[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2});
+        var sbBg = isExpandible ? '#fafbff' : '#fafafa';
+        var sbCursor = isExpandible ? 'cursor:pointer;' : '';
         
         siembraRowsHtml +=
           '<tr style="border-bottom:1px solid #e8edf3;" '+toggleClick+'>' +
             '<td colspan="4" style="padding:0;">' +
-              '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+(isExpandible?'#fafbff':'#fafafa')+';border-left:3px solid #7B1C1C;'+(isExpandible?'cursor:pointer;':'')+';transition:background 0.15s;" onmouseover="if(this.style.background)this.style.background=\'#f0f4ff\'" onmouseout="this.style.background=\''+(isExpandible?'#fafbff':'#fafafa')+'\'">'+
-                '<div style="width:32px;height:32px;background:linear-gradient(135deg,#7B1C1C,#a03050);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+
-                  '<span style="color:#fff;font-size:8px;font-weight:900;letter-spacing:0.5px;">SB</span>'+
-                '</div>'+
-                '<div style="flex:1;min-width:0;">'+
-                  '<div style="font-size:8.5px;font-weight:700;color:#9B3050;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">'+m.lbl+'</div>'+
-                  '<div style="font-size:17px;font-weight:800;color:#0f172a;line-height:1;font-family:monospace;">'+formattedVal+'</div>'+
-                '</div>'+
-                (isExpandible ? '<span class="si-arrow" style="color:#7B1C1C;font-size:12px;transition:transform 0.2s;flex-shrink:0;">▾</span>' : '')+
-              '</div>'+
+              '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+sbBg+';border-left:3px solid #7B1C1C;'+sbCursor+'transition:background 0.15s;">' +
+                '<div style="width:32px;height:32px;background:linear-gradient(135deg,#7B1C1C,#a03050);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                  '<span style="color:#fff;font-size:8px;font-weight:900;letter-spacing:0.5px;">SB</span>' +
+                '</div>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div style="font-size:8.5px;font-weight:700;color:#9B3050;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">'+m.lbl+'</div>' +
+                  '<div style="font-size:17px;font-weight:800;color:#0f172a;line-height:1;font-family:monospace;">'+formattedVal+'</div>' +
+                '</div>' +
+                (isExpandible ? '<span class="si-arrow" style="color:#7B1C1C;font-size:12px;transition:transform 0.2s;flex-shrink:0;">▾</span>' : '') +
+              '</div>' +
             '</td>' +
           '</tr>';
           
