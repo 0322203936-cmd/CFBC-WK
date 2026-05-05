@@ -3377,15 +3377,23 @@ function showProdPanel(rowData, opts) {
         var _WEEKLY_KEYS = ['inv_inicial','tallos_cos','tallos_des','tallos_comp','tallos_desp','inv_final','tallos_proc'];
         var isWeeklyDetail = _WEEKLY_KEYS.indexOf(m.k) >= 0;
         var isExpandible = isMetros || isCharolas || isWeeklyDetail;
-        var lblStyle = isExpandible ? 'cursor:pointer; color:#1e293b; transition: color 0.15s;' : 'color:#475569;';
-        var expandIcon = isExpandible ? '<span style="color:#94a3b8; font-size:9px; margin-left:6px; user-select:none;">▼</span>' : '';
-        var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) { var isHidden = n.style.display===\\\'none\\\'; n.style.display=(isHidden?\\\'table-row\\\':\\\'none\\\'); this.querySelector(\\\'span\\\').innerHTML=isHidden?\\\'▲\\\':\\\'▼\\\'; }"' : '';
+        var toggleClick = isExpandible ? 'onclick="var n=this.closest(\\\'tr\\\').nextElementSibling; if(n && n.className.indexOf(\\\'detail\\\')>0) { var isHidden = n.style.display===\\\'none\\\'; n.style.display=(isHidden?\\\'table-row\\\':\\\'none\\\'); var arr=this.querySelector(\\\'.si-arrow\\\'); if(arr){arr.style.transform=isHidden?\\\'rotate(180deg)\\\':\\\'rotate(0deg)\\\';} }"' : '';
+        var formattedVal = Number(_aggSiembra[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2});
         
         siembraRowsHtml +=
-          '<tr style="background:'+bg+';border-bottom:1px solid #e2e8f0; transition: background 0.2s;">' +
-            '<td style="padding:6px 10px;white-space:nowrap;width:1%;"><span style="background:#e2e8f0;color:#475569;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.5px;">SIEMBRA</span></td>' +
-            '<td colspan="2" style="padding:6px 10px;font-weight:600;"><span style="'+lblStyle+'" '+toggleClick+'>'+m.lbl+expandIcon+'</span></td>' +
-            '<td style="padding:6px 10px;text-align:right;font-weight:700;color:#0f172a;font-size:11px;">'+Number(_aggSiembra[m.k]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td>' +
+          '<tr style="border-bottom:1px solid #e8edf3;" '+toggleClick+'>' +
+            '<td colspan="4" style="padding:0;">' +
+              '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+(isExpandible?'#fafbff':'#fafafa')+';border-left:3px solid #7B1C1C;'+(isExpandible?'cursor:pointer;':'')+';transition:background 0.15s;" onmouseover="if(this.style.background)this.style.background=\'#f0f4ff\'" onmouseout="this.style.background=\''+(isExpandible?'#fafbff':'#fafafa')+'\'">'+
+                '<div style="width:32px;height:32px;background:linear-gradient(135deg,#7B1C1C,#a03050);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+
+                  '<span style="color:#fff;font-size:8px;font-weight:900;letter-spacing:0.5px;">SB</span>'+
+                '</div>'+
+                '<div style="flex:1;min-width:0;">'+
+                  '<div style="font-size:8.5px;font-weight:700;color:#9B3050;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">'+m.lbl+'</div>'+
+                  '<div style="font-size:17px;font-weight:800;color:#0f172a;line-height:1;font-family:monospace;">'+formattedVal+'</div>'+
+                '</div>'+
+                (isExpandible ? '<span class="si-arrow" style="color:#7B1C1C;font-size:12px;transition:transform 0.2s;flex-shrink:0;">▾</span>' : '')+
+              '</div>'+
+            '</td>' +
           '</tr>';
           
         if (isMetros && DATA.metros_acumulados) {
@@ -3613,28 +3621,32 @@ function showProdPanel(rowData, opts) {
     var searchHtml = hideProducts ? '' : '<input type="text" class="prod-filter-input" placeholder="Buscar producto..." style="padding:3px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; width:180px; margin-left:20px" oninput="filterProdRows(this)">';
 
     productSection =
-      '<div style="flex-shrink:0; background:#f1f5f9; border-bottom:1px solid #e2e8f0; padding:6px 10px; display:flex; justify-content:space-between; align-items:center;">' +
-        '<span style="font-size:11px; color:#475569;">'+panelMeta+'</span>' +
+      '<div style="flex-shrink:0; background:#f8fafc; border-bottom:1px solid #e2e8f0; border-top:1px solid #e8edf3; padding:8px 14px; display:flex; justify-content:space-between; align-items:center;">' +
+        '<div style="display:flex;align-items:center;gap:10px;">'+
+          '<span style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;">'+(_isUSD?'USD':'MXN')+' · GASTO TOTAL</span>'+
+          (hideProducts ? '<span style="font-size:11px;color:#64748b;">Solo resumen</span>' : '<span style="font-size:15px;font-weight:800;color:#16a34a;" class="gasto-total-val">'+_fmtG(total)+'</span>')+
+        '</div>'+
         searchHtml +
       '</div>' +
       '<div style="overflow-x:auto; scrollbar-width:thin;">' +
         '<table style="font-size:10px; width:100%; border-collapse:collapse;">' +
           '<thead><tr style="position:sticky;top:0;z-index:1;">' +
-            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600; white-space:nowrap;">UBICACI\u00d3N</th>' +
-            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">PRODUCTO</th>' +
-            '<th style="text-align:left; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">UNID.</th>' +
-            '<th style="text-align:right; background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:4px 6px; color:#64748b; font-weight:600;">GASTO '+(_isUSD?'USD':'MXN')+'</th>' +
+            '<th style="text-align:left; background:#1e293b; border-bottom:none; padding:7px 10px; color:#94a3b8; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; white-space:nowrap;">UBICACI\u00d3N</th>' +
+            '<th style="text-align:left; background:#1e293b; border-bottom:none; padding:7px 10px; color:#94a3b8; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">PRODUCTO</th>' +
+            '<th style="text-align:left; background:#1e293b; border-bottom:none; padding:7px 10px; color:#94a3b8; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">UNID.</th>' +
+            '<th style="text-align:right; background:#1e293b; border-bottom:none; padding:7px 10px; color:#94a3b8; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">GASTO</th>' +
           '</tr></thead><tbody>' +
           siembraRowsHtml;
     if (!hideProducts && rows.length > 0) {
       rows.forEach(function(r,i){
-        var rowBg = (i%2===0)?'#ffffff':'#f8fafc';
+        var rowBg = (i%2===0)?'#ffffff':'#f7f9fc';
         var safeProdName = r.producto ? r.producto.replace(/"/g,'&quot;').toLowerCase() : '';
-        productSection += '<tr class="pt-prod-row" data-prod="'+safeProdName+'" data-costo="'+r.gasto+'" style="background:'+rowBg+'; border-bottom:1px solid #f1f5f9;">' +
-          '<td style="padding:3px 6px; white-space:nowrap; font-weight:600; color:#0f172a;">'+r.ubicacion+'</td>' +
-          '<td style="padding:3px 6px; color:#0f172a;">'+r.producto+'</td>' +
-          '<td style="padding:3px 6px; color:#94a3b8; font-size:9px;">'+r.unidades+'</td>' +
-          '<td style="padding:3px 6px; text-align:right; font-weight:700; color:#0f172a;">'+_fmtG(r.gasto)+'</td>' +
+        var gastoColor = r.gasto > 50000 ? '#7B1C1C' : (r.gasto > 10000 ? '#b45309' : '#0f172a');
+        productSection += '<tr class="pt-prod-row" data-prod="'+safeProdName+'" data-costo="'+r.gasto+'" style="background:'+rowBg+'; border-bottom:1px solid #eef1f5; transition:background 0.12s;" onmouseover="this.style.background=\'#eef4ff\'" onmouseout="this.style.background=\''+rowBg+'\'">'+
+          '<td style="padding:5px 10px; white-space:nowrap; font-weight:700; color:#334155; font-size:10px; border-right:1px solid #f1f5f9;">'+r.ubicacion+'</td>' +
+          '<td style="padding:5px 10px; color:#1e293b; font-size:10px;">'+r.producto+'</td>' +
+          '<td style="padding:5px 10px; color:#94a3b8; font-size:9px; text-align:center;">'+r.unidades+'</td>' +
+          '<td style="padding:5px 10px; text-align:right; font-weight:800; color:'+gastoColor+'; font-size:11px; font-family:monospace;">'+_fmtG(r.gasto)+'</td>' +
           '</tr>';
       });
     } else {
@@ -3647,9 +3659,10 @@ function showProdPanel(rowData, opts) {
   }
 
   panelHtml =
-    '<div class="prod-panel-wrapper" style="flex:1; min-width:340px; border:1px solid #cbd5e1; border-top:3px solid #7B1C1C; display:block; background:#fff;">' +
-      '<div style="background:#7B1C1C; color:#fff; padding:5px 10px; flex-shrink:0; display:flex; justify-content:space-between; align-items:center;">' +
-        '<div style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+panelTitle+'">'+panelTitle+'</div>' +
+    '<div class="prod-panel-wrapper" style="flex:1; min-width:360px; border:1px solid #dde3ec; border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(107,30,53,0.13),0 2px 8px rgba(0,0,0,0.06); display:flex; flex-direction:column; background:#fff;">' +
+      '<div style="background:linear-gradient(135deg,#6A1E35 0%,#8b2a48 60%,#6A1E35 100%); color:#fff; padding:14px 16px; flex-shrink:0;">' +
+        '<div style="font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.6;margin-bottom:5px;">CFBC · Detalle Semanal</div>' +
+        '<div style="font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.4px; line-height:1.35; opacity:0.97;" title="'+panelTitle+'">'+panelTitle+'</div>' +
       '</div>' +
       productSection +
     '</div>';
