@@ -53,12 +53,13 @@ SHAREPOINT_URL_SIEMBRA_DETALLE = (
 # Detalle semanal de inventario / tallos (hojas WEEKLY####)
 SHAREPOINT_URL_WEEKLY = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "jesus_sandoval_cfbc_co/IQDToQpctdBlT4g2Lnc3B4uQAd-6shpssYiNVQabTkdd3ts?e=tei184"
+    "jesus_sandoval_cfbc_co/IQDToQpctdBlT4g2Lnc3B4uQAd-6shpssYiNVQabTkdd3ts?e=ss4fog"
 )
 SHAREPOINT_URL_WEEKLY_2026 = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "jesus_sandoval_cfbc_co/IQDTUEARFMLjR6MB40jc3pY5AX_1LvzWsyXdBLdhxxvpqEE?e=nXDscu"
+    "jesus_sandoval_cfbc_co/IQDTUEARFMLjR6MB40jc3pY5AX_1LvzWsyXdBLdhxxvpqEE?e=VWuZFQ"
 )
+
 
 # Índices de columna (0-based) dentro de cada hoja WEEKLY####
 # Usados como FALLBACK si no se detecta encabezado dinámico
