@@ -1892,11 +1892,11 @@ function renderRancho() {
   // ── Header nivel 1: CATEGORÍA | rancho (colspan) | TOTAL (colspan) ────────
   var h1='<tr>';
   h1+='<th rowspan="2" style="'+thPin+'min-width:220px;text-align:left">CATEGORÍA</th>';
+  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #7B1C1C;background:#9DC3E6">TOTAL SEMANAL</th>';
   activeRanches.forEach(function(rn){
     var col=RANCH_COLORS[rn]||'#888';
     h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
   });
-  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #7B1C1C;background:#9DC3E6">TOTAL '+sym+'</th>';
   h1+='</tr>';
 
   // ── Header nivel 2: por año → semanas + DIF, luego DIF años ───────────────
@@ -1921,8 +1921,8 @@ function renderRancho() {
     return s;
   }
   var h2='<tr>';
-  activeRanches.forEach(function(){ h2+=subHeaders(); });
   if(showTotal) h2+=subHeaders(); // TOTAL
+  activeRanches.forEach(function(){ h2+=subHeaders(); });
   h2+='</tr>';
 
   // ── Celda ─────────────────────────────────────────────────────────────────
@@ -1974,8 +1974,8 @@ function renderRancho() {
     var catFw=isCpv?'800':'700';
     bodyHtml+='<tr style="background:'+bgRow+'">';
     bodyHtml+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:'+catColor+';font-weight:'+catFw+'">'+cat.label+'</span></td>';
-    activeRanches.forEach(function(rn){ bodyHtml+=groupCells(rn); });
     if(showTotal) bodyHtml+=groupCells(null); // TOTAL
+    activeRanches.forEach(function(rn){ bodyHtml+=groupCells(rn); });
     bodyHtml+='</tr>';
   });
 
