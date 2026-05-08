@@ -1761,7 +1761,7 @@ function renderComparativo() {
   var f=state.fromWeek,t=state.toWeek,yrs=getActiveYears(),sym=state.currency.toUpperCase();
   var byYear=getRangeByYear(state.cat,f,t);
   var rangeWeeks=allWeeks.filter(function(w){return w>=f&&w<=t;});
-  var ranchCols=getActiveRanches();
+  var _allRanches=getActiveRanches();
   document.getElementById('cmpStats').innerHTML='';
 
   var weekData={};
@@ -1770,6 +1770,17 @@ function renderComparativo() {
     rangeWeeks.forEach(function(w){
       var recs=DATA.weekly_detail.filter(function(r){return r.categoria===state.cat&&r.year===yr&&r.week===w;});
       if (recs.length) weekData[yr][w]=aggregateRecs(recs);
+    });
+  });
+
+  var ranchCols=_allRanches.filter(function(rn){
+    return yrs.some(function(yr){
+      return rangeWeeks.some(function(w){
+        var d=weekData[yr][w];
+        if(!d) return false;
+        var src=state.currency==='usd'?d.ranches:d.ranches_mxn;
+        return Math.abs(src[rn]||0) > 0.01;
+      });
     });
   });
 
@@ -1826,7 +1837,7 @@ function renderRancho() {
   var yrs=getActiveYears(), sym=state.currency.toUpperCase();
   var f=state.fromWeek, t=state.toWeek;
   var cur=state.currency;
-  var activeRanches = getActiveRanches();
+  var _allRanches = getActiveRanches();
   var showTotal = state.activeRanches.indexOf('Todos')>-1;
 
   var matCats=DATA.categories.filter(function(c){
@@ -1844,12 +1855,12 @@ function renderRancho() {
   // Sumar para un (año, semana) específico
   function sumForYW(records, yr, wk){
     var out={total:0};
-    activeRanches.forEach(function(rn){ out[rn]=0; });
+    _allRanches.forEach(function(rn){ out[rn]=0; });
     records.forEach(function(r){
       if(r.year!==yr||r.week!==wk) return;
       var ranches=cur==='usd'?r.usd_ranches:r.mxn_ranches;
       var rowTot = 0;
-      activeRanches.forEach(function(rn){
+      _allRanches.forEach(function(rn){
         var v = ranches[rn]||0;
         out[rn] += v;
         rowTot += v;
@@ -1868,8 +1879,16 @@ function renderRancho() {
       var mo =sumForYW(moRecs, yr,wk);
       var sv =sumForYW(svRecs, yr,wk);
       var cpv={total:mat.total+mo.total+sv.total};
-      activeRanches.forEach(function(rn){ cpv[rn]=(mat[rn]||0)+(mo[rn]||0)+(sv[rn]||0); });
+      _allRanches.forEach(function(rn){ cpv[rn]=(mat[rn]||0)+(mo[rn]||0)+(sv[rn]||0); });
       ywData[yr][wk]={mat:mat,mo:mo,sv:sv,cpv:cpv};
+    });
+  });
+
+  var activeRanches = _allRanches.filter(function(rn){
+    return yrs.some(function(yr){
+      return rangeWeeks.some(function(wk){
+        return Math.abs(ywData[yr][wk].cpv[rn]||0) > 0.01;
+      });
     });
   });
 
