@@ -1226,6 +1226,8 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                     key = "mano_obra_prod_ha"
                 elif "MATERIAL DE EMPAQUE" in label or "EMPAQUE" in label:
                     key = "empaque_ha"
+                elif "SANIDAD VEGETAL" in label or "SANIDAD" in label:
+                    key = "sanidad_ha"
                 elif "FERTILIZ" in label or "FERTLIZ" in label:
                     key = "fertilizacion_ha"
                 elif "MANO DE OBRA" in label:
