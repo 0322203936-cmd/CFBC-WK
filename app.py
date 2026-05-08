@@ -1471,13 +1471,19 @@ function onCatChange(val) {
     else { btnProd.style.display = ''; sepProd.style.display = ''; }
   }
 
-  if (isSrvCat && state.view !== 'servicios') {
-    _prodViews = []; _prodViewsData = [];
-    setView('servicios');
-  } else if (!isSrvCat && state.view === 'servicios') {
-    setView('rancho');
+  if (isSrvCat) {
+    if (state.view !== 'servicios') {
+      _prodViews = []; _prodViewsData = [];
+      setView('servicios');
+    } else {
+      renderView();
+    }
   } else {
-    renderView();
+    if (state.view !== 'comparativo') {
+      setView('comparativo');
+    } else {
+      renderView();
+    }
   }
 }
 function setCurrency(cur) {
