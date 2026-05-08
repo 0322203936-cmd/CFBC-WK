@@ -570,9 +570,9 @@ def _area_from_concepto_rancho(label: str, ranch: str) -> str | None:
         if _is_prop: return None
         return "Transporte"
 
-    # VELADORES: Prop=omitir, PosCo=omitir, otros=Veladores
+    # VELADORES: Prop=omitir, PosCo=Veladores, otros=Veladores
     if "VELADOR" in s:
-        if _is_prop or _is_posco: return None
+        if _is_prop: return None
         return "Veladores"
 
     # SOLDADOR: Prop=omitir, PosCo=omitir, otros=Soldadores
