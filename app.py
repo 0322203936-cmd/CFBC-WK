@@ -1990,31 +1990,34 @@ function renderRancho() {
 // =======================================================
 function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRanches, showTotal) {
   var TALLO_CATS=[
+    {isHeader:true, label:'<<< INDICADORES', color:'#1e3a8a'},
+    {isHeader:true, label:'COSTOS UNITARIOS', color:'#1e3a8a'},
+    {isHeader:true, label:'$ / Tallo Procesado', color:'#1e3a8a', source:'ywData', key:'cpv', fmt:fmt},
+    {isHeader:true, label:'COSTOS UNITARIOS', color:'#1e3a8a'},
+    {isHeader:true, label:'$ / Libras Procesadas', color:'#1e3a8a'},
     {key:'materiales_tallo', label:'Materiales'},
     {key:'mano_obra_tallo',  label:'Mano de Obra'},
     {key:'servicios_tallo',  label:'Servicios (Fletes)'},
-    {key:'cpv_tallo',        label:'Costo de Producción y Ventas'},
-    {key:'empaque_tallo',    label:'Material de Empaque'},
-    {key:'sanidad_tallo',    label:'Sanidad Vegetal'},
-    {key:'fertilizacion_tallo', label:'Fertilización'},
-    {key:'mano_obra_prod_tallo', label:'Mano de Obra Prod'},
+    {key:'cpv_tallo',        label:'Costo de Produccion y Ventas', bg:'#FCE4D6', fw:'700', borderBottom:true},
+    {key:'empaque_tallo',    label:'Material de Empaque / Tallo', indent:true},
+    {key:'sanidad_tallo',    label:'Sanidad Vegetal / Tallo', indent:true, borderTop:true},
+    {key:'fertilizacion_tallo', label:'Fertilizacion / Tallo', indent:true},
+    {key:'mano_obra_prod_tallo', label:'Mano de Obra Prod / Tallo', indent:true, borderTop:true, borderBottom:true},
   ];
 
   var thB='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid #ddd;white-space:nowrap;position:sticky;top:0;z-index:3;';
   var thPin=thB+'left:0;z-index:4;';
   var fmt2=fmtFull;
 
-  // Header nivel 1
   var h1='<tr>';
   h1+='<th rowspan="2" style="'+thPin+'min-width:220px;text-align:left">CONCEPTO</th>';
+  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:#1e3a8a;border-left:1px solid #ddd;">TOTAL SEMANAL</th>';
   activeRanches.forEach(function(rn){
     var col=RANCH_COLORS[rn]||'#888';
-    h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
+    h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:1px solid #ddd">'+rn+'</th>';
   });
-  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #7B1C1C;background:#9DC3E6">TOTAL</th>';
   h1+='</tr>';
 
-  // Header nivel 2
   function subHeaders(){
     var s='';
     yrs.forEach(function(yr,yi){
@@ -2022,7 +2025,7 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
       var yy=String(yr).slice(2);
       rangeWeeks.forEach(function(wk,wi){
         var lbl=yy+String(wk).padStart(2,'0');
-        var lb=wi===0?'2px solid '+col:'1px solid #ddd';
+        var lb=wi===0?'1px solid #ddd':'1px solid #eee';
         s+='<th style="'+thB+'font-size:9px;color:'+col+';min-width:72px;text-align:right;border-left:'+lb+'">'+lbl+'</th>';
       });
       if(nWk>=2){
@@ -2031,82 +2034,113 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
     });
     if(nYrs>=2){
       var y0=String(yrs[0]).slice(2), yn=String(yrs[nYrs-1]).slice(2);
-      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #7B1C1C;background:#9DC3E6">'+yn+'−'+y0+'</th>';
+      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #7B1C1C;background:#9DC3E6">DIF AÑOS</th>';
     }
     return s;
   }
   var h2='<tr>';
-  activeRanches.forEach(function(){ h2+=subHeaders(); });
   if(showTotal) h2+=subHeaders();
+  activeRanches.forEach(function(){ h2+=subHeaders(); });
   h2+='</tr>';
 
-  // Función celda
-  function cell(v, isDif, lb, fmtFn){
+  function cell(v, isDif, lb, fmtFn, cat){
     var format = fmtFn || fmt2;
     var s='padding:3px 5px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
     if(lb) s+='border-left:'+lb+';';
+    if(cat && cat.bg) s+='background:'+cat.bg+';';
+    if(cat && cat.fw) s+='font-weight:'+cat.fw+';';
+    
+    if(cat && cat.isHeader && !cat.key) return '<td style="'+s+'"></td>';
     if(v===null||v===undefined||isNaN(v)||v===0) return '<td style="'+s+'color:#ccc">—</td>';
+    
     var text = format(v);
     if(isDif){
       var cl=v>0?'#16a34a':'#dc2626';
       return '<td style="'+s+'color:'+cl+'">'+(v>0?'+':'')+text+'</td>';
     }
-    return '<td style="'+s+'color:#1e3a5f">'+text+'</td>';
+    var col = (cat && cat.color) ? cat.color : '#1e3a5f';
+    if (cat && cat.fw) col = '#000';
+    return '<td style="'+s+'color:'+col+'">'+text+'</td>';
   }
 
-  // Función para generar celdas por rancho
-  // Lee de DATA.unit_costs_data (estructura: { code: { ranch|"TOTAL": { key: val } } })
   function groupCells(rnKey, cat){
     var s='';
     var ucData = DATA.unit_costs_data || {};
     yrs.forEach(function(yr,yi){
       var col=YEAR_COLORS[yr]||'#888';
       rangeWeeks.forEach(function(wk,wi){
-        var code = (yr - 2000) * 100 + wk;
-        var wkUC = ucData[code] || ucData[String(code)] || {};
-        var rData = rnKey !== null ? (wkUC[rnKey]||{}) : (wkUC['TOTAL']||{});
-        var v = rData[cat.key] || 0;
-        var lb=wi===0?'2px solid '+col:'';
-        s+=cell(v, false, lb, cat.fmt);
+        var v = 0;
+        if (cat.source === 'ywData') {
+           v = rnKey !== null ? (ywData[yr][wk][cat.key][rnKey]||0) : (ywData[yr][wk][cat.key].total||0);
+        } else if (!cat.isHeader || cat.key) {
+           var code = (yr - 2000) * 100 + wk;
+           var wkUC = ucData[code] || ucData[String(code)] || {};
+           var rData = rnKey !== null ? (wkUC[rnKey]||{}) : (wkUC['TOTAL']||{});
+           v = rData[cat.key] || 0;
+        }
+        var lb=wi===0?'1px solid #ddd':'';
+        s+=cell(v, false, lb, cat.fmt, cat);
       });
       if(nWk>=2){
-        var code0 = (yr-2000)*100 + rangeWeeks[0];
-        var codeN = (yr-2000)*100 + rangeWeeks[nWk-1];
-        var uc0 = ucData[code0] || ucData[String(code0)] || {};
-        var ucN = ucData[codeN] || ucData[String(codeN)] || {};
-        var r0 = rnKey!==null ? (uc0[rnKey]||{}) : (uc0['TOTAL']||{});
-        var rN = rnKey!==null ? (ucN[rnKey]||{}) : (ucN['TOTAL']||{});
-        var first = r0[cat.key]||0;
-        var last  = rN[cat.key]||0;
-        s+=cell(last-first, true, '1px solid #aaa', cat.fmt);
+        var first = 0, last = 0;
+        if (cat.source === 'ywData') {
+           first = rnKey!==null ? (ywData[yr][rangeWeeks[0]][cat.key][rnKey]||0) : (ywData[yr][rangeWeeks[0]][cat.key].total||0);
+           last  = rnKey!==null ? (ywData[yr][rangeWeeks[nWk-1]][cat.key][rnKey]||0) : (ywData[yr][rangeWeeks[nWk-1]][cat.key].total||0);
+        } else if (!cat.isHeader || cat.key) {
+           var code0 = (yr-2000)*100 + rangeWeeks[0];
+           var codeN = (yr-2000)*100 + rangeWeeks[nWk-1];
+           var uc0 = ucData[code0] || ucData[String(code0)] || {};
+           var ucN = ucData[codeN] || ucData[String(codeN)] || {};
+           var r0 = rnKey!==null ? (uc0[rnKey]||{}) : (uc0['TOTAL']||{});
+           var rN = rnKey!==null ? (ucN[rnKey]||{}) : (ucN['TOTAL']||{});
+           first = r0[cat.key]||0; last = rN[cat.key]||0;
+        }
+        s+=cell(last-first, true, '1px solid #aaa', cat.fmt, cat);
       }
     });
     if(nYrs>=2){
-      var c0yr = (yrs[0]-2000)*100 + rangeWeeks[nWk-1];
-      var cNyr = (yrs[nYrs-1]-2000)*100 + rangeWeeks[nWk-1];
-      var uc0yr = ucData[c0yr] || ucData[String(c0yr)] || {};
-      var ucNyr = ucData[cNyr] || ucData[String(cNyr)] || {};
-      var r0yr = rnKey!==null ? (uc0yr[rnKey]||{}) : (uc0yr['TOTAL']||{});
-      var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
-      var v0 = r0yr[cat.key]||0;
-      var vn = rNyr[cat.key]||0;
-      s+=cell(vn-v0, true, '2px solid #7B1C1C', cat.fmt);
+       var v0 = 0, vn = 0;
+       if (cat.source === 'ywData') {
+          v0 = rnKey!==null ? (ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key][rnKey]||0) : (ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key].total||0);
+          vn = rnKey!==null ? (ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key][rnKey]||0) : (ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key].total||0);
+       } else if (!cat.isHeader || cat.key) {
+          var c0yr = (yrs[0]-2000)*100 + rangeWeeks[nWk-1];
+          var cNyr = (yrs[nYrs-1]-2000)*100 + rangeWeeks[nWk-1];
+          var uc0yr = ucData[c0yr] || ucData[String(c0yr)] || {};
+          var ucNyr = ucData[cNyr] || ucData[String(cNyr)] || {};
+          var r0yr = rnKey!==null ? (uc0yr[rnKey]||{}) : (uc0yr['TOTAL']||{});
+          var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
+          v0 = r0yr[cat.key]||0; vn = rNyr[cat.key]||0;
+       }
+       s+=cell(vn-v0, true, '2px solid #7B1C1C', cat.fmt, cat);
     }
     return s;
   }
 
-  // Cuerpo de tabla
   var bodyHtml='';
   TALLO_CATS.forEach(function(c,ci){
-    var bgRow=ci%2===0?'#fff':'#F7FBFF';
-    bodyHtml+='<tr style="background:'+bgRow+'">';
-    bodyHtml+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:#333;font-weight:700">'+c.label+'</span></td>';
-    activeRanches.forEach(function(rn){ bodyHtml+=groupCells(rn, c); });
+    var bgRow = c.bg || (c.isHeader ? '#fff' : (ci%2===0?'#fff':'#F7FBFF'));
+    var labelStyle = 'color:'+(c.color||'#333')+';';
+    labelStyle += 'font-weight:'+(c.fw||(c.isHeader?'700':'500'))+';';
+    if(c.indent) labelStyle += 'padding-left:25px; font-size:10px;';
+    
+    var trStyle = 'background:'+bgRow+';';
+    if(c.borderTop) trStyle += 'border-top:2px solid #1e3a8a;';
+    if(c.borderBottom) trStyle += 'border-bottom:2px solid #1e3a8a;';
+
+    bodyHtml+='<tr style="'+trStyle+'">';
+    var cellStyle = 'padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-right:1px solid #ddd;white-space:nowrap;';
+    if(c.borderTop) cellStyle += 'border-top:2px solid #1e3a8a;';
+    if(c.borderBottom) cellStyle += 'border-bottom:2px solid #1e3a8a;';
+    if(!c.borderTop && !c.borderBottom) cellStyle += 'border-bottom:1px solid #eee;';
+    
+    bodyHtml+='<td style="'+cellStyle+'"><span style="'+labelStyle+'">'+c.label+'</span></td>';
     if(showTotal) bodyHtml+=groupCells(null, c);
+    activeRanches.forEach(function(rn){ bodyHtml+=groupCells(rn, c); });
     bodyHtml+='</tr>';
   });
 
-  var html='<div style="margin-top:20px"><h3 style="color:#1e3a5f;font-size:14px;font-weight:800;margin-bottom:10px">COSTOS UNITARIOS $ / TALLO PROCESADO</h3><div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
+  var html='<div style="margin-top:20px; border:3px solid #f97316; border-radius:4px; padding:2px;"><div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table" style="border-collapse:collapse;"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
   var gw=document.getElementById('gridWrap');
   gw.innerHTML+=html;
 }
@@ -2116,123 +2150,120 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
 // =======================================================
 function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRanches, showTotal) {
   var HA_CATS=[
-    {key:'hectareas_ha',     label:'$ / Hectárea (Ha totales)', fmt:fmtHa},
+    {isHeader:true, label:'$ / Hectárea', color:'#1e3a8a', fw:'700', key:'hectareas_ha', fmt:fmtHa},
     {key:'materiales_ha',    label:'Materiales'},
     {key:'mano_obra_ha',     label:'Mano de Obra'},
     {key:'servicios_ha',     label:'Servicios (Fletes)'},
-    {key:'cpv_ha',           label:'Costo de Producción y Ventas'},
-    {key:'empaque_ha',       label:'Material de Empaque'},
-    {key:'fertilizacion_ha', label:'Fertilización'},
-    {key:'mano_obra_prod_ha',label:'Mano de Obra Prod'},
+    {key:'cpv_ha',           label:'Costo de Producción y Ventas', fw:'700', borderBottom:true},
+    {key:'empaque_ha',       label:'Material de Empaque / Caja', indent:true},
+    {key:'sanidad_ha',       label:'Sanidad Vegetal / Ha', indent:true, borderTop:true},
+    {key:'fertilizacion_ha', label:'Fertilización / Ha', indent:true},
+    {key:'mano_obra_prod_ha',label:'Mano de Obra Prod / Ha', indent:true, borderTop:true, borderBottom:true},
   ];
 
   var thB='padding:5px 8px;background:var(--pt-hdr-bg);color:#1e3a5f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--pt-hdr-border);border-right:1px solid #ddd;white-space:nowrap;position:sticky;top:0;z-index:3;';
   var thPin=thB+'left:0;z-index:4;';
   var fmt2=fmt;
 
-  // Header nivel 1
-  var h1='<tr>';
-  h1+='<th rowspan="2" style="'+thPin+'min-width:220px;text-align:left">CONCEPTO</th>';
-  activeRanches.forEach(function(rn){
-    var col=RANCH_COLORS[rn]||'#888';
-    h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;color:'+col+';border-left:2px solid #8EA9C1">'+rn+'</th>';
-  });
-  if(showTotal) h1+='<th colspan="'+nCols+'" style="'+thB+'text-align:center;border-left:3px solid #7B1C1C;background:#9DC3E6">TOTAL</th>';
-  h1+='</tr>';
-
-  // Header nivel 2
-  function subHeaders(){
-    var s='';
-    yrs.forEach(function(yr,yi){
-      var col=YEAR_COLORS[yr]||'#888';
-      var yy=String(yr).slice(2);
-      rangeWeeks.forEach(function(wk,wi){
-        var lbl=yy+String(wk).padStart(2,'0');
-        var lb=wi===0?'2px solid '+col:'1px solid #ddd';
-        s+='<th style="'+thB+'font-size:9px;color:'+col+';min-width:72px;text-align:right;border-left:'+lb+'">'+lbl+'</th>';
-      });
-      if(nWk>=2){
-        s+='<th style="'+thB+'font-size:9px;min-width:62px;text-align:right;border-left:1px solid #aaa;background:#BDD7EE">DIF'+yy+'</th>';
-      }
-    });
-    if(nYrs>=2){
-      var y0=String(yrs[0]).slice(2), yn=String(yrs[nYrs-1]).slice(2);
-      s+='<th style="'+thB+'font-size:9px;min-width:68px;text-align:right;border-left:2px solid #7B1C1C;background:#9DC3E6">'+yn+'−'+y0+'</th>';
-    }
-    return s;
-  }
-  var h2='<tr>';
-  activeRanches.forEach(function(){ h2+=subHeaders(); });
-  if(showTotal) h2+=subHeaders();
-  h2+='</tr>';
-
-  // Función celda
-  function cell(v, isDif, lb, fmtFn){
+  function cell(v, isDif, lb, fmtFn, cat){
     var format = fmtFn || fmt2;
     var s='padding:3px 5px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;';
     if(lb) s+='border-left:'+lb+';';
+    if(cat && cat.bg) s+='background:'+cat.bg+';';
+    if(cat && cat.fw) s+='font-weight:'+cat.fw+';';
+    
+    if(cat && cat.isHeader && !cat.key) return '<td style="'+s+'"></td>';
     if(v===null||v===undefined||isNaN(v)||v===0) return '<td style="'+s+'color:#ccc">—</td>';
+    
     var text = format(v);
     if(isDif){
       var cl=v>0?'#16a34a':'#dc2626';
       return '<td style="'+s+'color:'+cl+'">'+(v>0?'+':'')+text+'</td>';
     }
-    return '<td style="'+s+'color:#1e3a5f">'+text+'</td>';
+    var col = (cat && cat.color) ? cat.color : '#1e3a5f';
+    if (cat && cat.fw) col = '#000';
+    return '<td style="'+s+'color:'+col+'">'+text+'</td>';
   }
 
-  // Función para generar celdas por rancho
-  // Lee de DATA.unit_costs_data (estructura: { code: { ranch|"TOTAL": { key: val } } })
   function groupCells(rnKey, cat){
     var s='';
     var ucData = DATA.unit_costs_data || {};
     yrs.forEach(function(yr,yi){
       var col=YEAR_COLORS[yr]||'#888';
       rangeWeeks.forEach(function(wk,wi){
-        var code = (yr - 2000) * 100 + wk;
-        var wkUC = ucData[code] || ucData[String(code)] || {};
-        var rData = rnKey !== null ? (wkUC[rnKey]||{}) : (wkUC['TOTAL']||{});
-        var v = rData[cat.key] || 0;
-        var lb=wi===0?'2px solid '+col:'';
-        s+=cell(v, false, lb, cat.fmt);
+        var v = 0;
+        if (cat.source === 'ywData') {
+           v = rnKey !== null ? (ywData[yr][wk][cat.key][rnKey]||0) : (ywData[yr][wk][cat.key].total||0);
+        } else if (!cat.isHeader || cat.key) {
+           var code = (yr - 2000) * 100 + wk;
+           var wkUC = ucData[code] || ucData[String(code)] || {};
+           var rData = rnKey !== null ? (wkUC[rnKey]||{}) : (wkUC['TOTAL']||{});
+           v = rData[cat.key] || 0;
+        }
+        var lb=wi===0?'1px solid #ddd':'';
+        s+=cell(v, false, lb, cat.fmt, cat);
       });
       if(nWk>=2){
-        var code0 = (yr-2000)*100 + rangeWeeks[0];
-        var codeN = (yr-2000)*100 + rangeWeeks[nWk-1];
-        var uc0 = ucData[code0] || ucData[String(code0)] || {};
-        var ucN = ucData[codeN] || ucData[String(codeN)] || {};
-        var r0 = rnKey!==null ? (uc0[rnKey]||{}) : (uc0['TOTAL']||{});
-        var rN = rnKey!==null ? (ucN[rnKey]||{}) : (ucN['TOTAL']||{});
-        var first = r0[cat.key]||0;
-        var last  = rN[cat.key]||0;
-        s+=cell(last-first, true, '1px solid #aaa', cat.fmt);
+        var first = 0, last = 0;
+        if (cat.source === 'ywData') {
+           first = rnKey!==null ? (ywData[yr][rangeWeeks[0]][cat.key][rnKey]||0) : (ywData[yr][rangeWeeks[0]][cat.key].total||0);
+           last  = rnKey!==null ? (ywData[yr][rangeWeeks[nWk-1]][cat.key][rnKey]||0) : (ywData[yr][rangeWeeks[nWk-1]][cat.key].total||0);
+        } else if (!cat.isHeader || cat.key) {
+           var code0 = (yr-2000)*100 + rangeWeeks[0];
+           var codeN = (yr-2000)*100 + rangeWeeks[nWk-1];
+           var uc0 = ucData[code0] || ucData[String(code0)] || {};
+           var ucN = ucData[codeN] || ucData[String(codeN)] || {};
+           var r0 = rnKey!==null ? (uc0[rnKey]||{}) : (uc0['TOTAL']||{});
+           var rN = rnKey!==null ? (ucN[rnKey]||{}) : (ucN['TOTAL']||{});
+           first = r0[cat.key]||0; last = rN[cat.key]||0;
+        }
+        s+=cell(last-first, true, '1px solid #aaa', cat.fmt, cat);
       }
     });
     if(nYrs>=2){
-      var c0yr = (yrs[0]-2000)*100 + rangeWeeks[nWk-1];
-      var cNyr = (yrs[nYrs-1]-2000)*100 + rangeWeeks[nWk-1];
-      var uc0yr = ucData[c0yr] || ucData[String(c0yr)] || {};
-      var ucNyr = ucData[cNyr] || ucData[String(cNyr)] || {};
-      var r0yr = rnKey!==null ? (uc0yr[rnKey]||{}) : (uc0yr['TOTAL']||{});
-      var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
-      var v0 = r0yr[cat.key]||0;
-      var vn = rNyr[cat.key]||0;
-      s+=cell(vn-v0, true, '2px solid #7B1C1C', cat.fmt);
+       var v0 = 0, vn = 0;
+       if (cat.source === 'ywData') {
+          v0 = rnKey!==null ? (ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key][rnKey]||0) : (ywData[yrs[0]][rangeWeeks[nWk-1]][cat.key].total||0);
+          vn = rnKey!==null ? (ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key][rnKey]||0) : (ywData[yrs[nYrs-1]][rangeWeeks[nWk-1]][cat.key].total||0);
+       } else if (!cat.isHeader || cat.key) {
+          var c0yr = (yrs[0]-2000)*100 + rangeWeeks[nWk-1];
+          var cNyr = (yrs[nYrs-1]-2000)*100 + rangeWeeks[nWk-1];
+          var uc0yr = ucData[c0yr] || ucData[String(c0yr)] || {};
+          var ucNyr = ucData[cNyr] || ucData[String(cNyr)] || {};
+          var r0yr = rnKey!==null ? (uc0yr[rnKey]||{}) : (uc0yr['TOTAL']||{});
+          var rNyr = rnKey!==null ? (ucNyr[rnKey]||{}) : (ucNyr['TOTAL']||{});
+          v0 = r0yr[cat.key]||0; vn = rNyr[cat.key]||0;
+       }
+       s+=cell(vn-v0, true, '2px solid #7B1C1C', cat.fmt, cat);
     }
     return s;
   }
 
-  // Cuerpo de tabla
   var bodyHtml='';
   HA_CATS.forEach(function(c,ci){
-    var bgRow=ci%2===0?'#fff':'#F7FBFF';
-    bodyHtml+='<tr style="background:'+bgRow+'">';
-    bodyHtml+='<td style="padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-bottom:1px solid #eee;border-right:1px solid #ddd;white-space:nowrap"><span style="color:#333;font-weight:700">'+c.label+'</span></td>';
-    activeRanches.forEach(function(rn){ bodyHtml+=groupCells(rn, c); });
+    var bgRow = c.bg || (c.isHeader ? '#fff' : (ci%2===0?'#fff':'#F7FBFF'));
+    var labelStyle = 'color:'+(c.color||'#333')+';';
+    labelStyle += 'font-weight:'+(c.fw||(c.isHeader?'700':'500'))+';';
+    if(c.indent) labelStyle += 'padding-left:25px; font-size:10px;';
+    
+    var trStyle = 'background:'+bgRow+';';
+    if(c.borderTop) trStyle += 'border-top:2px solid #1e3a8a;';
+    if(c.borderBottom) trStyle += 'border-bottom:2px solid #1e3a8a;';
+
+    bodyHtml+='<tr style="'+trStyle+'">';
+    var cellStyle = 'padding:3px 8px;position:sticky;left:0;z-index:1;background:'+bgRow+';border-right:1px solid #ddd;white-space:nowrap;';
+    if(c.borderTop) cellStyle += 'border-top:2px solid #1e3a8a;';
+    if(c.borderBottom) cellStyle += 'border-bottom:2px solid #1e3a8a;';
+    if(!c.borderTop && !c.borderBottom) cellStyle += 'border-bottom:1px solid #eee;';
+
+    bodyHtml+='<td style="'+cellStyle+'"><span style="'+labelStyle+'">'+c.label+'</span></td>';
     if(showTotal) bodyHtml+=groupCells(null, c);
+    activeRanches.forEach(function(rn){ bodyHtml+=groupCells(rn, c); });
     bodyHtml+='</tr>';
   });
 
-  var html='<div style="margin-top:20px"><h3 style="color:#1e3a5f;font-size:14px;font-weight:800;margin-bottom:10px">COSTOS UNITARIOS $ / HECTÁREA</h3><div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
+  // Omitimos <thead> para simular que es parte de la misma tabla unida como en el Excel
+  var html='<div style="margin-top:10px; border:3px solid #f97316; border-radius:4px; padding:2px;"><div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table" style="border-collapse:collapse;"><tbody>'+bodyHtml+'</tbody></table></div></div>';
   var gw=document.getElementById('gridWrap');
   gw.innerHTML+=html;
 }
