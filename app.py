@@ -1992,7 +1992,7 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
   var TALLO_CATS=[
     {isHeader:true, label:'<<< INDICADORES', color:'#1e3a8a'},
     {isHeader:true, label:'COSTOS UNITARIOS', color:'#1e3a8a'},
-    {isHeader:true, label:'$ / Tallo Procesado', color:'#1e3a8a', source:'ywData', key:'cpv', fmt:fmt},
+    {isHeader:true, label:'$ / Tallo Procesado', color:'#1e3a8a', key:'tallo_procesados', fmt:fmt},
     {isHeader:true, label:'COSTOS UNITARIOS', color:'#1e3a8a'},
     {isHeader:true, label:'$ / Libras Procesadas', color:'#1e3a8a'},
     {key:'materiales_tallo', label:'Materiales'},
