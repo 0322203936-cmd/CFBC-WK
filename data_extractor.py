@@ -1200,6 +1200,8 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
             if curr_section == "tallo":
                 if "MANO DE OBRA PROD" in label:
                     key = "mano_obra_prod_tallo"
+                elif "$ / TALLO" in label:
+                    key = "tallo_procesados"
                 elif "MATERIAL DE EMPAQUE" in label or "EMPAQUE" in label:
                     key = "empaque_tallo"
                 elif "SANIDAD VEGETAL" in label or "SANIDAD" in label:
