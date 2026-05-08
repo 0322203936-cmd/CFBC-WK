@@ -827,8 +827,8 @@ APP_HTML_BODY = """
 
   <!-- VIEW TABS -->
   <div class="view-tabs">
-    <button class="vtab active" id="vtComparativo"  onclick="setView('comparativo')">Comparativo</button>
-    <button class="vtab"        id="vtRancho"       onclick="setView('rancho')">Por Rancho</button>
+    <button class="vtab"        id="vtComparativo"  onclick="setView('comparativo')">Comparativo</button>
+    <button class="vtab active" id="vtRancho"       onclick="setView('rancho')">Por Rancho</button>
     <button class="vtab"        id="vtServicios"    onclick="setView('servicios')">Costo Servicios</button>
   </div>
 
@@ -902,7 +902,7 @@ var CAT_MIPE  = 'DESINFECCION / PLAGUICIDAS';
 // =======================================================
 // ESTADO
 // =======================================================
-var state = { cat:'', activeRanches:['Todos'], currency:'mxn', activeYears:{}, view:'comparativo', weekIdx:0, fromWeek:1, toWeek:52 };
+var state = { cat:'', activeRanches:['Todos'], currency:'mxn', activeYears:{}, view:'rancho', weekIdx:0, fromWeek:1, toWeek:52 };
 function getActiveRanches() { return state.activeRanches.indexOf('Todos') > -1 ? RANCH_ORDER : state.activeRanches; }
 var allWeeks = [];
 
@@ -1475,7 +1475,7 @@ function onCatChange(val) {
     _prodViews = []; _prodViewsData = [];
     setView('servicios');
   } else if (!isSrvCat && state.view === 'servicios') {
-    setView('comparativo');
+    setView('rancho');
   } else {
     renderView();
   }
