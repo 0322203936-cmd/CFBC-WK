@@ -3240,9 +3240,9 @@ window.filterProdRows = function(el) {
     if (term === '' || p.indexOf(term) > -1) {
       if(rows[i].style.display === 'none'){
         rows[i].style.display = '';
-        nuevoTotal += parseFloat(rows[i].getAttribute('data-costo')||0);
+        nuevoTotal += Math.abs(parseFloat(rows[i].getAttribute('data-costo')||0));
       } else {
-        nuevoTotal += parseFloat(rows[i].getAttribute('data-costo')||0);
+        nuevoTotal += Math.abs(parseFloat(rows[i].getAttribute('data-costo')||0));
       }
     } else {
       if(rows[i].style.display === ''){
@@ -3605,7 +3605,7 @@ function showProdPanel(rowData, opts) {
         : fmt(mxn);
       return str;
     };
-    var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+r.gasto;},0);
+    var total = hideProducts ? 0 : rows.reduce(function(s,r){return s+Math.abs(r.gasto);},0);
     var panelMeta = hideProducts
       ? 'Solo resumen de siembra'
       : ('Gasto: <b style="color:#16a34a" class="gasto-total-val">'+_fmtG(total)+'</b>');
