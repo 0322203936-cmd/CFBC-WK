@@ -1302,9 +1302,7 @@ function inicializar() {
 
   state.activeYears = {};
   var latestYr = DATA.years[DATA.years.length-1];
-  var prevYr   = DATA.years[DATA.years.length-2];
   if (latestYr) state.activeYears[latestYr] = true;
-  if (prevYr)   state.activeYears[prevYr]   = true;
 
   var wSet = {};
   DATA.weekly_detail.forEach(function(r){ wSet[r.week]=1; });
@@ -1332,7 +1330,7 @@ function inicializar() {
   state.weekIdx = idx>=0 ? idx : allWeeks.length-1;
 
   state.toWeek   = wksLatest[wksLatest.length-1] || allWeeks[allWeeks.length-1] || 52;
-  state.fromWeek = wksLatest[wksLatest.length-2] || wksLatest[0] || state.toWeek;
+  state.fromWeek = state.toWeek;
 
   buildCatSelect();
   buildRanchCheckboxes();
