@@ -1241,7 +1241,8 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                         key = "cpv_ha"
                     
             if key:
-                if wk_unit_costs.get("TOTAL", {}).get(key) is not None:
+                existing = wk_unit_costs.get("TOTAL", {}).get(key)
+                if existing is not None and existing != 0:
                     continue
                 total_val = sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0
                 wk_unit_costs.setdefault("TOTAL", {})[key] = total_val
