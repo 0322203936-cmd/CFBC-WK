@@ -2140,10 +2140,19 @@ function renderUnitCostosTallo(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, active
     bodyHtml+='</tr>';
   });
 
-  var html='<div style="margin-top:20px; border:3px solid #f97316; border-radius:4px; padding:2px;"><div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table" style="border-collapse:collapse;"><thead>'+h1+h2+'</thead><tbody>'+bodyHtml+'</tbody></table></div></div>';
+  // Abre la tabla unificada (NO la cerramos aquí; renderUnitCostosHa la cierra)
+  var wrapper = document.createElement('div');
+  wrapper.id = 'unitCostsWrapper';
+  wrapper.style.cssText = 'margin-top:20px;border:3px solid #f97316;border-radius:4px;padding:2px;';
+  var scrollDiv = document.createElement('div');
+  scrollDiv.className = 'pt-table-wrap';
+  scrollDiv.style.cssText = 'overflow-x:auto;overflow-y:visible;';
+  scrollDiv.innerHTML = '<table id="unitCostsTable" class="pt-table" style="border-collapse:collapse;"><thead>'+h1+h2+'</thead><tbody id="unitCostsTbody">'+bodyHtml+'</tbody></table>';
+  wrapper.appendChild(scrollDiv);
   var gw=document.getElementById('gridWrap');
-  gw.innerHTML+=html;
+  gw.appendChild(wrapper);
 }
+
 
 // =======================================================
 // TABLA: COSTOS UNITARIOS $ / HECTÁREA
@@ -2262,11 +2271,19 @@ function renderUnitCostosHa(ywData, yrs, rangeWeeks, nWk, nYrs, nCols, activeRan
     bodyHtml+='</tr>';
   });
 
-  // Omitimos <thead> para simular que es parte de la misma tabla unida como en el Excel
-  var html='<div style="margin-top:10px; border:3px solid #f97316; border-radius:4px; padding:2px;"><div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table" style="border-collapse:collapse;"><tbody>'+bodyHtml+'</tbody></table></div></div>';
-  var gw=document.getElementById('gridWrap');
-  gw.innerHTML+=html;
+  // Añadimos las filas de Ha al mismo tbody de la tabla Tallo → columnas siempre alineadas
+  var existingTbody = document.getElementById('unitCostsTbody');
+  if (existingTbody) {
+    // Fila separadora visual entre secciones
+    var sepRow = '<tr><td colspan="999" style="background:#f97316;height:3px;padding:0;"></td></tr>';
+    existingTbody.innerHTML += sepRow + bodyHtml;
+  } else {
+    // Fallback: tabla propia si por algún motivo no existe
+    var html='<div style="margin-top:10px;border:3px solid #f97316;border-radius:4px;padding:2px;"><div class="pt-table-wrap" style="overflow-x:auto;overflow-y:visible;"><table class="pt-table" style="border-collapse:collapse;"><tbody>'+bodyHtml+'</tbody></table></div></div>';
+    document.getElementById('gridWrap').innerHTML+=html;
+  }
 }
+
 function renderDetalle() {
   var sym=state.currency.toUpperCase();
   var activeRanches = getActiveRanches();
