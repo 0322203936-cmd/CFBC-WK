@@ -968,7 +968,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
     # 2. Leer hojas WK
     batch_data = {}
     for titulo, _ in hojas_validas:
-        batch_data[titulo] = _leer_hoja(xls, titulo, rango_filas=120, rango_cols=35)
+        batch_data[titulo] = _leer_hoja(xls, titulo, rango_filas=125, rango_cols=35)
 
     # 2b. Leer hojas PR que estén en el Excel WK (fallback)
     productos       = {}
@@ -1241,8 +1241,7 @@ def extraer_datos(xls: pd.ExcelFile) -> dict:
                         key = "cpv_ha"
                     
             if key:
-                existing = wk_unit_costs.get("TOTAL", {}).get(key)
-                if existing is not None and existing != 0:
+                if wk_unit_costs.get("TOTAL", {}).get(key) is not None:
                     continue
                 total_val = sv(row[mxn_total_col]) if mxn_total_col < len(row) else 0
                 wk_unit_costs.setdefault("TOTAL", {})[key] = total_val
