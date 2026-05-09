@@ -1125,97 +1125,69 @@ function applyNewStyle() {
     /* Efecto Tarjeta / Sombra (Card shadow) para tablas principales */
     #gridWrap, #comparativoWrap {
       background-color: #ffffff !important;
-      border-radius: 8px !important;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.08) !important;
-      border: 1px solid #cbd5e1 !important;
-      border-top: 4px solid #6A1E35 !important; /* Color Vino/Guinda como acento corporativo */
+      border-radius: 6px !important;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+      border: 1px solid #e2e8f0 !important;
+      border-top: 4px solid #6A1E35 !important; /* Color Vino/Guinda */
       margin-top: 15px !important;
-      padding: 0 !important; /* Sin padding interno para que la tabla llegue a los bordes como AG Grid */
+      padding: 5px !important;
       overflow: hidden !important;
     }
 
     /* Estilo de Tarjeta para las tablas de detalle de abajo (al clickear) */
     .prod-panel-wrapper {
       background-color: #ffffff !important;
-      border-radius: 8px !important;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08) !important;
-      border: 1px solid #cbd5e1 !important;
-      border-top: none !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+      border: 1px solid #e2e8f0 !important;
+      border-top: none !important; /* El borde superior lo da el header interior */
       overflow: hidden !important;
       margin-bottom: 15px !important;
     }
     
+    /* Sobrescribir el color rojo/cafe viejo por el nuevo Guinda en los sub-paneles */
     .prod-panel-wrapper > div:first-child {
-      background-color: #f8fafc !important; /* Header claro */
-      color: #0f172a !important;
-      border-bottom: 1px solid #cbd5e1 !important;
-    }
-    .prod-panel-wrapper > div:first-child > div {
-      color: #0f172a !important;
+      background-color: #6A1E35 !important;
     }
 
-    /* Encabezados de tabla - Estilo AG Grid Premium (Blancos/Grises con texto obscuro) */
+    /* Encabezados de tabla Guinda/Vino y texto blanco */
     :root {
-      --pt-hdr-bg: #f8fafc !important;
-      --pt-hdr-border: #cbd5e1 !important;
-      --pt-grp-bg: #f1f5f9 !important; /* Gris claro para filas de grupo */
-      --pt-tot-bg: #e2e8f0 !important; /* Gris solido para fila TOTAL */
+      --pt-hdr-bg: #6A1E35 !important;
+      --pt-hdr-border: #4A1528 !important;
+      --pt-grp-bg: #e6e6e6 !important; /* Gris más bajito (claro) para las filas de grupo */
+      --pt-tot-bg: #cccccc !important; /* Gris más sólido para la fila de TOTAL */
     }
-    
-    .pt-table, .cmp-tbl {
-      font-family: 'Inter', 'Segoe UI', sans-serif !important;
-    }
-    
     .pt-table th, .cmp-tbl th {
-      background-color: #f8fafc !important;
-      color: #334155 !important;
-      border: 1px solid #cbd5e1 !important;
-      border-bottom: 2px solid #94a3b8 !important;
-      font-weight: 700 !important;
-      font-size: 11px !important;
-      text-transform: uppercase !important;
-      letter-spacing: 0.5px !important;
+      background-color: #6A1E35 !important;
+      color: #ffffff !important;
+      border: 1px solid #4A1528 !important;
+      font-weight: bold !important;
     }
 
-    /* Celdas de datos con bordes super limpios */
-    .pt-table td, .cmp-tbl td {
-      border: 1px solid #e2e8f0 !important;
-      color: #0f172a !important;
-    }
-
+    /* Sobrescribir el texto blanco hardcoded en las filas de Mano de Obra (grupos) */
     .pt-table td[style*="--pt-grp-bg"] {
-      color: #0f172a !important;
+      color: #000000 !important;
       font-weight: 700 !important;
-      border-right: 1px solid #cbd5e1 !important;
-      border-bottom: 1px solid #cbd5e1 !important;
+      border-right: 1px solid #a0a0a0 !important;
+      border-bottom: 1px solid #a0a0a0 !important;
     }
     
-    /* Celdas alternas estilo Zebra (muy tenue) */
+    /* Celdas alternas en gris claro (zebra striping) para mayor legibilidad */
     .pt-row:nth-child(even) td, .cmp-row:nth-child(even) td {
-      background-color: #fafafa !important;
+      background-color: #f9f9f9 !important;
     }
     .pt-row:hover td, .cmp-row:hover td {
-      background-color: #f1f5f9 !important;
+      background-color: #e2e8f0 !important;
     }
 
-    /* Pestañas (Tabs) estilo Bloomberg */
-    .vtab {
-      color: #64748b !important;
-      border-bottom-width: 3px !important;
-    }
+    /* Pestañas (Tabs) con el nuevo color activo */
     .vtab.active {
       color: #6A1E35 !important;
       border-bottom-color: #6A1E35 !important;
-      background-color: #ffffff !important;
       font-weight: 800 !important;
     }
     
     /* Botones de la barra de herramientas */
-    .tb-btn {
-      border-radius: 4px !important;
-      border: 1px solid #cbd5e1 !important;
-      color: #475569 !important;
-    }
     .tb-btn.active {
       background: #6A1E35 !important;
       border-color: #6A1E35 !important;
@@ -3396,7 +3368,6 @@ function renderManoObra() {
   if(gw){ gw.style.display=''; gw.innerHTML=html; }
   document.getElementById('comparativoWrap').className='';
   document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
-  
   setTimeout(resizeTable,80);
 }
 
