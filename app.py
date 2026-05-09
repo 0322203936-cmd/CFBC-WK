@@ -832,26 +832,6 @@ APP_HTML_BODY = """
     <button class="vtab"        id="vtServicios"    onclick="setView('servicios')">Costo Servicios</button>
   </div>
 
-  <!-- KPI CARDS ENTERPRISE -->
-  <div id="kpi-cards" style="display:flex; gap:15px; padding:15px; background:#f8fafc; border-bottom:1px solid #e2e8f0; justify-content:space-between;">
-    <div style="flex:1; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:15px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-top:4px solid #6A1E35;">
-      <div style="color:#64748b; font-size:11px; font-weight:600; text-transform:uppercase; margin-bottom:5px;">Gasto Total</div>
-      <div id="kpi-gasto" style="font-size:24px; font-weight:800; color:#0f172a;">$0</div>
-    </div>
-    <div style="flex:1; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:15px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-top:4px solid #6A1E35;">
-      <div style="color:#64748b; font-size:11px; font-weight:600; text-transform:uppercase; margin-bottom:5px;">Total Personal (HC)</div>
-      <div id="kpi-mo" style="font-size:24px; font-weight:800; color:#0f172a;">👤 0</div>
-    </div>
-    <div style="flex:1; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:15px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-top:4px solid #6A1E35;">
-      <div style="color:#64748b; font-size:11px; font-weight:600; text-transform:uppercase; margin-bottom:5px;">Vista Actual</div>
-      <div id="kpi-vista" style="font-size:24px; font-weight:800; color:#6A1E35;">Rancho</div>
-    </div>
-    <div style="flex:1; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:15px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-top:4px solid #6A1E35;">
-      <div style="color:#64748b; font-size:11px; font-weight:600; text-transform:uppercase; margin-bottom:5px;">Semanas Analizadas</div>
-      <div id="kpi-semanas" style="font-size:24px; font-weight:800; color:#0f172a;">0</div>
-    </div>
-  </div>
-
   <!-- RANGE BAR eliminada — controles movidos al toolbar -->
 
   <!-- MAIN TABLE AREA (todas las vistas excepto comparativo) -->
@@ -3417,21 +3397,6 @@ function renderManoObra() {
   document.getElementById('comparativoWrap').className='';
   document.getElementById('stTotal').textContent=fmt(grandTotal)+' '+sym;
   
-  // Actualizar KPIs Enterprise
-  if (document.getElementById('kpi-gasto')) {
-    document.getElementById('kpi-gasto').textContent = fmt(grandTotal) + ' ' + sym;
-    
-    // Sumar Headcount total de las columnas renderizadas
-    var grandTotalHc = 0;
-    weekKeys.forEach(function(k){
-      grandTotalHc += (grandHcWk[k] || 0);
-    });
-    
-    document.getElementById('kpi-mo').textContent = '👤 ' + fmtHc(grandTotalHc);
-    document.getElementById('kpi-semanas').textContent = String(weekKeys.length);
-    document.getElementById('kpi-vista').textContent = state.cat.length > 20 ? state.cat.substring(0, 20) + '...' : state.cat;
-  }
-
   setTimeout(resizeTable,80);
 }
 
