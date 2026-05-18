@@ -51,9 +51,9 @@ SHAREPOINT_URL_SIEMBRA_DETALLE = (
 )
 
 # Detalle semanal de inventario / tallos (hojas WEEKLY####)
-SHAREPOINT_URL_WEEKLY = (
+SHAREPOINT_URL_WEEKLY = (      
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "jesus_sandoval_cfbc_co/IQDToQpctdBlT4g2Lnc3B4uQAd-6shpssYiNVQabTkdd3ts?e=ss4fog"
+    "jesus_sandoval_cfbc_co/IQDToQpctdBlT4g2Lnc3B4uQAd-6shpssYiNVQabTkdd3ts?e=XZhOxk"
 )
 SHAREPOINT_URL_WEEKLY_2026 = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
