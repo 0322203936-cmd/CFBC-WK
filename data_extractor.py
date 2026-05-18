@@ -57,9 +57,8 @@ SHAREPOINT_URL_WEEKLY = (
 )
 SHAREPOINT_URL_WEEKLY_2026 = (
     "https://pacificafarms-my.sharepoint.com/:x:/g/personal/"
-    "jesus_sandoval_cfbc_co/IQDTUEARFMLjR6MB40jc3pY5AX_1LvzWsyXdBLdhxxvpqEE?e=VWuZFQ"
+    "jesus_sandoval_cfbc_co/IQDTUEARFMLjR6MB40jc3pY5AX_1LvzWsyXdBLdhxxvpqEE?e=dHFiN9"
 )
-
 
 # Índices de columna (0-based) dentro de cada hoja WEEKLY####
 # Usados como FALLBACK si no se detecta encabezado dinámico
